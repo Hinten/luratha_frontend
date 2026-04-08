@@ -49,7 +49,6 @@ npm run lint
 npm run build
 ```
 
-- Requires outbound access to `fonts.googleapis.com` (CSS manifest) and `fonts.gstatic.com` (`.woff2` font files) because `src/app/layout.tsx` imports `Geist` and `Geist_Mono` from `next/font/google`. Both domains must be reachable; if either is blocked, Turbopack fails with `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`.
 - Build output goes to `.next/` (gitignored).
 
 ## No Test Suite
