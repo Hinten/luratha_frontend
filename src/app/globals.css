@@ -124,3 +124,9 @@ a:hover {
 ::-webkit-scrollbar-track  { background: var(--color-neutral-light); }
 ::-webkit-scrollbar-thumb  { background: var(--color-neutral-mid); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
