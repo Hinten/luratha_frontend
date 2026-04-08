@@ -49,8 +49,8 @@ npm run lint
 npm run build
 ```
 
-- **Known issue in sandboxed/offline environments**: The build fails if Google Fonts (`fonts.googleapis.com`) is unreachable, because `src/app/layout.tsx` imports `Geist` and `Geist_Mono` from `next/font/google`. This is a network restriction issue, not a code bug. The CI setup workflow (`copilot-setup-steps.yml`) does **not** run the build step for this reason.
-- In environments with internet access, the build succeeds.
+- **Known issue in sandboxed/offline environments**: The build fails because `src/app/layout.tsx` imports `Geist` and `Geist_Mono` from `next/font/google`, which requires access to both `fonts.googleapis.com` (for the CSS manifest) **and** `fonts.gstatic.com` (for the actual `.woff2` font binary files). If `fonts.gstatic.com` is unreachable, Turbopack fails with `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`. This is a network restriction issue, not a code bug. The CI setup workflow (`copilot-setup-steps.yml`) does **not** run the build step for this reason.
+- In environments with full internet access (both `fonts.googleapis.com` and `fonts.gstatic.com` reachable), the build succeeds.
 - Build output goes to `.next/` (gitignored).
 
 ## No Test Suite
