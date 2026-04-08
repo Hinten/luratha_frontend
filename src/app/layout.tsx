@@ -19,8 +19,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Luratha",
-  description: "Moda artesanal, versátil e sustentável para mulheres",
+  title: "Luratha – Moda Artesanal Feminina",
+  description:
+    "Peças feitas com amor para durar. Slow fashion brasileiro com foco em artesanato, versatilidade e sustentabilidade.",
 };
 
 export default function RootLayout({
