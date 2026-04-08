@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Luratha color palette */
+  --color-primary: #E8B9C9;
+  --color-primary-hover: #D9A8B9;
+  --color-secondary: #A8B8A2;
+  --color-accent: #EDE4D9;
+  --color-neutral-dark: #3A2F2A;
+  --color-neutral-light: #F8F5F0;
+  --color-neutral-mid: #D9D2C7;
+  --color-error: #C9A8A8;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Luratha typography */
+  --font-heading: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-neutral-light);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
