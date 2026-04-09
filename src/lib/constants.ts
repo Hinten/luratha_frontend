@@ -15,14 +15,14 @@ export const contactData = {
 
 
 export const CATEGORIES = [
-  { slug: "vestidos", label: "Vestidos" },
-  { slug: "blusas", label: "Blusas" },
-  { slug: "calcas", label: "Calças" },
-  { slug: "saias", label: "Saias" },
-  { slug: "shorts", label: "Shorts" },
-  { slug: "conjuntos", label: "Conjuntos" },
-  { slug: "moletons", label: "Moletons" },
-  { slug: "acessorios", label: "Acessórios" },
+  { slug: "vestidos",   label: "Vestidos",   href: "/categoria/vestidos" },
+  { slug: "blusas",     label: "Blusas",     href: "/categoria/blusas" },
+  { slug: "calcas",     label: "Calças",     href: "/categoria/calcas" },
+  { slug: "saias",      label: "Saias",      href: "/categoria/saias" },
+  { slug: "shorts",     label: "Shorts",     href: "/categoria/shorts" },
+  { slug: "conjuntos",  label: "Conjuntos",  href: "/categoria/conjuntos" },
+  { slug: "moletons",   label: "Moletons",   href: "/categoria/moletons" },
+  { slug: "acessorios", label: "Acessórios", href: "/categoria/acessorios" },
 ] as const;
 
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
