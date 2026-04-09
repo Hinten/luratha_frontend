@@ -325,14 +325,3 @@ Before committing any hover/focus/active color change, verify:
 ---
 
 > **Agent instruction:** Always follow this visual identity strictly when creating or reviewing any interface. Never invent colors, fonts, or styles outside what is documented here. Prioritize emotional connection, artisanal authenticity, and an effortless shopping experience.
-
----
-
-## Changelog
-
-| Date | Change | Reason |
-|---|---|---|
-| 2026-04-09 | Added **Styling Approach: CSS Modules** section | Enforce `.module.css` files for all component styles; prohibit large inline Tailwind blocks |
-| 2026-04-09 | Added **Color Transition & Hover Legibility** section with safe patterns and anti-patterns | Fix illegible hover states (e.g. blush text on warm-sand bg at ~1.3:1 contrast) found in Header and Footer |
-| 2026-04-09 | Replaced hardcoded hex values in Button examples with CSS variable tokens | Enforce the rule "all colors from palette tokens only" |
-| 2026-04-09 | Added legibility checklist items to Consistency Checklist | Ensure future agents verify contrast in both resting and transitioned states |
