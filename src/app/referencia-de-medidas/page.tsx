@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./page.module.css";
 
 const SIZE_CHART = [
   { size: "PP", bust: "80–84", waist: "62–66", hip: "88–92" },
@@ -27,30 +28,23 @@ const MEASURE_TIPS = [
 export default function ReferenciaDeMedidasPage() {
   return (
     <div className="container-luratha section-padding">
-      <div className="max-w-3xl mx-auto">
+      <div className={styles.container}>
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className={styles.header}>
           <h1 className="mb-4">Referência de Medidas</h1>
-          <p className="text-lg leading-relaxed text-[var(--color-neutral-dark)]/75">
+          <p className={styles.headerText}>
             Encontre o seu tamanho ideal. Todas as medidas estão em
             centímetros.
           </p>
         </div>
 
         {/* How to measure */}
-        <div className="bg-[var(--color-accent)] rounded-3xl p-8 mb-12">
-          <h2 className="text-xl font-semibold mb-4">
-            Como medir corretamente
-          </h2>
-          <ul className="flex flex-col gap-3">
+        <div className={styles.tipsCard}>
+          <h2 className={styles.tipsHeading}>Como medir corretamente</h2>
+          <ul className={styles.tipsList}>
             {MEASURE_TIPS.map(({ label, tip }) => (
-              <li
-                key={label}
-                className="flex gap-3 text-[var(--color-neutral-dark)]/85"
-              >
-                <span className="font-medium shrink-0 text-[var(--color-neutral-dark)]">
-                  {label}:
-                </span>
+              <li key={label} className={styles.tipItem}>
+                <span className={styles.tipLabel}>{label}:</span>
                 <span>{tip}</span>
               </li>
             ))}
@@ -58,46 +52,23 @@ export default function ReferenciaDeMedidasPage() {
         </div>
 
         {/* Size chart table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[var(--color-primary)] text-[var(--color-neutral-dark)]">
-                <th className="px-6 py-4 text-left font-semibold rounded-tl-2xl">
-                  Tamanho
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  Busto (cm)
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  Cintura (cm)
-                </th>
-                <th className="px-6 py-4 text-left font-semibold rounded-tr-2xl">
-                  Quadril (cm)
-                </th>
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead className={styles.thead}>
+              <tr>
+                <th className={styles.th}>Tamanho</th>
+                <th className={styles.th}>Busto (cm)</th>
+                <th className={styles.th}>Cintura (cm)</th>
+                <th className={styles.th}>Quadril (cm)</th>
               </tr>
             </thead>
             <tbody>
               {SIZE_CHART.map(({ size, bust, waist, hip }, i) => (
-                <tr
-                  key={size}
-                  className={
-                    i % 2 === 0
-                      ? "bg-[var(--color-neutral-light)]"
-                      : "bg-[var(--color-accent)]"
-                  }
-                >
-                  <td className="px-6 py-4 font-semibold text-[var(--color-neutral-dark)]">
-                    {size}
-                  </td>
-                  <td className="px-6 py-4 text-[var(--color-neutral-dark)]/85">
-                    {bust}
-                  </td>
-                  <td className="px-6 py-4 text-[var(--color-neutral-dark)]/85">
-                    {waist}
-                  </td>
-                  <td className="px-6 py-4 text-[var(--color-neutral-dark)]/85">
-                    {hip}
-                  </td>
+                <tr key={size} className={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                  <td className={styles.tdBold}>{size}</td>
+                  <td className={styles.td}>{bust}</td>
+                  <td className={styles.td}>{waist}</td>
+                  <td className={styles.td}>{hip}</td>
                 </tr>
               ))}
             </tbody>
@@ -105,13 +76,10 @@ export default function ReferenciaDeMedidasPage() {
         </div>
 
         {/* Tip note */}
-        <p className="mt-8 text-sm text-center text-[var(--color-neutral-dark)]/60">
+        <p className={styles.footerNote}>
           Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior.
           Se precisar de ajuda,{" "}
-          <Link
-            href="/contato"
-            className="font-medium underline underline-offset-2 text-[var(--color-neutral-dark)]"
-          >
+          <Link href="/contato" className={styles.footerNoteLink}>
             fale conosco
           </Link>
           .
@@ -120,4 +88,5 @@ export default function ReferenciaDeMedidasPage() {
     </div>
   );
 }
+
 

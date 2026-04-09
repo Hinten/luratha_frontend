@@ -1,0 +1,43 @@
+/* ─── Product Grid ───────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: 6rem;
+  text-align: center;
+}
+
+.emptyHeading {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  margin-bottom: 0.5rem;
+}
+
+.emptyBody {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 40%, transparent);
+}
