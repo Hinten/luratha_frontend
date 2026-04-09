@@ -1,10 +1,17 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Home page", () => {
-  test("loads successfully and shows heading", async ({ page }) => {
+  test("loads successfully and shows the hero banner", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Luratha/);
-    await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Banner principal" })).toBeVisible();
+  });
+
+  test("hero banner shows first slide title", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "Peças feitas com amor para durar" })
+    ).toBeVisible();
   });
 
   test("renders the header with logo", async ({ page }) => {
@@ -22,5 +29,40 @@ test.describe("Home page", () => {
     await expect(footer).toBeVisible();
     await expect(footer).toContainText("Luratha");
     await expect(footer).toContainText("Todos os direitos reservados");
+  });
+
+  test("renders category section with three categories", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Vestidos" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Blusas" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Calças" })).toBeVisible();
+  });
+
+  test("renders Lançamentos section with products", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Lançamentos" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ver todos os lançamentos" })).toBeVisible();
+  });
+
+  test("renders Destaques section", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Destaques" })).toBeVisible();
+  });
+
+  test("renders SALE section with link to /sale", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "SALE até 50% OFF" })
+    ).toBeVisible();
+    const saleLink = page.getByRole("link", { name: "Ver ofertas" }).first();
+    await expect(saleLink).toHaveAttribute("href", "/sale");
+  });
+
+  test("hero banner next/prev navigation works", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Próximo slide" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Novas chegadas" })
+    ).toBeVisible();
   });
 });
