@@ -150,7 +150,8 @@ luratha_frontend/
 │   │   └── constants.ts              # App-wide constants (name, logo path)
 │   └── test/
 │       └── setup.ts                  # Vitest global setup (jest-dom matchers)
-├── public/                           # Static assets
+├── public/
+│   └── llms.txt                      # LLM/AI discoverability (llmstxt.org spec)
 ├── next.config.ts                    # Next.js config
 ├── tsconfig.json                     # TypeScript config
 ├── vitest.config.mts                 # Vitest configuration
@@ -184,6 +185,53 @@ Always use the `@/src/...` prefix for imports within `src/`.
 - Firebase is configured for project `luratha-96386` (region: `us-east5`). The emulator suite runs Auth (9099), Firestore (8080), Storage (9199) with emulator UI enabled.
 - No Firebase config initialization file exists yet in `src/lib/` — if adding Firebase client SDK usage, create `src/lib/firebase.ts`.
 - Tailwind CSS v4 uses the PostCSS plugin approach; do **not** use `tailwind.config.js` (v3 pattern).
+
+## SEO, AEO, and GEO
+
+Every page created or modified must follow these discoverability standards. Use the **luratha-seo** skill (`.github/skills/luratha-seo/SKILL.md`) for full implementation details.
+
+### Three disciplines — one implementation
+
+| Discipline | Full Name | Channel |
+|---|---|---|
+| **SEO** | Search Engine Optimization | Google, Bing crawlers |
+| **AEO** | Answer Engine Optimization | AI Overviews, featured snippets, voice assistants |
+| **GEO** | Generative Engine Optimization | ChatGPT, Gemini, Copilot, Perplexity |
+
+### Mandatory rules for every new page
+
+1. **Metadata export** — every Server Component page must export `metadata` (static) or `generateMetadata` (dynamic):
+   ```ts
+   export const metadata: Metadata = {
+     title: "Page Title",                    // renders as "Page Title | Luratha" via root template
+     description: "120–160 char description",
+     alternates: { canonical: "https://www.luratha.com.br/route" },
+     openGraph: { title: "...", description: "...", url: "...", images: [...] },
+   };
+   ```
+
+2. **Structured data (schema.org JSON-LD)** — inject via `<JsonLd>` Server Component:
+   - Root layout: `Organization` + `WebSite`
+   - Product pages: `Product` + `BreadcrumbList`
+   - Category pages: `CollectionPage` + `BreadcrumbList`
+   - Institutional pages: `AboutPage`, `ContactPage`, `FAQPage` (returns, sizes)
+
+3. **Semantic HTML** — one `<h1>` per page, logical heading hierarchy (h1 → h2 → h3), descriptive `alt` on all images.
+
+4. **llms.txt** — `public/llms.txt` exists and follows [llmstxt.org](https://llmstxt.org/). Update it whenever new routes are added.
+
+5. **Sitemap & robots** — `src/app/sitemap.ts` and `src/app/robots.ts` list all public routes; private routes (`/conta/`, `/carrinho/`, `/api/`) are disallowed.
+
+### Definition of done — SEO checklist
+
+Before finishing any page implementation:
+- [ ] `metadata` export has unique title, description, canonical, and Open Graph
+- [ ] Schema.org JSON-LD injected for the page type
+- [ ] All images have descriptive `alt` text
+- [ ] `public/llms.txt` updated if new routes were added
+- [ ] `src/app/sitemap.ts` updated if new static routes were added
+
+> For the full implementation guide, patterns, and code templates, read `.github/skills/luratha-seo/SKILL.md`.
 
 ## CI Workflow
 
