@@ -1,0 +1,48 @@
+/* ─── Product Section ────────────────────────────────────────────────────── */
+
+/* Section header row: title + optional view-all link */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-family: var(--font-heading);
+  color: var(--color-neutral-dark);
+}
+
+.viewAll {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+  transition: color 300ms ease;
+  text-underline-offset: 4px;
+}
+
+.viewAll:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* Responsive product grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

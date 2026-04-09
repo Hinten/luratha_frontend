@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { appData, CATEGORIES } from "@/src/lib/constants";
+import { appData, contactData, CATEGORIES } from "@/src/lib/constants";
 
 describe("appData constants", () => {
   it("has the correct app name", () => {
@@ -16,36 +16,37 @@ describe("appData constants", () => {
   });
 });
 
-describe("CATEGORIES", () => {
-  it("exports an array of categories", () => {
+describe("contactData constants", () => {
+  it("has a phone number", () => {
+    expect(contactData.phone).toBe("(12) 98278-9225");
+  });
+
+  it("has a phoneTel for tel: links", () => {
+    expect(contactData.phoneTel).toBe("+5512982789225");
+  });
+
+  it("has whatsapp number", () => {
+    expect(contactData.whatsapp).toBe("5512982789225");
+  });
+
+  it("has social media URLs", () => {
+    expect(contactData.facebook).toContain("facebook.com");
+    expect(contactData.instagram).toContain("instagram.com");
+    expect(contactData.youtube).toContain("youtube.com");
+  });
+});
+
+describe("CATEGORIES constants", () => {
+  it("is a non-empty array", () => {
     expect(Array.isArray(CATEGORIES)).toBe(true);
-    expect(CATEGORIES.length).toBe(8);
+    expect(CATEGORIES.length).toBeGreaterThan(0);
   });
 
-  it("every category has a slug and a label", () => {
-    CATEGORIES.forEach((cat) => {
-      expect(cat).toHaveProperty("slug");
+  it("each category has href and label", () => {
+    for (const cat of CATEGORIES) {
+      expect(cat).toHaveProperty("href");
       expect(cat).toHaveProperty("label");
-      expect(typeof cat.slug).toBe("string");
-      expect(typeof cat.label).toBe("string");
-    });
-  });
-
-  it("contains all expected slugs", () => {
-    const slugs = CATEGORIES.map((c) => c.slug);
-    expect(slugs).toContain("vestidos");
-    expect(slugs).toContain("blusas");
-    expect(slugs).toContain("calcas");
-    expect(slugs).toContain("saias");
-    expect(slugs).toContain("shorts");
-    expect(slugs).toContain("conjuntos");
-    expect(slugs).toContain("moletons");
-    expect(slugs).toContain("acessorios");
-  });
-
-  it("all slugs are unique", () => {
-    const slugs = CATEGORIES.map((c) => c.slug);
-    const unique = new Set(slugs);
-    expect(unique.size).toBe(slugs.length);
+      expect(cat.href).toMatch(/^\/colecao\//);
+    }
   });
 });

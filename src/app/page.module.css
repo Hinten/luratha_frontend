@@ -1,0 +1,93 @@
+/* ─── Home Page ──────────────────────────────────────────────────────────── */
+
+/* ── Category section ── */
+.categoriesHeading {
+  font-family: var(--font-heading);
+  color: var(--color-neutral-dark);
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.categoriesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .categoriesGrid {
+    flex-direction: row;
+  }
+}
+
+@media (min-width: 768px) {
+  .categoriesGrid {
+    gap: 1.5rem;
+  }
+}
+
+/* ── Destaques wrapper ── */
+.destaquesBg {
+  background-color: var(--color-accent);
+}
+
+/* ── Sale section ── */
+.saleSection {
+  background-color: var(--color-neutral-light);
+}
+
+.saleHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.saleEyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.saleTitle {
+  font-family: var(--font-heading);
+  color: var(--color-neutral-dark);
+}
+
+.saleViewAll {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+  transition: color 300ms ease;
+  text-underline-offset: 4px;
+}
+
+.saleViewAll:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* Responsive sale grid */
+.saleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .saleGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .saleGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
