@@ -67,9 +67,10 @@ The project uses **Vitest** for unit/integration tests and **Playwright** for E2
 ```bash
 npm run lint       # must exit 0 with no new errors
 npm test           # must pass — all Vitest unit/integration tests
+npm run test:e2e   # must pass — all Playwright E2E tests
 ```
 
-E2E tests (`npm run test:e2e`) require the dev server and a Chromium install; run them when changes affect routing, navigation, or full-page rendering.
+E2E tests (`npm run test:e2e`) can and **must** be run in the Copilot agent environment — Chromium is installed by `copilot-setup-steps.yml` via `playwright install --with-deps chromium`. Run them whenever changes affect routing, navigation, or full-page rendering.
 
 ### Test file locations
 
