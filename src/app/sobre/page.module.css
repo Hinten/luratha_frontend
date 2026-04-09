@@ -43,7 +43,7 @@
 
 /* Manifesto */
 .manifesto {
-  max-width: 40rem;
+  max-width: 42rem;
   margin-inline: auto;
   background-color: var(--color-primary);
   border-radius: 1.5rem;
