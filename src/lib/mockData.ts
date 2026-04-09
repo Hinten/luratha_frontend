@@ -1,5 +1,4 @@
-import type { Product } from "./types";
-import type { Category } from "./types";
+import type { Product, Category } from "./types";
 import { CATEGORIES } from "./constants";
 
 // ─── Catalog products (used by /categoria/[slug], /todas-as-pecas, /sale) ─────

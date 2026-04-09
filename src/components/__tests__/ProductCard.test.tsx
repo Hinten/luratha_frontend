@@ -3,24 +3,6 @@ import { render, screen } from "@testing-library/react";
 import ProductCard from "@/src/components/ProductCard";
 import type { Product } from "@/src/lib/types";
 
-vi.mock("./ProductCard.module.css", () => ({
-  default: {
-    card: "card",
-    discountBadge: "discountBadge",
-    favoriteBtn: "favoriteBtn",
-    imageWrapper: "imageWrapper",
-    image: "image",
-    info: "info",
-    name: "name",
-    rating: "rating",
-    ratingCount: "ratingCount",
-    priceBlock: "priceBlock",
-    originalPrice: "originalPrice",
-    currentPrice: "currentPrice",
-    installments: "installments",
-  },
-}));
-
 const baseProduct: Product = {
   id: "1",
   name: "Vestido Bordado Floral",
