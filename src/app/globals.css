@@ -72,14 +72,16 @@ small,
   line-height: 1.5;
 }
 
-a {
-  color: var(--color-neutral-dark);
-  text-decoration: none;
-  transition: color 300ms ease;
-}
+@layer base {
+  a {
+    color: var(--color-neutral-dark);
+    text-decoration: none;
+    transition: color 300ms ease;
+  }
 
-a:hover {
-  color: var(--color-primary);
+  a:hover {
+    color: var(--color-primary);
+  }
 }
 
 /* ─── Layout helpers ─────────────────────────────────────────────────────── */
