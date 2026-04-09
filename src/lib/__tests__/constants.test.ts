@@ -46,7 +46,7 @@ describe("CATEGORIES constants", () => {
     for (const cat of CATEGORIES) {
       expect(cat).toHaveProperty("href");
       expect(cat).toHaveProperty("label");
-      expect(cat.href).toMatch(/^\/colecao\//);
+      expect(cat.href).toMatch(/^\/categoria\//);
     }
   });
 });
