@@ -2,22 +2,15 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { appData } from "@/src/lib/constants";
+import Logo from "./Logo";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-[var(--color-neutral-light)]/95 backdrop-blur-sm border-b border-[var(--color-neutral-mid)]">
-      <div className="container-luratha flex items-center justify-between h-16 md:h-20">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <img
-            src={appData.logo}
-            alt={appData.name}
-            className="h-8 w-auto"
-          />
-        </Link>
-
+      <div className="container-luratha flex items-center justify-between h-24 md:h-28">        
+        <Logo />
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           {[

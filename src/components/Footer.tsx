@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { appData } from "@/src/lib/constants";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
@@ -9,9 +10,7 @@ export default function Footer() {
       <div className="container-luratha section-padding">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Link href="/">
-            <img src={appData.logo} alt={appData.name} className="h-8 w-auto" />
-          </Link>
+          <Logo />
         </div>
 
         {/* Links */}
