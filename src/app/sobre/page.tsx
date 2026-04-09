@@ -64,7 +64,7 @@ export default function SobrePage() {
       <div className="mt-12 text-center">
         <Link
           href="/contato"
-          className="inline-block px-8 py-4 rounded-3xl font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-[var(--color-primary)] text-[var(--color-neutral-dark)]"
+          className="inline-block px-8 py-4 rounded-3xl font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-neutral-dark)] hover:text-[var(--color-neutral-dark)]"
         >
           Fale conosco
         </Link>
