@@ -1,40 +1,36 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { appData } from "@/src/lib/constants";
 import Logo from "./Logo";
+import styles from "./Header.module.css";
+
+const navItems = [
+  { href: "/colecao", label: "Coleção" },
+  { href: "/sobre", label: "Sobre" },
+  { href: "/contato", label: "Contato" },
+];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--color-neutral-light)]/95 backdrop-blur-sm border-b border-[var(--color-neutral-mid)]">
-      <div className="container-luratha flex items-center justify-between h-24 md:h-28">        
+    <header className={styles.header}>
+      <div className={`container-luratha ${styles.inner}`}>
         <Logo />
+
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
-          {[
-            { href: "/colecao", label: "Coleção" },
-            { href: "/sobre", label: "Sobre" },
-            { href: "/contato", label: "Contato" },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="font-[family-name:var(--font-inter)] font-medium text-[15px] uppercase tracking-[0.05em] text-[var(--color-neutral-dark)] hover:text-[var(--color-primary)] transition-colors duration-300"
-            >
+        <nav className={styles.desktopNav}>
+          {navItems.map(({ href, label }) => (
+            <Link key={href} href={href} className={styles.navLink}>
               {label}
             </Link>
           ))}
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-4">
+        <div className={styles.actions}>
           {/* Cart icon */}
-          <button
-            aria-label="Carrinho"
-            className="text-[var(--color-neutral-dark)] hover:text-[var(--color-primary)] transition-colors duration-300"
-          >
+          <button aria-label="Carrinho" className={styles.iconBtn}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -54,7 +50,7 @@ export default function Header() {
           {/* Hamburger (mobile) */}
           <button
             aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-            className="md:hidden text-[var(--color-neutral-dark)] hover:text-[var(--color-primary)] transition-colors duration-300"
+            className={`${styles.iconBtn} ${styles.hamburger}`}
             onClick={() => setMenuOpen((prev) => !prev)}
           >
             {menuOpen ? (
@@ -72,17 +68,13 @@ export default function Header() {
 
       {/* Mobile overlay menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[var(--color-neutral-light)] border-t border-[var(--color-neutral-mid)] px-6 py-6 flex flex-col gap-6">
-          {[
-            { href: "/colecao", label: "Coleção" },
-            { href: "/sobre", label: "Sobre" },
-            { href: "/contato", label: "Contato" },
-          ].map(({ href, label }) => (
+        <div className={styles.mobileMenu}>
+          {navItems.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setMenuOpen(false)}
-              className="font-[family-name:var(--font-inter)] font-medium text-lg uppercase tracking-[0.05em] text-[var(--color-neutral-dark)] hover:text-[var(--color-primary)] transition-colors duration-300"
+              className={styles.mobileNavLink}
             >
               {label}
             </Link>
@@ -92,3 +84,4 @@ export default function Header() {
     </header>
   );
 }
+
