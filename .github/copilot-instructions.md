@@ -60,6 +60,8 @@ npm run build
 
 The project uses **Vitest** for unit/integration tests and **Playwright** for E2E tests. Full documentation is in `docs/testing.md`.
 
+> **Skill available:** When writing or debugging tests, activate the **`testing`** skill (`.github/skills/testing/SKILL.md`). It contains templates, mock patterns, debugging tips, and the full test coverage strategy for this project.
+
 ### Running tests — mandatory checklist
 
 **Always run these commands before finishing any task:**
