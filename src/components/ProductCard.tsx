@@ -1,4 +1,5 @@
 import type { Product } from "@/src/lib/types";
+import styles from "./ProductCard.module.css";
 
 interface ProductCardProps {
   product: Product;
@@ -18,33 +19,28 @@ export default function ProductCard({ product }: ProductCardProps) {
     installments,
   } = product;
 
-  const hasDiscount =
-    originalPrice !== undefined && originalPrice > price;
+  const hasDiscount = originalPrice !== undefined && originalPrice > price;
   const discountPct = hasDiscount
     ? Math.round((1 - price / originalPrice!) * 100)
     : 0;
 
   return (
-    <article className="group relative flex flex-col rounded-3xl overflow-hidden bg-[var(--color-accent)] hover:-translate-y-0.5 transition-transform duration-300">
+    <article className={styles.card}>
       {/* Discount badge */}
       {hasDiscount && (
-        <span className="absolute top-3 left-3 z-10 bg-[var(--color-primary)] text-[var(--color-neutral-dark)] text-xs font-medium px-2.5 py-1 rounded-full">
-          -{discountPct}%
-        </span>
+        <span className={styles.discountBadge}>-{discountPct}%</span>
       )}
 
       {/* Favorite button */}
-      <button
-        aria-label={`Favoritar ${name}`}
-        className="absolute top-3 right-3 z-10 text-[var(--color-neutral-dark)] hover:text-[var(--color-primary)] transition-colors duration-300"
-      >
+      <button aria-label={`Favoritar ${name}`} className={styles.favoriteBtn}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="w-5 h-5"
+          width={20}
+          height={20}
         >
           <path
             strokeLinecap="round"
@@ -55,29 +51,28 @@ export default function ProductCard({ product }: ProductCardProps) {
       </button>
 
       {/* Image */}
-      <div className="aspect-[4/5] overflow-hidden">
+      <div className={styles.imageWrapper}>
         <img
           src={imageUrl}
           alt={name}
           loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className={styles.image}
         />
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1 p-4">
-        <h3 className="font-[family-name:var(--font-inter)] font-medium text-sm text-[var(--color-neutral-dark)] leading-snug line-clamp-2">
-          {name}
-        </h3>
+      <div className={styles.info}>
+        <h3 className={styles.name}>{name}</h3>
 
         {/* Rating */}
         {rating !== undefined && (
-          <div className="flex items-center gap-1 text-xs text-[var(--color-neutral-dark)]/70">
+          <div className={styles.rating}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="#E8B9C9"
-              className="w-3.5 h-3.5"
+              width={14}
+              height={14}
             >
               <path
                 fillRule="evenodd"
@@ -87,23 +82,19 @@ export default function ProductCard({ product }: ProductCardProps) {
             </svg>
             <span>{rating.toFixed(1)}</span>
             {reviewCount !== undefined && (
-              <span className="text-[var(--color-neutral-mid)]">({reviewCount})</span>
+              <span className={styles.ratingCount}>({reviewCount})</span>
             )}
           </div>
         )}
 
         {/* Price */}
-        <div className="mt-1">
+        <div className={styles.priceBlock}>
           {hasDiscount && (
-            <span className="block text-xs text-[var(--color-neutral-dark)]/50 line-through">
-              {formatBRL(originalPrice!)}
-            </span>
+            <span className={styles.originalPrice}>{formatBRL(originalPrice!)}</span>
           )}
-          <span className="block text-base font-semibold text-[var(--color-neutral-dark)]">
-            {formatBRL(price)}
-          </span>
+          <span className={styles.currentPrice}>{formatBRL(price)}</span>
           {installments && (
-            <span className="block text-xs text-[var(--color-neutral-dark)]/60">
+            <span className={styles.installments}>
               {installments.count}x {formatBRL(installments.value)} sem juros
             </span>
           )}
@@ -112,3 +103,4 @@ export default function ProductCard({ product }: ProductCardProps) {
     </article>
   );
 }
+

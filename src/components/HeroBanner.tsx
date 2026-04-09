@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import styles from "./HeroBanner.module.css";
 
 interface Slide {
   id: string;
@@ -65,36 +66,19 @@ export default function HeroBanner() {
   const slide = slides[current];
 
   return (
-    <section
-      aria-label="Banner principal"
-      className="relative w-full overflow-hidden"
-      style={{ minHeight: "80vh" }}
-    >
-      {/* Slide */}
+    <section aria-label="Banner principal" className={styles.section}>
+      {/* Slide — gradient background is dynamic so it stays as inline style */}
       <div
-        className="w-full flex flex-col items-center justify-center text-center px-6 transition-all duration-500"
+        className={styles.slide}
         style={{
-          minHeight: "80vh",
           background: `linear-gradient(135deg, ${slide.gradientFrom} 0%, ${slide.gradientTo} 100%)`,
         }}
       >
-        <div className="container-luratha flex flex-col items-center gap-6 py-24">
-          <span className="inline-block text-xs font-medium uppercase tracking-widest text-[var(--color-neutral-dark)]/60 bg-white/40 px-4 py-1.5 rounded-full">
-            Luratha — Slow Fashion
-          </span>
-          <h1
-            className="font-[family-name:var(--font-heading)] text-[var(--color-neutral-dark)] max-w-2xl"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            {slide.title}
-          </h1>
-          <p className="font-[family-name:var(--font-body)] text-[var(--color-neutral-dark)]/70 text-lg max-w-xl">
-            {slide.subtitle}
-          </p>
-          <a
-            href={slide.ctaHref}
-            className="mt-4 bg-[var(--color-neutral-dark)] hover:bg-[var(--color-neutral-dark)]/80 text-[var(--color-neutral-light)] font-medium px-8 py-4 rounded-3xl transition-all duration-300 shadow-sm hover:shadow-md inline-flex items-center gap-2"
-          >
+        <div className={styles.inner}>
+          <span className={styles.badge}>Luratha — Slow Fashion</span>
+          <h1 className={styles.title}>{slide.title}</h1>
+          <p className={styles.subtitle}>{slide.subtitle}</p>
+          <a href={slide.ctaHref} className={styles.cta}>
             {slide.ctaLabel}
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -102,7 +86,8 @@ export default function HeroBanner() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-4 h-4"
+              width={16}
+              height={16}
             >
               <path
                 strokeLinecap="round"
@@ -114,11 +99,11 @@ export default function HeroBanner() {
         </div>
       </div>
 
-      {/* Prev / Next buttons */}
+      {/* Prev button */}
       <button
         onClick={goPrev}
         aria-label="Slide anterior"
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-[var(--color-neutral-dark)] rounded-full p-2 shadow transition-all duration-200"
+        className={`${styles.navBtn} ${styles.navBtnPrev}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -126,15 +111,18 @@ export default function HeroBanner() {
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="w-5 h-5"
+          width={20}
+          height={20}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
       </button>
+
+      {/* Next button */}
       <button
         onClick={goNext}
         aria-label="Próximo slide"
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-[var(--color-neutral-dark)] rounded-full p-2 shadow transition-all duration-200"
+        className={`${styles.navBtn} ${styles.navBtnNext}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -142,27 +130,25 @@ export default function HeroBanner() {
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="w-5 h-5"
+          width={20}
+          height={20}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
         </svg>
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+      {/* Navigation dots */}
+      <div className={styles.dots}>
         {slides.map((s, i) => (
           <button
             key={s.id}
             onClick={() => goTo(i)}
             aria-label={`Ir para slide ${i + 1}`}
-            className={`rounded-full transition-all duration-300 ${
-              i === current
-                ? "w-6 h-2.5 bg-[var(--color-neutral-dark)]"
-                : "w-2.5 h-2.5 bg-[var(--color-neutral-dark)]/30 hover:bg-[var(--color-neutral-dark)]/60"
-            }`}
+            className={i === current ? styles.dotActive : styles.dotInactive}
           />
         ))}
       </div>
     </section>
   );
 }
+
