@@ -56,6 +56,20 @@ npm run build
 
 - Build output goes to `.next/` (gitignored).
 
+## Agent Skills
+
+Three Agent Skills (`.github/skills/`) are available for this project:
+
+| Skill | Path | When to use |
+|---|---|---|
+| `luratha-testing` | `.github/skills/luratha-testing/SKILL.md` | Writing new tests, running the test suite, fixing failing tests, adding coverage |
+| `luratha-debugging` | `.github/skills/luratha-debugging/SKILL.md` | Debugging failures, fixing lint errors, understanding component behavior |
+| `visual-identity` | `.github/skills/visual-identity/SKILL.md` | Creating or reviewing UI components, designs, or styles |
+
+Activate a skill by reading its `SKILL.md` file before starting the related task.
+
+---
+
 ## Test Suite
 
 The project uses **Vitest** for unit/integration tests and **Playwright** for E2E tests. Full documentation is in `docs/testing.md`.
