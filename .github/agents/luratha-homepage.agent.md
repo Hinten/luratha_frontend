@@ -87,4 +87,3 @@ Create `src/lib/mockData.ts` with at least 6 mock products and the category list
 - DO NOT implement real Firebase integration — use mockData
 - DO NOT implement a real checkout flow
 - DO NOT modify Header or Footer
-- DO NOT add features beyond what exists on luratha.com.br
