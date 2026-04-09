@@ -6,15 +6,18 @@ import Logo from "./Logo";
 
 const CNPJ = "43.123.456/0001-78";
 
+const INSTITUTIONAL_LINKS = [
+  { href: "/sobre", label: "Sobre" },
+  { href: "/contato", label: "Fale Conosco" },
+  { href: "/politica-de-trocas", label: "Política de Trocas" },
+  { href: "/referencia-de-medidas", label: "Referência de Medidas" },
+];
+
+const PAYMENT_METHODS = ["Pix", "Boleto", "Visa", "Mastercard"];
+
 export default function Footer() {
   return (
-    <footer
-      className="border-t"
-      style={{
-        backgroundColor: "var(--color-accent)",
-        borderColor: "var(--color-neutral-mid)",
-      }}
-    >
+    <footer className="border-t border-[var(--color-neutral-mid)] bg-[var(--color-accent)]">
       {/* Main columns */}
       <div className="container-luratha section-padding">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
@@ -23,10 +26,7 @@ export default function Footer() {
             <div className="mb-4">
               <Logo />
             </div>
-            <p
-              className="text-sm leading-relaxed"
-              style={{ color: "var(--color-neutral-dark)", opacity: 0.75 }}
-            >
+            <p className="text-sm leading-relaxed text-[var(--color-neutral-dark)]/75">
               Moda artesanal feminina brasileira. Peças feitas com amor para
               durar — slow fashion com foco em versatilidade e sustentabilidade.
             </p>
@@ -34,18 +34,14 @@ export default function Footer() {
 
           {/* Column 2: Atendimento */}
           <div>
-            <h3
-              className="text-sm font-semibold uppercase tracking-widest mb-4"
-              style={{ color: "var(--color-neutral-dark)" }}
-            >
+            <h3 className="text-sm font-semibold uppercase tracking-widest mb-4 text-[var(--color-neutral-dark)]">
               Atendimento
             </h3>
             <ul className="flex flex-col gap-3">
               <li>
                 <a
                   href={`tel:${contactData.phoneTel}`}
-                  className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)]"
-                  style={{ color: "var(--color-neutral-dark)", opacity: 0.75 }}
+                  className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/75"
                 >
                   {contactData.phone}
                 </a>
@@ -55,10 +51,7 @@ export default function Footer() {
                   href={`https://wa.me/${contactData.whatsapp}?text=Ol%C3%A1!%20Estou%20olhando%20o%20site%20e%20gostaria%20de%20algumas%20informa%C3%A7%C3%B5es`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm transition-colors duration-300"
-                  style={{
-                    color: "#25D366",
-                  }}
+                  className="text-sm transition-colors duration-300 text-[#25D366]"
                 >
                   WhatsApp
                 </a>
@@ -68,10 +61,7 @@ export default function Footer() {
 
           {/* Column 3: Categorias */}
           <div>
-            <h3
-              className="text-sm font-semibold uppercase tracking-widest mb-4"
-              style={{ color: "var(--color-neutral-dark)" }}
-            >
+            <h3 className="text-sm font-semibold uppercase tracking-widest mb-4 text-[var(--color-neutral-dark)]">
               Categorias
             </h3>
             <ul className="flex flex-col gap-2">
@@ -79,8 +69,7 @@ export default function Footer() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)]"
-                    style={{ color: "var(--color-neutral-dark)", opacity: 0.75 }}
+                    className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/75"
                   >
                     {label}
                   </Link>
@@ -91,27 +80,15 @@ export default function Footer() {
 
           {/* Column 4: Institucional */}
           <div>
-            <h3
-              className="text-sm font-semibold uppercase tracking-widest mb-4"
-              style={{ color: "var(--color-neutral-dark)" }}
-            >
+            <h3 className="text-sm font-semibold uppercase tracking-widest mb-4 text-[var(--color-neutral-dark)]">
               Institucional
             </h3>
             <ul className="flex flex-col gap-2">
-              {[
-                { href: "/sobre", label: "Sobre" },
-                { href: "/contato", label: "Fale Conosco" },
-                { href: "/politica-de-trocas", label: "Política de Trocas" },
-                {
-                  href: "/referencia-de-medidas",
-                  label: "Referência de Medidas",
-                },
-              ].map(({ href, label }) => (
+              {INSTITUTIONAL_LINKS.map(({ href, label }) => (
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)]"
-                    style={{ color: "var(--color-neutral-dark)", opacity: 0.75 }}
+                    className="text-sm transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/75"
                   >
                     {label}
                   </Link>
@@ -122,18 +99,12 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div
-          className="h-px mb-8"
-          style={{ backgroundColor: "var(--color-neutral-mid)" }}
-        />
+        <div className="h-px mb-8 bg-[var(--color-neutral-mid)]" />
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* CNPJ + copyright */}
-          <p
-            className="text-xs text-center md:text-left"
-            style={{ color: "var(--color-neutral-dark)", opacity: 0.6 }}
-          >
+          <p className="text-xs text-center md:text-left text-[var(--color-neutral-dark)]/60">
             CNPJ {CNPJ} &mdash; &copy; {new Date().getFullYear()}{" "}
             {appData.name}. Todos os direitos reservados.
           </p>
@@ -145,8 +116,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
-              className="transition-colors duration-300 hover:text-[var(--color-primary)]"
-              style={{ color: "var(--color-neutral-dark)", opacity: 0.7 }}
+              className="transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/70"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -162,8 +132,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
-              className="transition-colors duration-300 hover:text-[var(--color-primary)]"
-              style={{ color: "var(--color-neutral-dark)", opacity: 0.7 }}
+              className="transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/70"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -179,8 +148,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="YouTube"
-              className="transition-colors duration-300 hover:text-[var(--color-primary)]"
-              style={{ color: "var(--color-neutral-dark)", opacity: 0.7 }}
+              className="transition-colors duration-300 hover:text-[var(--color-primary)] text-[var(--color-neutral-dark)]/70"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -195,15 +163,10 @@ export default function Footer() {
 
           {/* Payment badges */}
           <div className="flex items-center gap-2 flex-wrap justify-center">
-            {["Pix", "Boleto", "Visa", "Mastercard"].map((method) => (
+            {PAYMENT_METHODS.map((method) => (
               <span
                 key={method}
-                className="text-xs px-3 py-1 rounded-full border font-medium"
-                style={{
-                  borderColor: "var(--color-neutral-mid)",
-                  color: "var(--color-neutral-dark)",
-                  opacity: 0.7,
-                }}
+                className="text-xs px-3 py-1 rounded-full border border-[var(--color-neutral-mid)] text-[var(--color-neutral-dark)]/70 font-medium"
               >
                 {method}
               </span>

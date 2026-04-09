@@ -1,24 +1,19 @@
 import { contactData } from "@/src/lib/constants";
 
+const SOCIAL_LINKS = [
+  { href: contactData.instagram, label: "Instagram" },
+  { href: contactData.facebook, label: "Facebook" },
+  { href: contactData.youtube, label: "YouTube" },
+];
+
 export default function ContatoPage() {
   return (
     <div className="container-luratha section-padding">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1
-            style={{
-              fontFamily: "var(--font-heading)",
-              color: "var(--color-neutral-dark)",
-            }}
-            className="mb-4"
-          >
-            Fale Conosco
-          </h1>
-          <p
-            className="text-lg leading-relaxed"
-            style={{ color: "var(--color-neutral-dark)", opacity: 0.75 }}
-          >
+          <h1 className="mb-4">Fale Conosco</h1>
+          <p className="text-lg leading-relaxed text-[var(--color-neutral-dark)]/75">
             Estamos aqui para ajudar. Entre em contato pelos canais abaixo ou
             preencha o formulário.
           </p>
@@ -27,27 +22,14 @@ export default function ContatoPage() {
         <div className="grid md:grid-cols-2 gap-10 mb-16">
           {/* Contact info */}
           <div className="flex flex-col gap-6">
-            <h2
-              className="text-xl font-semibold"
-              style={{
-                fontFamily: "var(--font-heading)",
-                color: "var(--color-neutral-dark)",
-              }}
-            >
-              Atendimento
-            </h2>
+            <h2 className="text-xl font-semibold">Atendimento</h2>
 
             {/* WhatsApp */}
             <a
               href={`https://wa.me/${contactData.whatsapp}?text=Ol%C3%A1!%20Estou%20olhando%20o%20site%20e%20gostaria%20de%20algumas%20informa%C3%A7%C3%B5es`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-6 py-4 rounded-3xl font-medium transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-md"
-              style={{
-                backgroundColor: "#25D366",
-                color: "#fff",
-                fontFamily: "var(--font-body)",
-              }}
+              className="flex items-center gap-3 px-6 py-4 rounded-3xl font-medium transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-md bg-[#25D366] text-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -63,12 +45,7 @@ export default function ContatoPage() {
             {/* Phone */}
             <a
               href={`tel:${contactData.phoneTel}`}
-              className="flex items-center gap-3 px-6 py-4 rounded-3xl font-medium transition-all duration-300 hover:-translate-y-0.5 border"
-              style={{
-                borderColor: "var(--color-secondary)",
-                color: "var(--color-neutral-dark)",
-                fontFamily: "var(--font-body)",
-              }}
+              className="flex items-center gap-3 px-6 py-4 rounded-3xl font-medium transition-all duration-300 hover:-translate-y-0.5 border border-[var(--color-secondary)] text-[var(--color-neutral-dark)]"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -89,22 +66,13 @@ export default function ContatoPage() {
 
             {/* Social media */}
             <div className="flex gap-4 mt-2">
-              {[
-                { href: contactData.instagram, label: "Instagram" },
-                { href: contactData.facebook, label: "Facebook" },
-                { href: contactData.youtube, label: "YouTube" },
-              ].map(({ href, label }) => (
+              {SOCIAL_LINKS.map(({ href, label }) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-3xl text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 border"
-                  style={{
-                    borderColor: "var(--color-neutral-mid)",
-                    color: "var(--color-neutral-dark)",
-                    fontFamily: "var(--font-body)",
-                  }}
+                  className="px-4 py-2 rounded-3xl text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 border border-[var(--color-neutral-mid)] text-[var(--color-neutral-dark)]"
                 >
                   {label}
                 </a>
@@ -114,21 +82,12 @@ export default function ContatoPage() {
 
           {/* Contact form */}
           <div>
-            <h2
-              className="text-xl font-semibold mb-6"
-              style={{
-                fontFamily: "var(--font-heading)",
-                color: "var(--color-neutral-dark)",
-              }}
-            >
-              Envie uma mensagem
-            </h2>
+            <h2 className="text-xl font-semibold mb-6">Envie uma mensagem</h2>
             <form action="" className="flex flex-col gap-4">
               <div>
                 <label
                   htmlFor="contact-name"
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--color-neutral-dark)" }}
+                  className="block text-sm font-medium mb-1 text-[var(--color-neutral-dark)]"
                 >
                   Nome
                 </label>
@@ -138,20 +97,13 @@ export default function ContatoPage() {
                   name="name"
                   required
                   placeholder="Seu nome"
-                  className="w-full px-4 py-3 rounded-2xl border outline-none transition-all duration-300"
-                  style={{
-                    borderColor: "var(--color-neutral-mid)",
-                    backgroundColor: "var(--color-neutral-light)",
-                    color: "var(--color-neutral-dark)",
-                    fontFamily: "var(--font-body)",
-                  }}
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--color-neutral-mid)] bg-[var(--color-neutral-light)] text-[var(--color-neutral-dark)] outline-none transition-all duration-300"
                 />
               </div>
               <div>
                 <label
                   htmlFor="contact-email"
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--color-neutral-dark)" }}
+                  className="block text-sm font-medium mb-1 text-[var(--color-neutral-dark)]"
                 >
                   E-mail
                 </label>
@@ -161,20 +113,13 @@ export default function ContatoPage() {
                   name="email"
                   required
                   placeholder="seu@email.com"
-                  className="w-full px-4 py-3 rounded-2xl border outline-none transition-all duration-300"
-                  style={{
-                    borderColor: "var(--color-neutral-mid)",
-                    backgroundColor: "var(--color-neutral-light)",
-                    color: "var(--color-neutral-dark)",
-                    fontFamily: "var(--font-body)",
-                  }}
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--color-neutral-mid)] bg-[var(--color-neutral-light)] text-[var(--color-neutral-dark)] outline-none transition-all duration-300"
                 />
               </div>
               <div>
                 <label
                   htmlFor="contact-message"
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--color-neutral-dark)" }}
+                  className="block text-sm font-medium mb-1 text-[var(--color-neutral-dark)]"
                 >
                   Mensagem
                 </label>
@@ -184,23 +129,12 @@ export default function ContatoPage() {
                   required
                   rows={5}
                   placeholder="Como podemos ajudar?"
-                  className="w-full px-4 py-3 rounded-2xl border outline-none transition-all duration-300 resize-none"
-                  style={{
-                    borderColor: "var(--color-neutral-mid)",
-                    backgroundColor: "var(--color-neutral-light)",
-                    color: "var(--color-neutral-dark)",
-                    fontFamily: "var(--font-body)",
-                  }}
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--color-neutral-mid)] bg-[var(--color-neutral-light)] text-[var(--color-neutral-dark)] outline-none transition-all duration-300 resize-none"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full px-8 py-4 rounded-3xl font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
-                style={{
-                  backgroundColor: "var(--color-primary)",
-                  color: "var(--color-neutral-dark)",
-                  fontFamily: "var(--font-body)",
-                }}
+                className="w-full px-8 py-4 rounded-3xl font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-[var(--color-primary)] text-[var(--color-neutral-dark)]"
               >
                 Enviar mensagem
               </button>
@@ -211,3 +145,4 @@ export default function ContatoPage() {
     </div>
   );
 }
+
