@@ -1,0 +1,33 @@
+# Cloud Build / Firebase App Hosting ignore file.
+# Files listed here are excluded from the build context sent to Cloud Run,
+# reducing image size and keeping test code out of production.
+
+# Node modules (restored via npm ci during build)
+node_modules/
+
+# Test source files and configuration
+e2e/
+src/**/__tests__/
+src/test/
+vitest.config.mts
+playwright.config.ts
+
+# Test output artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Local environment files
+.env*
+!.env.example
+
+# Next.js build cache (rebuilt during deployment)
+.next/
+
+# Git metadata
+.git/
+
+# Editor and OS files
+.DS_Store
+*.pem

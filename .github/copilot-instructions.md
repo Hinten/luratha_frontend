@@ -32,6 +32,11 @@ Always run `npm ci` before building, linting, or running the app. Dependencies a
 | `npm run build` | Production build (Turbopack) |
 | `npm run start` | Start production server (requires prior build) |
 | `npm run lint` | ESLint with Next.js rules |
+| `npm test` | Run unit/integration tests once (Vitest) |
+| `npm run test:watch` | Run unit tests in watch mode |
+| `npm run test:coverage` | Run unit tests with coverage report |
+| `npm run test:e2e` | Run E2E tests headless (Playwright) |
+| `npm run test:e2e:ui` | Run E2E tests with interactive UI |
 
 ## Lint
 
@@ -40,7 +45,7 @@ npm run lint
 ```
 
 - Uses ESLint 9 flat config (`eslint.config.mjs`) with `eslint-config-next` (core-web-vitals + TypeScript rules).
-- Currently emits 7 **warnings** (unused imports, `<img>` tag) — no errors. Warnings do not fail the process (exit 0).
+- Currently emits 3 **warnings** (unused `Image` import in `page.tsx`, `<img>` in Header/Footer) — no errors. Warnings do not fail the process (exit 0).
 - Errors (exit non-zero) will fail CI. Do not introduce new ESLint errors.
 
 ## Build
@@ -51,9 +56,66 @@ npm run build
 
 - Build output goes to `.next/` (gitignored).
 
-## No Test Suite
+## Test Suite
 
-There are currently no tests (no Jest, Vitest, or Playwright setup). Do not add a test runner unless explicitly asked.
+The project uses **Vitest** for unit/integration tests and **Playwright** for E2E tests. Full documentation is in `docs/testing.md`.
+
+### Running tests — mandatory checklist
+
+**Always run these commands before finishing any task:**
+
+```bash
+npm run lint       # must exit 0 with no new errors
+npm test           # must pass — all Vitest unit/integration tests
+```
+
+E2E tests (`npm run test:e2e`) require the dev server and a Chromium install; run them when changes affect routing, navigation, or full-page rendering.
+
+### Test file locations
+
+```
+src/
+├── app/__tests__/          # Page-level unit tests
+├── components/__tests__/   # Component unit/integration tests
+└── lib/__tests__/          # Utility/constant unit tests
+e2e/                        # Playwright E2E tests
+```
+
+**Convention:** unit/integration files are `*.test.ts(x)` inside `__tests__/`; E2E files are `*.spec.ts` in `e2e/`.
+
+### Writing tests for new code
+
+When creating any new element, always add the corresponding tests:
+
+| What you create | Tests required |
+|---|---|
+| New utility function / constant | Unit test in `src/lib/__tests__/` |
+| New React component | Unit test in `src/components/__tests__/` (render, props, interactions) |
+| New page | Unit test (`src/app/__tests__/`) + E2E test (`e2e/`) |
+| New navigation link or route | E2E navigation test |
+| Form or interactive flow | Integration test (Vitest) + E2E test |
+
+### Mocking Next.js in Vitest
+
+```ts
+// next/link — always mock in component unit tests
+vi.mock("next/link", () => ({
+  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
+// next/navigation — mock when a component calls useRouter/usePathname
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
+```
+
+### Firebase App Hosting & test exclusion
+
+Test files, config files, and output artifacts are excluded from Cloud Run deployments via `.gcloudignore`. Never remove those exclusions.
 
 ## Repository Layout
 
@@ -62,22 +124,39 @@ luratha_frontend/
 ├── .github/
 │   └── workflows/
 │       └── copilot-setup-steps.yml   # CI: installs deps + Firebase CLI
+├── docs/
+│   └── testing.md                    # Test suite documentation
+├── e2e/
+│   ├── home.spec.ts                  # E2E: home page tests
+│   └── navigation.spec.ts            # E2E: header/footer navigation tests
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx                # Root layout (Header + Footer, Geist fonts)
+│   │   ├── __tests__/
+│   │   │   └── page.test.tsx         # Unit test: Home page
+│   │   ├── layout.tsx                # Root layout (Header + Footer, Google fonts)
 │   │   ├── page.tsx                  # Home page
 │   │   ├── globals.css               # Global styles (Tailwind CSS entry)
 │   │   └── favicon.ico
 │   ├── components/
+│   │   ├── __tests__/
+│   │   │   ├── Header.test.tsx       # Unit tests: Header component
+│   │   │   └── Footer.test.tsx       # Unit tests: Footer component
 │   │   ├── Header.tsx                # Site header with logo
 │   │   └── Footer.tsx                # Site footer with copyright
-│   └── lib/
-│       └── constants.ts              # App-wide constants (name, logo path)
+│   ├── lib/
+│   │   ├── __tests__/
+│   │   │   └── constants.test.ts     # Unit tests: app constants
+│   │   └── constants.ts              # App-wide constants (name, logo path)
+│   └── test/
+│       └── setup.ts                  # Vitest global setup (jest-dom matchers)
 ├── public/                           # Static assets
-├── next.config.ts                    # Next.js config (empty/default)
+├── next.config.ts                    # Next.js config
 ├── tsconfig.json                     # TypeScript config
+├── vitest.config.mts                 # Vitest configuration
+├── playwright.config.ts              # Playwright configuration
 ├── eslint.config.mjs                 # ESLint flat config
 ├── postcss.config.mjs                # Tailwind PostCSS config
+├── .gcloudignore                     # Excludes test files from Cloud Run builds
 ├── firebase.json                     # Firebase project config (Firestore, Storage, emulators)
 ├── firestore.rules                   # Firestore security rules
 ├── storage.rules                     # Cloud Storage security rules
