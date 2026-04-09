@@ -70,7 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
-              fill="#E8B9C9"
+              className={styles.ratingStar}
               width={14}
               height={14}
             >

@@ -23,8 +23,9 @@
 }
 
 .viewAll:hover {
-  color: var(--color-primary);
+  color: var(--color-neutral-dark);
   text-decoration: underline;
+  text-decoration-color: var(--color-primary);
 }
 
 /* Responsive product grid */
