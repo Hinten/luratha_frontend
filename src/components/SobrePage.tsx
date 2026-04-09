@@ -69,7 +69,7 @@ export default function SobrePage() {
       {/* Manifesto */}
       <div
         className="max-w-2xl mx-auto rounded-3xl p-10 text-center"
-        style={{ backgroundColor: "var(--color-primary)", opacity: 0.9 }}
+        style={{ backgroundColor: "var(--color-primary)" }}
       >
         <h2
           style={{

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function PoliticaDeTrocasPage() {
   return (
     <div className="container-luratha section-padding">
@@ -92,13 +94,13 @@ export default function PoliticaDeTrocasPage() {
             style={{ color: "var(--color-neutral-dark)", opacity: 0.8 }}
           >
             Tem alguma dúvida sobre a política de trocas?{" "}
-            <a
-              href="/contato"
-              className="font-medium underline underline-offset-2"
-              style={{ color: "var(--color-neutral-dark)" }}
-            >
-              Fale conosco
-            </a>{" "}
+          <Link
+            href="/contato"
+            className="font-medium underline underline-offset-2"
+            style={{ color: "var(--color-neutral-dark)" }}
+          >
+            Fale conosco
+          </Link>{" "}
             e teremos prazer em ajudar.
           </p>
         </div>

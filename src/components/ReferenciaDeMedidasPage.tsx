@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const SIZE_CHART = [
   { size: "PP", bust: "80–84", waist: "62–66", hip: "88–92" },
   { size: "P", bust: "84–88", waist: "66–70", hip: "92–96" },
@@ -161,13 +163,13 @@ export default function ReferenciaDeMedidasPage() {
         >
           Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior.
           Se precisar de ajuda,{" "}
-          <a
+          <Link
             href="/contato"
             className="font-medium underline underline-offset-2"
             style={{ color: "var(--color-neutral-dark)", opacity: 1 }}
           >
             fale conosco
-          </a>
+          </Link>
           .
         </p>
       </div>
