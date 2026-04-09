@@ -68,3 +68,4 @@ describe("Home page", () => {
     expect(saleLinks[0]).toHaveAttribute("href", "/sale");
   });
 });
+

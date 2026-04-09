@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { appData } from "@/src/lib/constants";
+import { appData, contactData, CATEGORIES } from "@/src/lib/constants";
 
 describe("appData constants", () => {
   it("has the correct app name", () => {
@@ -13,5 +13,40 @@ describe("appData constants", () => {
   it("exports all required fields", () => {
     expect(appData).toHaveProperty("name");
     expect(appData).toHaveProperty("logo");
+  });
+});
+
+describe("contactData constants", () => {
+  it("has a phone number", () => {
+    expect(contactData.phone).toBe("(12) 98278-9225");
+  });
+
+  it("has a phoneTel for tel: links", () => {
+    expect(contactData.phoneTel).toBe("+5512982789225");
+  });
+
+  it("has whatsapp number", () => {
+    expect(contactData.whatsapp).toBe("5512982789225");
+  });
+
+  it("has social media URLs", () => {
+    expect(contactData.facebook).toContain("facebook.com");
+    expect(contactData.instagram).toContain("instagram.com");
+    expect(contactData.youtube).toContain("youtube.com");
+  });
+});
+
+describe("CATEGORIES constants", () => {
+  it("is a non-empty array", () => {
+    expect(Array.isArray(CATEGORIES)).toBe(true);
+    expect(CATEGORIES.length).toBeGreaterThan(0);
+  });
+
+  it("each category has href and label", () => {
+    for (const cat of CATEGORIES) {
+      expect(cat).toHaveProperty("href");
+      expect(cat).toHaveProperty("label");
+      expect(cat.href).toMatch(/^\/colecao\//);
+    }
   });
 });
