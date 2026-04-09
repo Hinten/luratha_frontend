@@ -1,7 +1,7 @@
-import SobrePage from "@/src/components/SobrePage";
-import ContatoPage from "@/src/components/ContatoPage";
-import PoliticaDeTrocasPage from "@/src/components/PoliticaDeTrocasPage";
-import ReferenciaDeMedidasPage from "@/src/components/ReferenciaDeMedidasPage";
+import SobrePage from "@/src/app/sobre/page";
+import ContatoPage from "@/src/app/contato/page";
+import PoliticaDeTrocasPage from "@/src/app/politica-de-trocas/page";
+import ReferenciaDeMedidasPage from "@/src/app/referencia-de-medidas/page";
 
 type SearchParams = Promise<{ _page?: string }>;
 
