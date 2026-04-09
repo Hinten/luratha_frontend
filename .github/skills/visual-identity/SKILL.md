@@ -117,20 +117,86 @@ Expose the variables in Tailwind CSS v4 (`globals.css`):
 
 ---
 
+## Styling Approach: CSS Modules
+
+Components in Luratha **must use CSS Modules** (`.module.css` files in the same directory) for their styles. Inline Tailwind utility classes are only acceptable for very small, one-off utilities (e.g., a single responsive visibility toggle or a layout helper already defined in `globals.css`).
+
+### Rules
+
+| Scenario | Approach |
+|---|---|
+| Component has 3 or more CSS declarations | Create a `.module.css` file next to the component |
+| Hover/focus/active pseudo-states | Always in the CSS module (never inline `hover:` Tailwind) |
+| Responsive breakpoint logic | In the CSS module with `@media` queries |
+| Simple responsive visibility (e.g., `md:hidden`) | Acceptable as a Tailwind class inline |
+| Layout helpers already in `globals.css` (e.g., `container-luratha`, `section-padding`) | Apply via `className` string — do not re-declare in the module |
+| Dynamic values that cannot be known at build time (e.g., a JavaScript-computed gradient) | The single `style={}` prop for that specific dynamic value is acceptable; all other styles belong in the module |
+
+### File naming convention
+
+```
+src/components/MyWidget.tsx          ← component
+src/components/MyWidget.module.css   ← styles
+```
+
+Import and use:
+
+```ts
+import styles from "./MyWidget.module.css";
+
+// In JSX:
+<div className={styles.wrapper}>...</div>
+
+// Combining module class + layout helper:
+<div className={`container-luratha ${styles.inner}`}>...</div>
+```
+
+---
+
 ## Core Components
 
 ### Buttons
 
-```html
-<!-- Primary -->
-<button class="bg-[#E8B9C9] hover:bg-[#D9A8B9] text-[#3A2F2A] font-medium px-8 py-4 rounded-3xl transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-2">
-  Adicionar ao carrinho
-</button>
+Use CSS variable tokens — **never hard-code hex values** in component code or documentation examples.
 
-<!-- Secondary -->
-<button class="border border-[#A8B8A2] hover:bg-[#A8B8A2]/10 text-[#3A2F2A] font-medium px-8 py-4 rounded-3xl transition-all">
-  Ver detalhes
-</button>
+```css
+/* In Component.module.css */
+.btnPrimary {
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 1rem 2rem;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+  transition: background-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btnPrimary:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-neutral-dark); /* explicitly kept — text must stay readable */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%);
+  transform: translateY(-2px);
+}
+
+.btnSecondary {
+  border: 1px solid var(--color-secondary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 1rem 2rem;
+  border-radius: 9999px;
+  transition: background-color 300ms ease;
+  background: none;
+}
+
+.btnSecondary:hover {
+  background-color: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+  color: var(--color-neutral-dark); /* explicitly kept — text must stay readable */
+}
 ```
 
 ### Product Card (PLP/PDP)
@@ -169,13 +235,64 @@ Expose the variables in Tailwind CSS v4 (`globals.css`):
 - **Product cards:** Never overcrowded. Max 3 lines of text. Always show artisanal badge when relevant.
 - **Visual hierarchy:** Large typography for emotional impact; generous white space (minimum 40px between elements).
 - **Component states:**
-  - Hover: gentle lift (`-translate-y-0.5`) + color shift
+  - Hover: gentle lift (`translateY(-2px)`) + color shift
   - Focus: soft ring in sage green
   - Loading: skeleton in Neutral Mid with shimmer animation
 - **Photography:** Natural daylight, soft shadows, real models in movement, close-ups of stitching/texture.
 - **Icons:** Simple line icons (stroke 1.5px), in sage or blush.
 - **Micro-interactions:** Smooth 300ms transitions, subtle scale on tap, heart icon fill animation on wishlist.
 - **Dark mode:** Not supported.
+
+---
+
+## Color Transition & Hover Legibility
+
+Every CSS transition that changes color — background, text, border, fill, or stroke — **must be reviewed for legibility and aesthetic quality in BOTH the resting state AND the transitioned state**. Never assume the hover state is legible just because the resting state is.
+
+### Mandatory legibility checks
+
+Before committing any hover/focus/active color change, verify:
+
+1. **Contrast ratio** — The foreground color (text, icon) against the new background color after transition must meet a minimum contrast ratio of **3:1** (WCAG AA for UI components and large text). Use computed luminance or a contrast-checker tool.
+2. **Visual clarity of icons** — SVG icons that change color must remain clearly recognizable after the transition. A blush icon (`#E8B9C9`) on a light blush or warm-sand background becomes nearly invisible — this is a bug.
+3. **Background color is known** — Always consider the *actual* background the element sits on (the parent or ancestor background), not just the element's own background. Nav links on the `#F8F5F0` header need sufficient contrast. Footer links on the `#EDE4D9` footer background need sufficient contrast.
+4. **Both fill and stroke** — For SVG icons, check that neither `fill` nor `stroke` transitions to a near-invisible color.
+5. **Aesthetic quality** — The post-transition state must look intentional, not broken. Prefer underline + color over color-only changes when the contrast ratio would otherwise be too low.
+
+### Safe hover patterns for the Luratha palette
+
+| Element | Background | Resting color | Safe hover pattern |
+|---|---|---|---|
+| Nav / footer links (light bg) | `#F8F5F0` or `#EDE4D9` | `var(--color-neutral-dark)` | Keep dark text + add `text-decoration: underline` with `text-decoration-color: var(--color-primary)` |
+| Icon buttons on light bg | `#F8F5F0` | dark icon | Keep icon dark; add soft blush background disc: `background-color: color-mix(in srgb, var(--color-primary) 20%, transparent)` |
+| Primary button text | `#E8B9C9` → `#D9A8B9` | `var(--color-neutral-dark)` | Text color **must not change** on hover; only background shifts |
+| Secondary button text | transparent → `#A8B8A2/10` | `var(--color-neutral-dark)` | Text color **must not change** on hover; only background shifts |
+| Dark-background CTA | `#3A2F2A` → slightly lighter | `var(--color-neutral-light)` | Text color **must not change** on hover; only background shifts |
+
+### Anti-patterns — never do these
+
+```css
+/* ❌ Blush text on warm-sand background — contrast ratio ≈ 1.3:1 */
+.link:hover { color: var(--color-primary); }  /* when background is var(--color-accent) */
+
+/* ❌ Blush icon on neutral-light background — contrast ratio ≈ 1.5:1 */
+.iconBtn:hover { color: var(--color-primary); }  /* when background is var(--color-neutral-light) */
+
+/* ❌ Hardcoded hex values — use CSS variables instead */
+.btn { background-color: #E8B9C9; }
+
+/* ✅ Correct: keep text dark, indicate hover with underline in brand color */
+.link:hover {
+  color: var(--color-neutral-dark);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+}
+
+/* ✅ Correct: keep icon dark, add soft blush background disc */
+.iconBtn:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+```
 
 ---
 
@@ -202,7 +319,20 @@ Expose the variables in Tailwind CSS v4 (`globals.css`):
 - [ ] Buttons always `rounded-3xl`
 - [ ] Brand voice: warm, intentional, empowering
 - [ ] No dark mode elements
+- [ ] Styles in `.module.css` files (not inline), except simple layout helpers from `globals.css`
+- [ ] Every hover/focus color transition verified for legibility (min 3:1 contrast ratio in both states)
 
 ---
 
 > **Agent instruction:** Always follow this visual identity strictly when creating or reviewing any interface. Never invent colors, fonts, or styles outside what is documented here. Prioritize emotional connection, artisanal authenticity, and an effortless shopping experience.
+
+---
+
+## Changelog
+
+| Date | Change | Reason |
+|---|---|---|
+| 2026-04-09 | Added **Styling Approach: CSS Modules** section | Enforce `.module.css` files for all component styles; prohibit large inline Tailwind blocks |
+| 2026-04-09 | Added **Color Transition & Hover Legibility** section with safe patterns and anti-patterns | Fix illegible hover states (e.g. blush text on warm-sand bg at ~1.3:1 contrast) found in Header and Footer |
+| 2026-04-09 | Replaced hardcoded hex values in Button examples with CSS variable tokens | Enforce the rule "all colors from palette tokens only" |
+| 2026-04-09 | Added legibility checklist items to Consistency Checklist | Ensure future agents verify contrast in both resting and transitioned states |
