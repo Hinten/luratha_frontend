@@ -5,10 +5,55 @@ import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 
-export const metadata = {
-  title: "Todas as Peças — Luratha",
-  description: "Explore nossa coleção completa de slow fashion artesanal.",
+export const metadata: Metadata = {
+  title: "Todas as Peças",
+  description:
+    "Explore o catálogo completo da Luratha — slow fashion artesanal feminino brasileiro. Vestidos, blusas, calças, saias e muito mais.",
+  alternates: { canonical: `${SITE_URL}/todas-as-pecas` },
+  openGraph: {
+    title: "Todas as Peças | Luratha",
+    description:
+      "Explore o catálogo completo da Luratha — slow fashion artesanal feminino brasileiro.",
+    url: `${SITE_URL}/todas-as-pecas`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
+
+const collectionPageSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "CollectionPage",
+  name: "Todas as Peças – Luratha",
+  description:
+    "Catálogo completo da Luratha — slow fashion artesanal feminino brasileiro.",
+  url: `${SITE_URL}/todas-as-pecas`,
+  isPartOf: {
+    "@type": "WebSite",
+    name: LURATHA_SCHEMA.name,
+    url: LURATHA_SCHEMA.url,
+  },
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Início",
+      item: SITE_URL,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Todas as Peças",
+      item: `${SITE_URL}/todas-as-pecas`,
+    },
+  ],
 };
 
 interface PageProps {
@@ -43,6 +88,8 @@ export default async function TodasAsPecasPage({ searchParams }: PageProps) {
 
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={collectionPageSchema} />
+      <JsonLd data={breadcrumbSchema} />
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },

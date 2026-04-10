@@ -1,5 +1,57 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
+
+export const metadata: Metadata = {
+  title: "Sobre a Luratha",
+  description:
+    "Conheça a história, os valores e o manifesto da Luratha — marca brasileira de slow fashion artesanal feminino comprometida com a moda consciente.",
+  alternates: { canonical: `${SITE_URL}/sobre` },
+  openGraph: {
+    title: "Sobre a Luratha | Luratha",
+    description:
+      "Conheça a história, os valores e o manifesto da Luratha — marca brasileira de slow fashion artesanal feminino.",
+    url: `${SITE_URL}/sobre`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
+
+const aboutPageSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "AboutPage",
+  name: "Sobre a Luratha",
+  description:
+    "Conheça a história, os valores e o manifesto da Luratha — marca brasileira de slow fashion artesanal feminino.",
+  url: `${SITE_URL}/sobre`,
+  isPartOf: {
+    "@type": "WebSite",
+    name: LURATHA_SCHEMA.name,
+    url: LURATHA_SCHEMA.url,
+  },
+};
+
+const organizationSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "Organization",
+  name: LURATHA_SCHEMA.name,
+  url: LURATHA_SCHEMA.url,
+  logo: LURATHA_SCHEMA.logo,
+  telephone: LURATHA_SCHEMA.telephone,
+  sameAs: LURATHA_SCHEMA.sameAs,
+  description:
+    "Luratha é uma marca brasileira de moda feminina artesanal — slow fashion com foco em peças versáteis, sustentáveis e feitas com amor para durar.",
+  foundingLocation: {
+    "@type": "Country",
+    name: "Brasil",
+  },
+  address: {
+    "@type": "PostalAddress",
+    addressCountry: "BR",
+  },
+};
 
 const VALUES = [
   {
@@ -22,6 +74,8 @@ const VALUES = [
 export default function SobrePage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={aboutPageSchema} />
+      <JsonLd data={organizationSchema} />
       {/* Hero */}
       <div className={styles.hero}>
         <h1 className="mb-6">Nossa História</h1>

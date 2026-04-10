@@ -5,10 +5,54 @@ import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 
-export const metadata = {
-  title: "Promoções — Luratha",
-  description: "Peças slow fashion com desconto especial. Aproveite!",
+export const metadata: Metadata = {
+  title: "Promoções",
+  description:
+    "Peças slow fashion artesanais Luratha com desconto especial. Aproveite ofertas em vestidos, blusas, calças e muito mais.",
+  alternates: { canonical: `${SITE_URL}/sale` },
+  openGraph: {
+    title: "Promoções | Luratha",
+    description:
+      "Peças slow fashion artesanais Luratha com desconto especial. Aproveite as ofertas.",
+    url: `${SITE_URL}/sale`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
+
+const offerCatalogSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "OfferCatalog",
+  name: "Promoções Luratha",
+  description: "Peças slow fashion artesanais Luratha com desconto especial.",
+  url: `${SITE_URL}/sale`,
+  seller: {
+    "@type": "Organization",
+    name: LURATHA_SCHEMA.name,
+    url: LURATHA_SCHEMA.url,
+  },
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Início",
+      item: SITE_URL,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Promoções",
+      item: `${SITE_URL}/sale`,
+    },
+  ],
 };
 
 interface PageProps {
@@ -44,6 +88,8 @@ export default async function SalePage({ searchParams }: PageProps) {
 
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={offerCatalogSchema} />
+      <JsonLd data={breadcrumbSchema} />
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
