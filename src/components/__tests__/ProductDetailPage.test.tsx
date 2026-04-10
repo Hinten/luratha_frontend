@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import ProductDetailPage from "@/src/components/ProductDetailPage";
+import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 import type { ProductDetail } from "@/src/lib/types";
 
 vi.mock("next/link", () => ({
@@ -21,13 +21,13 @@ vi.mock("next/link", () => ({
 
 // ProductGallery and SizeSelector are "use client" — mock them to prevent
 // React state issues in the jsdom test environment
-vi.mock("@/src/components/ProductGallery", () => ({
+vi.mock("@/src/components/produto/ProductGallery", () => ({
   default: ({ productName }: { productName: string }) => (
     <div data-testid="product-gallery">{productName}</div>
   ),
 }));
 
-vi.mock("@/src/components/SizeSelector", () => ({
+vi.mock("@/src/components/produto/SizeSelector", () => ({
   default: ({ sizes }: { sizes: string[] }) => (
     <div data-testid="size-selector">{sizes.join(", ")}</div>
   ),
@@ -45,6 +45,10 @@ const mockProduct: ProductDetail = {
   reviewCount: 24,
   installments: { count: 3, value: 96.33 },
   description: "Um vestido artesanal bordado à mão com motivos florais.",
+  highlights: [
+    "Bordado à mão — cada peça é única",
+    "Tecido linho 100% natural",
+  ],
   images: [
     "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1",
     "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Imagem+2",
@@ -94,8 +98,19 @@ describe("ProductDetailPage", () => {
     expect(screen.getByText(/24 avaliações/)).toBeInTheDocument();
   });
 
-  it("renders the description in a collapsible details element", () => {
+  it("renders highlights bullet list", () => {
     render(<ProductDetailPage product={mockProduct} />);
+    expect(
+      screen.getByRole("list", { name: "Destaques do produto" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bordado à mão — cada peça é única")).toBeInTheDocument();
+  });
+
+  it("renders the description in its own section", () => {
+    render(<ProductDetailPage product={mockProduct} />);
+    expect(
+      screen.getByRole("region", { name: "Descrição do produto" })
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/bordado à mão com motivos florais/)
     ).toBeInTheDocument();

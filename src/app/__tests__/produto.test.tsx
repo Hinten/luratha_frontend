@@ -25,13 +25,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock client components to keep the test synchronous
-vi.mock("@/src/components/ProductGallery", () => ({
+vi.mock("@/src/components/produto/ProductGallery", () => ({
   default: ({ productName }: { productName: string }) => (
     <div data-testid="product-gallery">{productName}</div>
   ),
 }));
 
-vi.mock("@/src/components/SizeSelector", () => ({
+vi.mock("@/src/components/produto/SizeSelector", () => ({
   default: ({ sizes }: { sizes: string[] }) => (
     <div data-testid="size-selector">{sizes.join(", ")}</div>
   ),

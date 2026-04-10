@@ -31,4 +31,5 @@ export interface ProductDetail extends Product {
   sizes: string[];
   categorySlug: string;
   reviews?: Review[];
+  highlights?: string[];
 }

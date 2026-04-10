@@ -212,6 +212,13 @@ export const mockProductDetails: ProductDetail[] = [
     installments: { count: 3, value: 96.33 },
     description:
       "Um vestido artesanal bordado à mão com motivos florais delicados, confeccionado em tecido linho de alta qualidade. Perfeito para ocasiões especiais ou para iluminar o dia a dia com charme e feminilidade. Cada peça é única, feita com amor e atenção a cada ponto do bordado.",
+    highlights: [
+      "Bordado à mão — cada peça é única",
+      "Tecido linho 100% natural, leve e respirável",
+      "Fechamento com botões forrados na parte traseira",
+      "Comprimento midi — versátil para dia e noite",
+      "Produzido em pequena escala, slow fashion",
+    ],
     images: [
       "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+1",
       "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Vestido+Bordado+2",
@@ -258,6 +265,13 @@ export const mockProductDetails: ProductDetail[] = [
     installments: { count: 4, value: 97.25 },
     description:
       "Conjunto artesanal em crochet feito à mão, composto por saia midi e blusa cropped. Tecido responsável, produzido em pequena escala com fio de algodão natural. Ideal para o verão brasileiro, este conjunto é versátil, confortável e cheio de personalidade.",
+    highlights: [
+      "Crochet feito à mão com fio de algodão natural",
+      "Inclui saia midi e blusa cropped coordenadas",
+      "Algodão natural — fresco e confortável no verão",
+      "Regulagem por elástico na cintura da saia",
+      "Produção artesanal em pequena escala",
+    ],
     images: [
       "https://placehold.co/600x750/A8B8A2/3A2F2A?text=Conjunto+Crochet+1",
       "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Conjunto+Crochet+2",
@@ -304,6 +318,13 @@ export const mockProductDetails: ProductDetail[] = [
     installments: { count: 3, value: 99.67 },
     description:
       "Moletom oversized com bordado artesanal slow fashion, confeccionado em moletom flanelado de algodão orgânico. Confortável, quentinho e com identidade própria. O bordado frontal é feito à mão, tornando cada peça única. Perfeito para os dias mais frescos sem abrir mão do estilo.",
+    highlights: [
+      "Bordado frontal artesanal — cada peça é única",
+      "Algodão orgânico flanelado, macio e quentinho",
+      "Modelagem oversized para uso descontraído",
+      "Punhos e barra canelados para melhor ajuste",
+      "Algodão orgânico certificado GOTS",
+    ],
     images: [
       "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Moletom+Bordado+1",
       "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Moletom+Bordado+2",

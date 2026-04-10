@@ -1,0 +1,23 @@
+/* ─── ProductDescription ─────────────────────────────────────────────────── */
+
+.section {
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--color-neutral-mid);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.1rem, 2vw, 1.375rem);
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  margin-bottom: 1rem;
+}
+
+.text {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: color-mix(in srgb, var(--color-neutral-dark) 75%, transparent);
+  max-width: 70ch;
+}
