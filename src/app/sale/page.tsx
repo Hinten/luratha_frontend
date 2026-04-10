@@ -6,9 +6,18 @@ import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
 
-export const metadata = {
-  title: "Promoções — Luratha",
-  description: "Peças slow fashion com desconto especial. Aproveite!",
+export const metadata: Metadata = {
+  title: "Promoções",
+  description:
+    "Aproveite peças slow fashion artesanais com desconto especial. Qualidade Luratha com preços imperdíveis.",
+  alternates: { canonical: "https://www.luratha.com.br/sale" },
+  openGraph: {
+    title: "Promoções | Luratha",
+    description:
+      "Aproveite peças slow fashion artesanais com desconto especial. Qualidade Luratha com preços imperdíveis.",
+    url: "https://www.luratha.com.br/sale",
+    type: "website",
+  },
 };
 
 interface PageProps {

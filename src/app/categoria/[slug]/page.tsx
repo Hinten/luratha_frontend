@@ -7,6 +7,8 @@ import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
+import JsonLd from "@/src/components/JsonLd";
+import type { CollectionPage, WithContext } from "schema-dts";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -21,9 +23,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const category = CATEGORIES.find((c) => c.slug === slug);
   if (!category) return {};
+  const url = `https://www.luratha.com.br/categoria/${slug}`;
   return {
-    title: category.label + " — Luratha",
-    description: "Explore nossa coleção de " + category.label.toLowerCase() + " slow fashion.",
+    title: `${category.label} Artesanais`,
+    description: `Explore nossa coleção de ${category.label.toLowerCase()} artesanais slow fashion. Peças únicas feitas no Brasil com qualidade e cuidado — Luratha.`,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${category.label} Artesanais | Luratha`,
+      description: `Explore nossa coleção de ${category.label.toLowerCase()} artesanais slow fashion. Peças únicas feitas no Brasil com qualidade e cuidado — Luratha.`,
+      url,
+      type: "website",
+    },
   };
 }
 
@@ -59,8 +69,26 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const filtered = mockProducts.filter((p) => p.categorySlug === slug);
   const products = sortProducts(filtered, sort);
 
+  const categoryUrl = `https://www.luratha.com.br/categoria/${slug}`;
+
+  const collectionPageSchema: WithContext<CollectionPage> = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${category.label} Artesanais – Luratha`,
+    description: `Coleção de ${category.label.toLowerCase()} artesanais slow fashion feitos no Brasil.`,
+    url: categoryUrl,
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Início", item: "https://www.luratha.com.br" },
+        { "@type": "ListItem", position: 2, name: category.label, item: categoryUrl },
+      ],
+    },
+  };
+
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={collectionPageSchema} />
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },

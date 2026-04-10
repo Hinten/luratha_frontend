@@ -6,9 +6,18 @@ import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
 
-export const metadata = {
-  title: "Todas as Peças — Luratha",
-  description: "Explore nossa coleção completa de slow fashion artesanal.",
+export const metadata: Metadata = {
+  title: "Todas as Peças",
+  description:
+    "Explore o catálogo completo Luratha — vestidos, blusas, calças, saias e muito mais. Slow fashion artesanal feito no Brasil.",
+  alternates: { canonical: "https://www.luratha.com.br/todas-as-pecas" },
+  openGraph: {
+    title: "Todas as Peças | Luratha",
+    description:
+      "Explore o catálogo completo Luratha — vestidos, blusas, calças, saias e muito mais. Slow fashion artesanal feito no Brasil.",
+    url: "https://www.luratha.com.br/todas-as-pecas",
+    type: "website",
+  },
 };
 
 interface PageProps {

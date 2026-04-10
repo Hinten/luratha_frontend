@@ -1,5 +1,53 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import type { FAQPage, WithContext } from "schema-dts";
+
+export const metadata: Metadata = {
+  title: "Referência de Medidas",
+  description:
+    "Guia completo de tamanhos Luratha — do PP ao XGG. Encontre seu tamanho ideal com nossa tabela de medidas (busto, cintura e quadril em centímetros).",
+  alternates: { canonical: "https://www.luratha.com.br/referencia-de-medidas" },
+  openGraph: {
+    title: "Referência de Medidas | Luratha",
+    description:
+      "Guia completo de tamanhos Luratha — do PP ao XGG. Encontre seu tamanho ideal com nossa tabela de medidas (busto, cintura e quadril em centímetros).",
+    url: "https://www.luratha.com.br/referencia-de-medidas",
+    type: "website",
+  },
+};
+
+const sizeGuideFaqSchema: WithContext<FAQPage> = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Como medir o busto para escolher o tamanho Luratha?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Meça ao redor da parte mais larga do busto, com os braços relaxados ao lado do corpo. A medida em centímetros corresponde ao tamanho: PP (80–84 cm), P (84–88 cm), M (88–92 cm), G (92–96 cm), GG (96–100 cm), XGG (100–108 cm).",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Como medir a cintura para escolher o tamanho Luratha?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Meça ao redor da parte mais estreita da cintura, geralmente 2–3 cm acima do umbigo. A medida em centímetros corresponde ao tamanho: PP (62–66 cm), P (66–70 cm), M (70–74 cm), G (74–78 cm), GG (78–82 cm), XGG (82–90 cm).",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Quais tamanhos a Luratha oferece?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "A Luratha oferece os tamanhos PP, P, M, G, GG e XGG. Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior.",
+      },
+    },
+  ],
+};
 
 const SIZE_CHART = [
   { size: "PP", bust: "80–84", waist: "62–66", hip: "88–92" },
@@ -28,6 +76,7 @@ const MEASURE_TIPS = [
 export default function ReferenciaDeMedidasPage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={sizeGuideFaqSchema} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>

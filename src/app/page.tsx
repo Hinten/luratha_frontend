@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import HeroBanner from "@/src/components/HeroBanner";
 import CategoryBlock from "@/src/components/CategoryBlock";
 import ProductSection from "@/src/components/ProductSection";
@@ -9,6 +10,20 @@ import {
   mockSale,
 } from "@/src/lib/mockData";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  title: "Luratha – Moda Artesanal Feminina",
+  description:
+    "Descubra peças slow fashion artesanais feitas com amor para durar. Vestidos, blusas, calças e muito mais — direto do Brasil para você.",
+  alternates: { canonical: "https://www.luratha.com.br" },
+  openGraph: {
+    title: "Luratha – Moda Artesanal Feminina",
+    description:
+      "Descubra peças slow fashion artesanais feitas com amor para durar. Vestidos, blusas, calças e muito mais — direto do Brasil para você.",
+    url: "https://www.luratha.com.br",
+    type: "website",
+  },
+};
 
 export default function Home() {
   return (

@@ -1,5 +1,37 @@
+import type { Metadata } from "next";
 import { contactData } from "@/src/lib/constants";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import type { ContactPage, WithContext } from "schema-dts";
+
+export const metadata: Metadata = {
+  title: "Fale Conosco",
+  description:
+    "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário. Estamos prontas para ajudar com dúvidas, trocas e informações.",
+  alternates: { canonical: "https://www.luratha.com.br/contato" },
+  openGraph: {
+    title: "Fale Conosco | Luratha",
+    description:
+      "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário. Estamos prontas para ajudar com dúvidas, trocas e informações.",
+    url: "https://www.luratha.com.br/contato",
+    type: "website",
+  },
+};
+
+const contactPageSchema: WithContext<ContactPage> = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  name: "Fale Conosco – Luratha",
+  description: "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
+  url: "https://www.luratha.com.br/contato",
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: "https://www.luratha.com.br" },
+      { "@type": "ListItem", position: 2, name: "Contato", item: "https://www.luratha.com.br/contato" },
+    ],
+  },
+};
 
 const SOCIAL_LINKS = [
   { href: contactData.instagram, label: "Instagram" },
@@ -10,6 +42,7 @@ const SOCIAL_LINKS = [
 export default function ContatoPage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={contactPageSchema} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
