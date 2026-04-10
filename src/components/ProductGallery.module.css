@@ -1,0 +1,63 @@
+/* ─── ProductGallery ──────────────────────────────────────────────────────── */
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mainWrapper {
+  border-radius: 1.5rem;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background-color: var(--color-accent);
+}
+
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 200ms ease;
+}
+
+/* Thumbnail strip */
+.thumbnails {
+  display: flex;
+  gap: 0.625rem;
+  overflow-x: auto;
+  padding-block: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-mid) transparent;
+}
+
+.thumbBtn {
+  flex-shrink: 0;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 200ms ease, opacity 200ms ease;
+  opacity: 0.65;
+}
+
+.thumbBtn:hover {
+  opacity: 0.9;
+  border-color: var(--color-neutral-mid);
+}
+
+.thumbActive {
+  border-color: var(--color-primary);
+  opacity: 1;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

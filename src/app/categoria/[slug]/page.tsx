@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { CATEGORIES } from "@/src/lib/constants";
-import { mockProducts } from "@/src/lib/mockData";
+import { mockProducts, mockProductDetails } from "@/src/lib/mockData";
 import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
+import ProductDetailPage from "@/src/components/ProductDetailPage";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -14,16 +15,43 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  return CATEGORIES.map(({ slug }) => ({ slug }));
+  const categorySlugs = CATEGORIES.map(({ slug }) => ({ slug }));
+  const productSlugs = mockProductDetails
+    .filter((p) => p.slug)
+    .map(({ slug }) => ({ slug: slug as string }));
+  return [...categorySlugs, ...productSlugs];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+
+  // Product takes priority: canonical points to /produto/:slug
+  const product = mockProductDetails.find((p) => p.slug === slug);
+  if (product) {
+    const description = product.description.slice(0, 160);
+    return {
+      title: `${product.name} — Luratha`,
+      description,
+      alternates: {
+        canonical: `https://www.luratha.com.br/produto/${slug}`,
+      },
+      openGraph: {
+        title: `${product.name} — Luratha`,
+        description,
+        url: `https://www.luratha.com.br/produto/${slug}`,
+        images: [{ url: product.images[0], alt: product.name }],
+      },
+    };
+  }
+
   const category = CATEGORIES.find((c) => c.slug === slug);
   if (!category) return {};
   return {
     title: category.label + " — Luratha",
-    description: "Explore nossa coleção de " + category.label.toLowerCase() + " slow fashion.",
+    description:
+      "Explore nossa coleção de " +
+      category.label.toLowerCase() +
+      " slow fashion.",
   };
 }
 
@@ -52,6 +80,12 @@ function sortProducts(products: Product[], sort?: string): Product[] {
 export default async function CategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { sort } = await searchParams;
+
+  // Product detail route (served at /produto/:slug via next.config.ts rewrite)
+  const product = mockProductDetails.find((p) => p.slug === slug);
+  if (product) {
+    return <ProductDetailPage product={product} />;
+  }
 
   const category = CATEGORIES.find((c) => c.slug === slug);
   if (!category) return notFound();
