@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Conheça a história, os valores e o manifesto da Luratha — marca brasileira de slow fashion artesanal feminino comprometida com a moda consciente.",
   alternates: { canonical: `${SITE_URL}/sobre` },
   openGraph: {
-    title: "Sobre a Luratha | Luratha",
+    title: "Sobre a Luratha",
     description:
       "Conheça a história, os valores e o manifesto da Luratha — marca brasileira de slow fashion artesanal feminino.",
     url: `${SITE_URL}/sobre`,

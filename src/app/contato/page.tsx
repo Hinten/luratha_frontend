@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário. Estamos aqui para ajudar com dúvidas, trocas e pedidos.",
   alternates: { canonical: `${SITE_URL}/contato` },
   openGraph: {
-    title: "Contato | Luratha",
+    title: "Fale Conosco – Luratha",
     description:
       "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
     url: `${SITE_URL}/contato`,
