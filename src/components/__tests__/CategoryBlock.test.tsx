@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import CategoryBlock from "@/src/components/CategoryBlock";
+import CategoryBlock from "@/src/components/categoria/CategoryBlock";
 import type { Category } from "@/src/lib/types";
 
 vi.mock("next/link", () => ({

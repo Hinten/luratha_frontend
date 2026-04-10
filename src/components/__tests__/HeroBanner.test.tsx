@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import HeroBanner from "@/src/components/HeroBanner";
+import HeroBanner from "@/src/components/home/HeroBanner";
 
 describe("HeroBanner", () => {
   beforeEach(() => {

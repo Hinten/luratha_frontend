@@ -5,8 +5,8 @@ import { CATEGORIES } from "@/src/lib/constants";
 import { mockProducts } from "@/src/lib/mockData";
 import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
-import ProductGrid from "@/src/components/ProductGrid";
-import SortDropdown from "@/src/components/SortDropdown";
+import ProductGrid from "@/src/components/categoria/ProductGrid";
+import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 

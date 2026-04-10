@@ -8,7 +8,7 @@ import SizeSelector from "@/src/components/produto/SizeSelector";
 import ReviewsList from "@/src/components/produto/ReviewsList";
 import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import ProductDescription from "@/src/components/produto/ProductDescription";
-import ProductCard from "@/src/components/ProductCard";
+import ProductCard from "@/src/components/produto/ProductCard";
 import styles from "./ProductDetailPage.module.css";
 
 interface ProductDetailPageProps {
