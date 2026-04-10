@@ -10,10 +10,10 @@ test.describe("Navigation", () => {
     await expect(header.getByRole("link", { name: "Contato" })).toBeVisible();
   });
 
-  test("header has cart button", async ({ page }) => {
+  test("header has cart link", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: "Carrinho" })
+      page.getByRole("link", { name: "Carrinho" })
     ).toBeVisible();
   });
 

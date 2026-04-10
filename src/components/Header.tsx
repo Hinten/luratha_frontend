@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 import styles from "./Header.module.css";
+import { useCart } from "@/src/contexts/CartContext";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 const navItems = [
   { href: "/colecao", label: "Coleção" },
@@ -12,6 +14,19 @@ const navItems = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { totalItems } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const firstName = user?.name.split(" ")[0] ?? "";
+
+  function handleMobileLinkClick() {
+    setMenuOpen(false);
+  }
+
+  function handleMobileLogout() {
+    logout();
+    setMenuOpen(false);
+  }
 
   return (
     <header className={styles.header}>
@@ -29,8 +44,31 @@ export default function Header() {
 
         {/* Actions */}
         <div className={styles.actions}>
-          {/* Cart icon */}
-          <button aria-label="Carrinho" className={styles.iconBtn}>
+          {/* User: "Entrar" link or first name → account */}
+          {isAuthenticated ? (
+            <span className={styles.userGreeting}>
+              Olá, {firstName}
+              <button
+                type="button"
+                className={styles.sairBtn}
+                onClick={logout}
+                aria-label="Sair da conta"
+              >
+                Sair
+              </button>
+            </span>
+          ) : (
+            <Link href="/login" className={styles.navLink} aria-label="Entrar">
+              Entrar
+            </Link>
+          )}
+
+          {/* Cart link with item count badge */}
+          <Link
+            href="/carrinho"
+            aria-label="Carrinho"
+            className={`${styles.iconBtn} ${styles.cartBtn}`}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -45,7 +83,12 @@ export default function Header() {
                 d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z"
               />
             </svg>
-          </button>
+            {totalItems > 0 && (
+              <span className={styles.cartBadge} aria-hidden="true">
+                {totalItems}
+              </span>
+            )}
+          </Link>
 
           {/* Hamburger (mobile) */}
           <button
@@ -73,15 +116,45 @@ export default function Header() {
             <Link
               key={href}
               href={href}
-              onClick={() => setMenuOpen(false)}
+              onClick={handleMobileLinkClick}
               className={styles.mobileNavLink}
             >
               {label}
             </Link>
           ))}
+
+          {/* Auth links in mobile menu */}
+          {isAuthenticated ? (
+            <>
+              <span className={styles.mobileUserName}>Olá, {firstName}</span>
+              <button
+                type="button"
+                className={styles.mobileNavLink}
+                onClick={handleMobileLogout}
+              >
+                Sair
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                onClick={handleMobileLinkClick}
+                className={styles.mobileNavLink}
+              >
+                Entrar
+              </Link>
+              <Link
+                href="/register"
+                onClick={handleMobileLinkClick}
+                className={styles.mobileNavLink}
+              >
+                Cadastrar
+              </Link>
+            </>
+          )}
         </div>
       )}
     </header>
   );
 }
-

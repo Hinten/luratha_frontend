@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SizeSelector from "@/src/components/produto/SizeSelector";
 
+vi.mock("@/src/contexts/CartContext", () => ({
+  useCart: () => ({
+    addItem: vi.fn(),
+    removeItem: vi.fn(),
+    updateQuantity: vi.fn(),
+    clearCart: vi.fn(),
+    items: [],
+    totalItems: 0,
+    totalPrice: 0,
+  }),
+}));
+
 const sizes = ["PP", "P", "M", "G", "GG"];
 
 describe("SizeSelector", () => {
@@ -38,7 +50,7 @@ describe("SizeSelector", () => {
   it("shows an error message when 'Adicionar ao Carrinho' is clicked without a size", () => {
     render(<SizeSelector sizes={sizes} productName="Vestido Bordado" />);
     fireEvent.click(
-      screen.getByRole("button", { name: /ADICIONAR AO CARRINHO/i })
+      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i })
     );
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Selecione um tamanho")).toBeInTheDocument();
@@ -47,7 +59,7 @@ describe("SizeSelector", () => {
   it("clears the error message when a size is selected after the error", () => {
     render(<SizeSelector sizes={sizes} productName="Vestido Bordado" />);
     fireEvent.click(
-      screen.getByRole("button", { name: /ADICIONAR AO CARRINHO/i })
+      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i })
     );
     expect(screen.getByText("Selecione um tamanho")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "P" }));
@@ -58,7 +70,7 @@ describe("SizeSelector", () => {
     render(<SizeSelector sizes={sizes} productName="Vestido Bordado" />);
     fireEvent.click(screen.getByRole("button", { name: "G" }));
     fireEvent.click(
-      screen.getByRole("button", { name: /ADICIONAR AO CARRINHO/i })
+      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i })
     );
     expect(screen.queryByText("Selecione um tamanho")).not.toBeInTheDocument();
   });

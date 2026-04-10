@@ -123,3 +123,71 @@
   text-decoration: underline;
   text-decoration-color: var(--color-primary);
 }
+
+/* ── Cart badge ── */
+.cartBtn {
+  position: relative;
+}
+
+.cartBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+  text-align: center;
+  padding-inline: 3px;
+  pointer-events: none;
+}
+
+/* ── User greeting (desktop) ── */
+.userGreeting {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+}
+
+@media (min-width: 768px) {
+  .userGreeting {
+    display: flex;
+  }
+}
+
+.sairBtn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 200ms ease, background-color 200ms ease;
+}
+
+.sairBtn:hover {
+  color: var(--color-neutral-dark);
+  background-color: color-mix(in srgb, var(--color-neutral-dark) 8%, transparent);
+}
+
+/* ── Mobile user name ── */
+.mobileUserName {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  padding-block: 0.25rem;
+}
+

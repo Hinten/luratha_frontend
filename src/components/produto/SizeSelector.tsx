@@ -2,17 +2,32 @@
 
 import { useState } from "react";
 import styles from "./SizeSelector.module.css";
+import { useCart } from "@/src/contexts/CartContext";
 
 interface SizeSelectorProps {
   sizes: string[];
   productName: string;
+  /** Optional cart data — when provided, "Adicionar ao Carrinho" uses CartContext */
+  productId?: string;
+  slug?: string;
+  imageUrl?: string;
+  price?: number;
 }
 
-export default function SizeSelector({ sizes, productName }: SizeSelectorProps) {
+export default function SizeSelector({
+  sizes,
+  productName,
+  productId,
+  slug,
+  imageUrl,
+  price,
+}: SizeSelectorProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [added, setAdded] = useState(false);
+
+  const { addItem } = useCart();
 
   function handleSizeClick(size: string) {
     setSelectedSize(size);
@@ -25,7 +40,23 @@ export default function SizeSelector({ sizes, productName }: SizeSelectorProps) 
       return;
     }
     setSizeError(false);
-    console.log(`Adicionado ao carrinho: ${productName} — Tamanho: ${selectedSize}`);
+
+    if (productId && slug && imageUrl !== undefined && price !== undefined) {
+      addItem({
+        productId,
+        name: productName,
+        slug,
+        imageUrl,
+        price,
+        size: selectedSize,
+      });
+    } else {
+      /* Fallback: log when cart props are not yet wired */
+      console.log(
+        `Adicionado ao carrinho: ${productName} — Tamanho: ${selectedSize}`,
+      );
+    }
+
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   }
@@ -83,3 +114,4 @@ export default function SizeSelector({ sizes, productName }: SizeSelectorProps) 
     </div>
   );
 }
+

@@ -5,6 +5,7 @@ import Header from "@/src/components/Header";
 import Footer from "@/src/components/Footer";
 import WhatsAppButton from "@/src/components/WhatsAppButton";
 import JsonLd from "@/src/components/JsonLd";
+import Providers from "@/src/components/Providers";
 import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
 
 const playfairDisplay = Playfair_Display({
@@ -111,10 +112,12 @@ export default function RootLayout({
       <body className={`${playfairDisplay.variable} ${inter.variable}`}>
         <JsonLd data={organizationSchema} />
         <JsonLd data={websiteSchema} />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <WhatsAppButton />
+        <Providers>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+          <WhatsAppButton />
+        </Providers>
       </body>
     </html>
   );
