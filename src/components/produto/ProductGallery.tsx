@@ -29,7 +29,6 @@ export default function ProductGallery({
             <button
               key={i}
               type="button"
-              role="listitem"
               className={`${styles.thumbBtn} ${i === activeIndex ? styles.thumbActive : ""}`}
               onClick={() => setActiveIndex(i)}
               aria-label={`Ver imagem ${i + 1}`}

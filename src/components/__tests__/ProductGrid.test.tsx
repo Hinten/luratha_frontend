@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import ProductGrid from "@/src/components/ProductGrid";
+import ProductGrid from "@/src/components/categoria/ProductGrid";
 import { Product } from "@/src/lib/types";
 
 const mockProducts: Product[] = [

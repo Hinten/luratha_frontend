@@ -63,7 +63,6 @@ export default function SizeSelector({ sizes, productName }: SizeSelectorProps) 
         type="button"
         className={styles.addToCart}
         onClick={handleAddToCart}
-        aria-label={`Adicionar ${productName} ao carrinho`}
       >
         {added ? "✓ ADICIONADO!" : "ADICIONAR AO CARRINHO"}
       </button>
