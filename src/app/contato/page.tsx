@@ -1,5 +1,55 @@
+import type { Metadata } from "next";
 import { contactData } from "@/src/lib/constants";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
+
+export const metadata: Metadata = {
+  title: "Contato",
+  description:
+    "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário. Estamos aqui para ajudar com dúvidas, trocas e pedidos.",
+  alternates: { canonical: `${SITE_URL}/contato` },
+  openGraph: {
+    title: "Fale Conosco – Luratha",
+    description:
+      "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
+    url: `${SITE_URL}/contato`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
+
+const contactPageSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "ContactPage",
+  name: "Fale Conosco – Luratha",
+  description:
+    "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
+  url: `${SITE_URL}/contato`,
+};
+
+const localBusinessSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "LocalBusiness",
+  name: LURATHA_SCHEMA.name,
+  url: LURATHA_SCHEMA.url,
+  logo: LURATHA_SCHEMA.logo,
+  telephone: LURATHA_SCHEMA.telephone,
+  sameAs: LURATHA_SCHEMA.sameAs,
+  address: {
+    "@type": "PostalAddress",
+    addressCountry: "BR",
+  },
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      telephone: LURATHA_SCHEMA.telephone,
+      contactType: "customer service",
+      contactOption: "TollFree",
+      availableLanguage: "Portuguese",
+    },
+  ],
+};
 
 const SOCIAL_LINKS = [
   { href: contactData.instagram, label: "Instagram" },
@@ -10,6 +60,8 @@ const SOCIAL_LINKS = [
 export default function ContatoPage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={contactPageSchema} />
+      <JsonLd data={localBusinessSchema} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>

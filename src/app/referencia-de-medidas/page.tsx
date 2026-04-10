@@ -1,5 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
+
+export const metadata: Metadata = {
+  title: "Referência de Medidas",
+  description:
+    "Guia completo de tamanhos Luratha do PP ao XGG. Encontre seu tamanho ideal com a tabela de medidas de busto, cintura e quadril em centímetros.",
+  alternates: { canonical: `${SITE_URL}/referencia-de-medidas` },
+  openGraph: {
+    title: "Referência de Medidas | Luratha",
+    description:
+      "Guia completo de tamanhos Luratha do PP ao XGG. Encontre seu tamanho ideal com a tabela de medidas.",
+    url: `${SITE_URL}/referencia-de-medidas`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
 
 const SIZE_CHART = [
   { size: "PP", bust: "80–84", waist: "62–66", hip: "88–92" },
@@ -25,9 +43,49 @@ const MEASURE_TIPS = [
   },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Como medir o busto corretamente?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Meça ao redor da parte mais larga do busto, com os braços relaxados ao lado do corpo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Como medir a cintura corretamente?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Meça ao redor da parte mais estreita da cintura, geralmente 2–3 cm acima do umbigo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Como medir o quadril corretamente?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Meça ao redor da parte mais larga do quadril, geralmente 18–20 cm abaixo da cintura.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Quais tamanhos a Luratha oferece?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "A Luratha oferece os tamanhos PP, P, M, G, GG e XGG. Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior.",
+      },
+    },
+  ],
+};
+
 export default function ReferenciaDeMedidasPage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={faqSchema} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
