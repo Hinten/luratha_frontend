@@ -1,5 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./page.module.css";
+import JsonLd from "@/src/components/JsonLd";
+import { SITE_URL, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
+
+export const metadata: Metadata = {
+  title: "Política de Trocas e Devoluções",
+  description:
+    "Saiba como funciona a política de trocas e devoluções da Luratha. Prazo de 7 dias, condições e instruções detalhadas para trocar ou devolver peças.",
+  alternates: { canonical: `${SITE_URL}/politica-de-trocas` },
+  openGraph: {
+    title: "Política de Trocas e Devoluções | Luratha",
+    description:
+      "Saiba como funciona a política de trocas e devoluções da Luratha. Prazo de 7 dias corridos após o recebimento.",
+    url: `${SITE_URL}/politica-de-trocas`,
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
 
 const POLICY_SECTIONS = [
   {
@@ -34,9 +52,23 @@ const POLICY_SECTIONS = [
   },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org" as const,
+  "@type": "FAQPage",
+  mainEntity: POLICY_SECTIONS.map(({ title, content }) => ({
+    "@type": "Question",
+    name: title,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: content,
+    },
+  })),
+};
+
 export default function PoliticaDeTrocasPage() {
   return (
     <div className="container-luratha section-padding">
+      <JsonLd data={faqSchema} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
@@ -74,5 +106,4 @@ export default function PoliticaDeTrocasPage() {
     </div>
   );
 }
-
 

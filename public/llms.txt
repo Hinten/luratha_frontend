@@ -9,6 +9,14 @@ A Luratha acredita que a moda pode ser um ato de amor — amor a si mesma, ao tr
 ## Loja
 
 - [Todas as Peças](/todas-as-pecas): Catálogo completo de produtos Luratha
+- [Vestidos](/categoria/vestidos): Vestidos artesanais femininos
+- [Blusas](/categoria/blusas): Blusas e tops artesanais
+- [Calças](/categoria/calcas): Calças e pantalonas artesanais
+- [Saias](/categoria/saias): Saias artesanais femininas
+- [Shorts](/categoria/shorts): Shorts femininos artesanais
+- [Conjuntos](/categoria/conjuntos): Conjuntos e coordenados artesanais
+- [Moletons](/categoria/moletons): Moletons e agasalhos artesanais
+- [Acessórios](/categoria/acessorios): Acessórios artesanais femininos
 - [Produto](/produto/[slug]): Página de detalhe de produto (ex: /produto/vestido-bordado-floral)
 - [Vestidos](/colecao/vestidos): Vestidos artesanais femininos
 - [Blusas](/colecao/blusas): Blusas e tops artesanais
