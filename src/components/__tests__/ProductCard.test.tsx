@@ -3,6 +3,22 @@ import { render, screen } from "@testing-library/react";
 import ProductCard from "@/src/components/ProductCard";
 import type { Product } from "@/src/lib/types";
 
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 const baseProduct: Product = {
   id: "1",
   name: "Vestido Bordado Floral",
@@ -21,6 +37,15 @@ const saleProduct: Product = {
   reviewCount: 36,
   installments: { count: 4, value: 97.25 },
   categorySlug: "conjuntos",
+};
+
+const linkedProduct: Product = {
+  id: "3",
+  name: "Vestido Midi Linho",
+  slug: "vestido-midi-linho",
+  price: 320,
+  imageUrl: "/placeholder-linked.jpg",
+  categorySlug: "vestidos",
 };
 
 describe("ProductCard", () => {
@@ -81,5 +106,17 @@ describe("ProductCard", () => {
   it("shows installments when provided", () => {
     render(<ProductCard product={saleProduct} />);
     expect(screen.getByText(/4x/)).toBeInTheDocument();
+  });
+
+  it("renders a link to /produto/[slug] when slug is provided", () => {
+    render(<ProductCard product={linkedProduct} />);
+    const link = screen.getByRole("link", { name: linkedProduct.name });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/produto/vestido-midi-linho");
+  });
+
+  it("does NOT render a link when slug is not provided", () => {
+    render(<ProductCard product={baseProduct} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });

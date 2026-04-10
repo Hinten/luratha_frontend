@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./ProductCard.module.css";
 import type { Product } from "@/src/lib/types";
 
@@ -9,25 +10,15 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { name, price, originalPrice, imageUrl, rating, reviewCount, installments } =
+  const { name, price, originalPrice, imageUrl, rating, reviewCount, installments, slug } =
     product;
 
   const discountPct = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
-  return (
-    <div className={styles.card}>
-      {discountPct > 0 && (
-        <span className={styles.discountBadge}>-{discountPct}%</span>
-      )}
-      <button
-        className={styles.favoriteBtn}
-        aria-label="Adicionar aos favoritos"
-        type="button"
-      >
-        ♡
-      </button>
+  const cardBody = (
+    <>
       <div className={styles.imageWrapper}>
         <img
           src={imageUrl}
@@ -58,6 +49,28 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
       </div>
+    </>
+  );
+
+  return (
+    <div className={styles.card}>
+      {discountPct > 0 && (
+        <span className={styles.discountBadge}>-{discountPct}%</span>
+      )}
+      <button
+        className={styles.favoriteBtn}
+        aria-label="Adicionar aos favoritos"
+        type="button"
+      >
+        ♡
+      </button>
+      {slug ? (
+        <Link href={`/produto/${slug}`} className={styles.cardLink} aria-label={name}>
+          {cardBody}
+        </Link>
+      ) : (
+        cardBody
+      )}
     </div>
   );
 }

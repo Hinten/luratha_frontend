@@ -16,3 +16,20 @@ export interface Category {
   href: string;
   imageUrl: string;
 }
+
+export interface Review {
+  id: string;
+  author: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
+export interface ProductDetail extends Product {
+  description: string;
+  images: string[];
+  sizes: string[];
+  categorySlug: string;
+  reviews?: Review[];
+  highlights?: string[];
+}

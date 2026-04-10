@@ -1,4 +1,4 @@
-import type { Product, Category } from "./types";
+import type { Product, Category, ProductDetail } from "./types";
 import { CATEGORIES } from "./constants";
 
 // ─── Catalog products (used by /categoria/[slug], /todas-as-pecas, /sale) ─────
@@ -195,3 +195,167 @@ export const mockFeatured: Product[] = [
 export const mockSale: Product[] = mockProducts.filter(
   (p) => p.originalPrice !== undefined
 );
+
+// ─── Product Detail entries (used by /produto/[slug]) ─────────────────────────
+
+export const mockProductDetails: ProductDetail[] = [
+  {
+    id: "v1",
+    name: "Vestido Bordado Floral",
+    slug: "vestido-bordado-floral",
+    categorySlug: "vestidos",
+    price: 289,
+    originalPrice: 389,
+    imageUrl: "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado",
+    rating: 4.8,
+    reviewCount: 24,
+    installments: { count: 3, value: 96.33 },
+    description:
+      "Um vestido artesanal bordado à mão com motivos florais delicados, confeccionado em tecido linho de alta qualidade. Perfeito para ocasiões especiais ou para iluminar o dia a dia com charme e feminilidade. Cada peça é única, feita com amor e atenção a cada ponto do bordado.",
+    highlights: [
+      "Bordado à mão — cada peça é única",
+      "Tecido linho 100% natural, leve e respirável",
+      "Fechamento com botões forrados na parte traseira",
+      "Comprimento midi — versátil para dia e noite",
+      "Produzido em pequena escala, slow fashion",
+    ],
+    images: [
+      "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+1",
+      "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Vestido+Bordado+2",
+      "https://placehold.co/600x750/E8B9C9/3A2F2A?text=Vestido+Bordado+3",
+    ],
+    sizes: ["PP", "P", "M", "G", "GG"],
+    reviews: [
+      {
+        id: "r1",
+        author: "Ana Claudia",
+        rating: 5,
+        comment:
+          "Amei o vestido! O bordado é lindo e o tecido é de ótima qualidade. Chegou muito bem embalado.",
+        date: "2026-03-15",
+      },
+      {
+        id: "r2",
+        author: "Fernanda Lima",
+        rating: 5,
+        comment:
+          "Simplesmente perfeito. Cada detalhe do bordado é impecável. Vale cada centavo!",
+        date: "2026-02-28",
+      },
+      {
+        id: "r3",
+        author: "Mariana Costa",
+        rating: 4,
+        comment:
+          "Muito bonito e bem feito. Só achei que poderia ter mais opções de cores, mas a qualidade é incrível.",
+        date: "2026-02-10",
+      },
+    ],
+  },
+  {
+    id: "co1",
+    name: "Conjunto Saia + Blusa Crochet",
+    slug: "conjunto-saia-blusa-crochet",
+    categorySlug: "conjuntos",
+    price: 389,
+    originalPrice: 499,
+    imageUrl: "https://placehold.co/600x750/A8B8A2/3A2F2A?text=Conjunto+Crochet",
+    rating: 4.9,
+    reviewCount: 36,
+    installments: { count: 4, value: 97.25 },
+    description:
+      "Conjunto artesanal em crochet feito à mão, composto por saia midi e blusa cropped. Tecido responsável, produzido em pequena escala com fio de algodão natural. Ideal para o verão brasileiro, este conjunto é versátil, confortável e cheio de personalidade.",
+    highlights: [
+      "Crochet feito à mão com fio de algodão natural",
+      "Inclui saia midi e blusa cropped coordenadas",
+      "Algodão natural — fresco e confortável no verão",
+      "Regulagem por elástico na cintura da saia",
+      "Produção artesanal em pequena escala",
+    ],
+    images: [
+      "https://placehold.co/600x750/A8B8A2/3A2F2A?text=Conjunto+Crochet+1",
+      "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Conjunto+Crochet+2",
+      "https://placehold.co/600x750/E8B9C9/3A2F2A?text=Conjunto+Crochet+3",
+    ],
+    sizes: ["PP", "P", "M", "G"],
+    reviews: [
+      {
+        id: "r4",
+        author: "Juliana Ramos",
+        rating: 5,
+        comment:
+          "O conjunto é uma obra de arte! O crochet é feito à mão e dá pra ver o cuidado em cada malha. Recebi muitos elogios.",
+        date: "2026-03-20",
+      },
+      {
+        id: "r5",
+        author: "Patricia Oliveira",
+        rating: 5,
+        comment:
+          "Qualidade artesanal de verdade. A saia e a blusa combinam perfeitamente. Já quero comprar mais peças.",
+        date: "2026-03-01",
+      },
+      {
+        id: "r6",
+        author: "Sofia Mendes",
+        rating: 4,
+        comment:
+          "Muito bem feito. O fio é de qualidade e o caimento é ótimo. Recomendo o tamanho acima se preferir algo mais folgado.",
+        date: "2026-02-14",
+      },
+    ],
+  },
+  {
+    id: "m1",
+    name: "Moletom Bordado Slow Fashion",
+    slug: "moletom-bordado-slow-fashion",
+    categorySlug: "moletons",
+    price: 299,
+    originalPrice: 379,
+    imageUrl: "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Moletom+Bordado",
+    rating: 4.8,
+    reviewCount: 21,
+    installments: { count: 3, value: 99.67 },
+    description:
+      "Moletom oversized com bordado artesanal slow fashion, confeccionado em moletom flanelado de algodão orgânico. Confortável, quentinho e com identidade própria. O bordado frontal é feito à mão, tornando cada peça única. Perfeito para os dias mais frescos sem abrir mão do estilo.",
+    highlights: [
+      "Bordado frontal artesanal — cada peça é única",
+      "Algodão orgânico flanelado, macio e quentinho",
+      "Modelagem oversized para uso descontraído",
+      "Punhos e barra canelados para melhor ajuste",
+      "Algodão orgânico certificado GOTS",
+    ],
+    images: [
+      "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Moletom+Bordado+1",
+      "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Moletom+Bordado+2",
+      "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Moletom+Bordado+3",
+    ],
+    sizes: ["P", "M", "G", "GG"],
+    reviews: [
+      {
+        id: "r7",
+        author: "Beatriz Santos",
+        rating: 5,
+        comment:
+          "O moletom mais bonito que já tive! Macio, quentinho e o bordado é delicado demais. Amo a proposta slow fashion.",
+        date: "2026-03-25",
+      },
+      {
+        id: "r8",
+        author: "Camila Ferreira",
+        rating: 5,
+        comment:
+          "Qualidade premium. O tecido é grossinho e macio, e o bordado é muito bem feito. Chegou rapidinho e bem embalado.",
+        date: "2026-03-08",
+      },
+      {
+        id: "r9",
+        author: "Leticia Carvalho",
+        rating: 4,
+        comment:
+          "Muito bonito e de qualidade. Só demorou um pouco mais para chegar, mas valeu a espera. Super recomendo!",
+        date: "2026-02-22",
+      },
+    ],
+  },
+];

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import ProductSection from "@/src/components/ProductSection";
+import ProductSection from "@/src/components/produto/ProductSection";
 import type { Product } from "@/src/lib/types";
 
 const mockProducts: Product[] = [

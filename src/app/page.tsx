@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import HeroBanner from "@/src/components/HeroBanner";
 import CategoryBlock from "@/src/components/CategoryBlock";
-import ProductSection from "@/src/components/ProductSection";
+import ProductSection from "@/src/components/produto/ProductSection";
 import ProductCard from "@/src/components/ProductCard";
 import JsonLd from "@/src/components/JsonLd";
 import {
