@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./Breadcrumb.module.css";
 
 export interface BreadcrumbItem {
   label: string;
@@ -27,30 +28,21 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <nav aria-label="Breadcrumb" className="py-4">
-        <ol className="flex items-center gap-2 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60">
+      <nav aria-label="Breadcrumb" className={styles.nav}>
+        <ol className={styles.list}>
           {items.map((item, index) => (
-            <li key={index} className="flex items-center gap-2">
+            <li key={index} className={styles.item}>
               {index > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="text-[var(--color-neutral-mid)]"
-                >
+                <span aria-hidden="true" className={styles.separator}>
                   /
                 </span>
               )}
               {item.href ? (
-                <Link
-                  href={item.href}
-                  className="hover:text-[var(--color-primary)] transition-colors duration-300"
-                >
+                <Link href={item.href} className={styles.link}>
                   {item.label}
                 </Link>
               ) : (
-                <span
-                  className="text-[var(--color-neutral-dark)] font-medium"
-                  aria-current="page"
-                >
+                <span className={styles.current} aria-current="page">
                   {item.label}
                 </span>
               )}
@@ -61,3 +53,4 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
     </>
   );
 }
+

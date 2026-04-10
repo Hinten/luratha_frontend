@@ -1,0 +1,49 @@
+/* ─── Breadcrumb ─────────────────────────────────────────────────────────── */
+
+.nav {
+  padding-block: 1rem;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.separator {
+  color: var(--color-neutral-mid);
+}
+
+/*
+ * Legibility rule: blush (#E8B9C9) on neutral-light (#F8F5F0) = ~1.5:1 contrast.
+ * Keep text dark; signal hover with a primary-colored underline instead.
+ */
+.link {
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  transition: color 300ms ease, text-decoration-color 300ms ease;
+}
+
+.link:hover {
+  color: var(--color-neutral-dark);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+}
+
+.current {
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+}

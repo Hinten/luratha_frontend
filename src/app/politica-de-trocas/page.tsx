@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./page.module.css";
 
 const POLICY_SECTIONS = [
   {
@@ -36,39 +37,34 @@ const POLICY_SECTIONS = [
 export default function PoliticaDeTrocasPage() {
   return (
     <div className="container-luratha section-padding">
-      <div className="max-w-3xl mx-auto">
+      <div className={styles.container}>
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className={styles.header}>
           <h1 className="mb-4">Política de Trocas e Devoluções</h1>
-          <p className="text-lg leading-relaxed text-[var(--color-neutral-dark)]/75">
+          <p className={styles.headerText}>
             Queremos que você ame cada peça. Saiba como funciona nosso processo
             de troca e devolução.
           </p>
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-10">
+        <div className={styles.sections}>
           {POLICY_SECTIONS.map(({ title, content }) => (
             <section key={title}>
-              <h2 className="text-xl font-semibold mb-3">{title}</h2>
-              <p className="leading-relaxed text-[var(--color-neutral-dark)]/80">
-                {content}
-              </p>
+              <h2 className={styles.sectionTitle}>{title}</h2>
+              <p className={styles.sectionText}>{content}</p>
             </section>
           ))}
         </div>
 
         {/* Divider */}
-        <div className="my-12 h-px bg-[var(--color-neutral-mid)]" />
+        <div className={styles.divider} />
 
         {/* Contact note */}
-        <div className="bg-[var(--color-accent)] rounded-3xl p-8 text-center">
-          <p className="leading-relaxed text-[var(--color-neutral-dark)]/80">
+        <div className={styles.contactNote}>
+          <p className={styles.contactNoteText}>
             Tem alguma dúvida sobre a política de trocas?{" "}
-            <Link
-              href="/contato"
-              className="font-medium underline underline-offset-2 text-[var(--color-neutral-dark)]"
-            >
+            <Link href="/contato" className={styles.contactNoteLink}>
               Fale conosco
             </Link>{" "}
             e teremos prazer em ajudar.
@@ -78,4 +74,5 @@ export default function PoliticaDeTrocasPage() {
     </div>
   );
 }
+
 

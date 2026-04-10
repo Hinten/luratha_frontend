@@ -79,8 +79,14 @@ small,
     transition: color 300ms ease;
   }
 
+  /*
+   * Legibility rule: blush (#E8B9C9) on neutral-light (#F8F5F0) = ~1.5:1 contrast.
+   * Keep text dark; signal hover with a primary-colored underline instead.
+   */
   a:hover {
-    color: var(--color-primary);
+    color: var(--color-neutral-dark);
+    text-decoration: underline;
+    text-decoration-color: var(--color-primary);
   }
 }
 

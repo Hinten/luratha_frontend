@@ -108,7 +108,7 @@
 }
 
 .navBtn:hover {
-  background-color: white;
+  background-color: var(--color-neutral-light);
 }
 
 .navBtnPrev {

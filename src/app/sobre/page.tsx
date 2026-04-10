@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./page.module.css";
 
 const VALUES = [
   {
@@ -22,9 +23,9 @@ export default function SobrePage() {
   return (
     <div className="container-luratha section-padding">
       {/* Hero */}
-      <div className="max-w-3xl mx-auto text-center mb-16">
+      <div className={styles.hero}>
         <h1 className="mb-6">Nossa História</h1>
-        <p className="text-lg leading-relaxed text-[var(--color-neutral-dark)]/80">
+        <p className={styles.heroText}>
           A Luratha nasceu do amor por peças que duram e contam histórias. Somos
           uma marca de moda feminina artesanal brasileira, comprometida com a
           beleza intencional e o consumo consciente.
@@ -32,40 +33,32 @@ export default function SobrePage() {
       </div>
 
       {/* Values */}
-      <div className="grid md:grid-cols-3 gap-8 mb-16">
+      <div className={styles.valuesGrid}>
         {VALUES.map(({ title, description }) => (
-          <div
-            key={title}
-            className="bg-[var(--color-accent)] rounded-3xl p-8 flex flex-col gap-4"
-          >
+          <div key={title} className={styles.valueCard}>
             <h3>{title}</h3>
-            <p className="leading-relaxed text-[var(--color-neutral-dark)]/75">
-              {description}
-            </p>
+            <p className={styles.valueCardText}>{description}</p>
           </div>
         ))}
       </div>
 
       {/* Manifesto */}
-      <div className="max-w-2xl mx-auto bg-[var(--color-primary)] rounded-3xl p-10 text-center">
+      <div className={styles.manifesto}>
         <h2 className="mb-6">Nosso Manifesto</h2>
-        <p className="leading-relaxed mb-4 text-[var(--color-neutral-dark)]/85">
+        <p className={styles.manifestoText}>
           Acreditamos que a moda pode ser um ato de amor — amor a si mesma, ao
           trabalho artesanal e ao planeta. Na Luratha, cada peça é pensada para
           ser especial no dia em que você a usa e anos depois.
         </p>
-        <p className="leading-relaxed text-[var(--color-neutral-dark)]/85">
+        <p className={styles.manifestoTextLast}>
           Fazemos slow fashion de verdade: menos coleções, mais significado.
           Somos feitas no Brasil, com orgulho e com carinho.
         </p>
       </div>
 
       {/* CTA */}
-      <div className="mt-12 text-center">
-        <Link
-          href="/contato"
-          className="inline-block px-8 py-4 rounded-3xl font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-neutral-dark)] hover:text-[var(--color-neutral-dark)]"
-        >
+      <div className={styles.cta}>
+        <Link href="/contato" className={styles.ctaBtn}>
           Fale conosco
         </Link>
       </div>
