@@ -16,5 +16,5 @@ export const DEFAULT_OG_IMAGE = {
   url: `${SITE_URL}/og-image.jpg`,
   width: 1200,
   height: 630,
-  alt: "Luratha – Moda Artesanal Feminina",
+  alt: "Luratha | Moda Artesanal Feminina",
 };

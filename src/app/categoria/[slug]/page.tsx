@@ -75,7 +75,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const collectionPageSchema = {
     "@context": "https://schema.org" as const,
     "@type": "CollectionPage",
-    name: `${category.label} Artesanais – Luratha`,
+    name: `${category.label} Artesanais | Luratha`,
     description: `Explore a coleção de ${category.label.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
     url: categoryUrl,
     isPartOf: {

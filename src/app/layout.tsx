@@ -60,7 +60,7 @@ const websiteSchema = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Luratha – Moda Artesanal Feminina",
+    default: "Luratha | Moda Artesanal Feminina",
     template: "%s | Luratha",
   },
   description:
@@ -73,14 +73,14 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: SITE_URL,
     siteName: "Luratha",
-    title: "Luratha – Moda Artesanal Feminina",
+    title: "Luratha | Moda Artesanal Feminina",
     description:
       "Peças feitas com amor para durar. Slow fashion brasileiro com foco em artesanato, versatilidade e sustentabilidade.",
     images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Luratha – Moda Artesanal Feminina",
+    title: "Luratha | Moda Artesanal Feminina",
     description:
       "Peças feitas com amor para durar. Slow fashion brasileiro com foco em artesanato, versatilidade e sustentabilidade.",
     images: [DEFAULT_OG_IMAGE.url],

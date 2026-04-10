@@ -14,12 +14,12 @@ import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstan
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: { absolute: "Luratha – Moda Artesanal Feminina" },
+  title: { absolute: "Luratha | Moda Artesanal Feminina" },
   description:
     "Descubra peças slow fashion artesanais brasileiras feitas com amor para durar. Vestidos, blusas, calças e muito mais na Luratha.",
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: "Luratha – Moda Artesanal Feminina",
+    title: "Luratha | Moda Artesanal Feminina",
     description:
       "Descubra peças slow fashion artesanais brasileiras feitas com amor para durar.",
     url: SITE_URL,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 const homePageSchema = {
   "@context": "https://schema.org" as const,
   "@type": "WebPage",
-  name: "Luratha – Moda Artesanal Feminina",
+  name: "Luratha | Moda Artesanal Feminina",
   description:
     "Descubra peças slow fashion artesanais brasileiras feitas com amor para durar. Vestidos, blusas, calças e muito mais na Luratha.",
   url: SITE_URL,
