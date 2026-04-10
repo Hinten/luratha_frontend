@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ProductGallery from "@/src/components/ProductGallery";
+import ProductGallery from "@/src/components/produto/ProductGallery";
 
 const images = [
   "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1",

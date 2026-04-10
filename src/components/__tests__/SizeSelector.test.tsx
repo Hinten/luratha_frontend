@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import SizeSelector from "@/src/components/SizeSelector";
+import SizeSelector from "@/src/components/produto/SizeSelector";
 
 const sizes = ["PP", "P", "M", "G", "GG"];
 

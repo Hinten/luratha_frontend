@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import ReviewsList from "@/src/components/ReviewsList";
+import ReviewsList from "@/src/components/produto/ReviewsList";
 import type { Review } from "@/src/lib/types";
 
 const mockReviews: Review[] = [

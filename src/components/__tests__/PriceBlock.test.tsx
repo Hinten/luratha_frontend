@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import PriceBlock from "@/src/components/PriceBlock";
+import PriceBlock from "@/src/components/produto/PriceBlock";
 
 describe("PriceBlock", () => {
   it("renders the current price formatted in BRL", () => {
