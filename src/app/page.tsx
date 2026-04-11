@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import HeroBanner from "@/src/components/home/HeroBanner";
-import CategoryBlock from "@/src/components/categoria/CategoryBlock";
+import HomeCategoriesSection from "@/src/components/home/HomeCategoriesSection";
 import ProductSection from "@/src/components/produto/ProductSection";
 import ProductCard from "@/src/components/produto/ProductCard";
 import JsonLd from "@/src/components/JsonLd";
@@ -58,16 +58,7 @@ export default function Home() {
       <HeroBanner />
 
       {/* 2. Category Quick-Access */}
-      <section className="section-padding">
-        <div className="container-luratha">
-          <h2 className={styles.categoriesHeading}>Explore por categoria</h2>
-          <div className={styles.categoriesGrid}>
-            {mockCategories.map((category) => (
-              <CategoryBlock key={category.href} category={category} />
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeCategoriesSection categories={mockCategories} />
 
       {/* 3. Lançamentos */}
       <ProductSection
@@ -109,4 +100,3 @@ export default function Home() {
     </main>
   );
 }
-

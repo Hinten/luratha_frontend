@@ -65,4 +65,19 @@ test.describe("Home page", () => {
       page.getByRole("heading", { name: "Novas chegadas" })
     ).toBeVisible();
   });
+
+  test("shows horizontal categories with arrow navigation on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const track = page.getByTestId("categories-track");
+    await expect(track).toBeVisible();
+
+    const initialScroll = await track.evaluate((el) => el.scrollLeft);
+    await page.getByRole("button", { name: "Próximas categorias" }).click();
+
+    await expect
+      .poll(async () => track.evaluate((el) => el.scrollLeft))
+      .toBeGreaterThan(initialScroll);
+  });
 });
