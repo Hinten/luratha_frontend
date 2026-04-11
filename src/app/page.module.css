@@ -1,31 +1,5 @@
 /* ─── Home Page ──────────────────────────────────────────────────────────── */
 
-/* ── Category section ── */
-.categoriesHeading {
-  font-family: var(--font-heading);
-  color: var(--color-neutral-dark);
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.categoriesGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-@media (min-width: 640px) {
-  .categoriesGrid {
-    flex-direction: row;
-  }
-}
-
-@media (min-width: 768px) {
-  .categoriesGrid {
-    gap: 1.5rem;
-  }
-}
-
 /* ── Destaques wrapper ── */
 .destaquesBg {
   background-color: var(--color-accent);
