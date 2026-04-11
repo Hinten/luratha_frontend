@@ -5,6 +5,9 @@ import CategoryBlock from "@/src/components/categoria/CategoryBlock";
 import type { Category } from "@/src/lib/types";
 import styles from "./HomeCategoriesSection.module.css";
 
+const SCROLL_THRESHOLD = 1;
+const SCROLL_AMOUNT_PERCENTAGE = 0.8;
+
 interface HomeCategoriesSectionProps {
   categories: Category[];
 }
@@ -23,7 +26,7 @@ export default function HomeCategoriesSection({
     const updateScrollState = () => {
       const maxScrollLeft = track.scrollWidth - track.clientWidth;
       setCanScrollLeft(track.scrollLeft > 0);
-      setCanScrollRight(track.scrollLeft < maxScrollLeft - 1);
+      setCanScrollRight(track.scrollLeft < maxScrollLeft - SCROLL_THRESHOLD);
     };
 
     updateScrollState();
@@ -40,7 +43,7 @@ export default function HomeCategoriesSection({
     const track = trackRef.current;
     if (!track) return;
 
-    const amount = track.clientWidth * 0.8;
+    const amount = track.clientWidth * SCROLL_AMOUNT_PERCENTAGE;
     track.scrollBy({
       left: direction === "left" ? -amount : amount,
       behavior: "smooth",
