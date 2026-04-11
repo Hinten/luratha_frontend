@@ -32,6 +32,8 @@ describe("HomeCategoriesSection", () => {
   it("scrolls horizontally when arrow buttons are clicked", async () => {
     const user = userEvent.setup();
     const scrollBy = vi.fn();
+    const clientWidth = 300;
+    const scrollAmountPercentage = 0.8;
 
     Object.defineProperty(HTMLElement.prototype, "scrollBy", {
       value: scrollBy,
@@ -41,7 +43,7 @@ describe("HomeCategoriesSection", () => {
     render(<HomeCategoriesSection categories={mockCategories} />);
 
     const track = screen.getByTestId("categories-track");
-    Object.defineProperty(track, "clientWidth", { value: 300, configurable: true });
+    Object.defineProperty(track, "clientWidth", { value: clientWidth, configurable: true });
     Object.defineProperty(track, "scrollWidth", { value: 900, configurable: true });
     Object.defineProperty(track, "scrollLeft", { value: 0, configurable: true });
     act(() => {
@@ -49,6 +51,9 @@ describe("HomeCategoriesSection", () => {
     });
 
     await user.click(screen.getByRole("button", { name: "Próximas categorias" }));
-    expect(scrollBy).toHaveBeenCalledWith({ left: 240, behavior: "smooth" });
+    expect(scrollBy).toHaveBeenCalledWith({
+      left: clientWidth * scrollAmountPercentage,
+      behavior: "smooth",
+    });
   });
 });

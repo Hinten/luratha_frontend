@@ -25,8 +25,9 @@ export default function HomeCategoriesSection({
 
     const updateScrollState = () => {
       const maxScrollLeft = track.scrollWidth - track.clientWidth;
+      const effectiveMaxScroll = maxScrollLeft - SCROLL_THRESHOLD;
       setCanScrollLeft(track.scrollLeft > 0);
-      setCanScrollRight(track.scrollLeft < maxScrollLeft - SCROLL_THRESHOLD);
+      setCanScrollRight(track.scrollLeft < effectiveMaxScroll);
     };
 
     updateScrollState();
