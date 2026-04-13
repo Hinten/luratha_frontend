@@ -7,7 +7,7 @@ import {
 
 export const userProfileSchema = z.object({
   id: uidSchema,
-  email: z.string().email(),
+  email: z.email(),
   firstName: nonEmptyStringSchema,
   lastName: nonEmptyStringSchema,
   phone: z.string().regex(/^\+?[1-9]\d{7,14}$/).optional(),

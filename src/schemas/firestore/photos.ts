@@ -8,7 +8,7 @@ import {
 export const photoSchema = z.object({
   id: nonEmptyStringSchema,
   storagePath: nonEmptyStringSchema,
-  downloadUrl: z.string().url(),
+  downloadUrl: z.url(),
   checksumSha256: z.string().trim().length(64),
   width: z.number().int().positive(),
   height: z.number().int().positive(),

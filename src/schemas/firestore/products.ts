@@ -42,7 +42,7 @@ export const productSchema = z
     variants: z.array(productVariantSchema).min(1),
     searchText: nonEmptyStringSchema,
     searchableTokens: z.array(nonEmptyStringSchema).max(200),
-    searchEmbedding: z.array(z.number().finite()).max(4096).optional(),
+    searchEmbedding: z.array(z.number()).max(4096).optional(),
     publishedAt: timestampSchema.optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
