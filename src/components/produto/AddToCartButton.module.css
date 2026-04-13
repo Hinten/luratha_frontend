@@ -1,0 +1,30 @@
+/* ─── AddToCartButton ───────────────────────────────────────────────────────── */
+
+.addToCart {
+  width: 100%;
+  padding: 1rem 2rem;
+  border-radius: 9999px;
+  border: none;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background-color 300ms ease, transform 200ms ease;
+}
+
+.addToCart:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.addToCart:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.addToCart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

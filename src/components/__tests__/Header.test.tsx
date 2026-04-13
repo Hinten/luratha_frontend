@@ -22,6 +22,29 @@ vi.mock("@/src/lib/constants", () => ({
   appData: { name: "Luratha", logo: "/luratha.svg" },
 }));
 
+/* Default mocks for contexts — override per test where needed */
+vi.mock("@/src/contexts/CartContext", () => ({
+  useCart: () => ({
+    items: [],
+    totalItems: 0,
+    totalPrice: 0,
+    addItem: vi.fn(),
+    removeItem: vi.fn(),
+    updateQuantity: vi.fn(),
+    clearCart: vi.fn(),
+  }),
+}));
+
+vi.mock("@/src/contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: null,
+    isAuthenticated: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
 describe("Header", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,11 +72,22 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Contato" })).toBeInTheDocument();
   });
 
-  it("renders the cart button", () => {
+  it("renders the cart link pointing to /carrinho", () => {
     render(<Header />);
-    expect(
-      screen.getByRole("button", { name: "Carrinho" })
-    ).toBeInTheDocument();
+    const cartLink = screen.getByRole("link", { name: "Carrinho" });
+    expect(cartLink).toBeInTheDocument();
+    expect(cartLink).toHaveAttribute("href", "/carrinho");
+  });
+
+  it("does not render a cart badge when cart is empty", () => {
+    render(<Header />);
+    // totalItems is 0 in the mock → no badge rendered
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("renders the Entrar link when not authenticated", () => {
+    render(<Header />);
+    expect(screen.getByRole("link", { name: "Entrar" })).toBeInTheDocument();
   });
 
   it("renders the hamburger menu button", () => {
@@ -86,4 +120,14 @@ describe("Header", () => {
 
     expect(screen.getByRole("button", { name: "Abrir menu" })).toBeInTheDocument();
   });
+
+  it("shows Entrar and Cadastrar links in mobile menu when not authenticated", () => {
+    render(<Header />);
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
+    // Both desktop (aria-label) and mobile links are in DOM — at least one "Entrar" link
+    expect(screen.getAllByRole("link", { name: "Entrar" }).length).toBeGreaterThanOrEqual(1);
+    // Cadastrar only appears in the mobile menu
+    expect(screen.getByRole("link", { name: "Cadastrar" })).toBeInTheDocument();
+  });
 });
+
