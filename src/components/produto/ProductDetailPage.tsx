@@ -113,6 +113,10 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
             <SizeSelector
               sizes={product.sizes}
               productName={product.name}
+              productId={product.id}
+              slug={product.slug}
+              imageUrl={product.images[0]}
+              price={product.price}
             />
 
             {/* Amazon-style bullet-point highlights */}

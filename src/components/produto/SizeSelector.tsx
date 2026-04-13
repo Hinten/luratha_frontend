@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import styles from "./SizeSelector.module.css";
-import { useCart } from "@/src/contexts/CartContext";
+import AddToCartButton from "./AddToCartButton";
 
 interface SizeSelectorProps {
   sizes: string[];
   productName: string;
-  /** Optional cart data — when provided, "Adicionar ao Carrinho" uses CartContext */
+  /** Cart data — required to enable real "Adicionar ao Carrinho" */
   productId?: string;
   slug?: string;
   imageUrl?: string;
@@ -25,40 +25,26 @@ export default function SizeSelector({
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [favorited, setFavorited] = useState(false);
-  const [added, setAdded] = useState(false);
 
-  const { addItem } = useCart();
+  const canAddToCart =
+    productId !== undefined &&
+    slug !== undefined &&
+    imageUrl !== undefined &&
+    price !== undefined;
 
   function handleSizeClick(size: string) {
     setSelectedSize(size);
     setSizeError(false);
   }
 
-  function handleAddToCart() {
+  /** Validates size selection before AddToCartButton proceeds. */
+  function handleBeforeAdd(): boolean {
     if (!selectedSize) {
       setSizeError(true);
-      return;
+      return false;
     }
     setSizeError(false);
-
-    if (productId && slug && imageUrl !== undefined && price !== undefined) {
-      addItem({
-        productId,
-        name: productName,
-        slug,
-        imageUrl,
-        price,
-        size: selectedSize,
-      });
-    } else {
-      /* Fallback: log when cart props are not yet wired */
-      console.log(
-        `Adicionado ao carrinho: ${productName} — Tamanho: ${selectedSize}`,
-      );
-    }
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2500);
+    return true;
   }
 
   function handleFavorite() {
@@ -90,13 +76,33 @@ export default function SizeSelector({
         ))}
       </div>
 
-      <button
-        type="button"
-        className={styles.addToCart}
-        onClick={handleAddToCart}
-      >
-        {added ? "✓ ADICIONADO!" : "ADICIONAR AO CARRINHO"}
-      </button>
+      {canAddToCart ? (
+        <AddToCartButton
+          productId={productId!}
+          name={productName}
+          slug={slug!}
+          imageUrl={imageUrl!}
+          price={price!}
+          size={selectedSize ?? ""}
+          className={styles.addToCart}
+          onBeforeAdd={handleBeforeAdd}
+        />
+      ) : (
+        <button
+          type="button"
+          className={styles.addToCart}
+          aria-label={`Adicionar ${productName} ao carrinho`}
+          onClick={() => {
+            if (!selectedSize) {
+              setSizeError(true);
+            } else {
+              setSizeError(false);
+            }
+          }}
+        >
+          ADICIONAR AO CARRINHO
+        </button>
+      )}
 
       <button
         type="button"
@@ -113,4 +119,3 @@ export default function SizeSelector({
     </div>
   );
 }
-
