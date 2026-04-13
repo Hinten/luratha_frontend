@@ -136,6 +136,12 @@ export interface InventorySchema {
   updatedAt: string;
 }
 
+/**
+ * Normalizes free text for search use-cases:
+ * - removes diacritics (NFD)
+ * - lowercases and strips punctuation
+ * - collapses repeated whitespace
+ */
 export function normalizeSearchText(input: string): string {
   return input
     .normalize("NFD")
@@ -146,6 +152,10 @@ export function normalizeSearchText(input: string): string {
     .trim();
 }
 
+/**
+ * Builds deduplicated search tokens from one or more text fragments.
+ * Inputs are normalized through normalizeSearchText before tokenization.
+ */
 export function buildSearchTokens(...values: string[]): string[] {
   const normalized = normalizeSearchText(values.join(" "));
   if (!normalized) {
@@ -209,6 +219,10 @@ function requireNonNegativeInt(
   return value;
 }
 
+/**
+ * Validates a photo asset document for Firebase Storage-backed images.
+ * Requires core metadata and enforces image/* content type plus string tags.
+ */
 export function validatePhotoAsset(
   input: unknown
 ): ValidationResult<PhotoAssetSchema> {
@@ -256,6 +270,12 @@ export function validatePhotoAsset(
   });
 }
 
+/**
+ * Validates product data including:
+ * - positive prices and stock rules
+ * - primary photo relation with photoIds
+ * - search tokens/vector readiness for Firestore Enterprise queries
+ */
 export function validateProduct(input: unknown): ValidationResult<ProductSchema> {
   const errors: string[] = [];
 
@@ -477,6 +497,11 @@ function validateCartLikeInput(
   });
 }
 
+/**
+ * Validates cart shape and totals.
+ * Delegates shared line-item and amount checks to validateCartLikeInput,
+ * then applies cart-specific id validation.
+ */
 export function validateCart(input: unknown): ValidationResult<CartSchema> {
   const base = validateCartLikeInput(input, "cart");
 
@@ -498,6 +523,12 @@ export function validateCart(input: unknown): ValidationResult<CartSchema> {
   return { ok: true, data: { id, ...base.data } };
 }
 
+/**
+ * Validates order data by reusing cart-like validations and adding:
+ * - order-specific fields (id/orderNumber/status)
+ * - shippingAddress required fields
+ * - allowed order status values
+ */
 export function validateOrder(input: unknown): ValidationResult<OrderSchema> {
   const base = validateCartLikeInput(input, "order");
 
