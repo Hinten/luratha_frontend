@@ -1,4 +1,8 @@
 import { pipelineSearchRequestSchema, vectorSearchRequestSchema } from "@/src/schemas/firestore";
+import {
+  normalizeLimit,
+  normalizeOffset,
+} from "@/src/lib/firestoreQueryStrategies.utils";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "rating_desc";
 
@@ -44,8 +48,8 @@ interface VectorPipelinePlan {
 }
 
 export function buildCoreProductQueryPlan(filters: ProductSearchFilters): CoreQueryPlan {
-  const limit = Math.min(Math.max(filters.limit ?? 24, 1), 100);
-  const offset = Math.max(filters.offset ?? 0, 0);
+  const limit = normalizeLimit(filters.limit);
+  const offset = normalizeOffset(filters.offset);
   const sort = filters.sort ?? "newest";
 
   const orderByMap: Record<ProductSort, CoreQueryPlan["orderBy"]> = {
@@ -94,7 +98,7 @@ export function buildEnterprisePipelineSearchPlan(
     maxPrice: filters.maxPrice,
     tags: filters.tags,
     limit: filters.limit ?? 24,
-    offset: filters.offset ?? 0,
+    offset: normalizeOffset(filters.offset),
   });
 
   return {
