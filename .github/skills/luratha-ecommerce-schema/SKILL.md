@@ -39,7 +39,7 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 - Use a **detail page** (not list/category page) for product rich results.
 - No misleading/spammy markup.
 - Keep price/availability synchronized with rendered page and feeds.
-- Prefer server-rendered JSON-LD in HTML inicial; JS-injected markup is allowed but can reduce Shopping crawl quality for fast-changing fields.
+- Prefer server-rendered JSON-LD in initial HTML; JS-injected markup is allowed but can reduce Shopping crawl quality for fast-changing fields.
 
 ---
 
@@ -48,7 +48,7 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 ### Required minimum
 - `Product.name`
 - `Product.image` (crawlable/indexable)
-- `Product.offers` (`Offer`, not `AggregateOffer` for merchant listing)
+- `Product.offers` (`Offer`, not `AggregateOffer` for merchant listing; `AggregateOffer` is for aggregated multi-seller snippet contexts)
 - `Offer.price` (or `priceSpecification.price`)
 - `Offer.priceCurrency` (ISO 4217)
 
@@ -61,7 +61,7 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 
 ### Price patterns
 - **Active price**: plain `price` or `UnitPriceSpecification`.
-- **Strikethrough**: `priceSpecification.priceType = https://schema.org/StrikethroughPrice`.
+- **Strikethrough**: include active sale price **and** original strikethrough price, with `priceSpecification.priceType = https://schema.org/StrikethroughPrice` on the original price.
 - **Member price**: `priceSpecification.validForMemberTier` (don’t combine with `priceType` in the same spec).
 
 ---
@@ -76,8 +76,8 @@ Use `ProductGroup` when variants exist (size/color/material/pattern/etc).
 - Product-level required fields still apply to each variant/product context
 
 ### Recommended
-- `ProductGroup.variesBy` with full schema URLs (for example `https://schema.org/size`, `https://schema.org/color`)
-- `hasVariant` (nested) or `isVariantOf` (separate entities)
+- `ProductGroup.variesBy` with full schema URLs (e.g. `https://schema.org/size`, `https://schema.org/color`)
+- `hasVariant` (nested) for compact single-page modeling, or `isVariantOf` (separate entities) when variants are generated/stored independently
 - Distinct URLs that preselect each variant
 
 For single-page variant selectors, keep a canonical group URL without preselection.
@@ -141,7 +141,7 @@ When feed and schema diverge, Google can reduce eligibility or disapprove listin
 - Prefer Server Components for JSON-LD.
 - Reuse `src/components/JsonLd.tsx`.
 - Keep schema close to route/page data source.
-- Use one cohesive block per entity set (for example `[ProductGroup, OfferShippingDetails, MerchantReturnPolicy]`).
+- Use one cohesive block per entity set (e.g. `[ProductGroup, OfferShippingDetails, MerchantReturnPolicy]`).
 
 ---
 
