@@ -9,27 +9,22 @@ compatibility: Next.js 16+ App Router, JSON-LD, schema.org Product/Offer/Product
 ## Scope
 
 Use this skill for schema-specific e-commerce work:
-- Merchant listing (`Product` + `Offer`) for purchasable PDPs
-- Product snippet (`Product` + `Review`/`AggregateRating`) for editorial/aggregator pages
-- Product variants (`ProductGroup` + `hasVariant` / `isVariantOf`)
 - Loyalty program (`MemberProgram`) at organization level
 - Return policy (`MerchantReturnPolicy`) at organization or offer level
 - Shipping policy (`ShippingService` at org level, `OfferShippingDetails` at offer level)
 
+For Product/ProductGroup implementation details, use `../luratha-product-schema/SKILL.md`.
 For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 
 ---
 
 ## Canonical decision tree
 
-1. **User can buy on this page?**
-   - Yes: use **merchant listing** markup (`Product` with `Offer`).
-   - No: use **product snippet** markup.
-2. **Has color/size/material variants?**
-   - Yes: use `ProductGroup` + variant modeling.
-3. **Policy is store-wide?**
+1. **Policy is store-wide?**
    - Yes: nest in `Organization` (`hasMerchantReturnPolicy`, `hasShippingService`, `hasMemberProgram`).
    - No: use offer-level policy subset in `Offer`.
+2. **Product/ProductGroup fields needed?**
+   - Yes: switch to `../luratha-product-schema/SKILL.md`.
 
 ---
 
@@ -40,47 +35,6 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 - No misleading/spammy markup.
 - Keep price/availability synchronized with rendered page and feeds.
 - Prefer server-rendered JSON-LD in initial HTML; JS-injected markup is allowed but can reduce Shopping crawl quality for fast-changing fields.
-
----
-
-## Merchant listing baseline (PDP purchasable)
-
-### Required minimum
-- `Product.name`
-- `Product.image` (crawlable/indexable)
-- `Product.offers` (`Offer`, not `AggregateOffer` for merchant listing; `AggregateOffer` is for aggregated multi-seller snippet contexts)
-- `Offer.price` (or `priceSpecification.price`)
-- `Offer.priceCurrency` (ISO 4217)
-
-### Strongly recommended
-- `Offer.availability`
-- `Product.brand`
-- `Product.description`
-- `Product.sku` and/or `gtin*`/`mpn`
-- `Product.aggregateRating` (only when real ratings exist)
-
-### Price patterns
-- **Active price**: plain `price` or `UnitPriceSpecification`.
-- **Strikethrough**: include active sale price **and** original strikethrough price, with `priceSpecification.priceType = https://schema.org/StrikethroughPrice` on the original price.
-- **Member price**: `priceSpecification.validForMemberTier` (don’t combine with `priceType` in the same spec).
-
----
-
-## Product variants baseline
-
-Use `ProductGroup` when variants exist (size/color/material/pattern/etc).
-
-### Required
-- Unique variant identity (`sku` or `gtin`)
-- Group identity (`productGroupID` or `inProductGroupWithID`)
-- Product-level required fields still apply to each variant/product context
-
-### Recommended
-- `ProductGroup.variesBy` with full schema URLs (e.g. `https://schema.org/size`, `https://schema.org/color`)
-- `hasVariant` (nested) for compact single-page modeling, or `isVariantOf` (separate entities) when variants are generated/stored independently
-- Distinct URLs that preselect each variant
-
-For single-page variant selectors, keep a canonical group URL without preselection.
 
 ---
 
@@ -159,9 +113,8 @@ When feed and schema diverge, Google can reduce eligibility or disapprove listin
 ## Definition of done
 
 - [ ] Correct schema type selected for page intent
-- [ ] Required properties present
-- [ ] Recommended properties added where data exists
-- [ ] Variant modeling complete (when applicable)
+- [ ] Required policy properties present
+- [ ] Recommended policy properties added where data exists
 - [ ] Store-wide loyalty/return/shipping modeled in `Organization` (or justified offer-level override)
 - [ ] Merchant Center feed fields aligned with schema/page content
 - [ ] Rich Results Test has no critical errors

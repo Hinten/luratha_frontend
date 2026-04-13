@@ -7,9 +7,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- BEGIN:luratha-schema-agent-rules -->
 # Luratha E-commerce Schema Specialist
 
-When the request is about schema.org for e-commerce (Google Shopping/Merchant listing, Product/ProductGroup variants, Product snippet, loyalty, return policy, shipping policy), use:
+When the request is about Product schema.org for e-commerce (Google Shopping/Merchant listing, Product/ProductGroup variants, Product snippet), use:
+
+- `.github/skills/luratha-product-schema/SKILL.md`
+
+When the request is about e-commerce policies (loyalty, return policy, shipping policy), use:
 
 - `.github/skills/luratha-ecommerce-schema/SKILL.md`
 
-Prefer this specialized skill first, then apply `luratha-seo` for broader SEO/AEO/GEO checks.
+Then apply `luratha-seo` for broader SEO/AEO/GEO checks.
 <!-- END:luratha-schema-agent-rules -->
