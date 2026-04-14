@@ -9,7 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     env: {
-      FIREBASE_PROJECT_ID: "demo-luratha-96386",
+      FIREBASE_PROJECT_ID: "luratha-96386",
       FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
       FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
       FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",

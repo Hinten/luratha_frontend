@@ -67,15 +67,7 @@ For Firestore CRUD integration tests, use:
 npm run test:firestore
 ```
 
-This script runs the dedicated Vitest file and will execute tests if the emulator is already running; otherwise the suite is skipped.
-
-For deterministic emulator startup/shutdown, use:
-
-```bash
-npm run test:firestore:emulator
-```
-
-This script uses `firebase emulators:exec --only firestore`.
+This script runs `firebase emulators:exec --only firestore` and executes the dedicated Vitest file for emulator-based integration coverage.
 
 Inside the test suite:
 

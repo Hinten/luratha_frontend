@@ -56,8 +56,7 @@ Isso está implementado com:
 `package.json` inclui:
 
 ```json
-"test:firestore": "vitest run src/lib/__tests__/productsRepository.emulator.test.ts",
-"test:firestore:emulator": "firebase emulators:exec --only firestore --project demo-luratha-96386 --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/productsRepository.emulator.test.ts\""
 ```
 
 Uso:
@@ -66,11 +65,7 @@ Uso:
 npm run test:firestore
 ```
 
-Para execução com startup/shutdown determinístico do emulador:
-
-```bash
-npm run test:firestore:emulator
-```
+> Não é necessário autenticar com `firebase login` para executar o Firestore Emulator localmente.
 
 ## Configuração de ambiente para testes
 

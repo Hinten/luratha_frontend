@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import net from "node:net";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { type Firestore, connectFirestoreEmulator, getFirestore } from "firebase/firestore";
@@ -9,7 +9,6 @@ type EnsureFirestoreEmulatorOptions = {
   port?: number;
   timeoutMs?: number;
   pollIntervalMs?: number;
-  autoStart?: boolean;
 };
 
 export type FirestoreEmulatorSession = {
@@ -26,13 +25,11 @@ let firestoreConnected = false;
 export async function ensureFirestoreEmulator(
   options: EnsureFirestoreEmulatorOptions = {},
 ): Promise<FirestoreEmulatorSession> {
-  const projectId =
-    options.projectId ?? process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386";
+  const projectId = options.projectId ?? process.env.FIREBASE_PROJECT_ID ?? "luratha-96386";
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 8080;
   const timeoutMs = options.timeoutMs ?? 25_000;
   const pollIntervalMs = options.pollIntervalMs ?? 500;
-  const autoStart = options.autoStart ?? process.env.FIREBASE_EMULATOR_AUTO_START === "true";
 
   process.env.GCLOUD_PROJECT = projectId;
   process.env.FIREBASE_PROJECT_ID = projectId;
@@ -50,15 +47,6 @@ export async function ensureFirestoreEmulator(
 
   if (await isFirestoreEmulatorReady(host, port, projectId, Math.min(700, pollIntervalMs))) {
     return { ready: true, startedByTest: false };
-  }
-
-  if (!autoStart) {
-    return {
-      ready: false,
-      startedByTest: false,
-      reason:
-        'Firestore emulator is not running and auto-start is disabled. Set FIREBASE_EMULATOR_AUTO_START="true" to enable automatic startup.',
-    };
   }
 
   const emulatorProcess = spawn(
@@ -117,7 +105,7 @@ export async function ensureFirestoreEmulator(
 }
 
 export function getFirestoreForEmulator(
-  projectId = process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386",
+  projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386",
 ): Firestore {
   const app =
     getApps().find((candidate) => candidate.name === FIREBASE_APP_NAME) ??
@@ -157,7 +145,7 @@ export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): 
     return;
   }
 
-  session.process.kill("SIGTERM");
+  terminateProcessTree(session.process);
   await sleep(500);
 }
 
@@ -200,7 +188,7 @@ export function getFirebaseTestApp() {
     return getApp(FIREBASE_APP_NAME);
   }
   return initializeApp(
-    { projectId: process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386" },
+    { projectId: process.env.FIREBASE_PROJECT_ID ?? "luratha-96386" },
     FIREBASE_APP_NAME,
   );
 }
@@ -235,4 +223,17 @@ async function isFirestoreEmulatorReady(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function terminateProcessTree(processRef: ChildProcess): void {
+  if (!processRef.pid) {
+    return;
+  }
+
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(processRef.pid), "/t", "/f"], { stdio: "ignore" });
+    return;
+  }
+
+  processRef.kill("SIGTERM");
 }

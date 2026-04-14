@@ -62,8 +62,7 @@ Recommended flow:
 Example:
 
 ```json
-"test:firestore": "vitest run src/lib/__tests__/productsRepository.emulator.test.ts",
-"test:firestore:emulator": "firebase emulators:exec --only firestore --project demo-luratha-96386 --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/productsRepository.emulator.test.ts\""
 ```
 
 Benefits:
@@ -71,6 +70,7 @@ Benefits:
 - automatically starts and stops emulator processes;
 - reduces flaky tests;
 - ideal for CI pipelines.
+- does not require `firebase login` for local emulator execution.
 
 ## 6) SDK configuration for emulator targets
 
