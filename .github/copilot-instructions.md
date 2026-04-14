@@ -190,12 +190,6 @@ Always use the `@/src/...` prefix for imports within `src/`.
 
 Every page created or modified must follow these discoverability standards. Use the **luratha-seo** skill (`.github/skills/luratha-seo/SKILL.md`) for full implementation details.
 
-### E-commerce schema specialization
-
-For Product/Google Shopping schema tasks (merchant listing, product snippet, product variants), use the specialist agent guide at `.github/luratha-product-schema-agent.md`.
-For loyalty, return and shipping policies, use the specialist agent guide at `.github/luratha-ecommerce-policy-schema-agent.md`.
-Then apply luratha-seo as a complement.
-
 ### Three disciplines — one implementation
 
 | Discipline | Full Name | Channel |
