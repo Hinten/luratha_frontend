@@ -145,7 +145,7 @@ export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): 
     return;
   }
 
-  terminateProcessTree(session.process);
+  await terminateProcessTree(session.process);
   await sleep(500);
 }
 
@@ -225,13 +225,14 @@ async function isFirestoreEmulatorReady(
   }
 }
 
-function terminateProcessTree(processRef: ChildProcess): void {
+async function terminateProcessTree(processRef: ChildProcess): Promise<void> {
   if (!processRef.pid) {
     return;
   }
 
   if (process.platform === "win32") {
     spawnSync("taskkill", ["/PID", String(processRef.pid), "/T"], { stdio: "ignore" });
+    await sleep(250);
     if (processRef.exitCode === null) {
       spawnSync("taskkill", ["/PID", String(processRef.pid), "/T", "/F"], { stdio: "ignore" });
     }

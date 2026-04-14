@@ -62,7 +62,7 @@ Recommended flow:
 Example:
 
 ```json
-"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
 ```
 
 Benefits:
