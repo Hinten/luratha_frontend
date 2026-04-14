@@ -25,7 +25,6 @@ const firebaseConfig = {
 
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-let emulatorConnected = false;
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -34,22 +33,66 @@ export const storage = getStorage(app);
 /* Connect to the Auth Emulator in local development when the flag is set */
 if (
   process.env.NEXT_PUBLIC_USE_EMULATOR === "true" &&
-  typeof window !== "undefined" &&
-  !emulatorConnected
+  typeof window !== "undefined"
 ) {
   const authHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9099";
   const firestoreHost = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080";
   const storageHost = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
 
-  const [authHostname, authPort] = authHost.split(":");
-  connectAuthEmulator(auth, `http://${authHostname}:${Number(authPort)}`, {
-    disableWarnings: true,
-  });
+  const { hostname: authHostname, port: authPort } = parseHostAndPort(authHost);
+  const { hostname: firestoreHostname, port: firestorePort } = parseHostAndPort(firestoreHost);
+  const { hostname: storageHostname, port: storagePort } = parseHostAndPort(storageHost);
 
-  const [firestoreHostname, firestorePort] = firestoreHost.split(":");
-  connectFirestoreEmulator(db, firestoreHostname, Number(firestorePort));
+  connectAuthEmulatorSafely(auth, `http://${authHostname}:${authPort}`);
+  connectFirestoreEmulatorSafely(db, firestoreHostname, firestorePort);
+  connectStorageEmulatorSafely(storage, storageHostname, storagePort);
+}
 
-  const [storageHostname, storagePort] = storageHost.split(":");
-  connectStorageEmulator(storage, storageHostname, Number(storagePort));
-  emulatorConnected = true;
+function parseHostAndPort(value: string): { hostname: string; port: number } {
+  const [hostname, portString] = value.split(":");
+  const port = Number(portString);
+
+  if (!hostname || !Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid emulator host "${value}". Expected format "hostname:port".`);
+  }
+
+  return { hostname, port };
+}
+
+function connectAuthEmulatorSafely(authInstance: typeof auth, url: string): void {
+  try {
+    connectAuthEmulator(authInstance, url, { disableWarnings: true });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.toLowerCase().includes("already")) {
+      throw error;
+    }
+  }
+}
+
+function connectFirestoreEmulatorSafely(
+  firestoreInstance: typeof db,
+  hostname: string,
+  port: number,
+): void {
+  try {
+    connectFirestoreEmulator(firestoreInstance, hostname, port);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.toLowerCase().includes("already")) {
+      throw error;
+    }
+  }
+}
+
+function connectStorageEmulatorSafely(
+  storageInstance: typeof storage,
+  hostname: string,
+  port: number,
+): void {
+  try {
+    connectStorageEmulator(storageInstance, hostname, port);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.toLowerCase().includes("already")) {
+      throw error;
+    }
+  }
 }

@@ -100,16 +100,9 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
       }
 
       const current = validateProduct(snapshot.data());
-      const safePatch = {
-        ...(patch as Record<string, unknown>),
-      };
-      delete safePatch.id;
-      delete safePatch.createdAt;
-      delete safePatch.slug;
-
       const merged = validateProduct({
         ...current,
-        ...safePatch,
+        ...patch,
         updatedAt: new Date().toISOString(),
       });
 
@@ -156,11 +149,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
   }
 
   async function seedMockProducts(products: unknown[]): Promise<Product[]> {
-    const createdProducts: Product[] = [];
-    for (const candidate of products) {
-      createdProducts.push(await create(candidate));
-    }
-    return createdProducts;
+    return Promise.all(products.map((candidate) => create(candidate)));
   }
 
   return {

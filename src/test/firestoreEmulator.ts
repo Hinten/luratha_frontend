@@ -36,7 +36,7 @@ export async function ensureFirestoreEmulator(
   process.env.FIREBASE_STORAGE_EMULATOR_HOST =
     process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
 
-  if (await isPortOpen(host, port, pollIntervalMs)) {
+  if (await isPortOpen(host, port, Math.min(200, pollIntervalMs))) {
     return { ready: true, startedByTest: false };
   }
 
@@ -61,7 +61,7 @@ export async function ensureFirestoreEmulator(
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await isPortOpen(host, port, pollIntervalMs)) {
+    if (await isPortOpen(host, port, Math.min(200, pollIntervalMs))) {
       return {
         ready: true,
         startedByTest: true,
@@ -77,7 +77,7 @@ export async function ensureFirestoreEmulator(
       };
     }
 
-    await sleep(pollIntervalMs);
+    await sleep(100);
   }
 
   if (emulatorProcess.exitCode === null) {
