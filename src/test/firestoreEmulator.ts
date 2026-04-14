@@ -231,7 +231,10 @@ function terminateProcessTree(processRef: ChildProcess): void {
   }
 
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/pid", String(processRef.pid), "/t", "/f"], { stdio: "ignore" });
+    spawnSync("taskkill", ["/PID", String(processRef.pid), "/T"], { stdio: "ignore" });
+    if (processRef.exitCode === null) {
+      spawnSync("taskkill", ["/PID", String(processRef.pid), "/T", "/F"], { stdio: "ignore" });
+    }
     return;
   }
 
