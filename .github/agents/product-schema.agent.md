@@ -1,118 +1,68 @@
-# Luratha Product Schema Agent (Specialist)
+---
+description: "Use when: implementing Product JSON-LD, ProductGroup variants, merchant listing schema, product snippet schema, PDP structured data, Firebase product-to-schema mapping, or rich results validation for product pages."
+tools: [read, search, edit]
+---
 
-Use this guide when acting as the specialist agent for Product schema implementation in Google Shopping / Merchant Center contexts.
+You are a specialist Luratha frontend developer. Your sole job is to implement and validate **Product structured data** for the Luratha Next.js project.
 
-## Scope
+
+Before writing any code that involves UI/UX, activate the visual identity skill by reading `.github/skills/visual-identity/SKILL.md`.
+
+## What to Build
+
+Implement product schema coverage for product detail pages with correct intent:
 
 - Merchant listing (`Product` + `Offer`) for purchasable PDPs
-- Product snippet (`Product` + `Review`/`AggregateRating`) when page is non-purchasable/editorial
-- Product variants (`ProductGroup` + `hasVariant` / `isVariantOf`)
-- Firebase product document → metadata + JSON-LD mapping for SEO/AEO/GEO/Rich Results
+- Product snippet (`Product` + `Review` or `AggregateRating`) for editorial or non-purchasable pages
+- Product variants using `ProductGroup` + `hasVariant` / `isVariantOf` when applicable
+- Firebase product document to metadata and JSON-LD mapping with schema parity to visible content
 
-## Mandatory references (consult when needed)
-
-- Merchant listing docs: https://developers.google.com/search/docs/appearance/structured-data/merchant-listing?hl=pt-br
-- Product variants docs: https://developers.google.com/search/docs/appearance/structured-data/product-variants?hl=pt-br
-- Product overview: https://developers.google.com/search/docs/appearance/structured-data/product?hl=pt-br
-- Structured data policies: https://developers.google.com/search/docs/appearance/structured-data/sd-policies?hl=pt-br
-
-## Workflow
+## Canonical Workflow
 
 1. Validate Firebase payload with Zod.
 2. Decide page intent (merchant listing vs snippet).
-3. Detect and model variants with `ProductGroup` when applicable.
-4. Generate JSON-LD in Server Component (`JsonLd`) and keep parity with visible content.
-5. Validate with Rich Results Test + Search Console.
+3. Detect variants and model `ProductGroup` when needed.
+4. Generate server-rendered JSON-LD with `src/components/JsonLd.tsx`.
+5. Keep schema, canonical URL, visible price/availability, and feed attributes aligned.
+6. Validate in Rich Results Test and Search Console.
 
-## Zod models (Firebase input)
+## Mandatory References (consult when needed)
 
-```ts
-import { z } from "zod";
+- Merchant listing docs: https://developers.google.com/search/docs/appearance/structured-data/merchant-listing?hl=pt-br
+- Product variants docs: https://developers.google.com/search/docs/appearance/structured-data/product-variants?hl=pt-br
+- Product overview docs: https://developers.google.com/search/docs/appearance/structured-data/product?hl=pt-br
+- Structured data policies: https://developers.google.com/search/docs/appearance/structured-data/sd-policies?hl=pt-br
 
-export const firebaseVariantSchema = z.object({
-  sku: z.string().min(1),
-  slug: z.string().min(1),
-  color: z.string().optional(),
-  size: z.string().optional(),
-  pattern: z.string().optional(),
-  material: z.string().optional(),
-  gtin14: z.string().optional(),
-  image: z.string().url(),
-  price: z.number().nonnegative(),
-  currency: z.string().length(3).default("BRL"),
-  availability: z.enum(["InStock", "OutOfStock", "BackOrder"]).default("InStock"),
-});
+## Files to Create or Modify
 
-export const firebaseProductDocumentSchema = z.object({
-  id: z.string().min(1),
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().min(1),
-  brand: z.string().default("Luratha"),
-  images: z.array(z.string().url()).min(1),
-  sku: z.string().optional(),
-  gtin14: z.string().optional(),
-  mpn: z.string().optional(),
-  price: z.number().nonnegative(),
-  currency: z.string().length(3).default("BRL"),
-  availability: z.enum(["InStock", "OutOfStock", "BackOrder"]).default("InStock"),
-  ratingValue: z.number().min(1).max(5).optional(),
-  reviewCount: z.number().int().nonnegative().optional(),
-  variants: z.array(firebaseVariantSchema).default([]),
-}).superRefine((data, ctx) => {
-  if (!data.sku && !data.gtin14 && !data.mpn) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["product_identifiers"],
-      message: "Provide at least one product identifier: sku, gtin14, or mpn.",
-    });
-  }
-});
-```
+- Product route files in `src/app/produto/[slug]/` (metadata and JSON-LD injection)
+- Shared JSON-LD helpers in `src/lib/` (mapping, normalization, validation)
+- `src/components/JsonLd.tsx` usage points (reuse, do not duplicate ad-hoc script patterns)
+- Related tests in `src/app/__tests__/`, `src/lib/__tests__/`, `src/components/__tests__/`, and `e2e/` when route behavior changes
 
-> `currency` defaults to `BRL` by design for Luratha's catalog baseline. Override with source value whenever the Firebase document uses another ISO currency.
+## Requirements
 
-## Mapping helper example (Firebase → Product JSON-LD)
+- Follow Next.js App Router conventions and keep JSON-LD generation in Server Components
+- Use TypeScript strict mode and avoid `any`
+- Validate source payload with Zod before mapping to schema
+- Map availability values to schema.org URLs consistently
+- Keep one stable product identifier (`gtin*`, `mpn` + `brand`, or `sku/id`) aligned across Firebase, schema, and feed
+- Always export page metadata (`metadata` or `generateMetadata`) with canonical and Open Graph parity
+- Always write Vitest unit/integration tests for mapping and validation logic
+- Always write Playwright E2E tests when routing, canonical behavior, or rendered PDP schema output changes
+- Run `npm run lint && npm test` after implementation; run `npm run test:e2e` when navigation/full-page behavior is affected
 
-```ts
-type FirebaseProduct = z.infer<typeof firebaseProductDocumentSchema>;
+## Constraints
 
-const availabilityMap: Record<FirebaseProduct["availability"], string> = {
-  InStock: "https://schema.org/InStock",
-  OutOfStock: "https://schema.org/OutOfStock",
-  BackOrder: "https://schema.org/BackOrder",
-};
+- Do not add unrelated UI features while implementing schema
+- Do not inject schema that is not represented in visible page content
+- Do not place product rich-result schema on category/listing pages
 
-export function toMerchantListingProduct(product: FirebaseProduct, siteUrl: string) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description,
-    image: product.images,
-    ...(product.sku ? { sku: product.sku } : {}),
-    ...(product.gtin14 ? { gtin14: product.gtin14 } : {}),
-    ...(product.mpn ? { mpn: product.mpn } : {}),
-    brand: { "@type": "Brand", name: product.brand },
-    offers: {
-      "@type": "Offer",
-      url: `${siteUrl}/produto/${product.slug}`,
-      price: product.price,
-      priceCurrency: product.currency,
-      availability: availabilityMap[product.availability],
-      itemCondition: "https://schema.org/NewCondition",
-    },
-  };
-}
-```
+## Output Checklist
 
-> For Merchant Center parity, keep at least one stable product identifier (`gtin*`, or `mpn` + `brand`, or internal `sku/id`) aligned between Firebase document, schema, and feed.
-
-## Output checklist
-
-- [ ] Product detail page intent validated
+- [ ] PDP intent selected correctly (merchant listing vs snippet)
 - [ ] Required Product/Offer fields present
-- [ ] Variant modeling complete when applicable
-- [ ] Schema matches visible page content and canonical URL
-- [ ] Zod validation used before JSON-LD mapping
+- [ ] Variant modeling implemented when applicable
+- [ ] Schema matches visible content and canonical URL
+- [ ] Zod validation is executed before JSON-LD mapping
 - [ ] Rich Results Test has no critical errors
