@@ -3,6 +3,8 @@ export { photoSchema, type Photo } from "@/src/schemas/firestore/photos";
 export {
   productVariantSchema,
   productSchema,
+  buildProductSlug,
+  slugifyProductPart,
   type ProductVariant,
   type Product,
   validateProduct,
