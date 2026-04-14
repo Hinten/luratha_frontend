@@ -13,7 +13,7 @@ When the request is about Product schema.org for e-commerce (Google Shopping/Mer
 
 When the request is about e-commerce policies (loyalty, return policy, shipping policy), use:
 
-- `.github/skills/luratha-ecommerce-schema/SKILL.md`
+- `.github/luratha-ecommerce-policy-schema-agent.md`
 
 Then apply `luratha-seo` for broader SEO/AEO/GEO checks.
 <!-- END:luratha-schema-agent-rules -->

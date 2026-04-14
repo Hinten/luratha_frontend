@@ -1,22 +1,14 @@
----
-name: luratha-ecommerce-schema
-description: Activate when asked to implement or review e-commerce policy schema.org (loyalty program, return policy, shipping policy) and Merchant Center policy alignment.
-compatibility: Next.js 16+ App Router, JSON-LD, schema.org Product/Offer/ProductGroup/MerchantReturnPolicy/ShippingService/MemberProgram, Google Search + Merchant Center.
----
+# Luratha E-commerce Policy Schema Agent (Specialist)
 
-# Luratha E-commerce Schema Specialist
+Use this guide when acting as the specialist agent for e-commerce policy schema in Google Shopping / Merchant Center contexts.
 
 ## Scope
 
-Use this skill for schema-specific e-commerce policy work:
 - Loyalty program (`MemberProgram`) at organization level
 - Return policy (`MerchantReturnPolicy`) at organization or offer level
 - Shipping policy (`ShippingService` at org level, `OfferShippingDetails` at offer level)
 
 For Product/ProductGroup implementation, use `.github/luratha-product-schema-agent.md`.
-For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
-
----
 
 ## Canonical decision tree
 
@@ -26,8 +18,6 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 2. **Need Product/ProductGroup fields?**
    - Yes: switch to `.github/luratha-product-schema-agent.md`.
 
----
-
 ## Google policy guardrails (must pass)
 
 - Markup must reflect visible page content.
@@ -35,8 +25,6 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 - No misleading/spammy markup.
 - Keep price/availability synchronized with rendered page and feeds.
 - Prefer server-rendered JSON-LD in initial HTML; JS-injected markup is allowed but can reduce Shopping crawl quality for fast-changing fields.
-
----
 
 ## Organization-level commerce policies
 
@@ -74,8 +62,6 @@ Recommended:
 - `MemberProgramTier.membershipPointsEarned`
 - `MemberProgramTier.hasTierRequirement`
 
----
-
 ## Merchant Center feed alignment (critical)
 
 Keep parity between page schema and feed attributes:
@@ -88,16 +74,12 @@ Keep parity between page schema and feed attributes:
 
 When feed and schema diverge, Google can reduce eligibility or disapprove listings.
 
----
-
-## Implementation pattern for Next.js
+## Implementation pattern (Next.js)
 
 - Prefer Server Components for JSON-LD.
 - Reuse `src/components/JsonLd.tsx`.
 - Keep schema close to route/page data source.
 - Use one cohesive block per entity set (e.g. `[ProductGroup, OfferShippingDetails, MerchantReturnPolicy]`).
-
----
 
 ## Validation workflow (mandatory)
 
@@ -108,9 +90,7 @@ When feed and schema diverge, Google can reduce eligibility or disapprove listin
    - Product snippets report
 4. Re-submit sitemap after major schema rollout
 
----
-
-## Definition of done
+## Output checklist
 
 - [ ] Correct schema type selected for page intent
 - [ ] Required policy properties present

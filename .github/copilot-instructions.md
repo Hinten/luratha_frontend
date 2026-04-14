@@ -193,7 +193,7 @@ Every page created or modified must follow these discoverability standards. Use 
 ### E-commerce schema specialization
 
 For Product/Google Shopping schema tasks (merchant listing, product snippet, product variants), use the specialist agent guide at `.github/luratha-product-schema-agent.md`.
-For loyalty, return and shipping policies, use **luratha-ecommerce-schema** (`.github/skills/luratha-ecommerce-schema/SKILL.md`).
+For loyalty, return and shipping policies, use the specialist agent guide at `.github/luratha-ecommerce-policy-schema-agent.md`.
 Then apply luratha-seo as a complement.
 
 ### Three disciplines — one implementation
