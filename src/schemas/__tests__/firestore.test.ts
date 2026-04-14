@@ -4,6 +4,7 @@ import {
   couponSchema,
   orderSchema,
   photoSchema,
+  buildProductSlug,
   productSchema,
   vectorSearchRequestSchema,
 } from "@/src/schemas/firestore";
@@ -25,9 +26,16 @@ const validPhoto = {
 
 const validProduct = {
   id: "prod_vestido_linho_cru",
-  slug: "vestido-linho-cru",
   name: "Vestido Linho Cru",
   description: "Vestido artesanal de linho cru com modelagem midi.",
+  productType: "variable" as const,
+  schemaIntent: "merchant_listing" as const,
+  isPurchasable: true,
+  brandName: "Luratha",
+  identifier: {
+    type: "sku" as const,
+    value: "LURATHA-001",
+  },
   categorySlug: "vestidos",
   tags: ["linho", "midi"],
   materialTags: ["linho"],
@@ -41,28 +49,36 @@ const validProduct = {
   status: "active" as const,
   photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
   primaryPhotoId: "photo_cream_linen_front",
+  defaultVariantSku: "LURATHA-001",
+  variantAxes: ["size"],
   variants: [
     {
       sku: "LURATHA-001",
       size: "P",
+      attributes: { size: "P" },
       price: 329,
       compareAtPrice: 399,
       stock: 6,
       photoIds: ["photo_cream_linen_front"],
+      availability: "InStock" as const,
+      itemCondition: "NewCondition" as const,
       active: true,
     },
     {
       sku: "LURATHA-002",
       size: "M",
+      attributes: { size: "M" },
       price: 359,
       stock: 8,
       photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
+      availability: "InStock" as const,
+      itemCondition: "NewCondition" as const,
       active: true,
     },
   ],
   searchText: "vestido linho cru midi artesanal",
   searchableTokens: ["vestido", "linho", "midi", "artesanal"],
-  searchEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
+  vectorEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
   publishedAt: now,
   createdAt: now,
   updatedAt: now,
@@ -114,7 +130,9 @@ describe("firestore schemas", () => {
   });
 
   it("accepts a valid product with reusable photo references", () => {
-    expect(productSchema.parse(validProduct)).toMatchObject(validProduct);
+    const parsed = productSchema.parse(validProduct);
+    expect(parsed).toMatchObject(validProduct);
+    expect(parsed.slug).toBe(buildProductSlug(validProduct.name, validProduct.defaultVariantSku));
   });
 
   it("rejects product with non-positive prices", () => {
@@ -137,6 +155,42 @@ describe("firestore schemas", () => {
     expect(() => productSchema.parse(invalid)).toThrow(
       "all variant photoIds must exist in product photoIds",
     );
+  });
+
+  it("rejects simple products with more than one variant", () => {
+    const invalid = {
+      ...validProduct,
+      productType: "simple" as const,
+      variantAxes: [],
+    };
+
+    expect(() => productSchema.parse(invalid)).toThrow(
+      "simple products must contain exactly one variant",
+    );
+  });
+
+  it("rejects missing vector embedding", () => {
+    const invalid = {
+      ...validProduct,
+      vectorEmbedding: undefined,
+      searchEmbedding: undefined,
+    };
+
+    expect(() => productSchema.parse(invalid)).toThrow(
+      "vectorEmbedding is required for vector search indexing",
+    );
+  });
+
+  it("accepts legacy searchEmbedding and normalizes slug automatically", () => {
+    const parsed = productSchema.parse({
+      ...validProduct,
+      slug: undefined,
+      vectorEmbedding: undefined,
+      searchEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
+    });
+
+    expect(parsed.vectorEmbedding).toEqual([0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74]);
+    expect(parsed.slug).toBe(buildProductSlug(validProduct.name, validProduct.defaultVariantSku));
   });
 
   it("accepts a valid order", () => {
