@@ -9,6 +9,7 @@ type EnsureFirestoreEmulatorOptions = {
   port?: number;
   timeoutMs?: number;
   pollIntervalMs?: number;
+  autoStart?: boolean;
 };
 
 export type FirestoreEmulatorSession = {
@@ -19,29 +20,49 @@ export type FirestoreEmulatorSession = {
 };
 
 const FIREBASE_APP_NAME = "firestore-emulator-tests";
+const NPX_COMMAND = process.platform === "win32" ? "npx.cmd" : "npx";
 let firestoreConnected = false;
 
 export async function ensureFirestoreEmulator(
   options: EnsureFirestoreEmulatorOptions = {},
 ): Promise<FirestoreEmulatorSession> {
-  const projectId = options.projectId ?? process.env.FIREBASE_PROJECT_ID ?? "luratha-96386";
+  const projectId =
+    options.projectId ?? process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386";
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 8080;
   const timeoutMs = options.timeoutMs ?? 25_000;
   const pollIntervalMs = options.pollIntervalMs ?? 500;
+  const autoStart = options.autoStart ?? process.env.FIREBASE_EMULATOR_AUTO_START === "true";
 
   process.env.GCLOUD_PROJECT = projectId;
+  process.env.FIREBASE_PROJECT_ID = projectId;
   process.env.FIRESTORE_EMULATOR_HOST = `${host}:${port}`;
   process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9099";
   process.env.FIREBASE_STORAGE_EMULATOR_HOST =
     process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
+  process.env.FIREBASE_CLI_DISABLE_UPDATE_CHECK =
+    process.env.FIREBASE_CLI_DISABLE_UPDATE_CHECK ?? "1";
+  process.env.FIREBASE_CLI_EXPERIMENTS = process.env.FIREBASE_CLI_EXPERIMENTS ?? "";
+  process.env.NO_GCE_CHECK = process.env.NO_GCE_CHECK ?? "true";
+  process.env.GOOGLE_CLOUD_DISABLE_METADATA = process.env.GOOGLE_CLOUD_DISABLE_METADATA ?? "true";
+  process.env.CLOUDSDK_CORE_DISABLE_PROMPTS =
+    process.env.CLOUDSDK_CORE_DISABLE_PROMPTS ?? "1";
 
-  if (await isPortOpen(host, port, Math.min(200, pollIntervalMs))) {
+  if (await isFirestoreEmulatorReady(host, port, projectId, Math.min(700, pollIntervalMs))) {
     return { ready: true, startedByTest: false };
   }
 
+  if (!autoStart) {
+    return {
+      ready: false,
+      startedByTest: false,
+      reason:
+        'Firestore emulator is not running and auto-start is disabled. Set FIREBASE_EMULATOR_AUTO_START="true" to enable automatic startup.',
+    };
+  }
+
   const emulatorProcess = spawn(
-    "npx",
+    NPX_COMMAND,
     [
       "firebase",
       "emulators:start",
@@ -51,17 +72,21 @@ export async function ensureFirestoreEmulator(
       projectId,
       "--config",
       "firebase.json",
+      "--non-interactive",
       "--quiet",
     ],
     {
       cwd: process.cwd(),
       stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+      },
     },
   );
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await isPortOpen(host, port, Math.min(200, pollIntervalMs))) {
+    if (await isFirestoreEmulatorReady(host, port, projectId, Math.min(700, pollIntervalMs))) {
       return {
         ready: true,
         startedByTest: true,
@@ -91,7 +116,9 @@ export async function ensureFirestoreEmulator(
   };
 }
 
-export function getFirestoreForEmulator(projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386"): Firestore {
+export function getFirestoreForEmulator(
+  projectId = process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386",
+): Firestore {
   const app =
     getApps().find((candidate) => candidate.name === FIREBASE_APP_NAME) ??
     initializeApp({ projectId }, FIREBASE_APP_NAME);
@@ -173,7 +200,39 @@ export function getFirebaseTestApp() {
     return getApp(FIREBASE_APP_NAME);
   }
   return initializeApp(
-    { projectId: process.env.FIREBASE_PROJECT_ID ?? "luratha-96386" },
+    { projectId: process.env.FIREBASE_PROJECT_ID ?? "demo-luratha-96386" },
     FIREBASE_APP_NAME,
   );
+}
+
+async function isFirestoreEmulatorReady(
+  host: string,
+  port: number,
+  projectId: string,
+  timeoutMs: number,
+): Promise<boolean> {
+  if (!(await isPortOpen(host, port, timeoutMs))) {
+    return false;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(
+      `http://${host}:${port}/emulator/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents`,
+      {
+        method: "GET",
+        signal: controller.signal,
+      },
+    );
+    return response.ok;
+  } catch {
+    if (process.env.FIREBASE_EMULATOR_DEBUG === "true") {
+      console.warn("[firestoreEmulator] readiness probe failed");
+    }
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }

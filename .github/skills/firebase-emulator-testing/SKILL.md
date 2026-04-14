@@ -1,18 +1,18 @@
 ---
 name: firebase-emulator-testing
-description: Use esta skill para implementar e validar testes de integração com Firebase Emulator (Firestore/Auth/Storage), incluindo detecção de emulator ativo, startup automático com timeout, estratégia de skip, cleanup de dados, scripts com firebase emulators:exec e boas práticas de CI/CD.
+description: Use this skill to implement and validate Firebase Emulator integration tests (Firestore/Auth/Storage), including running-emulator detection, auto-start with timeout, skip strategy, data cleanup, firebase emulators:exec scripts, and CI/CD best practices.
 compatibility: Firebase CLI, Firebase JS SDK v12, Vitest, Node.js 22, Next.js 16
 ---
 
 # Firebase Emulator Testing — Luratha
 
-## Objetivo
+## Goal
 
-Padronizar como criar testes de integração para Firestore com segurança, previsibilidade e boa performance.
+Standardize how Firestore integration tests are built with reliability, predictable behavior, and strong performance.
 
-## 1) Configuração correta do Firebase Emulator
+## 1) Correct Firebase Emulator setup
 
-Pré-requisitos:
+Prerequisites:
 
 ```bash
 npm ci
@@ -20,100 +20,101 @@ npm install -g firebase-tools@latest
 firebase setup:emulators:firestore
 ```
 
-Configuração local esperada (`firebase.json`):
+Expected local emulator ports (`firebase.json`):
 
 - Firestore: `8080`
 - Auth: `9099`
 - Storage: `9199`
 
-## 2) Como verificar se o emulator está rodando (código reutilizável)
+## 2) How to check if the emulator is running (reusable code)
 
-Use utilitário Node para verificar porta (`net.createConnection`) e expor função:
+Use a Node utility that probes ports (`net.createConnection`) and exposes:
 
 - `ensureFirestoreEmulator()`
 
-Fluxo recomendado:
+Recommended flow:
 
-1. Tenta conectar em `FIRESTORE_EMULATOR_HOST`.
-2. Se falhar, inicia `firebase emulators:start --only firestore`.
-3. Aguarda até timeout.
-4. Retorna status para `describe` ou `describe.skip`.
+1. Try to connect to `FIRESTORE_EMULATOR_HOST`.
+2. If unavailable, start `firebase emulators:start --only firestore`.
+3. Wait until timeout.
+4. Return a status used by `describe` or `describe.skip`.
 
-## 3) Estratégia recomendada: skip vs iniciar automaticamente
+## 3) Recommended strategy: skip vs auto-start
 
-- **Dev local:** tentar subir automaticamente para reduzir fricção.
-- **CI:** preferir `firebase emulators:exec` (determinístico).
-- **Fallback obrigatório:** se timeout estourar, usar `describe.skip` e logar motivo.
+- **Local dev:** auto-start to reduce friction.
+- **CI:** prefer `firebase emulators:exec` (deterministic startup/shutdown).
+- **Mandatory fallback:** if startup exceeds timeout, use `describe.skip` and log the reason.
 
-## 4) Boas práticas para escrever testes com emulator
+## 4) Best practices for emulator tests
 
-- Use `@vitest-environment node` para testes de integração Firebase.
-- Injete dependências (ex.: `createProductsRepository(db)`).
-- Valide payloads com schema (Zod) antes de persistir.
-- Cubra:
+- Use `@vitest-environment node` for Firebase integration tests.
+- Inject dependencies (for example `createProductsRepository(db)`).
+- Validate payloads with schema validation (Zod) before persistence.
+- Cover:
   - Create
   - Read
   - Update
   - Delete
-  - Casos de borda (not_found, conflito, validação).
+  - Edge cases (`not_found`, conflicts, validation errors).
 
-## 5) `firebase emulators:exec` no package.json
+## 5) `firebase emulators:exec` in package.json
 
-Exemplo:
+Example:
 
 ```json
-"test:firestore": "firebase emulators:exec --only firestore \"vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "vitest run src/lib/__tests__/productsRepository.emulator.test.ts",
+"test:firestore:emulator": "firebase emulators:exec --only firestore --project demo-luratha-96386 --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
 ```
 
-Benefícios:
+Benefits:
 
-- sobe/derruba emulator automaticamente;
-- reduz flakes;
-- ideal para pipeline CI.
+- automatically starts and stops emulator processes;
+- reduces flaky tests;
+- ideal for CI pipelines.
 
-## 6) Configuração do SDK para apontar para emulator
+## 6) SDK configuration for emulator targets
 
-No frontend (`src/lib/firebase.ts`):
+In frontend code (`src/lib/firebase.ts`):
 
 - `NEXT_PUBLIC_USE_EMULATOR=true`
 - `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`
 - `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`
 - `NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199`
 
-No Vitest (`vitest.config.mts`):
+In Vitest config (`vitest.config.mts`):
 
 - `FIREBASE_PROJECT_ID`
 - `FIRESTORE_EMULATOR_HOST`
 - `FIREBASE_AUTH_EMULATOR_HOST`
 - `FIREBASE_STORAGE_EMULATOR_HOST`
 
-## 7) Clean up, performance e CI/CD
+## 7) Cleanup, performance, and CI/CD
 
-- Limpe coleção(s) antes de cada teste (`clearFirestoreCollection`).
-- Evite dados desnecessários: seed curto e objetivo.
-- Pré-baixe emulator no setup de CI:
+- Clean collection data before each test (`clearFirestoreCollection`).
+- Keep seed data focused and minimal.
+- Pre-download emulator binaries in CI setup:
 
 ```yaml
 - run: firebase setup:emulators:firestore
 ```
 
-## 8) Dicas avançadas
+## 8) Advanced tips
 
-- **Auth Emulator:** valide login/claims em fluxos reais.
-- **Storage Emulator:** valide upload e metadados.
-- **Rules testing:** inclua testes de security rules (allow/deny).
-- **Ambientes isolados:** use project IDs de teste dedicados.
+- **Auth Emulator:** validate login and claims in real auth flows.
+- **Storage Emulator:** validate upload behavior and object metadata.
+- **Rules testing:** include allow/deny tests for security rules.
+- **Isolated environments:** use dedicated test project IDs.
 
-## 9) Exemplo prático (baseado no código atual)
+## 9) Practical example (based on this codebase)
 
-- Repositório: `src/lib/repositories/productsRepository.ts`
+- Repository: `src/lib/repositories/productsRepository.ts`
 - Mock/seed: `src/lib/repositories/productsMockData.ts`
-- Utilitário emulator: `src/test/firestoreEmulator.ts`
-- Teste integração: `src/lib/__tests__/productsRepository.emulator.test.ts`
+- Emulator utility: `src/test/firestoreEmulator.ts`
+- Integration test: `src/lib/__tests__/productsRepository.emulator.test.ts`
 
-## 10) Problemas comuns e fixes
+## 10) Common issues and fixes
 
-- **ECONNREFUSED**: emulator não iniciado ou host incorreto.
-- **Timeout de startup**: aumentar timeout e pré-baixar binário.
-- **Validação Zod quebrando update**: garantir consistência entre variantes/estoque/preço.
-- **Flakes em CI**: usar `firebase emulators:exec` ao invés de start manual.
+- **ECONNREFUSED**: emulator not running or host/port mismatch.
+- **Startup timeout**: increase timeout and pre-download emulator binaries.
+- **Zod validation failures on update**: ensure variant/stock/price consistency.
+- **CI flakes**: prefer `firebase emulators:exec` over manual startup flows.

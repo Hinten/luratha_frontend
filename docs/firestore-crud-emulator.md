@@ -56,13 +56,20 @@ Isso está implementado com:
 `package.json` inclui:
 
 ```json
-"test:firestore": "firebase emulators:exec --only firestore \"vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "vitest run src/lib/__tests__/productsRepository.emulator.test.ts",
+"test:firestore:emulator": "firebase emulators:exec --only firestore --project demo-luratha-96386 --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
 ```
 
 Uso:
 
 ```bash
 npm run test:firestore
+```
+
+Para execução com startup/shutdown determinístico do emulador:
+
+```bash
+npm run test:firestore:emulator
 ```
 
 ## Configuração de ambiente para testes
