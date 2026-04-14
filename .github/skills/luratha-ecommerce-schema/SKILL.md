@@ -1,6 +1,6 @@
 ---
 name: luratha-ecommerce-schema
-description: Activate when asked to implement or review e-commerce schema.org for Google Shopping (Product merchant listing, product snippet, product variants, loyalty program, return policy, shipping policy) and Merchant Center data alignment.
+description: Activate when asked to implement or review e-commerce policy schema.org (loyalty program, return policy, shipping policy) and Merchant Center policy alignment.
 compatibility: Next.js 16+ App Router, JSON-LD, schema.org Product/Offer/ProductGroup/MerchantReturnPolicy/ShippingService/MemberProgram, Google Search + Merchant Center.
 ---
 
@@ -8,12 +8,12 @@ compatibility: Next.js 16+ App Router, JSON-LD, schema.org Product/Offer/Product
 
 ## Scope
 
-Use this skill for schema-specific e-commerce work:
+Use this skill for schema-specific e-commerce policy work:
 - Loyalty program (`MemberProgram`) at organization level
 - Return policy (`MerchantReturnPolicy`) at organization or offer level
 - Shipping policy (`ShippingService` at org level, `OfferShippingDetails` at offer level)
 
-For Product/ProductGroup implementation details, use `../luratha-product-schema/SKILL.md`.
+For Product/ProductGroup implementation, use `.github/luratha-product-schema-agent.md`.
 For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 
 ---
@@ -23,8 +23,8 @@ For broad metadata/robots/sitemap/llms.txt tasks, complement with `luratha-seo`.
 1. **Policy is store-wide?**
    - Yes: nest in `Organization` (`hasMerchantReturnPolicy`, `hasShippingService`, `hasMemberProgram`).
    - No: use offer-level policy subset in `Offer`.
-2. **Product/ProductGroup fields needed?**
-   - Yes: switch to `../luratha-product-schema/SKILL.md`.
+2. **Need Product/ProductGroup fields?**
+   - Yes: switch to `.github/luratha-product-schema-agent.md`.
 
 ---
 
