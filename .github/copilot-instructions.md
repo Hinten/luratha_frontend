@@ -1,254 +1,115 @@
 # Copilot Instructions for luratha_frontend
 
-Trust these instructions. Only search the codebase if you need information not covered here.
+Trust this file first. Search the codebase only when this guide does not answer the question.
 
-## What This Repository Is
+## Project Snapshot
 
-Luratha is a Next.js 16.2.2 web application frontend (React 19, TypeScript) integrated with Firebase (Firestore, Firebase Auth, Cloud Storage). It is deployed via Firebase App Hosting (Cloud Run). The UI uses Tailwind CSS v4. The codebase is small (~7 source files).
+Luratha is a Next.js 16.2.2 App Router frontend (React 19 + TypeScript strict) for a Brazilian slow-fashion e-commerce. It uses Firebase client SDK + Firebase App Hosting and Tailwind CSS v4 with CSS Modules.
 
-## Runtime & Toolchain
+## Runtime & Prerequisites
 
-- **Node.js**: 22 (required; see `copilot-setup-steps.yml`)
-- **npm**: 10 (use `npm ci`, never `npm install` in CI)
-- **Next.js**: 16.2.2 with Turbopack
-- **TypeScript**: 5, strict mode
-- **Tailwind CSS**: 4 (PostCSS plugin: `@tailwindcss/postcss`)
-- **Firebase SDK**: 12 (client-side)
-- **Firebase CLI**: latest (installed globally via `npm install -g firebase-tools@latest`)
+- Node.js **22**
+- npm **10** (`npm ci`, never `npm install` in CI)
+- Next.js **16.2.2** (Turbopack default)
+- TypeScript **strict mode**
+- Firebase CLI (`npm install -g firebase-tools@latest`)
+- Playwright Chromium (`npx playwright install --with-deps chromium`)
 
-## Installing Dependencies
+`next/font/google` is used in `src/app/layout.tsx`; build environments must allow access to Google Fonts endpoints.
+
+## Command Order (mandatory)
+
+Run commands in this order for any code change:
 
 ```bash
 npm ci
-```
-
-Always run `npm ci` before building, linting, or running the app. Dependencies are in `node_modules/`; never commit them.
-
-## Scripts (from `package.json`)
-
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Start dev server on http://localhost:3000 |
-| `npm run build` | Production build (Turbopack) |
-| `npm run start` | Start production server (requires prior build) |
-| `npm run lint` | ESLint with Next.js rules |
-| `npm test` | Run unit/integration tests once (Vitest) |
-| `npm run test:watch` | Run unit tests in watch mode |
-| `npm run test:coverage` | Run unit tests with coverage report |
-| `npm run test:e2e` | Run E2E tests headless (Playwright) |
-| `npm run test:e2e:ui` | Run E2E tests with interactive UI |
-
-## Lint
-
-```bash
 npm run lint
+npm test
+npm run test:e2e
 ```
 
-- Uses ESLint 9 flat config (`eslint.config.mjs`) with `eslint-config-next` (core-web-vitals + TypeScript rules).
-- Currently emits 3 **warnings** (unused `Image` import in `page.tsx`, `<img>` in Header/Footer) — no errors. Warnings do not fail the process (exit 0).
-- Errors (exit non-zero) will fail CI. Do not introduce new ESLint errors.
-
-## Build
+If the change affects production behavior, also run:
 
 ```bash
 npm run build
 ```
 
-- Build output goes to `.next/` (gitignored).
+## Scripts (`package.json`)
 
-## Test Suite
-
-The project uses **Vitest** for unit/integration tests and **Playwright** for E2E tests. Full documentation is in `docs/testing.md`.
-
-### Running tests — mandatory checklist
-
-**Always run these commands before finishing any task:**
-
-```bash
-npm run lint       # must exit 0 with no new errors
-npm test           # must pass — all Vitest unit/integration tests
-npm run test:e2e   # must pass — all Playwright E2E tests
-```
-
-E2E tests (`npm run test:e2e`) can and **must** be run in the Copilot agent environment — Chromium is installed by `copilot-setup-steps.yml` via `playwright install --with-deps chromium`. Run them whenever changes affect routing, navigation, or full-page rendering.
-
-### Test file locations
-
-```
-src/
-├── app/__tests__/          # Page-level unit tests
-├── components/__tests__/   # Component unit/integration tests
-└── lib/__tests__/          # Utility/constant unit tests
-e2e/                        # Playwright E2E tests
-```
-
-**Convention:** unit/integration files are `*.test.ts(x)` inside `__tests__/`; E2E files are `*.spec.ts` in `e2e/`.
-
-### Writing tests for new code
-
-When creating any new element, always add the corresponding tests:
-
-| What you create | Tests required |
+| Command | Purpose |
 |---|---|
-| New utility function / constant | Unit test in `src/lib/__tests__/` |
-| New React component | Unit test in `src/components/__tests__/` (render, props, interactions) |
-| New page | Unit test (`src/app/__tests__/`) + E2E test (`e2e/`) |
-| New navigation link or route | E2E navigation test |
-| Form or interactive flow | Integration test (Vitest) + E2E test |
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run start` | Run built app |
+| `npm run lint` | ESLint (Next core-web-vitals + TS) |
+| `npm test` | Vitest once |
+| `npm run test:watch` | Vitest watch mode |
+| `npm run test:coverage` | Vitest with coverage |
+| `npm run test:e2e` | Playwright E2E (headless) |
+| `npm run test:e2e:ui` | Playwright UI mode |
+| `npm run setup:routes` | Run `docs/create-catalog-routes.mjs` scaffolding |
 
-### Mocking Next.js in Vitest
+## Architecture Map (where to change code)
 
-```ts
-// next/link — always mock in component unit tests
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
+- `src/app/`: routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests.
+- `src/components/`: shared UI plus domain folders (`categoria/`, `produto/`), each with `.module.css`.
+- `src/contexts/`: client state providers (`AuthContext`, `CartContext`).
+- `src/lib/`: constants, SEO constants, Firebase init, query helpers, mock data, utilities.
+- `src/services/`: app service layer (e.g., Firestore/product services).
+- `src/schemas/`: validation and domain schemas.
+- `src/test/`: Vitest setup.
+- `e2e/`: Playwright specs.
+- `public/llms.txt`: GEO/LLM discoverability file.
 
-// next/navigation — mock when a component calls useRouter/usePathname
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
-  usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
-}));
-```
+## Core Engineering Conventions
 
-### Firebase App Hosting & test exclusion
+- Use `@/src/...` imports (alias from `tsconfig.json`).
+- Prefer Server Components; add `"use client"` only when required (hooks/events/browser APIs).
+- Keep changes small and composable; reuse existing components/utilities before creating new ones.
+- Styling: use CSS Modules for component styles; use design tokens from `src/app/globals.css` (`var(--color-*)`, `var(--font-*)`).
+- Accessibility is required: semantic landmarks, one `<h1>` per page, keyboard-accessible interactions, visible focus states, descriptive labels and `alt`.
+- Performance: avoid unnecessary client components and redundant data work in render paths.
 
-Test files, config files, and output artifacts are excluded from Cloud Run deployments via `.gcloudignore`. Never remove those exclusions.
+## Testing Expectations
 
-## Repository Layout
+- Vitest config: `vitest.config.mts` (`jsdom`, globals, setup in `src/test/setup.ts`).
+- Playwright config: `playwright.config.ts` (auto `npm run dev`, Chromium project).
+- Test naming: `src/**/__tests__/*.test.ts(x)` and `e2e/*.spec.ts`.
+- Do not remove/skip existing tests to make CI pass.
+- For full patterns and mocks, use `.github/skills/luratha-testing/SKILL.md`.
 
-```
-luratha_frontend/
-├── .github/
-│   └── workflows/
-│       └── copilot-setup-steps.yml   # CI: installs deps + Firebase CLI
-├── docs/
-│   └── testing.md                    # Test suite documentation
-├── e2e/
-│   ├── home.spec.ts                  # E2E: home page tests
-│   └── navigation.spec.ts            # E2E: header/footer navigation tests
-├── src/
-│   ├── app/
-│   │   ├── __tests__/
-│   │   │   └── page.test.tsx         # Unit test: Home page
-│   │   ├── layout.tsx                # Root layout (Header + Footer, Google fonts)
-│   │   ├── page.tsx                  # Home page
-│   │   ├── globals.css               # Global styles (Tailwind CSS entry)
-│   │   └── favicon.ico
-│   ├── components/
-│   │   ├── __tests__/
-│   │   │   ├── Header.test.tsx       # Unit tests: Header component
-│   │   │   └── Footer.test.tsx       # Unit tests: Footer component
-│   │   ├── Header.tsx                # Site header with logo
-│   │   └── Footer.tsx                # Site footer with copyright
-│   ├── lib/
-│   │   ├── __tests__/
-│   │   │   └── constants.test.ts     # Unit tests: app constants
-│   │   └── constants.ts              # App-wide constants (name, logo path)
-│   └── test/
-│       └── setup.ts                  # Vitest global setup (jest-dom matchers)
-├── public/
-│   └── llms.txt                      # LLM/AI discoverability (llmstxt.org spec)
-├── next.config.ts                    # Next.js config
-├── tsconfig.json                     # TypeScript config
-├── vitest.config.mts                 # Vitest configuration
-├── playwright.config.ts              # Playwright configuration
-├── eslint.config.mjs                 # ESLint flat config
-├── postcss.config.mjs                # Tailwind PostCSS config
-├── .gcloudignore                     # Excludes test files from Cloud Run builds
-├── firebase.json                     # Firebase project config (Firestore, Storage, emulators)
-├── firestore.rules                   # Firestore security rules
-├── storage.rules                     # Cloud Storage security rules
-├── firestore.indexes.json            # Firestore index definitions
-├── apphosting.yaml                   # Firebase App Hosting (Cloud Run) config
-├── .firebaserc                       # Firebase project alias (luratha-96386)
-├── package.json
-└── package-lock.json
-```
+## SEO / AEO / GEO Expectations
 
-## Path Aliases
+When adding or updating pages/routes:
 
-`tsconfig.json` defines `"@/*": ["./*"]` (relative to repo root). Therefore:
-- `@/src/components/Header` → `src/components/Header.tsx`
-- `@/src/lib/constants` → `src/lib/constants.ts`
+- Provide page metadata (`metadata` or `generateMetadata`) with unique title, description, canonical, OG.
+- Inject JSON-LD using `JsonLd` with the correct schema type.
+- Keep semantic HTML structure and descriptive alt text.
+- Update `src/app/sitemap.ts`, `src/app/robots.ts`, and `public/llms.txt` when route discoverability changes.
 
-Always use the `@/src/...` prefix for imports within `src/`.
+Use `.github/skills/luratha-seo/SKILL.md` for implementation details.
 
-## Key Architectural Facts
+## Firebase & Security
 
-- **App Router** (Next.js App Directory under `src/app/`). Use Server Components by default; add `"use client"` only when needed (hooks, browser APIs, event handlers).
-- `Header.tsx` and `Footer.tsx` are already marked `"use client"`.
-- Global app constants (app name, logo path) live in `src/lib/constants.ts` as `appData`.
-- Firebase is configured for project `luratha-96386` (region: `us-east5`). The emulator suite runs Auth (9099), Firestore (8080), Storage (9199) with emulator UI enabled.
-- No Firebase config initialization file exists yet in `src/lib/` — if adding Firebase client SDK usage, create `src/lib/firebase.ts`.
-- Tailwind CSS v4 uses the PostCSS plugin approach; do **not** use `tailwind.config.js` (v3 pattern).
+- Firebase project config is in `firebase.json` (project `luratha-96386`, region `us-east5`, emulators for Auth/Firestore/Storage).
+- `src/lib/firebase.ts` reads `NEXT_PUBLIC_FIREBASE_*`; never hardcode keys or secrets.
+- Keep `.env*` files out of commits (excluded in `.gcloudignore`).
+- Preserve `.gcloudignore` exclusions so tests/config/artifacts stay out of Cloud Run build context.
 
-## SEO, AEO, and GEO
+## CI / Workflow Reality
 
-Every page created or modified must follow these discoverability standards. Use the **luratha-seo** skill (`.github/skills/luratha-seo/SKILL.md`) for full implementation details.
+Current workflow: `.github/workflows/copilot-setup-steps.yml`
 
-### Three disciplines — one implementation
+- Triggers only on workflow dispatch and changes to that workflow file.
+- Installs Node 22 deps (`npm ci`), Firebase CLI, and Playwright Chromium.
+- Validates toolchain versions (`next`, `firebase`).
+- It does **not** run lint, unit tests, E2E, or build for normal PR changes. Agents must validate locally.
 
-| Discipline | Full Name | Channel |
-|---|---|---|
-| **SEO** | Search Engine Optimization | Google, Bing crawlers |
-| **AEO** | Answer Engine Optimization | AI Overviews, featured snippets, voice assistants |
-| **GEO** | Generative Engine Optimization | ChatGPT, Gemini, Copilot, Perplexity |
+## Common Pitfalls to Avoid
 
-### Mandatory rules for every new page
-
-1. **Metadata export** — every Server Component page must export `metadata` (static) or `generateMetadata` (dynamic):
-   ```ts
-   export const metadata: Metadata = {
-     title: "Page Title",                    // renders as "Page Title | Luratha" via root template
-     description: "120–160 char description",
-     alternates: { canonical: "https://www.luratha.com.br/route" },
-     openGraph: { title: "...", description: "...", url: "...", images: [...] },
-   };
-   ```
-
-2. **Structured data (schema.org JSON-LD)** — inject via `<JsonLd>` Server Component:
-   - Root layout: `Organization` + `WebSite`
-   - Product pages: `Product` + `BreadcrumbList`
-   - Category pages: `CollectionPage` + `BreadcrumbList`
-   - Institutional pages: `AboutPage`, `ContactPage`, `FAQPage` (returns, sizes)
-
-3. **Semantic HTML** — one `<h1>` per page, logical heading hierarchy (h1 → h2 → h3), descriptive `alt` on all images.
-
-4. **llms.txt** — `public/llms.txt` exists and follows [llmstxt.org](https://llmstxt.org/). Update it whenever new routes are added.
-
-5. **Sitemap & robots** — `src/app/sitemap.ts` and `src/app/robots.ts` list all public routes; private routes (`/conta/`, `/carrinho/`, `/api/`) are disallowed.
-
-### Definition of done — SEO checklist
-
-Before finishing any page implementation:
-- [ ] `metadata` export has unique title, description, canonical, and Open Graph
-- [ ] Schema.org JSON-LD injected for the page type
-- [ ] All images have descriptive `alt` text
-- [ ] `public/llms.txt` updated if new routes were added
-- [ ] `src/app/sitemap.ts` updated if new static routes were added
-
-> For the full implementation guide, patterns, and code templates, read `.github/skills/luratha-seo/SKILL.md`.
-
-## CI Workflow
-
-File: `.github/workflows/copilot-setup-steps.yml`
-
-Steps (runs on push/PR to that file, or manually):
-1. Checkout code
-2. Setup Node.js 22 (with npm cache)
-3. `npm ci`
-4. `npm install -g firebase-tools@latest`
-5. Validate: `npx next --version` and `firebase --version`
-
-The workflow does **not** run build or lint. There is no separate CI workflow that blocks merging.
-
-## Next.js Version Note
-
-This project uses **Next.js 16.2.2** — a newer version that may differ from training data. Before writing Next.js-specific code, consult `node_modules/next/dist/docs/` for current APIs. Key changes from older versions:
-- Turbopack is the default bundler for both dev and build.
-- App Router is the standard pattern (`src/app/`).
-- Font optimization via `next/font/google` is used in `layout.tsx`.
+- Import domain components from the correct folder (for example, catalog grid/sort components are under `src/components/categoria/`).
+- Do not reintroduce `tailwind.config.js` (this repo uses Tailwind v4 PostCSS setup).
+- Do not duplicate long skill content; reference the relevant skill:
+  - Testing: `.github/skills/luratha-testing/SKILL.md`
+  - SEO/AEO/GEO: `.github/skills/luratha-seo/SKILL.md`
+  - Visual system: `.github/skills/visual-identity/SKILL.md`
