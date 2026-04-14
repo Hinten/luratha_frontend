@@ -107,14 +107,22 @@ export function getFirestoreForEmulator(projectId = process.env.FIREBASE_PROJECT
 }
 
 export async function clearFirestoreCollection(db: Firestore, collectionName: string): Promise<void> {
-  while (true) {
+  const MAX_ITERATIONS = 100;
+  let iterations = 0;
+
+  while (iterations < MAX_ITERATIONS) {
     const snapshot = await getDocsInBatches(db, collectionName, 50);
     if (snapshot.length === 0) {
       return;
     }
 
     await Promise.all(snapshot.map((ref) => ref.delete()));
+    iterations += 1;
   }
+
+  throw new Error(
+    `Exceeded cleanup iteration limit (${MAX_ITERATIONS}) while clearing collection "${collectionName}"`,
+  );
 }
 
 export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): Promise<void> {

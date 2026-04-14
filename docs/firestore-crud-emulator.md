@@ -4,10 +4,10 @@ Este guia descreve a camada de CRUD criada para `src/schemas/firestore/products.
 
 ## Arquivos principais
 
-- Repositório CRUD: `/home/runner/work/luratha_frontend/luratha_frontend/src/lib/repositories/productsRepository.ts`
-- Mock data para seed: `/home/runner/work/luratha_frontend/luratha_frontend/src/lib/repositories/productsMockData.ts`
-- Utilitários de emulator para testes: `/home/runner/work/luratha_frontend/luratha_frontend/src/test/firestoreEmulator.ts`
-- Testes de integração: `/home/runner/work/luratha_frontend/luratha_frontend/src/lib/__tests__/productsRepository.emulator.test.ts`
+- Repositório CRUD: `src/lib/repositories/productsRepository.ts`
+- Mock data para seed: `src/lib/repositories/productsMockData.ts`
+- Utilitários de emulator para testes: `src/test/firestoreEmulator.ts`
+- Testes de integração: `src/lib/__tests__/productsRepository.emulator.test.ts`
 
 ## Camada CRUD implementada
 

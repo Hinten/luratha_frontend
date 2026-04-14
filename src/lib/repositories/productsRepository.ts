@@ -100,11 +100,16 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
       }
 
       const current = validateProduct(snapshot.data());
+      const safePatch = {
+        ...(patch as Record<string, unknown>),
+      };
+      delete safePatch.id;
+      delete safePatch.createdAt;
+      delete safePatch.slug;
+
       const merged = validateProduct({
         ...current,
-        ...patch,
-        id: current.id,
-        createdAt: current.createdAt,
+        ...safePatch,
         updatedAt: new Date().toISOString(),
       });
 
