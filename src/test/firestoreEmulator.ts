@@ -1,0 +1,171 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import net from "node:net";
+import { initializeApp, getApp, getApps } from "firebase/app";
+import { type Firestore, connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+
+type EnsureFirestoreEmulatorOptions = {
+  projectId?: string;
+  host?: string;
+  port?: number;
+  timeoutMs?: number;
+  pollIntervalMs?: number;
+};
+
+export type FirestoreEmulatorSession = {
+  ready: boolean;
+  startedByTest: boolean;
+  process?: ChildProcess;
+  reason?: string;
+};
+
+const FIREBASE_APP_NAME = "firestore-emulator-tests";
+let firestoreConnected = false;
+
+export async function ensureFirestoreEmulator(
+  options: EnsureFirestoreEmulatorOptions = {},
+): Promise<FirestoreEmulatorSession> {
+  const projectId = options.projectId ?? process.env.FIREBASE_PROJECT_ID ?? "luratha-96386";
+  const host = options.host ?? "127.0.0.1";
+  const port = options.port ?? 8080;
+  const timeoutMs = options.timeoutMs ?? 25_000;
+  const pollIntervalMs = options.pollIntervalMs ?? 500;
+
+  process.env.GCLOUD_PROJECT = projectId;
+  process.env.FIRESTORE_EMULATOR_HOST = `${host}:${port}`;
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9099";
+  process.env.FIREBASE_STORAGE_EMULATOR_HOST =
+    process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
+
+  if (await isPortOpen(host, port, pollIntervalMs)) {
+    return { ready: true, startedByTest: false };
+  }
+
+  const emulatorProcess = spawn(
+    "npx",
+    [
+      "firebase",
+      "emulators:start",
+      "--only",
+      "firestore",
+      "--project",
+      projectId,
+      "--config",
+      "firebase.json",
+      "--quiet",
+    ],
+    {
+      cwd: process.cwd(),
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await isPortOpen(host, port, pollIntervalMs)) {
+      return {
+        ready: true,
+        startedByTest: true,
+        process: emulatorProcess,
+      };
+    }
+
+    if (emulatorProcess.exitCode !== null) {
+      return {
+        ready: false,
+        startedByTest: true,
+        reason: `firebase emulators:start exited with code ${emulatorProcess.exitCode}`,
+      };
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  if (emulatorProcess.exitCode === null) {
+    emulatorProcess.kill("SIGTERM");
+  }
+
+  return {
+    ready: false,
+    startedByTest: true,
+    reason: `Firestore emulator did not become available within ${timeoutMs}ms`,
+  };
+}
+
+export function getFirestoreForEmulator(projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386"): Firestore {
+  const app =
+    getApps().find((candidate) => candidate.name === FIREBASE_APP_NAME) ??
+    initializeApp({ projectId }, FIREBASE_APP_NAME);
+
+  const db = getFirestore(app);
+  if (!firestoreConnected) {
+    const [host, portString] = (process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080").split(":");
+    connectFirestoreEmulator(db, host, Number(portString));
+    firestoreConnected = true;
+  }
+
+  return db;
+}
+
+export async function clearFirestoreCollection(db: Firestore, collectionName: string): Promise<void> {
+  while (true) {
+    const snapshot = await getDocsInBatches(db, collectionName, 50);
+    if (snapshot.length === 0) {
+      return;
+    }
+
+    await Promise.all(snapshot.map((ref) => ref.delete()));
+  }
+}
+
+export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): Promise<void> {
+  if (!session.startedByTest || !session.process || session.process.exitCode !== null) {
+    return;
+  }
+
+  session.process.kill("SIGTERM");
+  await sleep(500);
+}
+
+type MinimalDocumentRef = { delete: () => Promise<void> };
+
+async function getDocsInBatches(
+  db: Firestore,
+  collectionName: string,
+  batchSize: number,
+): Promise<MinimalDocumentRef[]> {
+  const { collection, getDocs, limit, query } = await import("firebase/firestore");
+  const snapshot = await getDocs(query(collection(db, collectionName), limit(batchSize)));
+  return snapshot.docs.map((entry) => entry.ref);
+}
+
+function isPortOpen(host: string, port: number, timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    const onFailure = (): void => {
+      socket.destroy();
+      resolve(false);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => {
+      socket.end();
+      resolve(true);
+    });
+    socket.once("timeout", onFailure);
+    socket.once("error", onFailure);
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function getFirebaseTestApp() {
+  if (getApps().find((candidate) => candidate.name === FIREBASE_APP_NAME)) {
+    return getApp(FIREBASE_APP_NAME);
+  }
+  return initializeApp(
+    { projectId: process.env.FIREBASE_PROJECT_ID ?? "luratha-96386" },
+    FIREBASE_APP_NAME,
+  );
+}

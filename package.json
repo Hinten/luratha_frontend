@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:firestore": "firebase emulators:exec --only firestore \"vitest run src/lib/__tests__/productsRepository.emulator.test.ts\"",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
