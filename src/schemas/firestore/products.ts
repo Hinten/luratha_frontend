@@ -53,7 +53,7 @@ export const productVariantSchema = z.object({
   size: nonEmptyStringSchema,
   colorName: nonEmptyStringSchema.optional(),
   colorHex: colorHexSchema.optional(),
-  attributes: z.record(nonEmptyStringSchema).default({}),
+  attributes: z.record(z.string(), nonEmptyStringSchema).default({}),
   price: moneySchema,
   compareAtPrice: moneySchema.optional(),
   stock: z.number().int().min(0),
