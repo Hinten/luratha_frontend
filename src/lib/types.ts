@@ -1,3 +1,6 @@
+/* @deprecated
+  * These types are deprecated and should not be used in new code. They are kept here for backward compatibility with existing code that may still reference them. Please use the new types defined in the src/schemas directory instead.
+*/
 export interface Product {
   id: string;
   name: string;
