@@ -31,3 +31,6 @@ blob-report/
 # Editor and OS files
 .DS_Store
 *.pem
+
+#firebase emulator logs
+firestore-debug.log

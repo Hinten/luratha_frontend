@@ -59,6 +59,26 @@ npm run test:coverage
 
 Coverage reports are generated in the `coverage/` directory. Open `coverage/index.html` in a browser to view the HTML report.
 
+### Firestore Integration Tests (Firebase Emulator)
+
+For Firestore CRUD integration tests, use:
+
+```bash
+npm run test:firestore
+```
+
+This script runs a dedicated Vitest configuration (`vitest.emulator.config.mts`) with global emulator setup/teardown.
+Emulator tests are isolated under `src/test/emulator/`.
+
+Inside the emulator setup flow:
+
+1. It checks whether the emulator is already running.
+2. If not running, it tries to start it.
+3. It stores emulator status in environment variables used by tests.
+4. On teardown, it stops the emulator only when it was started by the test process.
+
+Detailed guide: `docs/firestore-crud-emulator.md`.
+
 ### End-to-End Tests (Playwright)
 
 E2E tests require the development server to be running. The `playwright.config.ts` is configured to automatically start it via `npm run dev`.
