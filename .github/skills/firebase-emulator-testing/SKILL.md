@@ -65,6 +65,13 @@ Example:
 "test:firestore": "vitest run --config vitest.emulator.config.mts"
 ```
 
+When this is mandatory:
+
+- Any schema/domain contract change (for example files in `src/schemas/**`).
+- Any Firebase request flow change (Firestore/Auth/Storage reads, writes, query filters, repository/service methods).
+
+In these cases, always run `npm run test:firestore` and confirm all emulator-targeted suites are passing before finishing the task.
+
 Benefits:
 
 - automatically starts and stops emulator processes;

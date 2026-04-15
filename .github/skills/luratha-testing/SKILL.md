@@ -30,6 +30,9 @@ npm run lint
 # Unit/integration tests — run once
 npm test
 
+# Firebase emulator integration suite (Firestore/Auth/Storage)
+npm run test:firestore
+
 # Unit/integration tests — watch mode (dev)
 npm run test:watch
 
@@ -100,6 +103,7 @@ luratha_frontend/
 | Form or interactive flow | Integration test (Vitest) + E2E test (Playwright) |
 | Authentication flow | E2E test |
 | Firebase utility/hook | Unit test with Firebase emulator mocks |
+| Schema or Firebase request flow changes | `npm run test:firestore` is mandatory and must pass |
 
 ---
 
@@ -340,4 +344,10 @@ npm test           # all Vitest tests must pass
 npm run test:e2e   # all Playwright tests must pass
 ```
 
-> **Agent rule:** Never remove or skip existing tests. Always add tests for new code. Always run all three commands before considering a task complete.
+When the task changes schema definitions or Firebase request flows (Firestore/Auth/Storage), also run:
+
+```bash
+npm run test:firestore  # emulator integration suites must pass
+```
+
+> **Agent rule:** Never remove or skip existing tests. Always add tests for new code. Always run the required commands above before considering a task complete, including `npm run test:firestore` whenever schema or Firebase request flows are changed.

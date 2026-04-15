@@ -28,6 +28,12 @@ npm test
 npm run test:e2e
 ```
 
+If the change updates schemas or Firebase request flows (for example `src/schemas/**`, Firestore queries, Auth/Storage calls, or repository/service code that reads/writes Firebase), also run:
+
+```bash
+npm run test:firestore
+```
+
 If the change affects production behavior, also run:
 
 ```bash
@@ -43,6 +49,7 @@ npm run build
 | `npm run start` | Run built app |
 | `npm run lint` | ESLint (Next core-web-vitals + TS) |
 | `npm test` | Vitest once |
+| `npm run test:firestore` | Vitest emulator integration suite (`vitest.emulator.config.mts`) |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run test:coverage` | Vitest with coverage |
 | `npm run test:e2e` | Playwright E2E (headless) |
@@ -73,8 +80,10 @@ npm run build
 ## Testing Expectations
 
 - Vitest config: `vitest.config.mts` (`jsdom`, globals, setup in `src/test/setup.ts`).
+- Firebase emulator Vitest config: `vitest.emulator.config.mts` (`node`, global setup in `src/test/firestoreEmulator.globalSetup.ts`).
 - Playwright config: `playwright.config.ts` (auto `npm run dev`, Chromium project).
 - Test naming: `src/**/__tests__/*.test.ts(x)` and `e2e/*.spec.ts`.
+- For schema or Firebase request changes, `npm run test:firestore` is mandatory and must pass before finishing.
 - Do not remove/skip existing tests to make CI pass.
 - For full patterns and mocks, use `.github/skills/luratha-testing/SKILL.md`.
 
