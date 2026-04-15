@@ -24,16 +24,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const description = product.description.slice(0, 160);
   return {
-    title: `${product.name} — Luratha`,
+    title: `${product.title}`,
     description,
     alternates: {
       canonical: `https://www.luratha.com.br/produto/${slug}`,
     },
     openGraph: {
-      title: `${product.name} — Luratha`,
+      title: `${product.title}`,
       description,
       url: `https://www.luratha.com.br/produto/${slug}`,
-      images: [{ url: product.images[0], alt: product.name }],
+      images: [{ url: product.photoIds[0], alt: product.title }],
     },
   };
 }
