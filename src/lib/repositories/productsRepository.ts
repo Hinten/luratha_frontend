@@ -52,16 +52,15 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
-export function createProductsRepository(): ProductsRepository {
-  console.log("Creating Firestore-based ProductsRepository",);
-  const productsCollectionRef = collection(db, firestoreCollections.products);
+export function createProductsRepository(dbInstance: Firestore = db): ProductsRepository {
+  const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
 
   async function create(input: unknown): Promise<Product> {
     try {
       const parsed = validateProduct(input);
       const productRef = doc(productsCollectionRef, parsed.id);
 
-      await runTransaction(db, async (transaction) => {
+      await runTransaction(dbInstance, async (transaction) => {
         const existing = await transaction.get(productRef);
         if (existing.exists()) {
           throw new ProductRepositoryError(

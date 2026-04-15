@@ -6,7 +6,7 @@ import {
   type Product as FirestoreProduct,
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { db } from "@/src/lib/firebaseClient";
+import { dbServer } from "@/src/lib/firebaseServer";
 import type { Category, Product } from "@/src/lib/types";
 import { mockCategories, mockFeatured, mockNewArrivals, mockSale } from "@/src/lib/mockData";
 
@@ -22,7 +22,7 @@ type HomePageData = {
 
 export async function getHomePageData(): Promise<HomePageData> {
   try {
-    const productsRepository = createProductsRepository();
+    const productsRepository = createProductsRepository(dbServer);
     const [products, categories] = await withTimeout(
       Promise.all([
         productsRepository.list({ status: "active", limit: 30 }),
@@ -56,7 +56,7 @@ export async function getHomePageData(): Promise<HomePageData> {
 async function listCategories(): Promise<FirestoreCategory[]> {
   const snapshot = await getDocs(
     query(
-      collection(db, firestoreCollections.categories),
+      collection(dbServer, firestoreCollections.categories),
       orderBy("name", "asc"),
       queryLimit(20),
     ),

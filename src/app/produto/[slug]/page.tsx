@@ -1,7 +1,9 @@
+"use server";
+
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { db } from "@/src/lib/firebaseClient";
+import { dbServer } from "@/src/lib/firebaseServer";
 import {
   ProductRepositoryError,
   createProductsRepository,
@@ -16,26 +18,30 @@ interface PageProps {
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const product = await loadProductBySlug(slug);
-  if (!product) {
-    return {};
-  }
+  try {
+    const { slug } = await params;
+    const product = await loadProductBySlug(slug);
+    if (!product) {
+      return {};
+    }
 
-  const description = product.description.slice(0, 160);
-  return {
-    title: `${product.title}`,
-    description,
-    alternates: {
-      canonical: `https://www.luratha.com.br/produto/${slug}`,
-    },
-    openGraph: {
+    const description = product.description.slice(0, 160);
+    return {
       title: `${product.title}`,
       description,
-      url: `https://www.luratha.com.br/produto/${slug}`,
-      images: [{ url: product.photoIds[0], alt: product.title }],
-    },
-  };
+      alternates: {
+        canonical: `https://www.luratha.com.br/produto/${slug}`,
+      },
+      openGraph: {
+        title: `${product.title}`,
+        description,
+        url: `https://www.luratha.com.br/produto/${slug}`,
+        images: [{ url: product.photoIds[0], alt: product.title }],
+      },
+    };
+  } catch {
+    return {};
+  }
 }
 
 export default async function ProdutoPage({ params }: PageProps) {
@@ -49,7 +55,15 @@ export default async function ProdutoPage({ params }: PageProps) {
 }
 
 async function loadProductBySlug(slug: string): Promise<FirestoreProduct | null> {
-  return await createProductsRepository(db).getBySlug(slug);
+  try {
+    return await createProductsRepository(dbServer).getBySlug(slug);
+  } catch (error) {
+    if (error instanceof ProductRepositoryError && error.code === "not_found") {
+      return null;
+    }
+
+    throw createHttpStatusError(500, "Erro ao carregar dados do produto.");
+  }
 }
 
 function mapProductToProductDetail(product: FirestoreProduct): ProductDetail {
