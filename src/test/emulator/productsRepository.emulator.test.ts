@@ -113,7 +113,7 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
   it("throws not_found when updating unknown product", async () => {
     await expect(
       repository.update("missing-product-id", {
-        description: "não deve existir",
+        description: "should not exist",
       }),
     ).rejects.toMatchObject<ProductRepositoryError>({
       code: "not_found",
