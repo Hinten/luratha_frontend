@@ -13,7 +13,12 @@ export default defineConfig({
       FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
       FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",
     },
-    include: ["src/test/emulator/**/*.{test,spec}.{ts,tsx}"],
+    include: [
+      "src/test/emulator/**/*.test.ts",
+      "src/test/emulator/**/*.test.tsx",
+      "src/test/emulator/**/*.spec.ts",
+      "src/test/emulator/**/*.spec.tsx",
+    ],
     exclude: ["node_modules", ".next", "e2e"],
   },
 });

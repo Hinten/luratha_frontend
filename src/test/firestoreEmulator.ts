@@ -19,7 +19,6 @@ export type FirestoreEmulatorSession = {
 };
 
 const FIREBASE_APP_NAME = "firestore-emulator-tests";
-const NPX_COMMAND = process.platform === "win32" ? "npx.cmd" : "npx";
 let firestoreConnected = false;
 
 export async function ensureFirestoreEmulator(
@@ -49,28 +48,7 @@ export async function ensureFirestoreEmulator(
     return { ready: true, startedByTest: false };
   }
 
-  const emulatorProcess = spawn(
-    NPX_COMMAND,
-    [
-      "firebase",
-      "emulators:start",
-      "--only",
-      "firestore",
-      "--project",
-      projectId,
-      "--config",
-      "firebase.json",
-      "--non-interactive",
-      "--quiet",
-    ],
-    {
-      cwd: process.cwd(),
-      stdio: ["ignore", "pipe", "pipe"],
-      env: {
-        ...process.env,
-      },
-    },
-  );
+  const emulatorProcess = spawnFirebaseEmulatorProcess(projectId);
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -131,7 +109,7 @@ export async function clearFirestoreCollection(db: Firestore, collectionName: st
       return;
     }
 
-    await Promise.all(snapshot.map((ref) => ref.delete()));
+    await Promise.all(snapshot.map((ref) => ref()));
     iterations += 1;
   }
 
@@ -149,16 +127,16 @@ export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): 
   await sleep(500);
 }
 
-type MinimalDocumentRef = { delete: () => Promise<void> };
+type DeleteDocumentOperation = () => Promise<void>;
 
 async function getDocsInBatches(
   db: Firestore,
   collectionName: string,
   batchSize: number,
-): Promise<MinimalDocumentRef[]> {
-  const { collection, getDocs, limit, query } = await import("firebase/firestore");
+): Promise<DeleteDocumentOperation[]> {
+  const { collection, deleteDoc, getDocs, limit, query } = await import("firebase/firestore");
   const snapshot = await getDocs(query(collection(db, collectionName), limit(batchSize)));
-  return snapshot.docs.map((entry) => entry.ref);
+  return snapshot.docs.map((entry) => () => deleteDoc(entry.ref));
 }
 
 function isPortOpen(host: string, port: number, timeoutMs: number): Promise<boolean> {
@@ -196,33 +174,10 @@ export function getFirebaseTestApp() {
 async function isFirestoreEmulatorReady(
   host: string,
   port: number,
-  projectId: string,
+  _projectId: string,
   timeoutMs: number,
 ): Promise<boolean> {
-  if (!(await isPortOpen(host, port, timeoutMs))) {
-    return false;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(
-      `http://${host}:${port}/emulator/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents`,
-      {
-        method: "GET",
-        signal: controller.signal,
-      },
-    );
-    return response.ok;
-  } catch {
-    if (process.env.FIREBASE_EMULATOR_DEBUG === "true") {
-      console.warn("[firestoreEmulator] readiness probe failed");
-    }
-    return false;
-  } finally {
-    clearTimeout(timeout);
-  }
+  return isPortOpen(host, port, timeoutMs);
 }
 
 async function terminateProcessTree(processRef: ChildProcess): Promise<void> {
@@ -240,4 +195,49 @@ async function terminateProcessTree(processRef: ChildProcess): Promise<void> {
   }
 
   processRef.kill("SIGTERM");
+}
+
+function spawnFirebaseEmulatorProcess(projectId: string): ChildProcess {
+  const firebaseArgs = [
+    "firebase",
+    "emulators:start",
+    "--only",
+    "firestore",
+    "--project",
+    projectId,
+    "--config",
+    "firebase.json",
+    "--non-interactive",
+  ];
+
+  if (process.platform === "win32") {
+    const command = quoteForWindowsShell(["npx", ...firebaseArgs]);
+    return spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", command], {
+      cwd: process.cwd(),
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+      },
+    });
+  }
+
+  return spawn("npx", firebaseArgs, {
+    cwd: process.cwd(),
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+    },
+  });
+}
+
+function quoteForWindowsShell(args: string[]): string {
+  return args
+    .map((arg) => {
+      if (!/[\s"]/u.test(arg)) {
+        return arg;
+      }
+
+      return `"${arg.replace(/"/gu, '""')}"`;
+    })
+    .join(" ");
 }

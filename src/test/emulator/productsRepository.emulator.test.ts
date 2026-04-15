@@ -1,14 +1,15 @@
-import { beforeEach, afterAll, describe, expect, it } from "vitest";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  initializeTestEnvironment,
+  type RulesTestEnvironment,
+} from "@firebase/rules-unit-testing";
+import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import {
   ProductRepositoryError,
   createProductsRepository,
 } from "@/src/lib/repositories/productsRepository";
-import {
-  clearFirestoreCollection,
-  getFirestoreForEmulator,
-} from "@/src/test/firestoreEmulator";
 
 const emulatorReady = process.env.FIRESTORE_EMULATOR_READY === "true";
 if (!emulatorReady) {
@@ -18,18 +19,41 @@ if (!emulatorReady) {
 }
 
 const describeWhenEmulator = emulatorReady ? describe : describe.skip;
+const projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386";
+const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080";
+const [host, portString] = firestoreHost.split(":");
+const port = Number(portString);
 
 describeWhenEmulator("products repository (Firestore Emulator)", () => {
-  const db = getFirestoreForEmulator();
-  const repository = createProductsRepository(db);
+  let testEnv: RulesTestEnvironment;
+  let db: Parameters<typeof createProductsRepository>[0];
+  let repository: ReturnType<typeof createProductsRepository>;
   const [mockProduct] = buildMockProducts();
 
+  beforeAll(async () => {
+    const rules = await readFile(path.join(process.cwd(), "firestore.rules"), "utf8");
+    testEnv = await initializeTestEnvironment({
+      projectId,
+      firestore: {
+        host,
+        port,
+        rules,
+      },
+    });
+
+    db = testEnv.authenticatedContext("admin-test-user", { admin: true }).firestore() as Parameters<
+      typeof createProductsRepository
+    >[0];
+    repository = createProductsRepository(db);
+  });
+
   beforeEach(async () => {
-    await clearFirestoreCollection(db, firestoreCollections.products);
+    await testEnv.clearFirestore();
   });
 
   afterAll(async () => {
-    await clearFirestoreCollection(db, firestoreCollections.products);
+    await testEnv.clearFirestore();
+    await testEnv.cleanup();
   });
 
   it("creates and reads a product", async () => {
@@ -96,18 +120,18 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
         vectorEmbedding: undefined,
         searchEmbedding: undefined,
       }),
-    ).rejects.toMatchObject<ProductRepositoryError>({
+    ).rejects.toMatchObject({
       code: "validation",
       name: "ProductRepositoryError",
-    });
+    } satisfies Partial<ProductRepositoryError>);
   });
 
   it("throws conflict when creating duplicate product ids", async () => {
     await repository.create(mockProduct);
-    await expect(repository.create(mockProduct)).rejects.toMatchObject<ProductRepositoryError>({
+    await expect(repository.create(mockProduct)).rejects.toMatchObject({
       code: "conflict",
       name: "ProductRepositoryError",
-    });
+    } satisfies Partial<ProductRepositoryError>);
   });
 
   it("throws not_found when updating unknown product", async () => {
@@ -115,9 +139,9 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
       repository.update("missing-product-id", {
         description: "should not exist",
       }),
-    ).rejects.toMatchObject<ProductRepositoryError>({
+    ).rejects.toMatchObject({
       code: "not_found",
       name: "ProductRepositoryError",
-    });
+    } satisfies Partial<ProductRepositoryError>);
   });
 });
