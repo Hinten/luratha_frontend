@@ -7,6 +7,8 @@ import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import ProductDescription from "@/src/components/produto/ProductDescription";
 import styles from "./ProductDetailPage.module.css";
 
+const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+
 interface ProductDetailPageProps {
   product: FirestoreProduct;
 }
@@ -127,5 +129,3 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
     </>
   );
 }
-
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";

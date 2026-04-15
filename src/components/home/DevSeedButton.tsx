@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./DevSeedButton.module.css";
 
 type DevSeedButtonProps = {
@@ -10,6 +10,8 @@ type DevSeedButtonProps = {
 type SeedStatus = "idle" | "loading" | "success" | "error";
 
 export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const actionButtonRef = useRef<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState<SeedStatus>("idle");
   const [message, setMessage] = useState("");
@@ -18,8 +20,35 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
     return null;
   }
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    actionButtonRef.current?.focus();
+
+    function handleDocumentClick(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
+
   async function handleSeedMockData() {
-    setMenuOpen(false);
     setStatus("loading");
     setMessage("Cadastrando categorias e produtos mock...");
 
@@ -42,7 +71,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} ref={wrapperRef}>
       <button
         type="button"
         className={styles.iconButton}
@@ -66,6 +95,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
       {menuOpen && (
         <div className={styles.dropdown} role="menu" aria-label="Menu de desenvolvimento">
           <button
+            ref={actionButtonRef}
             type="button"
             role="menuitem"
             className={styles.actionButton}
@@ -74,12 +104,12 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
           >
             {status === "loading" ? "Cadastrando..." : "Cadastrar dados mock"}
           </button>
+          {message && (
+            <p className={status === "error" ? styles.errorMessage : styles.successMessage} role="status">
+              {message}
+            </p>
+          )}
         </div>
-      )}
-      {message && (
-        <p className={status === "error" ? styles.errorMessage : styles.successMessage} role="status">
-          {message}
-        </p>
       )}
     </div>
   );
