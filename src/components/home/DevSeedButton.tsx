@@ -11,6 +11,7 @@ type SeedStatus = "idle" | "loading" | "success" | "error";
 
 export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const iconButtonRef = useRef<HTMLButtonElement | null>(null);
   const actionButtonRef = useRef<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState<SeedStatus>("idle");
@@ -26,12 +27,18 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
     function handleDocumentClick(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
+        requestAnimationFrame(() => {
+          iconButtonRef.current?.focus();
+        });
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setMenuOpen(false);
+        requestAnimationFrame(() => {
+          iconButtonRef.current?.focus();
+        });
       }
     }
 
@@ -73,6 +80,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       <button
+        ref={iconButtonRef}
         type="button"
         className={styles.iconButton}
         aria-label="Ações de desenvolvimento"

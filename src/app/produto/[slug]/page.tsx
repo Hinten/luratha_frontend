@@ -16,10 +16,11 @@ interface PageProps {
 }
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+const productsRepository = createProductsRepository(dbServer);
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
   try {
-    return await createProductsRepository(dbServer).getBySlug(slug);
+    return await productsRepository.getBySlug(slug);
   } catch (error) {
     if (error instanceof ProductRepositoryError && error.code === "not_found") {
       return null;
