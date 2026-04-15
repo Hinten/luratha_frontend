@@ -26,60 +26,44 @@ const validPhoto = {
 
 const validProduct = {
   id: "prod_vestido_linho_cru",
-  name: "Vestido Linho Cru",
+  title: "Vestido Linho Cru",
   description: "Vestido artesanal de linho cru com modelagem midi.",
-  productType: "variable" as const,
-  schemaIntent: "merchant_listing" as const,
   isPurchasable: true,
   brandName: "Luratha",
-  identifier: {
-    type: "sku" as const,
-    value: "LURATHA-001",
-  },
-  categorySlug: "vestidos",
+  sku: "LURATHA_001",
+  category: [],
   tags: ["linho", "midi"],
   materialTags: ["linho"],
   seasonalTags: ["verao"],
-  priceMin: 329,
-  priceMax: 359,
-  currency: "BRL" as const,
+  price: {
+    price: 329,
+    salePrice: 299,
+    priceMin: 329,
+    priceMax: 359,
+    currency: "BRL" as const,
+  },
   ratingAverage: 4.8,
   reviewCount: 28,
   totalStock: 14,
   status: "active" as const,
   photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
-  primaryPhotoId: "photo_cream_linen_front",
-  defaultVariantSku: "LURATHA-001",
-  variantAxes: ["size"],
   variants: [
     {
-      sku: "LURATHA-001",
-      size: "P",
-      attributes: { size: "P" },
-      price: 329,
-      compareAtPrice: 399,
+      sku: "LURATHA_002",
+      size: ["P"],
       stock: 6,
       photoIds: ["photo_cream_linen_front"],
-      availability: "InStock" as const,
-      itemCondition: "NewCondition" as const,
       active: true,
     },
     {
-      sku: "LURATHA-002",
-      size: "M",
-      attributes: { size: "M" },
-      price: 359,
+      sku: "LURATHA_003",
+      size: ["M"],
       stock: 8,
       photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
-      availability: "InStock" as const,
-      itemCondition: "NewCondition" as const,
       active: true,
     },
   ],
-  searchText: "vestido linho cru midi artesanal",
-  searchableTokens: ["vestido", "linho", "midi", "artesanal"],
   vectorEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
-  publishedAt: now,
   createdAt: now,
   updatedAt: now,
 };
@@ -132,53 +116,55 @@ describe("firestore schemas", () => {
   it("accepts a valid product with reusable photo references", () => {
     const parsed = productSchema.parse(validProduct);
     expect(parsed).toMatchObject(validProduct);
-    expect(parsed.slug).toBe(buildProductSlug(validProduct.name, validProduct.defaultVariantSku));
+    expect(parsed.slug).toBe(buildProductSlug(validProduct.title, validProduct.sku));
   });
 
   it("rejects product with non-positive prices", () => {
-    const invalid = { ...validProduct, priceMin: 0 };
+    const invalid = {
+      ...validProduct,
+      price: {
+        ...validProduct.price,
+        priceMin: 0,
+      },
+    };
     expect(() => productSchema.parse(invalid)).toThrow("Too small");
   });
 
-  it("rejects product when variant references unknown photoId", () => {
+  it("rejects product when one variant uses the same sku as parent product", () => {
     const invalid = {
       ...validProduct,
       variants: [
         {
           ...validProduct.variants[0],
-          sku: "LURATHA-003",
-          photoIds: ["photo_missing"],
+          sku: validProduct.sku,
         },
       ],
     };
 
     expect(() => productSchema.parse(invalid)).toThrow(
-      "all variant photoIds must exist in product photoIds",
+      "variant SKU must be unique inside the product",
     );
   });
 
-  it("rejects simple products with more than one variant", () => {
+  it("rejects explicit slug when it does not match title and sku", () => {
     const invalid = {
       ...validProduct,
-      productType: "simple" as const,
-      variantAxes: [],
+      slug: "slug-incorreto",
     };
 
     expect(() => productSchema.parse(invalid)).toThrow(
-      "simple products must contain exactly one variant",
+      "slug must match the generated value based on title and sku",
     );
   });
 
-  it("rejects missing vector embedding", () => {
-    const invalid = {
+  it("accepts product without vector embeddings", () => {
+    const parsed = productSchema.parse({
       ...validProduct,
       vectorEmbedding: undefined,
       searchEmbedding: undefined,
-    };
+    });
 
-    expect(() => productSchema.parse(invalid)).toThrow(
-      "vectorEmbedding is required for vector search indexing",
-    );
+    expect(parsed.vectorEmbedding).toBeUndefined();
   });
 
   it("accepts legacy searchEmbedding and normalizes slug automatically", () => {
@@ -190,7 +176,7 @@ describe("firestore schemas", () => {
     });
 
     expect(parsed.vectorEmbedding).toEqual([0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74]);
-    expect(parsed.slug).toBe(buildProductSlug(validProduct.name, validProduct.defaultVariantSku));
+    expect(parsed.slug).toBe(buildProductSlug(validProduct.title, validProduct.sku));
   });
 
   it("accepts a valid order", () => {

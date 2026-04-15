@@ -195,7 +195,7 @@ const productSchemaBase = z
   });
 
 export const productSchema = productSchemaBase.transform((product) => {
-  const generatedSlug = buildProductSlug(product.name, product.defaultVariantSku);
+  const generatedSlug = buildProductSlug(product.title, product.sku);
   const vectorEmbedding = product.vectorEmbedding ?? product.searchEmbedding;
 
   return {
