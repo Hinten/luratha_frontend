@@ -21,13 +21,11 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
   const images = product.photoIds.length > 0 ? product.photoIds : [DEFAULT_PRODUCT_IMAGE_URL];
   const currentPrice = product.price.salePrice ?? product.price.price;
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
-  const sizes = Array.from(
-    new Set([
-      ...(product.size ?? []),
-      ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
-    ]),
-  );
+  const sizes = extractUniqueSizes(product);
   const highlights = product.productHighlight ?? [];
+  const availability = product.totalStock > 0
+    ? "https://schema.org/InStock"
+    : "https://schema.org/OutOfStock";
 
   const productSchema = {
     "@context": "https://schema.org",
@@ -41,7 +39,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
       "@type": "Offer",
       priceCurrency: "BRL",
       price: currentPrice,
-      availability: product.totalStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      availability,
       url: `https://www.luratha.com.br/produto/${product.slug}`,
     },
     ...(product.ratingAverage !== null && product.reviewCount !== null && product.reviewCount > 0
@@ -127,5 +125,14 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         <ProductDescription description={product.description} />
       </div>
     </>
+  );
+}
+
+function extractUniqueSizes(product: FirestoreProduct): string[] {
+  return Array.from(
+    new Set([
+      ...(product.size ?? []),
+      ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
+    ]),
   );
 }

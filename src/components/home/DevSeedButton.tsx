@@ -24,7 +24,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
 
     actionButtonRef.current?.focus();
 
-    function handleDocumentClick(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
         requestAnimationFrame(() => {
@@ -42,11 +42,11 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
       }
     }
 
-    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [enabled, menuOpen]);
