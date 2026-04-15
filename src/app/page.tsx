@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import HeroBanner from "@/src/components/home/HeroBanner";
-import DevSeedButton from "@/src/components/home/DevSeedButton";
 import HomeCategoriesSection from "@/src/components/home/HomeCategoriesSection";
 import ProductSection from "@/src/components/produto/ProductSection";
 import ProductCard from "@/src/components/produto/ProductCard";
@@ -52,7 +51,6 @@ export default async function Home() {
   return (
     <main>
       <JsonLd data={homePageSchema} />
-      <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
       {/* 1. Hero Section */}
       <HeroBanner />
 

@@ -9,7 +9,6 @@ import {
   ProductRepositoryError,
   createProductsRepository,
 } from "@/src/lib/repositories/productsRepository";
-import type { ProductDetail } from "@/src/lib/types";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 
 interface PageProps {
@@ -41,6 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const description = product.description.slice(0, 160);
+  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
   return {
     title: `${product.title}`,
     description,
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${product.title}`,
       description,
       url: `https://www.luratha.com.br/produto/${slug}`,
-      images: [{ url: product.photoIds[0], alt: product.title }],
+      images: [{ url: imageUrl, alt: product.title }],
     },
   };
 }
@@ -63,33 +63,7 @@ export default async function ProdutoPage({ params }: PageProps) {
     return notFound();
   }
 
-  return <ProductDetailPage product={mapProductToProductDetail(product)} />;
-}
-
-function mapProductToProductDetail(product: FirestoreProduct): ProductDetail {
-  const images = product.photoIds.length > 0
-    ? product.photoIds
-    : [DEFAULT_PRODUCT_IMAGE_URL];
-  const uniqueSizes = Array.from(
-    new Set([
-      ...(product.size ?? []),
-      ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
-    ]),
-  );
-  const categorySlug = product.category[0]?.slug ?? "outros";
-
-  return {
-    id: product.id,
-    name: product.title,
-    slug: product.slug,
-    categorySlug,
-    price: product.price.salePrice ?? product.price.price,
-    originalPrice: product.price.salePrice ? product.price.price : undefined,
-    imageUrl: images[0],
-    description: product.description,
-    images,
-    sizes: uniqueSizes,
-  };
+  return <ProductDetailPage product={product} />;
 }
 
 function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
