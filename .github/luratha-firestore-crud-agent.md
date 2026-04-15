@@ -32,7 +32,7 @@ Implement and maintain clean CRUD services/repositories for schemas under `src/s
    - auto-start attempt with timeout;
    - skip fallback on timeout;
    - cleanup between tests.
-5. Add a `firebase emulators:exec` script.
+5. Add a dedicated emulator Vitest config with global setup/teardown.
 6. Update technical documentation.
 
 ## Minimum expected CRUD contract
@@ -53,7 +53,7 @@ Implement and maintain clean CRUD services/repositories for schemas under `src/s
 
 ## Emulator integration
 
-- Prioritize `firebase emulators:exec` in CI.
+- Prioritize `vitest run --config vitest.emulator.config.mts` in CI for emulator suites.
 - For local tests, allow timeout-based auto-bootstrap.
 - Use environment variables:
   - `FIRESTORE_EMULATOR_HOST`
@@ -65,5 +65,5 @@ Implement and maintain clean CRUD services/repositories for schemas under `src/s
 
 - `src/lib/repositories/productsRepository.ts`
 - `src/lib/repositories/productsMockData.ts`
-- `src/lib/__tests__/productsRepository.emulator.test.ts`
+- `src/test/emulator/productsRepository.emulator.test.ts`
 - `src/test/firestoreEmulator.ts`

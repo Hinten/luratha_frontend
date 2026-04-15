@@ -1,6 +1,4 @@
-// @vitest-environment node
-
-import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
+import { beforeEach, afterAll, describe, expect, it } from "vitest";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import {
@@ -9,31 +7,22 @@ import {
 } from "@/src/lib/repositories/productsRepository";
 import {
   clearFirestoreCollection,
-  ensureFirestoreEmulator,
   getFirestoreForEmulator,
-  stopFirestoreEmulator,
-  type FirestoreEmulatorSession,
 } from "@/src/test/firestoreEmulator";
 
-const emulatorSession = await ensureFirestoreEmulator({
-  timeoutMs: 25_000,
-});
-
-if (!emulatorSession.ready) {
-  console.warn(`[productsRepository.emulator.test] skipped: ${emulatorSession.reason ?? "emulator unavailable"}`);
+const emulatorReady = process.env.FIRESTORE_EMULATOR_READY === "true";
+if (!emulatorReady) {
+  console.warn(
+    `[productsRepository.emulator.test] skipped: ${process.env.FIRESTORE_EMULATOR_REASON ?? "emulator unavailable"}`,
+  );
 }
 
-const describeWhenEmulator = emulatorSession.ready ? describe : describe.skip;
+const describeWhenEmulator = emulatorReady ? describe : describe.skip;
 
 describeWhenEmulator("products repository (Firestore Emulator)", () => {
-  let session: FirestoreEmulatorSession;
   const db = getFirestoreForEmulator();
   const repository = createProductsRepository(db);
   const [mockProduct] = buildMockProducts();
-
-  beforeAll(() => {
-    session = emulatorSession;
-  });
 
   beforeEach(async () => {
     await clearFirestoreCollection(db, firestoreCollections.products);
@@ -41,7 +30,6 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
 
   afterAll(async () => {
     await clearFirestoreCollection(db, firestoreCollections.products);
-    await stopFirestoreEmulator(session);
   });
 
   it("creates and reads a product", async () => {

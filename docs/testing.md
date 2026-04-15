@@ -67,14 +67,15 @@ For Firestore CRUD integration tests, use:
 npm run test:firestore
 ```
 
-This script runs `firebase emulators:exec --only firestore` and executes the dedicated Vitest file for emulator-based integration coverage.
+This script runs a dedicated Vitest configuration (`vitest.emulator.config.mts`) with global emulator setup/teardown.
+Emulator tests are isolated under `src/test/emulator/`.
 
-Inside the test suite:
+Inside the emulator setup flow:
 
 1. It checks whether the emulator is already running.
 2. If not running, it tries to start it.
-3. If startup exceeds timeout, tests are skipped (`describe.skip`).
-4. Data is cleaned before each test.
+3. It stores emulator status in environment variables used by tests.
+4. On teardown, it stops the emulator only when it was started by the test process.
 
 Detailed guide: `docs/firestore-crud-emulator.md`.
 

@@ -7,7 +7,8 @@ Este guia descreve a camada de CRUD criada para `src/schemas/firestore/products.
 - Repositório CRUD: `src/lib/repositories/productsRepository.ts`
 - Mock data para seed: `src/lib/repositories/productsMockData.ts`
 - Utilitários de emulator para testes: `src/test/firestoreEmulator.ts`
-- Testes de integração: `src/lib/__tests__/productsRepository.emulator.test.ts`
+- Global setup/teardown: `src/test/firestoreEmulator.globalSetup.ts`
+- Testes de integração: `src/test/emulator/productsRepository.emulator.test.ts`
 
 ## Camada CRUD implementada
 
@@ -56,7 +57,7 @@ Isso está implementado com:
 `package.json` inclui:
 
 ```json
-"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "vitest run --config vitest.emulator.config.mts"
 ```
 
 Uso:
@@ -69,7 +70,9 @@ npm run test:firestore
 
 ## Configuração de ambiente para testes
 
-`vitest.config.mts` define, por padrão:
+`vitest.config.mts` define os testes regulares (sem emulator) e `vitest.emulator.config.mts` define os testes de emulator.
+
+No config de emulator:
 
 - `FIREBASE_PROJECT_ID=luratha-96386`
 - `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`
@@ -122,5 +125,5 @@ Isso reduz falhas por download tardio durante testes.
 
 - **Erro de conexão**: confirme `FIRESTORE_EMULATOR_HOST` e porta `8080`.
 - **Emulator não sobe no CI**: valide Java no runner e execute `firebase setup:emulators:firestore` no setup.
-- **Testes lentos**: execute via `firebase emulators:exec` e mantenha limpeza por coleção com lotes pequenos.
+- **Testes lentos**: mantenha limpeza por coleção com lotes pequenos e rode apenas `npm run test:firestore` para a suíte de emulator.
 - **Falha de validação**: garanta consistência entre `priceMin/priceMax`, variantes, `totalStock` e embeddings.

@@ -57,12 +57,12 @@ Recommended flow:
   - Delete
   - Edge cases (`not_found`, conflicts, validation errors).
 
-## 5) `firebase emulators:exec` in package.json
+## 5) Dedicated Vitest config in package.json
 
 Example:
 
 ```json
-"test:firestore": "firebase emulators:exec --only firestore --project luratha-96386 --config firebase.json --non-interactive \"npx vitest run src/lib/__tests__/productsRepository.emulator.test.ts\""
+"test:firestore": "vitest run --config vitest.emulator.config.mts"
 ```
 
 Benefits:
@@ -110,11 +110,12 @@ In Vitest config (`vitest.config.mts`):
 - Repository: `src/lib/repositories/productsRepository.ts`
 - Mock/seed: `src/lib/repositories/productsMockData.ts`
 - Emulator utility: `src/test/firestoreEmulator.ts`
-- Integration test: `src/lib/__tests__/productsRepository.emulator.test.ts`
+- Global setup/teardown: `src/test/firestoreEmulator.globalSetup.ts`
+- Integration test: `src/test/emulator/productsRepository.emulator.test.ts`
 
 ## 10) Common issues and fixes
 
 - **ECONNREFUSED**: emulator not running or host/port mismatch.
 - **Startup timeout**: increase timeout and pre-download emulator binaries.
 - **Zod validation failures on update**: ensure variant/stock/price consistency.
-- **CI flakes**: prefer `firebase emulators:exec` over manual startup flows.
+- **CI flakes**: keep emulator startup/shutdown in Vitest global setup and run only emulator-targeted suites.
