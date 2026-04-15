@@ -41,7 +41,7 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
       },
     });
 
-    db = testEnv.authenticatedContext("admin-test-user", { admin: true }).firestore() as Parameters<
+    db = testEnv.authenticatedContext("admin-test-user", { admin: true }).firestore() as unknown as Parameters<
       typeof createProductsRepository
     >[0];
     repository = createProductsRepository(db);
