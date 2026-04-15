@@ -16,12 +16,8 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   const [status, setStatus] = useState<SeedStatus>("idle");
   const [message, setMessage] = useState("");
 
-  if (!enabled) {
-    return null;
-  }
-
   useEffect(() => {
-    if (!menuOpen) {
+    if (!enabled || !menuOpen) {
       return;
     }
 
@@ -46,7 +42,11 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
       document.removeEventListener("mousedown", handleDocumentClick);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [menuOpen]);
+  }, [enabled, menuOpen]);
+
+  if (!enabled) {
+    return null;
+  }
 
   async function handleSeedMockData() {
     setStatus("loading");
