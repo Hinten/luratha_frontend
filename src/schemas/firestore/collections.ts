@@ -1,4 +1,5 @@
 export const firestoreCollections = {
+  categories: "categories",
   photos: "photos",
   products: "products",
   carts: "carts",

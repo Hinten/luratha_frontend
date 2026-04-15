@@ -1,0 +1,60 @@
+.wrapper {
+  padding-top: 24px;
+  padding-bottom: 0;
+}
+
+.content {
+  border: 1px solid var(--color-neutral-mid);
+  background-color: var(--color-accent);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  color: var(--color-neutral-dark);
+  font-size: 1.5rem;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.description {
+  font-family: var(--font-body);
+  color: var(--color-neutral-dark);
+  margin-bottom: 16px;
+}
+
+.button {
+  border: none;
+  border-radius: 9999px;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 300ms ease;
+}
+
+.button:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.button:disabled {
+  background-color: var(--color-neutral-mid);
+  cursor: not-allowed;
+}
+
+.successMessage,
+.errorMessage {
+  margin-top: 12px;
+  font-family: var(--font-body);
+}
+
+.successMessage {
+  color: var(--color-neutral-dark);
+}
+
+.errorMessage {
+  color: var(--color-error);
+}
