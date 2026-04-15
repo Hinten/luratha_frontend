@@ -42,6 +42,7 @@ export class ProductRepositoryError extends Error {
 export interface ProductsRepository {
   create(input: unknown): Promise<Product>;
   getById(id: string): Promise<Product | null>;
+  getBySlug(slug: string): Promise<Product | null>;
   update(id: string, patch: ProductUpdateInput): Promise<Product>;
   delete(id: string): Promise<void>;
   list(filters?: ProductListFilters): Promise<Product[]>;
@@ -90,6 +91,22 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
     }
   }
 
+  async function getBySlug(slug: string): Promise<Product | null> {
+    try {
+      const snapshot = await getDocs(
+        query(productsCollectionRef, where("slug", "==", slug), queryLimit(1)),
+      );
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      return validateProduct(snapshot.docs[0].data());
+    } catch (error) {
+      throw normalizeRepositoryError(error, `read product by slug "${slug}"`);
+    }
+  }
+
   async function update(id: string, patch: ProductUpdateInput): Promise<Product> {
     try {
       const productRef = doc(productsCollectionRef, id);
@@ -135,7 +152,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
         constraints.push(where("status", "==", filters.status));
       }
       if (filters.categorySlug) {
-        constraints.push(where("categorySlug", "==", filters.categorySlug));
+        constraints.push(where("category.0.slug", "==", filters.categorySlug));
       }
 
       const normalizedLimit = Math.max(1, Math.min(filters.limit ?? 24, MAX_LIST_LIMIT));
@@ -155,6 +172,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
   return {
     create,
     getById,
+    getBySlug,
     update,
     delete: remove,
     list,
