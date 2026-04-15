@@ -1,6 +1,9 @@
 import "server-only";
-import { getApps, initializeApp } from "firebase/app";
+import { getApps, initializeServerApp, initializeApp } from "firebase/app";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { cookies } from "next/headers";
+import { getAuth } from "firebase/auth";
+
 
 const FIREBASE_SERVER_APP_NAME = "luratha-server-app";
 
@@ -13,9 +16,13 @@ const firebaseServerConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "1:0:web:server",
 };
 
+
+
 const firebaseServerApp =
-  getApps().find((candidate) => candidate.name === FIREBASE_SERVER_APP_NAME) ??
-  initializeApp(firebaseServerConfig, FIREBASE_SERVER_APP_NAME);
+  getApps()[0] ??
+  initializeApp(firebaseServerConfig);
+  
+
 
 export const dbServer = getFirestore(firebaseServerApp);
 
@@ -43,4 +50,25 @@ function connectFirestoreEmulatorSafely(hostname: string, port: number): void {
       throw error;
     }
   }
+}
+
+
+export async function getAuthenticatedAppForUser() {
+  const authIdToken = (await cookies()).get("__session")?.value;
+
+  // Firebase Server App is a new feature in the JS SDK that allows you to
+  // instantiate the SDK with credentials retrieved from the client & has
+  // other affordances for use in server environments.
+  const firebaseServerApp = initializeServerApp(
+    // https://github.com/firebase/firebase-js-sdk/issues/8863#issuecomment-2751401913
+    initializeApp(firebaseServerConfig),
+    {
+      authIdToken,
+    }
+  );
+
+  const auth = getAuth(firebaseServerApp);
+  await auth.authStateReady();
+
+  return { firebaseServerApp, currentUser: auth.currentUser };
 }
