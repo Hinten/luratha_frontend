@@ -8,8 +8,8 @@ export const CategorySchema = z.object({
   slug: nonEmptyStringSchema,
 });
 
-export type FirestoreCategory = z.infer<typeof CategorySchema>;
+export type Category = z.infer<typeof CategorySchema>;
 
-export function validateCategory(input: unknown): FirestoreCategory {
+export function validateCategory(input: unknown): Category {
   return CategorySchema.parse(input);
 }

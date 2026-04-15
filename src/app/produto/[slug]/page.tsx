@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { dbServer } from "@/src/lib/firebaseServer";
+import { db } from "@/src/lib/firebaseClient";
 import {
   ProductRepositoryError,
   createProductsRepository,
@@ -49,15 +49,7 @@ export default async function ProdutoPage({ params }: PageProps) {
 }
 
 async function loadProductBySlug(slug: string): Promise<FirestoreProduct | null> {
-  try {
-    return await createProductsRepository(dbServer).getBySlug(slug);
-  } catch (error) {
-    if (error instanceof ProductRepositoryError && error.code === "not_found") {
-      return null;
-    }
-
-    throw createHttpStatusError(500, "Erro ao carregar dados do produto.");
-  }
+  return await createProductsRepository(db).getBySlug(slug);
 }
 
 function mapProductToProductDetail(product: FirestoreProduct): ProductDetail {
@@ -80,12 +72,9 @@ function mapProductToProductDetail(product: FirestoreProduct): ProductDetail {
     price: product.price.salePrice ?? product.price.price,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl: images[0],
-    rating: product.ratingAverage,
-    reviewCount: product.reviewCount,
     description: product.description,
     images,
     sizes: uniqueSizes,
-    highlights: product.productHighlight,
   };
 }
 

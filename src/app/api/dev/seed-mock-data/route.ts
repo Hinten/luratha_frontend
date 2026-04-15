@@ -9,22 +9,17 @@ export async function POST() {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
 
-  try {
-    const categories = buildHomeSeedCategories();
-    const products = buildHomeSeedProducts(categories);
+  const categories = buildHomeSeedCategories();
+  const products = buildHomeSeedProducts(categories);
 
-    const categoriesCreated = await seedCategories(categories);
-    const productsCreated = await seedProducts(products);
+  const categoriesCreated = await seedCategories(categories);
+  const productsCreated = await seedProducts(products);
 
-    return NextResponse.json({
-      message: "Dados mock cadastrados com sucesso.",
-      categoriesCreated,
-      productsCreated,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro ao cadastrar dados mock.";
-    return NextResponse.json({ message }, { status: 500 });
-  }
+  return NextResponse.json({
+    message: "Dados mock cadastrados com sucesso.",
+    categoriesCreated,
+    productsCreated,
+  });
 }
 
 async function seedCategories(categories: FirestoreCategory[]): Promise<number> {

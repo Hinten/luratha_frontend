@@ -165,7 +165,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       seasonalTags: ["verão"],
       price: {
         price: seed.price,
-        salePrice: seed.salePrice,
+        salePrice: seed.salePrice ?? null,
         priceMin: seed.salePrice ?? seed.price,
         priceMax: seed.price,
         currency: "BRL",

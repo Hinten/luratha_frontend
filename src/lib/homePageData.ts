@@ -6,7 +6,7 @@ import {
   type Product as FirestoreProduct,
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { dbServer } from "@/src/lib/firebaseServer";
+import { db } from "@/src/lib/firebaseClient";
 import type { Category, Product } from "@/src/lib/types";
 import { mockCategories, mockFeatured, mockNewArrivals, mockSale } from "@/src/lib/mockData";
 
@@ -22,7 +22,7 @@ type HomePageData = {
 
 export async function getHomePageData(): Promise<HomePageData> {
   try {
-    const productsRepository = createProductsRepository(dbServer);
+    const productsRepository = createProductsRepository();
     const [products, categories] = await withTimeout(
       Promise.all([
         productsRepository.list({ status: "active", limit: 30 }),
@@ -56,7 +56,7 @@ export async function getHomePageData(): Promise<HomePageData> {
 async function listCategories(): Promise<FirestoreCategory[]> {
   const snapshot = await getDocs(
     query(
-      collection(dbServer, firestoreCollections.categories),
+      collection(db, firestoreCollections.categories),
       orderBy("name", "asc"),
       queryLimit(20),
     ),
@@ -84,8 +84,6 @@ function mapFirestoreProductToCard(product: FirestoreProduct): Product {
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,
-    rating: product.ratingAverage,
-    reviewCount: product.reviewCount,
   };
 }
 

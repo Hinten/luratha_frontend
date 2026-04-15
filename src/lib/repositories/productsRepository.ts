@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { db } from "../firebaseClient";
 
 type ProductListFilters = {
   status?: Product["status"];
@@ -51,7 +52,8 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
-export function createProductsRepository(db: Firestore): ProductsRepository {
+export function createProductsRepository(): ProductsRepository {
+  console.log("Creating Firestore-based ProductsRepository",);
   const productsCollectionRef = collection(db, firestoreCollections.products);
 
   async function create(input: unknown): Promise<Product> {
@@ -93,6 +95,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
 
   async function getBySlug(slug: string): Promise<Product | null> {
     try {
+
       const snapshot = await getDocs(
         query(productsCollectionRef, where("slug", "==", slug), queryLimit(1)),
       );
@@ -100,6 +103,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
       if (snapshot.empty) {
         return null;
       }
+      
 
       return validateProduct(snapshot.docs[0].data());
     } catch (error) {
