@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
+import DevSeedButton from "@/src/components/home/DevSeedButton";
 import styles from "./Header.module.css";
 import { useCart } from "@/src/contexts/CartContext";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -44,6 +45,8 @@ export default function Header() {
 
         {/* Actions */}
         <div className={styles.actions}>
+          <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
+
           {/* User: "Entrar" link or first name → account */}
           {isAuthenticated ? (
             <span className={styles.userGreeting}>

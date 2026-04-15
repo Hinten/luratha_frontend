@@ -1,56 +1,53 @@
-import type { ProductDetail } from "@/src/lib/types";
-import { CATEGORIES } from "@/src/lib/constants";
-import { mockProducts } from "@/src/lib/mockData";
+import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGallery from "@/src/components/produto/ProductGallery";
 import PriceBlock from "@/src/components/produto/PriceBlock";
 import SizeSelector from "@/src/components/produto/SizeSelector";
-import ReviewsList from "@/src/components/produto/ReviewsList";
 import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import ProductDescription from "@/src/components/produto/ProductDescription";
-import ProductCard from "@/src/components/produto/ProductCard";
 import styles from "./ProductDetailPage.module.css";
 
 interface ProductDetailPageProps {
-  product: ProductDetail;
+  product: FirestoreProduct;
 }
 
 export default function ProductDetailPage({ product }: ProductDetailPageProps) {
-  const category = CATEGORIES.find((c) => c.slug === product.categorySlug);
-  const categoryLabel = category?.label ?? product.categorySlug;
-  const categoryHref = category?.href ?? `/categoria/${product.categorySlug}`;
-
-  const relatedProducts = mockProducts
-    .filter(
-      (p) =>
-        p.categorySlug === product.categorySlug && p.slug !== product.slug
-    )
-    .slice(0, 6);
+  const primaryCategory = product.category[0];
+  const categorySlug = primaryCategory?.slug ?? "outros";
+  const categoryLabel = primaryCategory?.name ?? "Outros";
+  const categoryHref = `/categoria/${categorySlug}`;
+  const images = product.photoIds.length > 0 ? product.photoIds : [DEFAULT_PRODUCT_IMAGE_URL];
+  const currentPrice = product.price.salePrice ?? product.price.price;
+  const originalPrice = product.price.salePrice ? product.price.price : undefined;
+  const sizes = Array.from(
+    new Set([
+      ...(product.size ?? []),
+      ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
+    ]),
+  );
+  const highlights = product.productHighlight ?? [];
 
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
+    name: product.title,
     description: product.description,
-    image: product.images,
-    sku: product.id,
-    brand: { "@type": "Brand", name: "Luratha" },
+    image: images,
+    sku: product.sku,
+    brand: { "@type": "Brand", name: product.brandName },
     offers: {
       "@type": "Offer",
       priceCurrency: "BRL",
-      price: product.price,
-      availability: "https://schema.org/InStock",
+      price: currentPrice,
+      availability: product.totalStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       url: `https://www.luratha.com.br/produto/${product.slug}`,
     },
-    ...(product.reviews && product.reviews.length > 0
+    ...(product.ratingAverage !== null && product.reviewCount !== null && product.reviewCount > 0
       ? {
           aggregateRating: {
             "@type": "AggregateRating",
-            ratingValue: (
-              product.reviews.reduce((s, r) => s + r.rating, 0) /
-              product.reviews.length
-            ).toFixed(1),
-            reviewCount: product.reviews.length,
+            ratingValue: product.ratingAverage.toFixed(1),
+            reviewCount: product.reviewCount,
           },
         }
       : {}),
@@ -67,7 +64,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
           items={[
             { label: "Home", href: "/" },
             { label: categoryLabel, href: categoryHref },
-            { label: product.name },
+            { label: product.title },
           ]}
         />
 
@@ -76,27 +73,26 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
           {/* Gallery column */}
           <div className={styles.galleryCol}>
             <ProductGallery
-              images={product.images}
-              productName={product.name}
+              images={images}
+              productName={product.title}
             />
           </div>
 
           {/* Info column */}
           <div className={styles.infoCol}>
-            <h1 className={styles.productName}>{product.name}</h1>
+            <h1 className={styles.productName}>{product.title}</h1>
 
-            {product.rating !== undefined && (
+            {product.ratingAverage !== null && (
               <div className={styles.ratingRow}>
                 <span className={styles.ratingStar} aria-hidden="true">
                   ★
                 </span>
                 <span className={styles.ratingValue}>
-                  {product.rating.toFixed(1)}
+                  {product.ratingAverage.toFixed(1)}
                 </span>
-                {product.reviewCount !== undefined && (
+                {product.reviewCount !== null && (
                   <span className={styles.ratingCount}>
-                    ({product.reviewCount}{" "}
-                    {product.reviewCount === 1 ? "avaliação" : "avaliações"})
+                    ({product.reviewCount} {product.reviewCount === 1 ? "avaliação" : "avaliações"})
                   </span>
                 )}
               </div>
@@ -104,56 +100,32 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
 
             <div className={styles.priceWrapper}>
               <PriceBlock
-                price={product.price}
-                originalPrice={product.originalPrice}
-                installments={product.installments}
+                price={currentPrice}
+                originalPrice={originalPrice}
               />
             </div>
 
             <SizeSelector
-              sizes={product.sizes}
-              productName={product.name}
+              sizes={sizes}
+              productName={product.title}
               productId={product.id}
               slug={product.slug}
-              imageUrl={product.images[0]}
-              price={product.price}
+              imageUrl={images[0]}
+              price={currentPrice}
             />
 
             {/* Amazon-style bullet-point highlights */}
-            {product.highlights && product.highlights.length > 0 && (
-              <ProductHighlights highlights={product.highlights} />
+            {highlights.length > 0 && (
+              <ProductHighlights highlights={highlights} />
             )}
           </div>
         </div>
 
         {/* Full description — always visible, below the two-column layout */}
         <ProductDescription description={product.description} />
-
-        {/* Reviews section */}
-        {product.reviews && product.reviews.length > 0 && (
-          <div className={styles.reviewsSection}>
-            <h2 className={styles.sectionTitle}>Avaliações</h2>
-            <ReviewsList reviews={product.reviews} />
-          </div>
-        )}
-
-        {/* Related products */}
-        {relatedProducts.length > 0 && (
-          <section
-            aria-label="Peças relacionadas"
-            className={styles.relatedSection}
-          >
-            <h2 className={styles.sectionTitle}>Você também pode gostar</h2>
-            <div className={styles.relatedScroll}>
-              {relatedProducts.map((p) => (
-                <div key={p.id} className={styles.relatedCard}>
-                  <ProductCard product={p} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </>
   );
 }
+
+const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";

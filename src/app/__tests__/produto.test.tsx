@@ -3,7 +3,9 @@ import { render, screen } from "@testing-library/react";
 import ProdutoPage from "@/src/app/produto/[slug]/page";
 import { buildProductSlug, type Product } from "@/src/schemas/firestore";
 
-const getBySlugMock = vi.fn();
+const { getBySlugMock } = vi.hoisted(() => ({
+  getBySlugMock: vi.fn(),
+}));
 
 vi.mock("next/link", () => ({
   default: ({

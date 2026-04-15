@@ -10,6 +10,7 @@ type DevSeedButtonProps = {
 type SeedStatus = "idle" | "loading" | "success" | "error";
 
 export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState<SeedStatus>("idle");
   const [message, setMessage] = useState("");
 
@@ -18,6 +19,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   }
 
   async function handleSeedMockData() {
+    setMenuOpen(false);
     setStatus("loading");
     setMessage("Cadastrando categorias e produtos mock...");
 
@@ -40,25 +42,46 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   }
 
   return (
-    <section className={`container-luratha section-padding ${styles.wrapper}`}>
-      <div className={styles.content}>
-        <h2 className={styles.title}>Modo desenvolvimento</h2>
-        <p className={styles.description}>
-          Clique no botão para cadastrar categorias e produtos mock no Firestore.
-        </p>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={handleSeedMockData}
-          disabled={status === "loading"}
+    <div className={styles.wrapper}>
+      <button
+        type="button"
+        className={styles.iconButton}
+        aria-label="Ações de desenvolvimento"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className={styles.icon}
+          aria-hidden="true"
         >
-          {status === "loading" ? "Cadastrando..." : "Cadastrar dados mock"}
-        </button>
-        {message && (
-          <p className={status === "error" ? styles.errorMessage : styles.successMessage}>{message}</p>
-        )}
-      </div>
-    </section>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 9h15m-15 6h15m-15 6h15" />
+        </svg>
+      </button>
+      {menuOpen && (
+        <div className={styles.dropdown} role="menu" aria-label="Menu de desenvolvimento">
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.actionButton}
+            onClick={handleSeedMockData}
+            disabled={status === "loading"}
+          >
+            {status === "loading" ? "Cadastrando..." : "Cadastrar dados mock"}
+          </button>
+        </div>
+      )}
+      {message && (
+        <p className={status === "error" ? styles.errorMessage : styles.successMessage} role="status">
+          {message}
+        </p>
+      )}
+    </div>
   );
 }
 
