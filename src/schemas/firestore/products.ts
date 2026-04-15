@@ -6,27 +6,13 @@ import {
   skuSchema,
   timestampSchema,
 } from "@/src/schemas/firestore/utils";
+import { CategorySchema } from "./category";
 
 const productSlugSchema = z
   .string()
   .trim()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-const productIdentifierSchema = z
-  .object({
-    type: z.enum(["sku", "gtin", "mpn_brand"]),
-    value: nonEmptyStringSchema,
-    brandName: nonEmptyStringSchema.optional(),
-  })
-  .superRefine((identifier, ctx) => {
-    if (identifier.type === "mpn_brand" && !identifier.brandName) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["brandName"],
-        message: "brandName is required when identifier type is mpn_brand",
-      });
-    }
-  });
 
 export function slugifyProductPart(value: string): string {
   return value
@@ -48,230 +34,162 @@ export function buildProductSlug(name: string, sku: string): string {
   return `${fallbackName}-${fallbackSku}`;
 }
 
-export const productVariantSchema = z.object({
-  sku: skuSchema,
-  size: nonEmptyStringSchema,
-  colorName: nonEmptyStringSchema.optional(),
-  colorHex: colorHexSchema.optional(),
-  attributes: z.record(z.string(), nonEmptyStringSchema).default({}),
+
+export const priceSchema = z.object({
   price: moneySchema,
-  compareAtPrice: moneySchema.optional(),
-  stock: z.number().int().min(0),
-  photoIds: z.array(nonEmptyStringSchema).min(1),
-  availability: z
-    .enum(["InStock", "OutOfStock", "PreOrder", "BackOrder", "Discontinued"])
-    .default("InStock"),
-  itemCondition: z.enum(["NewCondition", "UsedCondition", "RefurbishedCondition"]).default("NewCondition"),
-  gtin: z
-    .string()
-    .trim()
-    .regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/)
-    .optional(),
-  mpn: nonEmptyStringSchema.optional(),
-  active: z.boolean().default(true),
+  salePrice: moneySchema.optional(),
+  priceMin: moneySchema, // utilizado para automação de preços em produtos variáveis
+  priceMax: moneySchema, // utilizado para automação de preços em produtos variáveis
+  currency: z.literal("BRL"),
+  startDate: timestampSchema.optional(),
+  endDate: timestampSchema.optional(),
+}).superRefine((price, ctx) => {  if (price.priceMax < price.priceMin) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["priceMax"],
+      message: "priceMax must be greater than or equal to priceMin",
+    });
+  }
+
+  if (price.salePrice !== undefined) {
+    if (price.salePrice >= price.price) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["salePrice"],
+        message: "salePrice must be less than price",
+      });
+    }
+  }
+
 });
 
+export const dimensionsSchema = z.object({
+  length: z.number().positive(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  unit: z.enum(["cm", "in"]).default("cm"),
+  weightKg: z.number().positive().optional(),
+  weightGrossKg: z.number().positive().optional(),
+});
+
+export const productDetailsSchema = z.object({
+  section_name: nonEmptyStringSchema.max(140),
+  attribute_name: nonEmptyStringSchema.max(140),
+  attribute_value: nonEmptyStringSchema.max(1000),
+});
+
+export const productVariantSchema = z.object({
+  sku: skuSchema,
+  gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).optional(),
+  mpn: nonEmptyStringSchema.optional(),
+  // acho que vou usar o sku do pai mesmo
+  item_group_id: nonEmptyStringSchema.optional(), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
+  color: z.array(nonEmptyStringSchema).optional(),
+  size: z.array(nonEmptyStringSchema).optional(),
+
+  stock: z.number().int().min(0),
+  photoIds: z.array(nonEmptyStringSchema).min(1),
+  active: z.boolean().default(true),
+  
+});
+//https://support.google.com/merchants/answer/7052112?hl=en
 const productSchemaBase = z
   .object({
-    id: nonEmptyStringSchema,
+    id: nonEmptyStringSchema.max(50),
     slug: productSlugSchema.optional(),
-    name: nonEmptyStringSchema,
-    description: nonEmptyStringSchema,
-    productType: z.enum(["simple", "variable"]).default("simple"),
-    schemaIntent: z.enum(["merchant_listing", "product_snippet"]).default("merchant_listing"),
+    title: nonEmptyStringSchema.max(150),
+    shortTitle: nonEmptyStringSchema.min(5).max(65).optional(),
+    description: nonEmptyStringSchema.max(5000),
+    
+    vectorEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
+    searchEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
+
+    sku: skuSchema,
+    gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).optional(),
+    mpn: nonEmptyStringSchema.optional(),
+    status: z.enum(["draft", "active", "archived"]),
+
+    // productType: z.enum(["simple", "variable"]).default("simple"), // ver se é necessário colocar isso
+    // schemaIntent: z.enum(["merchant_listing", "product_snippet"]).default("merchant_listing"),
     isPurchasable: z.boolean().default(true),
     brandName: nonEmptyStringSchema.default("Luratha"),
-    identifier: productIdentifierSchema,
-    categorySlug: nonEmptyStringSchema,
-    subcategorySlug: nonEmptyStringSchema.optional(),
+    category: z.array(CategorySchema).default([]),
+    googleProductCategoryId: z.string().trim().optional(), // https://support.google.com/merchants/answer/6324436?visit_id=639118635357846475-888363973&rd=1
     tags: z.array(nonEmptyStringSchema).max(50).default([]),
     materialTags: z.array(nonEmptyStringSchema).max(20).default([]),
     seasonalTags: z.array(nonEmptyStringSchema).max(20).default([]),
-    priceMin: moneySchema,
-    priceMax: moneySchema,
-    currency: z.literal("BRL"),
-    ratingAverage: z.number().min(0).max(5).default(0),
-    reviewCount: z.number().int().min(0).default(0),
-    totalStock: z.number().int().min(0),
-    status: z.enum(["draft", "active", "archived"]),
-    photoIds: z.array(nonEmptyStringSchema).min(1),
-    primaryPhotoId: nonEmptyStringSchema,
-    defaultVariantSku: skuSchema,
-    variantAxes: z.array(nonEmptyStringSchema).max(3).default([]),
-    variants: z.array(productVariantSchema).min(1),
-    searchText: nonEmptyStringSchema,
-    searchableTokens: z.array(nonEmptyStringSchema).max(200),
-    vectorEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
-    searchEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
-    publishedAt: timestampSchema.optional(),
+    price: priceSchema,
+    salePrice: priceSchema.optional(),
+    condition: z.enum(["new", "used", "refurbished"]).default("new"),
+    adult: z.boolean().default(false), // Indica se o produto contém nudez ou conteúdo adulto
+    isBundle: z.boolean().default(false), // Indica se o produto é um bundle de múltiplos itens
+    multipack: z.number().int().min(1).default(1), // Quantidade de itens em um bundle, se isBundle for true
+
+    age_group: z.enum(["newborn", "infant", "toddler", "kids", "adult"]).optional(),
+    gender: z.enum(["male", "female", "unisex"]).optional(),
+    color: z.array(nonEmptyStringSchema).optional(),
+    size: z.array(nonEmptyStringSchema).optional(),
+    sizeType: z.enum([
+      "regular", 
+      "petite", 
+      "maternity",
+      "big",
+      "tall",
+      "plus"
+    ]).optional(),
+    sizeSystem: z.enum([
+      "US",
+      "UK",
+      "EU",
+      "DE",
+      "FR",
+      "JP",
+      "CN",
+      "IT",
+      "BR",
+      "MEX",
+      "AU",
+    ]).optional(),
+    material: z.array(nonEmptyStringSchema).default([]),
+    pattern: z.array(nonEmptyStringSchema).default([]),
+    dimensions: dimensionsSchema.optional(),
+
+    productDetail: z.array(productDetailsSchema).optional(),
+    productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).optional(),
+    
+    photoIds: z.array(nonEmptyStringSchema),
+    lifeStylePhotoIds: z.array(nonEmptyStringSchema).optional(),
+    videoUrls: z.array(z.url()).default([]),
+
+    // shipping verificar se é possível usar isso no brasil https://support.google.com/merchants/answer/6324484?visit_id=639118635357846475-888363973&rd=1
+    // carrier_shipping implementarhttps://support.google.com/merchants/answer/15449142
+
+    ratingAverage: z.number().min(0).max(5).optional(),
+    reviewCount: z.number().int().min(0).optional(),
+    totalStock: z.number().int().default(0),
+
+    variants: z.array(productVariantSchema).optional(),
+
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
   })
   .superRefine((product, ctx) => {
-    if (product.priceMax < product.priceMin) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["priceMax"],
-        message: "priceMax must be greater than or equal to priceMin",
-      });
-    }
 
-    if (!product.photoIds.includes(product.primaryPhotoId)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["primaryPhotoId"],
-        message: "primaryPhotoId must exist in photoIds",
-      });
-    }
-
-    const defaultVariant = product.variants.find((variant) => variant.sku === product.defaultVariantSku);
-    if (!defaultVariant) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["defaultVariantSku"],
-        message: "defaultVariantSku must reference an existing variant sku",
-      });
-    }
-
-    if (product.productType === "simple" && product.variants.length !== 1) {
+    const sameSkuInVariants = product.variants?.some((variant) => variant.sku === product.sku);
+    if (sameSkuInVariants) {
       ctx.addIssue({
         code: "custom",
         path: ["variants"],
-        message: "simple products must contain exactly one variant",
+        message: "variant SKU must be unique inside the product",
       });
     }
 
-    if (product.productType === "variable" && product.variants.length < 2) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["variants"],
-        message: "variable products must contain at least two variants",
-      });
-    }
-
-    if (product.productType === "variable" && product.variantAxes.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["variantAxes"],
-        message: "variable products must declare at least one variant axis",
-      });
-    }
-
-    if (product.productType === "simple" && product.variantAxes.length > 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["variantAxes"],
-        message: "simple products cannot declare variant axes",
-      });
-    }
-
-    if (product.schemaIntent === "merchant_listing" && !product.isPurchasable) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["isPurchasable"],
-        message: "merchant_listing products must be purchasable",
-      });
-    }
-
-    if (product.schemaIntent === "product_snippet" && product.isPurchasable) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["isPurchasable"],
-        message: "product_snippet products must be marked as non-purchasable",
-      });
-    }
-
-    if (!product.vectorEmbedding && !product.searchEmbedding) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["vectorEmbedding"],
-        message: "vectorEmbedding is required for vector search indexing",
-      });
-    }
-
-    const variantSkus = new Set<string>();
-    for (const variant of product.variants) {
-      if (variant.compareAtPrice !== undefined && variant.compareAtPrice <= variant.price) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["variants"],
-          message: "compareAtPrice must be greater than variant price when provided",
-        });
-      }
-
-      if (variantSkus.has(variant.sku)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["variants"],
-          message: "variant SKU must be unique inside the product",
-        });
-      }
-      variantSkus.add(variant.sku);
-
-      const unknownPhoto = variant.photoIds.find((photoId) => !product.photoIds.includes(photoId));
-      if (unknownPhoto) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["variants"],
-          message: "all variant photoIds must exist in product photoIds",
-        });
-      }
-    }
-
-    const variantPrices = product.variants.map((variant) => variant.price);
-    const minVariantPrice = Math.min(...variantPrices);
-    const maxVariantPrice = Math.max(...variantPrices);
-
-    if (product.priceMin !== minVariantPrice) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["priceMin"],
-        message: "priceMin must match the minimum variant price",
-      });
-    }
-
-    if (product.priceMax !== maxVariantPrice) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["priceMax"],
-        message: "priceMax must match the maximum variant price",
-      });
-    }
-
-    const stockFromVariants = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
-    if (product.totalStock !== stockFromVariants) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["totalStock"],
-        message: "totalStock must match the sum of variant stock",
-      });
-    }
-
-    if (product.identifier.type === "sku" && product.identifier.value !== product.defaultVariantSku) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["identifier", "value"],
-        message: "sku identifier must match defaultVariantSku",
-      });
-    }
-
-    if (product.identifier.type === "gtin") {
-      const hasMatchingGtin = product.variants.some((variant) => variant.gtin === product.identifier.value);
-      if (!hasMatchingGtin) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["identifier", "value"],
-          message: "gtin identifier must match at least one variant gtin",
-        });
-      }
-    }
-
-    const expectedSlug = buildProductSlug(product.name, product.defaultVariantSku);
+    const expectedSlug = buildProductSlug(product.title, product.sku);
     if (product.slug && product.slug !== expectedSlug) {
       ctx.addIssue({
         code: "custom",
         path: ["slug"],
-        message: "slug must match the generated value based on name and defaultVariantSku",
+        message: "slug must match the generated value based on title and sku",
       });
     }
   });
