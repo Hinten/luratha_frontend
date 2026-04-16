@@ -170,9 +170,6 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
         priceMax: seed.price,
         currency: "BRL",
       },
-      photoIds: [
-        `https://placehold.co/600x750/EDE4D9/3A2F2A?text=${encodeURIComponent(seed.title)}`,
-      ],
       totalStock: seed.stock,
       ratingAverage: 4.5,
       reviewCount: index + 3,

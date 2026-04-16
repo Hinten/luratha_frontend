@@ -30,10 +30,6 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 12,
       ratingAverage: 4.5,
       reviewCount: 5,
-      photoIds: [
-        "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+Floral",
-        "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Vestido+Detalhe",
-      ],
       variants: [
         {
           sku: "LURATHA_E2E_001_VARIANT",
@@ -69,9 +65,6 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 8,
       ratingAverage: 4.7,
       reviewCount: 3,
-      photoIds: [
-        "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Conjunto+Crochet",
-      ],
       createdAt: now,
       updatedAt: now,
     }),
@@ -96,9 +89,6 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 7,
       ratingAverage: 4.6,
       reviewCount: 4,
-      photoIds: [
-        "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Moletom+Bordado",
-      ],
       createdAt: now,
       updatedAt: now,
     }),

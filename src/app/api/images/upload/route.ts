@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         productId: latestResult.productId,
         imageAsset: latestResult.imageAsset,
         imageAssets: results.map((result) => result.imageAsset),
-        photoIds: latestResult.photoIds,
+        photoAssets: latestResult.photoAssets,
       },
       { status: 201 },
     );

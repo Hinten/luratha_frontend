@@ -31,10 +31,6 @@ export function buildMockProducts(): Product[] {
       reviewCount: 9,
       totalStock: 12,
       status: "active",
-      photoIds: [
-        "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Mock+1",
-        "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Vestido+Mock+2",
-      ],
       variants: [
         {
           sku: "LURATHA_101",
@@ -69,7 +65,6 @@ export function buildMockProducts(): Product[] {
       reviewCount: 4,
       totalStock: 7,
       status: "active",
-      photoIds: ["https://placehold.co/600x750/F8F5F0/3A2F2A?text=Blusa+Mock+1"],
       size: ["M"],
       vectorEmbedding: [0.21, 0.11, 0.35, 0.49, 0.19, 0.28, 0.4, 0.55],
       createdAt,

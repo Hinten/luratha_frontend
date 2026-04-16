@@ -16,19 +16,18 @@ export function getProductPrimaryImage(product: Product, fallbackUrl: string): s
     return firstAsset.resolutions.desktop.temporaryUrl ?? firstAsset.resolutions.desktop.downloadUrl;
   }
 
-  return product.photoIds[0] ?? fallbackUrl;
+  return fallbackUrl;
 }
 
 export function getProductGalleryImages(product: Product, fallbackUrl: string): ProductGalleryImage[] {
   if (product.photoAssets.length === 0) {
-    const fallbackImages = product.photoIds.length > 0 ? product.photoIds : [fallbackUrl];
-    return fallbackImages.map((url, index) => ({
-      id: `legacy-${index + 1}`,
-      defaultUrl: url,
-      alt: `${product.title} — imagem ${index + 1}`,
-      srcSet: `${url} 1200w`,
-      links: [{ label: "Desktop", url }],
-    }));
+    return [{
+      id: "fallback-image",
+      defaultUrl: fallbackUrl,
+      alt: `${product.title} — imagem 1`,
+      srcSet: `${fallbackUrl} 1200w`,
+      links: [{ label: "Desktop", url: fallbackUrl }],
+    }];
   }
 
   return product.photoAssets.map((asset, index) => {

@@ -56,7 +56,7 @@ describeWhenReady("POST /api/images/upload (emulator)", () => {
     const parsedProduct = validateProduct(updatedDoc.data());
 
     expect(parsedProduct.photoAssets).toHaveLength(1);
-    expect(parsedProduct.photoAssets[0].resolutions.desktop.downloadUrl).toBe(parsedProduct.photoIds[parsedProduct.photoIds.length - 1]);
+    expect(parsedProduct.photoAssets[0].resolutions.desktop.downloadUrl).toBeTruthy();
 
     const [mobileExists] = await adminBucket.file(payload.imageAsset.resolutions.mobile.storagePath).exists();
     const [tabletExists] = await adminBucket.file(payload.imageAsset.resolutions.tablet.storagePath).exists();

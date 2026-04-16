@@ -198,8 +198,7 @@ const productSchemaBase = z
     productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).nullable().default(null),
     
     photoAssets: z.array(productImageAssetSchema).default([]),
-    photoIds: z.array(nonEmptyStringSchema),
-    lifeStylePhotoIds: z.array(nonEmptyStringSchema).nullable().default(null),
+    lifeStylePhotos: z.array(productImageAssetSchema).default([]),
     videoUrls: z.array(z.url()).default([]),
 
     // shipping verificar se é possível usar isso no brasil https://support.google.com/merchants/answer/6324484?visit_id=639118635357846475-888363973&rd=1
@@ -238,13 +237,11 @@ const productSchemaBase = z
 export const productSchema = productSchemaBase.transform((product) => {
   const generatedSlug = buildProductSlug(product.title, product.sku);
   const vectorEmbedding = product.vectorEmbedding ?? product.searchEmbedding;
-  const generatedPhotoIds = product.photoAssets.map((asset) => asset.resolutions.desktop.downloadUrl);
 
   return {
     ...product,
     slug: generatedSlug,
     vectorEmbedding,
-    photoIds: generatedPhotoIds.length > 0 ? generatedPhotoIds : product.photoIds,
   };
 });
 

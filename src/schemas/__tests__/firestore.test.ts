@@ -80,7 +80,7 @@ const validProduct = {
       updatedAt: now,
     },
   ],
-  photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
+  lifeStylePhotos: [],
   variants: [
     {
       sku: "LURATHA_002",
@@ -149,9 +149,9 @@ describe("firestore schemas", () => {
 
   it("accepts a valid product with reusable photo references", () => {
     const parsed = productSchema.parse(validProduct);
-    expect(parsed).toMatchObject({ ...validProduct, photoIds: ["https://example.com/desktop.webp"] });
+    expect(parsed).toMatchObject(validProduct);
     expect(parsed.slug).toBe(buildProductSlug(validProduct.title, validProduct.sku));
-    expect(parsed.photoIds).toEqual(["https://example.com/desktop.webp"]);
+    expect(parsed.photoAssets).toHaveLength(1);
   });
 
   it("rejects product with non-positive prices", () => {

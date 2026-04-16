@@ -69,7 +69,7 @@ describe("POST /api/images/upload", () => {
         createdAt: "2026-04-16T00:00:00.000Z",
         updatedAt: "2026-04-16T00:00:00.000Z",
       },
-      photoIds: ["https://example.com/desktop.webp"],
+      photoAssets: [],
     });
 
     const formData = new FormData();
@@ -139,7 +139,7 @@ describe("POST /api/images/upload", () => {
         createdAt: "2026-04-16T00:00:00.000Z",
         updatedAt: "2026-04-16T00:00:00.000Z",
       },
-      photoIds: ["https://example.com/desktop.webp"],
+      photoAssets: [],
     });
 
     const formData = new FormData();

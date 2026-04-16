@@ -52,7 +52,7 @@ const productWithAssets = validateProduct({
       updatedAt: now,
     },
   ],
-  photoIds: [],
+  lifeStylePhotos: [],
   createdAt: now,
   updatedAt: now,
 });

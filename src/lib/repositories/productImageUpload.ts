@@ -39,7 +39,7 @@ type UploadProductImageInput = {
 type UploadProductImageResult = {
   productId: string;
   imageAsset: Product["photoAssets"][number];
-  photoIds: string[];
+  photoAssets: Product["photoAssets"];
 };
 
 export class ProductImageUploadError extends Error {
@@ -83,15 +83,10 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
 
   const previousAssets = currentProduct.photoAssets.filter((asset) => asset.id !== imageId);
   const nextAssets = [...previousAssets, imageAsset];
-  const nextPhotoIds = [
-    ...currentProduct.photoIds.filter((url) => !previousAssets.some((asset) => asset.resolutions.desktop.downloadUrl === url)),
-    ...nextAssets.map((asset) => asset.resolutions.desktop.downloadUrl),
-  ];
 
   const updatedProduct = validateProduct({
     ...currentProduct,
     photoAssets: nextAssets,
-    photoIds: nextPhotoIds,
     updatedAt: now,
   });
 
@@ -100,7 +95,7 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
   return {
     productId: currentProduct.id,
     imageAsset,
-    photoIds: updatedProduct.photoIds,
+    photoAssets: updatedProduct.photoAssets,
   };
 }
 
