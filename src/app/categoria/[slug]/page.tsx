@@ -1,36 +1,62 @@
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import { CATEGORIES } from "@/src/lib/constants";
-import { mockProducts } from "@/src/lib/mockData";
+import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
 import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
+import { dbServer } from "@/src/lib/firebaseServer";
+import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
+import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ sort?: string }>;
 }
 
-export function generateStaticParams() {
-  return CATEGORIES.map(({ slug }) => ({ slug }));
-}
+const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+const categoriesRepository = createCategoriesRepository(dbServer);
+const productsRepository = createProductsRepository(dbServer);
+
+const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCategory | null> => {
+  try {
+    return await categoriesRepository.getBySlug(slug);
+  } catch (error) {
+    console.error(`[CategoriaPage] error fetching category with slug "${slug}"`, error);
+    throw createHttpStatusError(500, "Erro ao carregar dados da categoria.");
+  }
+});
+
+const getCachedCategoryProducts = cache(async (categorySlug: string): Promise<Product[]> => {
+  try {
+    const products = await productsRepository.list({
+      status: "active",
+      categorySlug,
+      limit: 100,
+    });
+
+    return products.map(mapFirestoreProductToCard);
+  } catch (error) {
+    console.error(`[CategoriaPage] error fetching products for category "${categorySlug}"`, error);
+    throw createHttpStatusError(500, "Erro ao carregar produtos da categoria.");
+  }
+});
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = CATEGORIES.find((c) => c.slug === slug);
+  const category = await getCachedCategoryBySlug(slug);
   if (!category) return {};
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
   return {
-    title: `${category.label} Artesanais`,
-    description: `Explore a coleção de ${category.label.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro feito com amor e cuidado.`,
+    title: `${category.name} Artesanais`,
+    description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro feito com amor e cuidado.`,
     alternates: { canonical: categoryUrl },
     openGraph: {
-      title: `${category.label} Artesanais | Luratha`,
-      description: `Explore a coleção de ${category.label.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
+      title: `${category.name} Artesanais | Luratha`,
+      description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
       url: categoryUrl,
       type: "website",
       images: [DEFAULT_OG_IMAGE],
@@ -64,19 +90,19 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const { slug } = await params;
   const { sort } = await searchParams;
 
-  const category = CATEGORIES.find((c) => c.slug === slug);
+  const category = await getCachedCategoryBySlug(slug);
   if (!category) return notFound();
 
-  const filtered = mockProducts.filter((p) => p.categorySlug === slug);
-  const products = sortProducts(filtered, sort);
+  const firestoreProducts = await getCachedCategoryProducts(slug);
+  const products = sortProducts(firestoreProducts, sort);
 
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
 
   const collectionPageSchema = {
     "@context": "https://schema.org" as const,
     "@type": "CollectionPage",
-    name: `${category.label} Artesanais | Luratha`,
-    description: `Explore a coleção de ${category.label.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
+    name: `${category.name} Artesanais | Luratha`,
+    description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
     url: categoryUrl,
     isPartOf: {
       "@type": "WebSite",
@@ -98,7 +124,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       {
         "@type": "ListItem",
         position: 2,
-        name: category.label,
+        name: category.name,
         item: categoryUrl,
       },
     ],
@@ -111,13 +137,13 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
-          { label: category.label },
+          { label: category.name },
         ]}
       />
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
           <h1 className="font-[family-name:var(--font-heading)]">
-            {category.label}
+            {category.name}
           </h1>
           <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">
             {products.length}{" "}
@@ -131,4 +157,25 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <ProductGrid products={products} />
     </div>
   );
+}
+
+function mapFirestoreProductToCard(product: FirestoreProduct): Product {
+  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
+  const currentPrice = product.price.salePrice ?? product.price.price;
+
+  return {
+    id: product.id,
+    name: product.title,
+    slug: product.slug,
+    categorySlug: product.category[0]?.slug,
+    price: currentPrice,
+    originalPrice: product.price.salePrice ? product.price.price : undefined,
+    imageUrl,
+    rating: product.ratingAverage ?? undefined,
+    reviewCount: product.reviewCount ?? undefined,
+  };
+}
+
+function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
+  return Object.assign(new Error(message), { statusCode });
 }
