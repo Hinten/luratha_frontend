@@ -38,7 +38,7 @@ const getCachedCategoryProducts = cache(async (categorySlug: string): Promise<Pr
       limit: 100,
     });
 
-    return products.map(mapFirestoreProductToCard);
+    return products.map((product) => mapFirestoreProductToCard(product, categorySlug));
   } catch (error) {
     console.error(`[CategoriaPage] error fetching products for category "${categorySlug}"`, error);
     throw createHttpStatusError(500, "Erro ao carregar produtos da categoria.");
@@ -159,7 +159,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   );
 }
 
-function mapFirestoreProductToCard(product: FirestoreProduct): Product {
+function mapFirestoreProductToCard(product: FirestoreProduct, fallbackCategorySlug: string): Product {
   const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
   const currentPrice = product.price.salePrice ?? product.price.price;
 
@@ -167,7 +167,7 @@ function mapFirestoreProductToCard(product: FirestoreProduct): Product {
     id: product.id,
     name: product.title,
     slug: product.slug,
-    categorySlug: product.category[0]?.slug,
+    categorySlug: product.category[0]?.slug ?? fallbackCategorySlug,
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,

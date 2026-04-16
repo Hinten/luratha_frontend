@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type FirestoreCategory, validateCategory } from "@/src/schemas/firestore";
-import { db } from "../firebaseClient";
+import { dbServer } from "../firebaseServer";
 
 type CategoryRepositoryErrorCode = "validation" | "unknown";
 
@@ -29,7 +29,7 @@ export interface CategoriesRepository {
   getBySlug(slug: string): Promise<FirestoreCategory | null>;
 }
 
-export function createCategoriesRepository(dbInstance: Firestore = db): CategoriesRepository {
+export function createCategoriesRepository(dbInstance: Firestore = dbServer): CategoriesRepository {
   const categoriesCollectionRef = collection(dbInstance, firestoreCollections.categories);
 
   async function getBySlug(slug: string): Promise<FirestoreCategory | null> {
