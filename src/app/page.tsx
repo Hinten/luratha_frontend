@@ -4,12 +4,7 @@ import HomeCategoriesSection from "@/src/components/home/HomeCategoriesSection";
 import ProductSection from "@/src/components/produto/ProductSection";
 import ProductCard from "@/src/components/produto/ProductCard";
 import JsonLd from "@/src/components/JsonLd";
-import {
-  mockCategories,
-  mockNewArrivals,
-  mockFeatured,
-  mockSale,
-} from "@/src/lib/mockData";
+import { getHomePageData } from "@/src/lib/homePageData";
 import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
 import styles from "./page.module.css";
 
@@ -50,7 +45,9 @@ const homePageSchema = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  const { categories, newArrivals, featured, sale } = await getHomePageData();
+
   return (
     <main>
       <JsonLd data={homePageSchema} />
@@ -58,12 +55,12 @@ export default function Home() {
       <HeroBanner />
 
       {/* 2. Category Quick-Access */}
-      <HomeCategoriesSection categories={mockCategories} />
+      <HomeCategoriesSection categories={categories} />
 
       {/* 3. Lançamentos */}
       <ProductSection
         title="Lançamentos"
-        products={mockNewArrivals}
+        products={newArrivals}
         viewAllHref="/colecao"
         viewAllLabel="Ver todos os lançamentos"
       />
@@ -72,7 +69,7 @@ export default function Home() {
       <div className={styles.destaquesBg}>
         <ProductSection
           title="Destaques"
-          products={mockFeatured}
+          products={featured}
           viewAllHref="/colecao"
           viewAllLabel="Ver todos os destaques"
         />
@@ -91,7 +88,7 @@ export default function Home() {
             </a>
           </div>
           <div className={styles.saleGrid}>
-            {mockSale.map((product) => (
+            {sale.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

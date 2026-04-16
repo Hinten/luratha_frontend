@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
-import type { ProductDetail } from "@/src/lib/types";
+import { buildProductSlug, type Product } from "@/src/schemas/firestore";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -33,36 +33,47 @@ vi.mock("@/src/components/produto/SizeSelector", () => ({
   ),
 }));
 
-const mockProduct: ProductDetail = {
-  id: "v1",
-  name: "Vestido Bordado Floral",
-  slug: "vestido-bordado-floral",
-  categorySlug: "vestidos",
-  price: 289,
-  originalPrice: 389,
-  imageUrl: "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+1",
-  rating: 4.8,
-  reviewCount: 24,
-  installments: { count: 3, value: 96.33 },
+const mockProduct: Product = {
+  id: "prod_test_vestido",
+  title: "Vestido Bordado Floral",
+  slug: buildProductSlug("Vestido Bordado Floral", "LURATHA_001"),
   description: "Um vestido artesanal bordado à mão com motivos florais.",
-  highlights: [
-    "Bordado à mão — cada peça é única",
-    "Tecido linho 100% natural",
-  ],
-  images: [
+  isPurchasable: true,
+  brandName: "Luratha",
+  sku: "LURATHA_001",
+  category: [{ id: "cat_vestidos", name: "Vestidos", slug: "vestidos" }],
+  tags: ["vestido", "bordado"],
+  materialTags: ["linho"],
+  seasonalTags: ["verao"],
+  productHighlight: ["Bordado à mão — cada peça é única", "Tecido linho 100% natural"],
+  price: {
+    price: 389,
+    salePrice: 289,
+    priceMin: 289,
+    priceMax: 389,
+    currency: "BRL",
+  },
+  ratingAverage: 4.8,
+  reviewCount: 24,
+  totalStock: 12,
+  status: "active",
+  size: ["PP", "P", "M", "G", "GG"],
+  photoIds: [
     "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1",
     "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Imagem+2",
   ],
-  sizes: ["PP", "P", "M", "G", "GG"],
-  reviews: [
+  variants: [
     {
-      id: "r1",
-      author: "Ana Claudia",
-      rating: 5,
-      comment: "Amei o vestido!",
-      date: "2026-03-15",
+      sku: "LURATHA_001_M",
+      size: ["M"],
+      stock: 12,
+      photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1"],
+      active: true,
     },
   ],
+  vectorEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
+  createdAt: "2026-03-15T00:00:00.000Z",
+  updatedAt: "2026-03-15T00:00:00.000Z",
 };
 
 describe("ProductDetailPage", () => {
@@ -73,7 +84,7 @@ describe("ProductDetailPage", () => {
   it("renders the product name as an h1", () => {
     render(<ProductDetailPage product={mockProduct} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Vestido Bordado Floral" })
+      screen.getByRole("heading", { level: 1, name: mockProduct.title })
     ).toBeInTheDocument();
   });
 
@@ -121,14 +132,7 @@ describe("ProductDetailPage", () => {
     const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(nav.querySelector("a[href='/']")).toBeInTheDocument();
     expect(nav.querySelector("a[href='/categoria/vestidos']")).toBeInTheDocument();
-    expect(screen.getByText("Vestido Bordado Floral", { selector: "[aria-current='page']" })).toBeInTheDocument();
-  });
-
-  it("renders the reviews section when reviews are present", () => {
-    render(<ProductDetailPage product={mockProduct} />);
-    expect(
-      screen.getByRole("region", { name: "Avaliações do produto" })
-    ).toBeInTheDocument();
+    expect(screen.getByText(mockProduct.title, { selector: "[aria-current='page']" })).toBeInTheDocument();
   });
 
   it("renders the schema.org JSON-LD script", () => {
@@ -137,13 +141,6 @@ describe("ProductDetailPage", () => {
     expect(script).toBeInTheDocument();
     const data = JSON.parse(script!.textContent!);
     expect(data["@type"]).toBe("Product");
-    expect(data.name).toBe("Vestido Bordado Floral");
-  });
-
-  it("renders the related products section when there are products in the same category", () => {
-    render(<ProductDetailPage product={mockProduct} />);
-    expect(
-      screen.getByRole("region", { name: "Peças relacionadas" })
-    ).toBeInTheDocument();
+    expect(data.name).toBe(mockProduct.title);
   });
 });

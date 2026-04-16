@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "emulator": "firebase emulators:start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,11 +13,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:emulator": "playwright test --config playwright.e2e.emulator.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "setup:routes": "node docs/create-catalog-routes.mjs"
   },
   "dependencies": {
     "firebase": "^12.11.0",
+    "firebase-admin": "^13.8.0",
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4"

@@ -1,0 +1,184 @@
+import {
+  CategorySchema,
+  type FirestoreCategory,
+  type Product,
+  validateProduct,
+} from "@/src/schemas/firestore";
+
+type ProductSeed = {
+  id: string;
+  title: string;
+  description: string;
+  sku: string;
+  categorySlug: string;
+  tags: string[];
+  price: number;
+  salePrice?: number;
+  stock: number;
+};
+
+function createIsoDate(offsetMinutes: number): string {
+  return new Date(Date.now() + offsetMinutes * 60_000).toISOString();
+}
+
+export function buildHomeSeedCategories(): FirestoreCategory[] {
+  return [
+    { id: "cat_vestidos", name: "Vestidos", slug: "vestidos" },
+    { id: "cat_blusas", name: "Blusas", slug: "blusas" },
+    { id: "cat_calcas", name: "Calças", slug: "calcas" },
+    { id: "cat_saias", name: "Saias", slug: "saias" },
+    { id: "cat_shorts", name: "Shorts", slug: "shorts" },
+    { id: "cat_conjuntos", name: "Conjuntos", slug: "conjuntos" },
+    { id: "cat_moletons", name: "Moletons", slug: "moletons" },
+    { id: "cat_acessorios", name: "Acessórios", slug: "acessorios" },
+    { id: "cat_camisas", name: "Camisas", slug: "camisas" },
+    { id: "cat_tricots", name: "Tricots", slug: "tricots" },
+  ].map((category) => CategorySchema.parse(category));
+}
+
+export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): Product[] {
+  const bySlug = new Map(categories.map((category) => [category.slug, category]));
+  const now = createIsoDate(0);
+  const seeds: ProductSeed[] = [
+    {
+      id: "prod_home_01",
+      title: "Vestido Midi Linho Natural",
+      description: "Vestido midi artesanal em linho com acabamento delicado.",
+      sku: "LURATHA_1001",
+      categorySlug: "vestidos",
+      tags: ["vestido", "linho"],
+      price: 329,
+      salePrice: 289,
+      stock: 12,
+    },
+    {
+      id: "prod_home_02",
+      title: "Vestido Bordado Brisa",
+      description: "Vestido com bordado manual e modelagem leve para o dia a dia.",
+      sku: "LURATHA_1002",
+      categorySlug: "vestidos",
+      tags: ["vestido", "bordado"],
+      price: 359,
+      stock: 8,
+    },
+    {
+      id: "prod_home_03",
+      title: "Blusa Cropped Algodão",
+      description: "Blusa cropped artesanal em algodão macio.",
+      sku: "LURATHA_1003",
+      categorySlug: "blusas",
+      tags: ["blusa", "algodao"],
+      price: 169,
+      stock: 15,
+    },
+    {
+      id: "prod_home_04",
+      title: "Blusa Linho Off White",
+      description: "Blusa de linho off white com toque minimalista.",
+      sku: "LURATHA_1004",
+      categorySlug: "blusas",
+      tags: ["blusa", "linho"],
+      price: 189,
+      salePrice: 169,
+      stock: 10,
+    },
+    {
+      id: "prod_home_05",
+      title: "Calça Wide Leg Artesanal",
+      description: "Calça wide leg de caimento fluido e produção em pequena escala.",
+      sku: "LURATHA_1005",
+      categorySlug: "calcas",
+      tags: ["calca", "wide-leg"],
+      price: 279,
+      stock: 9,
+    },
+    {
+      id: "prod_home_06",
+      title: "Saia Midi Plissada",
+      description: "Saia midi plissada com acabamento artesanal.",
+      sku: "LURATHA_1006",
+      categorySlug: "saias",
+      tags: ["saia", "plissada"],
+      price: 239,
+      stock: 11,
+    },
+    {
+      id: "prod_home_07",
+      title: "Conjunto Crochet Verão",
+      description: "Conjunto artesanal em crochet para dias quentes.",
+      sku: "LURATHA_1007",
+      categorySlug: "conjuntos",
+      tags: ["conjunto", "crochet"],
+      price: 419,
+      salePrice: 379,
+      stock: 6,
+    },
+    {
+      id: "prod_home_08",
+      title: "Moletom Bordado Slow",
+      description: "Moletom bordado com toque macio e estilo atemporal.",
+      sku: "LURATHA_1008",
+      categorySlug: "moletons",
+      tags: ["moletom", "bordado"],
+      price: 319,
+      stock: 7,
+    },
+    {
+      id: "prod_home_09",
+      title: "Short Linho Texturizado",
+      description: "Short de linho texturizado com conforto e versatilidade.",
+      sku: "LURATHA_1009",
+      categorySlug: "shorts",
+      tags: ["short", "linho"],
+      price: 179,
+      stock: 13,
+    },
+    {
+      id: "prod_home_10",
+      title: "Bolsa Palha Artesanal",
+      description: "Bolsa de palha feita à mão com acabamento premium.",
+      sku: "LURATHA_1010",
+      categorySlug: "acessorios",
+      tags: ["bolsa", "acessorio"],
+      price: 199,
+      stock: 10,
+    },
+  ];
+
+  return seeds.map((seed, index) => {
+    const category = bySlug.get(seed.categorySlug);
+    if (!category) {
+      throw new Error(`Category "${seed.categorySlug}" not found for seed product "${seed.id}"`);
+    }
+
+    return validateProduct({
+      id: seed.id,
+      title: seed.title,
+      description: seed.description,
+      sku: seed.sku,
+      status: "active",
+      isPurchasable: true,
+      brandName: "Luratha",
+      category: [category],
+      tags: seed.tags,
+      materialTags: [],
+      seasonalTags: ["verão"],
+      price: {
+        price: seed.price,
+        salePrice: seed.salePrice ?? null,
+        priceMin: seed.salePrice ?? seed.price,
+        priceMax: seed.price,
+        currency: "BRL",
+      },
+      photoIds: [
+        `https://placehold.co/600x750/EDE4D9/3A2F2A?text=${encodeURIComponent(seed.title)}`,
+      ],
+      totalStock: seed.stock,
+      ratingAverage: 4.5,
+      reviewCount: index + 3,
+      vectorEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}

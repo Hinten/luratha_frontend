@@ -37,13 +37,13 @@ export function buildProductSlug(name: string, sku: string): string {
 
 export const priceSchema = z.object({
   price: moneySchema,
-  salePrice: moneySchema.optional(),
-  priceMin: moneySchema, // utilizado para automação de preços em produtos variáveis
-  priceMax: moneySchema, // utilizado para automação de preços em produtos variáveis
+  salePrice: moneySchema.nullable().default(null),
+  priceMin: moneySchema.nullable().default(null), // utilizado para automação de preços em produtos variáveis
+  priceMax: moneySchema.nullable().default(null), // utilizado para automação de preços em produtos variáveis
   currency: z.literal("BRL"),
-  startDate: timestampSchema.optional(),
-  endDate: timestampSchema.optional(),
-}).superRefine((price, ctx) => {  if (price.priceMax < price.priceMin) {
+  startDate: timestampSchema.nullable().default(null),
+  endDate: timestampSchema.nullable().default(null),
+}).superRefine((price, ctx) => {  if ((price.priceMax && price.priceMin) && price.priceMax < price.priceMin) {
     ctx.addIssue({
       code: "custom",
       path: ["priceMax"],
@@ -51,7 +51,7 @@ export const priceSchema = z.object({
     });
   }
 
-  if (price.salePrice !== undefined) {
+  if (price.salePrice !== null) {
     if (price.salePrice >= price.price) {
       ctx.addIssue({
         code: "custom",
@@ -68,8 +68,8 @@ export const dimensionsSchema = z.object({
   width: z.number().positive(),
   height: z.number().positive(),
   unit: z.enum(["cm", "in"]).default("cm"),
-  weightKg: z.number().positive().optional(),
-  weightGrossKg: z.number().positive().optional(),
+  weightKg: z.number().positive().nullable().default(null),
+  weightGrossKg: z.number().positive().nullable().default(null),
 });
 
 export const productDetailsSchema = z.object({
@@ -80,12 +80,12 @@ export const productDetailsSchema = z.object({
 
 export const productVariantSchema = z.object({
   sku: skuSchema,
-  gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).optional(),
-  mpn: nonEmptyStringSchema.optional(),
+  gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).nullable().default(null),
+  mpn: nonEmptyStringSchema.nullable().default(null),
   // acho que vou usar o sku do pai mesmo
-  item_group_id: nonEmptyStringSchema.optional(), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
-  color: z.array(nonEmptyStringSchema).optional(),
-  size: z.array(nonEmptyStringSchema).optional(),
+  item_group_id: nonEmptyStringSchema.nullable().default(null), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
+  color: z.array(nonEmptyStringSchema).nullable().default(null),
+  size: z.array(nonEmptyStringSchema).nullable().default(null),
 
   stock: z.number().int().min(0),
   photoIds: z.array(nonEmptyStringSchema).min(1),
@@ -94,19 +94,38 @@ export const productVariantSchema = z.object({
 });
 //https://support.google.com/merchants/answer/7052112?hl=en
 const productSchemaBase = z
-  .object({
+  .preprocess((input) => {
+    if (!input || typeof input !== "object") {
+      return input;
+    }
+
+    const parsedInput = input as Record<string, unknown>;
+    const hasSlug = typeof parsedInput.slug === "string" && parsedInput.slug.trim().length > 0;
+    const hasName = typeof parsedInput.title === "string";
+    const hasSku = typeof parsedInput.sku === "string";
+
+    if (hasSlug || !hasName || !hasSku) {
+      return input;
+    }
+
+    return {
+      ...parsedInput,
+      slug: buildProductSlug(parsedInput.title as string, parsedInput.sku as string),
+    };
+  },
+  z.object({
     id: nonEmptyStringSchema.max(50),
-    slug: productSlugSchema.optional(),
+    slug: productSlugSchema.nullable().default(null),
     title: nonEmptyStringSchema.max(150),
-    shortTitle: nonEmptyStringSchema.min(5).max(65).optional(),
+    shortTitle: nonEmptyStringSchema.min(5).max(65).nullable().default(null),
     description: nonEmptyStringSchema.max(5000),
     
-    vectorEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
-    searchEmbedding: z.array(z.number().finite()).min(8).max(4096).optional(),
+    vectorEmbedding: z.array(z.number().finite()).min(8).max(4096).nullable().default(null),
+    searchEmbedding: z.array(z.number().finite()).min(8).max(4096).nullable().default(null),
 
     sku: skuSchema,
-    gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).optional(),
-    mpn: nonEmptyStringSchema.optional(),
+    gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).nullable().default(null),
+    mpn: nonEmptyStringSchema.nullable().default(null),
     status: z.enum(["draft", "active", "archived"]),
 
     // productType: z.enum(["simple", "variable"]).default("simple"), // ver se é necessário colocar isso
@@ -114,21 +133,21 @@ const productSchemaBase = z
     isPurchasable: z.boolean().default(true),
     brandName: nonEmptyStringSchema.default("Luratha"),
     category: z.array(CategorySchema).default([]),
-    googleProductCategoryId: z.string().trim().optional(), // https://support.google.com/merchants/answer/6324436?visit_id=639118635357846475-888363973&rd=1
+    googleProductCategoryId: z.string().trim().nullable().default(null), // https://support.google.com/merchants/answer/6324436?visit_id=639118635357846475-888363973&rd=1
     tags: z.array(nonEmptyStringSchema).max(50).default([]),
     materialTags: z.array(nonEmptyStringSchema).max(20).default([]),
     seasonalTags: z.array(nonEmptyStringSchema).max(20).default([]),
     price: priceSchema,
-    salePrice: priceSchema.optional(),
+    salePrice: priceSchema.nullable().default(null),
     condition: z.enum(["new", "used", "refurbished"]).default("new"),
     adult: z.boolean().default(false), // Indica se o produto contém nudez ou conteúdo adulto
     isBundle: z.boolean().default(false), // Indica se o produto é um bundle de múltiplos itens
     multipack: z.number().int().min(1).default(1), // Quantidade de itens em um bundle, se isBundle for true
 
-    age_group: z.enum(["newborn", "infant", "toddler", "kids", "adult"]).optional(),
-    gender: z.enum(["male", "female", "unisex"]).optional(),
-    color: z.array(nonEmptyStringSchema).optional(),
-    size: z.array(nonEmptyStringSchema).optional(),
+    age_group: z.enum(["newborn", "infant", "toddler", "kids", "adult"]).nullable().default(null),
+    gender: z.enum(["male", "female", "unisex"]).nullable().default(null),
+    color: z.array(nonEmptyStringSchema).nullable().default(null),
+    size: z.array(nonEmptyStringSchema).nullable().default(null),
     sizeType: z.enum([
       "regular", 
       "petite", 
@@ -136,7 +155,7 @@ const productSchemaBase = z
       "big",
       "tall",
       "plus"
-    ]).optional(),
+    ]).nullable().default(null),
     sizeSystem: z.enum([
       "US",
       "UK",
@@ -149,26 +168,26 @@ const productSchemaBase = z
       "BR",
       "MEX",
       "AU",
-    ]).optional(),
+    ]).nullable().default(null),
     material: z.array(nonEmptyStringSchema).default([]),
     pattern: z.array(nonEmptyStringSchema).default([]),
-    dimensions: dimensionsSchema.optional(),
+    dimensions: dimensionsSchema.nullable().default(null),
 
-    productDetail: z.array(productDetailsSchema).optional(),
-    productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).optional(),
+    productDetail: z.array(productDetailsSchema).nullable().default(null),
+    productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).nullable().default(null),
     
     photoIds: z.array(nonEmptyStringSchema),
-    lifeStylePhotoIds: z.array(nonEmptyStringSchema).optional(),
+    lifeStylePhotoIds: z.array(nonEmptyStringSchema).nullable().default(null),
     videoUrls: z.array(z.url()).default([]),
 
     // shipping verificar se é possível usar isso no brasil https://support.google.com/merchants/answer/6324484?visit_id=639118635357846475-888363973&rd=1
     // carrier_shipping implementarhttps://support.google.com/merchants/answer/15449142
 
-    ratingAverage: z.number().min(0).max(5).optional(),
-    reviewCount: z.number().int().min(0).optional(),
+    ratingAverage: z.number().min(0).max(5).nullable().default(null),
+    reviewCount: z.number().int().min(0).nullable().default(null),
     totalStock: z.number().int().default(0),
 
-    variants: z.array(productVariantSchema).optional(),
+    variants: z.array(productVariantSchema).nullable().default(null),
 
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
@@ -192,7 +211,7 @@ const productSchemaBase = z
         message: "slug must match the generated value based on title and sku",
       });
     }
-  });
+  }));
 
 export const productSchema = productSchemaBase.transform((product) => {
   const generatedSlug = buildProductSlug(product.title, product.sku);

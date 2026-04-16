@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { db } from "../firebaseClient";
 
 type ProductListFilters = {
   status?: Product["status"];
@@ -42,6 +43,7 @@ export class ProductRepositoryError extends Error {
 export interface ProductsRepository {
   create(input: unknown): Promise<Product>;
   getById(id: string): Promise<Product | null>;
+  getBySlug(slug: string): Promise<Product | null>;
   update(id: string, patch: ProductUpdateInput): Promise<Product>;
   delete(id: string): Promise<void>;
   list(filters?: ProductListFilters): Promise<Product[]>;
@@ -50,15 +52,15 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
-export function createProductsRepository(db: Firestore): ProductsRepository {
-  const productsCollectionRef = collection(db, firestoreCollections.products);
+export function createProductsRepository(dbInstance: Firestore = db): ProductsRepository {
+  const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
 
   async function create(input: unknown): Promise<Product> {
     try {
       const parsed = validateProduct(input);
       const productRef = doc(productsCollectionRef, parsed.id);
 
-      await runTransaction(db, async (transaction) => {
+      await runTransaction(dbInstance, async (transaction) => {
         const existing = await transaction.get(productRef);
         if (existing.exists()) {
           throw new ProductRepositoryError(
@@ -87,6 +89,24 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
       return validateProduct(snapshot.data());
     } catch (error) {
       throw normalizeRepositoryError(error, `read product "${id}"`);
+    }
+  }
+
+  async function getBySlug(slug: string): Promise<Product | null> {
+    try {
+
+      const snapshot = await getDocs(
+        query(productsCollectionRef, where("slug", "==", slug), queryLimit(1)),
+      );
+
+      if (snapshot.empty) {
+        return null;
+      }
+      
+
+      return validateProduct(snapshot.docs[0].data());
+    } catch (error) {
+      throw normalizeRepositoryError(error, `read product by slug "${slug}"`);
     }
   }
 
@@ -135,7 +155,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
         constraints.push(where("status", "==", filters.status));
       }
       if (filters.categorySlug) {
-        constraints.push(where("categorySlug", "==", filters.categorySlug));
+        constraints.push(where("category.0.slug", "==", filters.categorySlug));
       }
 
       const normalizedLimit = Math.max(1, Math.min(filters.limit ?? 24, MAX_LIST_LIMIT));
@@ -155,6 +175,7 @@ export function createProductsRepository(db: Firestore): ProductsRepository {
   return {
     create,
     getById,
+    getBySlug,
     update,
     delete: remove,
     list,
