@@ -3,7 +3,7 @@
 ## 1) Problemas, fixes aplicados e problemas que persistiram
 
 ### Problemas tratados no PR
-- PDP (`src/app/produto/[slug]/page.tsx`) ainda estava acoplada a mock local e não ao contrato de `src/schemas/firestore`.
+- PDP (`src/app/produto/[slug]/page.tsx`) ainda estava acoplado a mock local e não ao contrato de `src/schemas/firestore`.
 - Fluxo de erro e não encontrado na PDP não estava consistente para 404 e falha de carregamento.
 - Home (`src/app/page.tsx`) não estava lendo categorias/produtos da database.
 - Faltava mecanismo prático para popular dados no emulator durante desenvolvimento.
@@ -20,7 +20,7 @@
 - Evolução de testes unitários/emulator/E2E para cobrir o novo fluxo.
 
 ### Problemas que persistiram (estado atual)
-- `npm run test:e2e` padrão ainda pode falhar/travar quando não existe acesso ao Firestore cloud, pois o comando default não garante emulator.
+- `npm run test:e2e` padrão ainda pode falhar/travar quando não existe acesso ao Firestore cloud, pois o comando padrão não garante emulator.
 - `npm run test:firestore` pode passar com **skip** quando o emulator não está alcançável (não falha o pipeline por padrão).
 - Existem warnings de lint preexistentes (`no-img-element` e `no-unused-vars`).
 - `npm ci` reporta vulnerabilidades de dependências (`npm audit`) que não foram alvo deste PR.
