@@ -26,7 +26,7 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
     return await categoriesRepository.getBySlug(slug);
   } catch (error) {
     console.error(`[CategoriaPage] error fetching category with slug "${slug}"`, error);
-    throw createHttpStatusError(500, "Erro ao carregar dados da categoria.");
+    throw createHttpStatusError(500, "Erro ao carregar dados da categoria no banco.");
   }
 });
 
@@ -41,7 +41,7 @@ const getCachedCategoryProducts = cache(async (categorySlug: string): Promise<Pr
     return products.map((product) => mapFirestoreProductToCard(product, categorySlug));
   } catch (error) {
     console.error(`[CategoriaPage] error fetching products for category "${categorySlug}"`, error);
-    throw createHttpStatusError(500, "Erro ao carregar produtos da categoria.");
+    throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
   }
 });
 
@@ -159,15 +159,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   );
 }
 
-function mapFirestoreProductToCard(product: FirestoreProduct, fallbackCategorySlug: string): Product {
-  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
+function mapFirestoreProductToCard(product: FirestoreProduct, categorySlug: string): Product {
+  const imageUrl = product.photoIds[0]?.trim() || DEFAULT_PRODUCT_IMAGE_URL;
   const currentPrice = product.price.salePrice ?? product.price.price;
+  const productCategorySlug = product.category[0]?.slug;
 
   return {
     id: product.id,
     name: product.title,
     slug: product.slug,
-    categorySlug: product.category[0]?.slug ?? fallbackCategorySlug,
+    categorySlug: productCategorySlug ?? categorySlug,
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,
