@@ -109,6 +109,10 @@ async function createAndUploadVariants(
   imageId: string,
   fileBuffer: Buffer,
 ): Promise<Record<ImageVariantName, ProductImageResolution>> {
+  const sourceMetadata = await sharp(fileBuffer).metadata();
+  const sourceAspectRatio =
+    sourceMetadata.width && sourceMetadata.height ? sourceMetadata.height / sourceMetadata.width : null;
+
   const uploads = await Promise.all(
     IMAGE_VARIANTS.map(async ({ name, width }) => {
       const transformed = await sharp(fileBuffer)
@@ -131,11 +135,16 @@ async function createAndUploadVariants(
         },
       });
 
+      const outputWidth = transformed.info.width ?? width;
+      const outputHeight =
+        transformed.info.height ??
+        (sourceAspectRatio ? Math.max(1, Math.round(outputWidth * sourceAspectRatio)) : outputWidth);
+
       return {
         name,
         resolution: {
-          width: transformed.info.width ?? width,
-          height: transformed.info.height ?? width,
+          width: outputWidth,
+          height: outputHeight,
           storagePath,
           downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
           temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
