@@ -1,4 +1,4 @@
-import { ensureFirestoreEmulator, getFirestoreForEmulator } from "@/src/test/firestoreEmulator";
+import { authenticateAdminForEmulator, ensureFirestoreEmulator } from "@/src/test/firestoreEmulator";
 import { seedE2eFirestore } from "./seedE2eFirestore";
 
 export default async function globalSetup(): Promise<void> {
@@ -15,6 +15,10 @@ export default async function globalSetup(): Promise<void> {
     );
   }
 
-  const db = getFirestoreForEmulator();
-  await seedE2eFirestore(db);
+  const adminSession = await authenticateAdminForEmulator();
+  try {
+    await seedE2eFirestore(adminSession.db);
+  } finally {
+    await adminSession.cleanup();
+  }
 }

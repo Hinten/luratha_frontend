@@ -1,5 +1,11 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import net from "node:net";
+import path from "node:path";
+import {
+  initializeTestEnvironment,
+  type RulesTestEnvironment,
+} from "@firebase/rules-unit-testing";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { type Firestore, connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
@@ -16,6 +22,11 @@ export type FirestoreEmulatorSession = {
   startedByTest: boolean;
   process?: ChildProcess;
   reason?: string;
+};
+
+export type AdminFirestoreAuthSession = {
+  db: Firestore;
+  cleanup: () => Promise<void>;
 };
 
 const FIREBASE_APP_NAME = "firestore-emulator-tests";
@@ -36,6 +47,13 @@ export async function ensureFirestoreEmulator(
   process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9099";
   process.env.FIREBASE_STORAGE_EMULATOR_HOST =
     process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
+  process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST =
+    process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST ?? process.env.FIRESTORE_EMULATOR_HOST;
+  process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST =
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST ?? process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST ?? process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  process.env.NEXT_PUBLIC_USE_EMULATOR = process.env.NEXT_PUBLIC_USE_EMULATOR ?? "true";
   process.env.FIREBASE_CLI_DISABLE_UPDATE_CHECK =
     process.env.FIREBASE_CLI_DISABLE_UPDATE_CHECK ?? "1";
   process.env.FIREBASE_CLI_EXPERIMENTS = process.env.FIREBASE_CLI_EXPERIMENTS ?? "";
@@ -44,7 +62,7 @@ export async function ensureFirestoreEmulator(
   process.env.CLOUDSDK_CORE_DISABLE_PROMPTS =
     process.env.CLOUDSDK_CORE_DISABLE_PROMPTS ?? "1";
 
-  if (await isFirestoreEmulatorReady(host, port, projectId, Math.min(700, pollIntervalMs))) {
+  if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs))) {
     return { ready: true, startedByTest: false };
   }
 
@@ -52,7 +70,7 @@ export async function ensureFirestoreEmulator(
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await isFirestoreEmulatorReady(host, port, projectId, Math.min(700, pollIntervalMs))) {
+    if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs))) {
       return {
         ready: true,
         startedByTest: true,
@@ -78,7 +96,39 @@ export async function ensureFirestoreEmulator(
   return {
     ready: false,
     startedByTest: true,
-    reason: `Firestore emulator did not become available within ${timeoutMs}ms`,
+    reason: `Firebase emulators (firestore/auth/storage) did not become available within ${timeoutMs}ms`,
+  };
+}
+
+export async function authenticateAdminForEmulator(
+  projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386",
+  uid = "emulator-admin-user",
+): Promise<AdminFirestoreAuthSession> {
+  const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080";
+  const [host, portString] = firestoreHost.split(":");
+  const port = Number(portString);
+
+  if (!host || !Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid FIRESTORE_EMULATOR_HOST value "${firestoreHost}".`);
+  }
+
+  const rules = await readFile(path.join(process.cwd(), "firestore.rules"), "utf8");
+  const testEnv = await initializeTestEnvironment({
+    projectId,
+    firestore: {
+      host,
+      port,
+      rules,
+    },
+  });
+
+  const db = testEnv.authenticatedContext(uid, { admin: true }).firestore() as unknown as Firestore;
+
+  return {
+    db,
+    cleanup: async () => {
+      await cleanupRulesTestEnvironment(testEnv);
+    },
   };
 }
 
@@ -180,13 +230,23 @@ export function getFirebaseTestApp() {
   );
 }
 
-async function isFirestoreEmulatorReady(
-  host: string,
-  port: number,
-  _projectId: string,
+async function areFirebaseEmulatorsReady(
+  firestoreHost: string,
+  firestorePort: number,
   timeoutMs: number,
 ): Promise<boolean> {
-  return isPortOpen(host, port, timeoutMs);
+  const authAddress = parseHostAndPort(process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9099");
+  const storageAddress = parseHostAndPort(
+    process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199",
+  );
+
+  const statuses = await Promise.all([
+    isPortOpen(firestoreHost, firestorePort, timeoutMs),
+    isPortOpen(authAddress.host, authAddress.port, timeoutMs),
+    isPortOpen(storageAddress.host, storageAddress.port, timeoutMs),
+  ]);
+
+  return statuses.every(Boolean);
 }
 
 async function terminateProcessTree(processRef: ChildProcess): Promise<void> {
@@ -213,7 +273,7 @@ function spawnFirebaseEmulatorProcess(projectId: string): ChildProcess {
     "firebase",
     "emulators:start",
     "--only",
-    "firestore",
+    "firestore,auth,storage",
     "--project",
     projectId,
     "--config",
@@ -251,4 +311,19 @@ function quoteForWindowsShell(args: string[]): string {
       return `"${arg.replace(/"/gu, '""')}"`;
     })
     .join(" ");
+}
+
+function parseHostAndPort(value: string): { host: string; port: number } {
+  const [host, portString] = value.split(":");
+  const port = Number(portString);
+
+  if (!host || !Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid emulator host "${value}". Expected format "hostname:port".`);
+  }
+
+  return { host, port };
+}
+
+async function cleanupRulesTestEnvironment(testEnv: RulesTestEnvironment): Promise<void> {
+  await testEnv.cleanup();
 }
