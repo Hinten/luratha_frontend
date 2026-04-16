@@ -2,6 +2,8 @@ import { FirebaseError } from "firebase/app";
 import {
   type Firestore,
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit as queryLimit,
   query,
@@ -26,11 +28,27 @@ export class CategoryRepositoryError extends Error {
 }
 
 export interface CategoriesRepository {
+  getById(id: string): Promise<FirestoreCategory | null>;
   getBySlug(slug: string): Promise<FirestoreCategory | null>;
 }
 
 export function createCategoriesRepository(dbInstance: Firestore = dbServer): CategoriesRepository {
   const categoriesCollectionRef = collection(dbInstance, firestoreCollections.categories);
+
+  async function getById(id: string): Promise<FirestoreCategory | null> {
+    try {
+      const categoryRef = doc(categoriesCollectionRef, id);
+      const snapshot = await getDoc(categoryRef);
+
+      if (!snapshot.exists()) {
+        return null;
+      }
+
+      return validateCategory(snapshot.data());
+    } catch (error) {
+      throw normalizeRepositoryError(error, `read category "${id}"`);
+    }
+  }
 
   async function getBySlug(slug: string): Promise<FirestoreCategory | null> {
     try {
@@ -49,6 +67,7 @@ export function createCategoriesRepository(dbInstance: Firestore = dbServer): Ca
   }
 
   return {
+    getById,
     getBySlug,
   };
 }

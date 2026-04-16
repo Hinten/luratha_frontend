@@ -87,7 +87,7 @@ describe("CategoriaPage", () => {
     expect(getBySlugMock).toHaveBeenCalledWith("vestidos");
     expect(listMock).toHaveBeenCalledWith({
       status: "active",
-      categorySlug: "vestidos",
+      categoryId: "cat_vestidos",
       limit: 100,
     });
     expect(productGridSpy).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ function createFirestoreProduct(
     isPurchasable: true,
     brandName: "Luratha",
     sku: "LURATHA_9999",
-    category: [{ id: "cat_vestidos", name: "Vestidos", slug: "vestidos" }],
+    categoryId: "cat_vestidos",
     tags: [],
     materialTags: [],
     seasonalTags: [],

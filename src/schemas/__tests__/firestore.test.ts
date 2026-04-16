@@ -31,7 +31,7 @@ const validProduct = {
   isPurchasable: true,
   brandName: "Luratha",
   sku: "LURATHA_001",
-  category: [],
+  categoryId: "cat_vestidos",
   tags: ["linho", "midi"],
   materialTags: ["linho"],
   seasonalTags: ["verao"],

@@ -30,17 +30,17 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
   }
 });
 
-const getCachedCategoryProducts = cache(async (categorySlug: string): Promise<Product[]> => {
+const getCachedCategoryProducts = cache(async (category: FirestoreCategory): Promise<Product[]> => {
   try {
     const products = await productsRepository.list({
       status: "active",
-      categorySlug,
+      categoryId: category.id,
       limit: 100,
     });
 
-    return products.map((product) => mapFirestoreProductToCard(product, categorySlug));
+    return products.map((product) => mapFirestoreProductToCard(product, category.slug));
   } catch (error) {
-    console.error(`[CategoriaPage] error fetching products for category "${categorySlug}"`, error);
+    console.error(`[CategoriaPage] error fetching products for category "${category.slug}"`, error);
     throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
   }
 });
@@ -93,7 +93,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const category = await getCachedCategoryBySlug(slug);
   if (!category) return notFound();
 
-  const firestoreProducts = await getCachedCategoryProducts(slug);
+  const firestoreProducts = await getCachedCategoryProducts(category);
   const products = sortProducts(firestoreProducts, sort);
 
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
@@ -162,13 +162,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 function mapFirestoreProductToCard(product: FirestoreProduct, categorySlug: string): Product {
   const imageUrl = product.photoIds[0]?.trim() || DEFAULT_PRODUCT_IMAGE_URL;
   const currentPrice = product.price.salePrice ?? product.price.price;
-  const productCategorySlug = product.category[0]?.slug;
 
   return {
     id: product.id,
     name: product.title,
     slug: product.slug,
-    categorySlug: productCategorySlug ?? categorySlug,
+    categorySlug,
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,

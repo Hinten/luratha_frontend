@@ -6,7 +6,6 @@ import {
   skuSchema,
   timestampSchema,
 } from "@/src/schemas/firestore/utils";
-import { CategorySchema } from "./category";
 
 const productSlugSchema = z
   .string()
@@ -132,7 +131,7 @@ const productSchemaBase = z
     // schemaIntent: z.enum(["merchant_listing", "product_snippet"]).default("merchant_listing"),
     isPurchasable: z.boolean().default(true),
     brandName: nonEmptyStringSchema.default("Luratha"),
-    category: z.array(CategorySchema).default([]),
+    categoryId: nonEmptyStringSchema.max(50),
     googleProductCategoryId: z.string().trim().nullable().default(null), // https://support.google.com/merchants/answer/6324436?visit_id=639118635357846475-888363973&rd=1
     tags: z.array(nonEmptyStringSchema).max(50).default([]),
     materialTags: z.array(nonEmptyStringSchema).max(20).default([]),

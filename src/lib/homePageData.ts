@@ -31,7 +31,8 @@ export async function getHomePageData(): Promise<HomePageData> {
       HOME_DATA_TIMEOUT_MS,
     );
 
-    const mappedProducts = products.map(mapFirestoreProductToCard);
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const mappedProducts = products.map((product) => mapFirestoreProductToCard(product, categoryById));
     const mappedCategories = categories.map(mapFirestoreCategoryToHomeCategory);
 
     return {
@@ -72,15 +73,19 @@ function mapFirestoreCategoryToHomeCategory(category: FirestoreCategory): Catego
   };
 }
 
-function mapFirestoreProductToCard(product: FirestoreProduct): Product {
+function mapFirestoreProductToCard(
+  product: FirestoreProduct,
+  categoryById: Map<string, FirestoreCategory>,
+): Product {
   const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
   const currentPrice = product.price.salePrice ?? product.price.price;
+  const category = categoryById.get(product.categoryId);
 
   return {
     id: product.id,
     name: product.title,
     slug: product.slug,
-    categorySlug: product.category[0]?.slug,
+    categorySlug: category?.slug,
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,

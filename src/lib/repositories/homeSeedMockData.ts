@@ -159,7 +159,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       status: "active",
       isPurchasable: true,
       brandName: "Luratha",
-      category: [category],
+      categoryId: category.id,
       tags: seed.tags,
       materialTags: [],
       seasonalTags: ["verão"],
