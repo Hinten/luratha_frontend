@@ -164,7 +164,7 @@ describe("firestore schemas", () => {
       searchEmbedding: undefined,
     });
 
-    expect(parsed.vectorEmbedding).toBeUndefined();
+    expect(parsed.vectorEmbedding).toBeNull();
   });
 
   it("accepts legacy searchEmbedding and normalizes slug automatically", () => {
