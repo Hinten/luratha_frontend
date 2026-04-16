@@ -2,11 +2,18 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: [
+    "./e2e/with-emulator"              // pode adicionar quantas quiser
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: [
+    ['html', { open: 'never' }],   // ← esta é a linha que você precisa
+    // ou se quiser manter o relatório no terminal também:
+    ['list'],
+  ],
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
