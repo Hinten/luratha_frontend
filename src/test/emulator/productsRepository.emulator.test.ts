@@ -7,6 +7,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { buildProductSlug } from "@/src/schemas/firestore/products";
 import {
   ProductRepositoryError,
   createProductsRepository,
@@ -91,15 +92,17 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
     expect(loadedWithVariants?.variants?.length).toBeGreaterThan(0);
 
     expect(loadedWithoutVariants?.id).toBe(mockProductWithoutVariants.id);
-    expect(loadedWithoutVariants?.variants).toBeUndefined();
+    expect(loadedWithoutVariants?.variants).toBeNull();
   });
 
   it("updates an existing product with validation", async () => {
     if (shouldSkipTests(repository, emulatorReachable)) return;
     await repository.create(mockProductWithVariants);
+    const updatedTitle = "Vestido Linho Mock Atualizado";
     const updated = await repository.update(mockProductWithVariants.id, {
       description: "Descrição atualizada via teste de integração",
-      title: "Vestido Linho Mock Atualizado",
+      title: updatedTitle,
+      slug: buildProductSlug(updatedTitle, mockProductWithVariants.sku),
       variants: [
         {
           ...mockProductWithVariants.variants![0],
@@ -151,8 +154,10 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
     await expect(
       repository.create({
         ...mockProductWithVariants,
-        vectorEmbedding: undefined,
-        searchEmbedding: undefined,
+        price: {
+          ...mockProductWithVariants.price,
+          currency: "USD" as "BRL",
+        },
       }),
     ).rejects.toMatchObject({
       code: "validation",

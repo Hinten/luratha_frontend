@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const product = await getCacheProductBySlug(slug);
   if (!product) {
-    return {};
+    return notFound();
   }
 
   const description = product.description.slice(0, 160);
@@ -60,6 +60,7 @@ export default async function ProdutoPage({ params }: PageProps) {
   const { slug } = await params;
   const product = await getCacheProductBySlug(slug);
   if (!product) {
+    console.warn(`[ProdutoPage] Product with slug "${slug}" not found.`);
     return notFound();
   }
 
