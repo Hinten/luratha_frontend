@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:emulator": "firebase emulators:exec --only firestore \"playwright test --config playwright.e2e.emulator.config.ts\"",
+    "test:e2e:emulator": "playwright test --config playwright.e2e.emulator.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "setup:routes": "node docs/create-catalog-routes.mjs"
   },

@@ -127,6 +127,15 @@ export async function stopFirestoreEmulator(session: FirestoreEmulatorSession): 
   await sleep(500);
 }
 
+export async function stopFirestoreEmulatorByPid(pid: number): Promise<void> {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return;
+  }
+
+  await terminateProcessTreeByPid(pid);
+  await sleep(500);
+}
+
 type DeleteDocumentOperation = () => Promise<void>;
 
 async function getDocsInBatches(
@@ -185,16 +194,18 @@ async function terminateProcessTree(processRef: ChildProcess): Promise<void> {
     return;
   }
 
+  await terminateProcessTreeByPid(processRef.pid);
+}
+
+async function terminateProcessTreeByPid(pid: number): Promise<void> {
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(processRef.pid), "/T"], { stdio: "ignore" });
+    spawnSync("taskkill", ["/PID", String(pid), "/T"], { stdio: "ignore" });
     await sleep(250);
-    if (processRef.exitCode === null) {
-      spawnSync("taskkill", ["/PID", String(processRef.pid), "/T", "/F"], { stdio: "ignore" });
-    }
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
     return;
   }
 
-  processRef.kill("SIGTERM");
+  process.kill(pid, "SIGTERM");
 }
 
 function spawnFirebaseEmulatorProcess(projectId: string): ChildProcess {
