@@ -7,10 +7,12 @@ export {
 export { photoSchema, type Photo } from "@/src/schemas/firestore/photos";
 export {
   productVariantSchema,
+  productImageAssetSchema,
   productSchema,
   buildProductSlug,
   slugifyProductPart,
   type ProductVariant,
+  type ProductImageAsset,
   type Product,
   validateProduct,
 } from "@/src/schemas/firestore/products";

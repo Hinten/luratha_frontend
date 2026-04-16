@@ -87,6 +87,7 @@ const mockFirestoreProduct: Product = {
   reviewCount: 24,
   totalStock: 12,
   status: "active",
+  photoAssets: [],
   photoIds: [
     "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+1",
     "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Vestido+Bordado+2",

@@ -9,6 +9,7 @@ import { createProductsRepository } from "@/src/lib/repositories/productsReposit
 import { dbServer } from "@/src/lib/firebaseServer";
 import type { Category, Product } from "@/src/lib/types";
 import { mockCategories, mockFeatured, mockNewArrivals, mockSale } from "@/src/lib/mockData";
+import { getProductPrimaryImage } from "@/src/lib/productImages";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 const HOME_DATA_TIMEOUT_MS = 1_500;
@@ -73,7 +74,7 @@ function mapFirestoreCategoryToHomeCategory(category: FirestoreCategory): Catego
 }
 
 function mapFirestoreProductToCard(product: FirestoreProduct): Product {
-  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
+  const imageUrl = getProductPrimaryImage(product, DEFAULT_PRODUCT_IMAGE_URL);
   const currentPrice = product.price.salePrice ?? product.price.price;
 
   return {

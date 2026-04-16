@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import styles from "./ProductGallery.module.css";
+import type { ProductGalleryImage } from "@/src/lib/productImages";
+import { productGalleryImageSizes } from "@/src/lib/productImages";
 
 interface ProductGalleryProps {
-  images: string[];
+  images: ProductGalleryImage[];
   productName: string;
 }
 
@@ -13,21 +15,24 @@ export default function ProductGallery({
   productName,
 }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeImage = images[activeIndex];
 
   return (
     <div className={styles.gallery}>
       <div className={styles.mainWrapper}>
         <img
-          src={images[activeIndex]}
-          alt={`${productName} — imagem ${activeIndex + 1}`}
+          src={activeImage.defaultUrl}
+          srcSet={activeImage.srcSet}
+          sizes={productGalleryImageSizes}
+          alt={activeImage.alt || `${productName} — imagem ${activeIndex + 1}`}
           className={styles.mainImage}
         />
       </div>
       {images.length > 1 && (
         <div className={styles.thumbnails} role="list" aria-label="Miniaturas do produto">
-          {images.map((src, i) => (
+          {images.map((image, i) => (
             <button
-              key={i}
+              key={image.id}
               type="button"
               className={`${styles.thumbBtn} ${i === activeIndex ? styles.thumbActive : ""}`}
               onClick={() => setActiveIndex(i)}
@@ -35,13 +40,24 @@ export default function ProductGallery({
               aria-pressed={i === activeIndex}
             >
               <img
-                src={src}
+                src={image.defaultUrl}
                 alt={`${productName} — miniatura ${i + 1}`}
                 className={styles.thumbImage}
               />
             </button>
           ))}
         </div>
+      )}
+      {activeImage.links.length > 0 && (
+        <ul role="list" aria-label="Links da imagem">
+          {activeImage.links.map((link) => (
+            <li key={`${activeImage.id}-${link.label}`}>
+              <a href={link.url} target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

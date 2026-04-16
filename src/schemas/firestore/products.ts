@@ -92,6 +92,27 @@ export const productVariantSchema = z.object({
   active: z.boolean().default(true),
   
 });
+
+const productImageResolutionSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  storagePath: nonEmptyStringSchema,
+  downloadUrl: z.url(),
+  temporaryUrl: z.url().nullable().default(null),
+  format: z.literal("webp").default("webp"),
+});
+
+export const productImageAssetSchema = z.object({
+  id: nonEmptyStringSchema.max(120),
+  alt: nonEmptyStringSchema.max(300).nullable().default(null),
+  resolutions: z.object({
+    mobile: productImageResolutionSchema,
+    tablet: productImageResolutionSchema,
+    desktop: productImageResolutionSchema,
+  }),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
 //https://support.google.com/merchants/answer/7052112?hl=en
 const productSchemaBase = z
   .preprocess((input) => {
@@ -176,6 +197,7 @@ const productSchemaBase = z
     productDetail: z.array(productDetailsSchema).nullable().default(null),
     productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).nullable().default(null),
     
+    photoAssets: z.array(productImageAssetSchema).default([]),
     photoIds: z.array(nonEmptyStringSchema),
     lifeStylePhotoIds: z.array(nonEmptyStringSchema).nullable().default(null),
     videoUrls: z.array(z.url()).default([]),
@@ -216,15 +238,18 @@ const productSchemaBase = z
 export const productSchema = productSchemaBase.transform((product) => {
   const generatedSlug = buildProductSlug(product.title, product.sku);
   const vectorEmbedding = product.vectorEmbedding ?? product.searchEmbedding;
+  const generatedPhotoIds = product.photoAssets.map((asset) => asset.resolutions.desktop.downloadUrl);
 
   return {
     ...product,
     slug: generatedSlug,
     vectorEmbedding,
+    photoIds: generatedPhotoIds.length > 0 ? generatedPhotoIds : product.photoIds,
   };
 });
 
 export type ProductVariant = z.infer<typeof productVariantSchema>;
+export type ProductImageAsset = z.infer<typeof productImageAssetSchema>;
 export type Product = z.infer<typeof productSchema>;
 
 export function validateProduct(input: unknown): Product {

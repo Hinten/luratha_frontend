@@ -10,6 +10,7 @@ import {
   createProductsRepository,
 } from "@/src/lib/repositories/productsRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
+import { getProductPrimaryImage } from "@/src/lib/productImages";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const description = product.description.slice(0, 160);
-  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
+  const imageUrl = getProductPrimaryImage(product, DEFAULT_PRODUCT_IMAGE_URL);
   return {
     title: `${product.title}`,
     description,
