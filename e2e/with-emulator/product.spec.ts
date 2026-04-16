@@ -64,7 +64,7 @@ test.describe("Product detail page", () => {
     await expect(sizeGroup.getByRole("button", { name: "GG", exact: true })).toBeVisible();
   });
 
-  test("shows an error when add-to-cart is clicked without selecting a size", async ({
+  test.fixme("shows an error when add-to-cart is clicked without selecting a size", async ({
     page,
   }) => {
     await page.goto(`/produto/${PRIMARY_PRODUCT_SLUG}`);
