@@ -1,5 +1,5 @@
 import ProductCard from "@/src/components/produto/ProductCard";
-import type { Product } from "@/src/lib/types";
+import type { Product } from "@/src/schemas/firestore";
 import styles from "./ProductSection.module.css";
 
 interface ProductSectionProps {
@@ -36,4 +36,3 @@ export default function ProductSection({
     </section>
   );
 }
-

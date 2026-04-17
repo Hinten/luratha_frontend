@@ -25,7 +25,8 @@
       "README.md",
       "storage.rules",
       "firestore.rules",
-      "playwright-report"
+      "playwright-report",
+      ".playwright-mcp"
     ]
   },
   "storage": {
@@ -42,7 +43,7 @@
       "port": 9199
     },
     "ui": {
-      "enabled": true
+      "enabled": false
     },
     "singleProjectMode": true
   },

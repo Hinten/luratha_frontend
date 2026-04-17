@@ -1,8 +1,15 @@
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
 import { adminDb } from "@/src/lib/firebaseAdmin";
+import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
+
+const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const MIN_IMAGES_PER_PRODUCT = 3;
 
 export async function POST() {
   if (process.env.NODE_ENV !== "development") {
@@ -13,12 +20,14 @@ export async function POST() {
   const products = buildHomeSeedProducts(categories);
 
   const categoriesCreated = await seedCategories(categories);
-  const productsCreated = await seedProducts(products);
+  const createdProductIds = await seedProducts(products);
+  const uploadedImages = await seedProductImages(products, createdProductIds);
 
   return NextResponse.json({
     message: "Dados mock cadastrados com sucesso.",
     categoriesCreated,
-    productsCreated,
+    productsCreated: createdProductIds.length,
+    uploadedImages,
   });
 }
 
@@ -38,18 +47,77 @@ async function seedCategories(categories: FirestoreCategory[]): Promise<number> 
   return results.filter(Boolean).length;
 }
 
-async function seedProducts(products: Product[]): Promise<number> {
+async function seedProducts(products: Product[]): Promise<string[]> {
   const results = await Promise.all(
     products.map(async (product) => {
       const productRef = adminDb.collection(firestoreCollections.products).doc(product.id);
       const existingProduct = await productRef.get();
       if (existingProduct.exists) {
-        return false;
+        return null;
       }
 
       await productRef.set(product);
-      return true;
+      return product.id;
     }),
   );
-  return results.filter(Boolean).length;
+
+  return results.filter((productId): productId is string => productId !== null);
+}
+
+async function seedProductImages(products: Product[], createdProductIds: string[]): Promise<number> {
+  if (createdProductIds.length === 0) {
+    return 0;
+  }
+
+  const imagePaths = await getSeedImagePaths();
+  if (imagePaths.length === 0) {
+    return 0;
+  }
+
+  const productById = new Map(products.map((product) => [product.id, product]));
+  let uploadedImages = 0;
+
+  for (const [index, productId] of createdProductIds.entries()) {
+    const product = productById.get(productId);
+    if (!product) {
+      continue;
+    }
+
+    for (let imageOffset = 0; imageOffset < MIN_IMAGES_PER_PRODUCT; imageOffset += 1) {
+      const imagePath = imagePaths[(index + imageOffset) % imagePaths.length];
+      const imageBuffer = await readFile(imagePath);
+
+      await uploadProductImage({
+        productId,
+        fileBuffer: imageBuffer,
+        fileName: path.basename(imagePath),
+        alt: `${product.title} — imagem seed ${imageOffset + 1}`,
+      });
+
+      uploadedImages += 1;
+    }
+  }
+
+  return uploadedImages;
+}
+
+async function getSeedImagePaths(): Promise<string[]> {
+  let imageDirectoryEntries: Awaited<ReturnType<typeof readdir>>;
+  try {
+    imageDirectoryEntries = await readdir(SEED_IMAGES_DIRECTORY, { withFileTypes: true });
+  } catch (error) {
+    if (isMissingDirectoryError(error)) {
+      return [];
+    }
+    throw error;
+  }
+
+  return imageDirectoryEntries
+    .filter((entry) => entry.isFile() && SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+    .map((entry) => path.join(SEED_IMAGES_DIRECTORY, entry.name))
+    .sort();
+}
+
+function isMissingDirectoryError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }

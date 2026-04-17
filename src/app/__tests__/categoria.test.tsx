@@ -116,7 +116,7 @@ describe("CategoriaPage", () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe("Vestidos Artesanais");
+    expect(metadata.title).toBe("Vestidos");
     expect(metadata.alternates?.canonical).toBe("https://www.luratha.com.br/categoria/vestidos");
   });
 });
@@ -156,7 +156,8 @@ function createFirestoreProduct(
     multipack: 1,
     material: [],
     pattern: [],
-    photoIds: ["https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto"],
+    photoAssets: [],
+    lifeStylePhotos: [],
     videoUrls: [],
     totalStock: 10,
     status: "active",

@@ -2,7 +2,6 @@ import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { Product } from "@/src/lib/types";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
@@ -17,7 +16,6 @@ interface PageProps {
   searchParams: Promise<{ sort?: string }>;
 }
 
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 const categoriesRepository = createCategoriesRepository(dbServer);
 const productsRepository = createProductsRepository(dbServer);
 
@@ -30,15 +28,13 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
   }
 });
 
-const getCachedCategoryProducts = cache(async (category: FirestoreCategory): Promise<Product[]> => {
+const getCachedCategoryProducts = cache(async (category: FirestoreCategory): Promise<FirestoreProduct[]> => {
   try {
-    const products = await productsRepository.list({
+    return await productsRepository.list({
       status: "active",
       categoryId: category.id,
       limit: 100,
     });
-
-    return products.map((product) => mapFirestoreProductToCard(product, category.slug));
   } catch (error) {
     console.error(`[CategoriaPage] error fetching products for category "${category.slug}"`, error);
     throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
@@ -64,20 +60,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-function sortProducts(products: Product[], sort?: string): Product[] {
+function sortProducts(products: FirestoreProduct[], sort?: string): FirestoreProduct[] {
   const sorted = [...products];
   switch (sort) {
     case "menor-preco":
-      return sorted.sort((a, b) => a.price - b.price);
+      return sorted.sort((a, b) => getCurrentPrice(a) - getCurrentPrice(b));
     case "maior-preco":
-      return sorted.sort((a, b) => b.price - a.price);
+      return sorted.sort((a, b) => getCurrentPrice(b) - getCurrentPrice(a));
     case "maior-desconto":
       return sorted.sort((a, b) => {
-        const discountA = a.originalPrice
-          ? (a.originalPrice - a.price) / a.originalPrice
+        const originalPriceA = getOriginalPrice(a);
+        const currentPriceA = getCurrentPrice(a);
+        const discountA = originalPriceA
+          ? (originalPriceA - currentPriceA) / originalPriceA
           : 0;
-        const discountB = b.originalPrice
-          ? (b.originalPrice - b.price) / b.originalPrice
+        const originalPriceB = getOriginalPrice(b);
+        const currentPriceB = getCurrentPrice(b);
+        const discountB = originalPriceB
+          ? (originalPriceB - currentPriceB) / originalPriceB
           : 0;
         return discountB - discountA;
       });
@@ -159,23 +159,14 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   );
 }
 
-function mapFirestoreProductToCard(product: FirestoreProduct, categorySlug: string): Product {
-  const imageUrl = product.photoIds[0]?.trim() || DEFAULT_PRODUCT_IMAGE_URL;
-  const currentPrice = product.price.salePrice ?? product.price.price;
-
-  return {
-    id: product.id,
-    name: product.title,
-    slug: product.slug,
-    categorySlug,
-    price: currentPrice,
-    originalPrice: product.price.salePrice ? product.price.price : undefined,
-    imageUrl,
-    rating: product.ratingAverage ?? undefined,
-    reviewCount: product.reviewCount ?? undefined,
-  };
-}
-
 function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
   return Object.assign(new Error(message), { statusCode });
+}
+
+function getCurrentPrice(product: FirestoreProduct): number {
+  return product.price.salePrice ?? product.price.price;
+}
+
+function getOriginalPrice(product: FirestoreProduct): number | undefined {
+  return product.price.salePrice ? product.price.price : undefined;
 }
