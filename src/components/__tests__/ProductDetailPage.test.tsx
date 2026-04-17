@@ -57,11 +57,9 @@ const mockProduct: Product = {
   reviewCount: 24,
   totalStock: 12,
   status: "active",
+  photoAssets: [],
+  lifeStylePhotos: [],
   size: ["PP", "P", "M", "G", "GG"],
-  photoIds: [
-    "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1",
-    "https://placehold.co/600x750/D9D2C7/3A2F2A?text=Imagem+2",
-  ],
   variants: [
     {
       sku: "LURATHA_001_M",

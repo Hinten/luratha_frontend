@@ -17,6 +17,21 @@ const { docStore, collectionMock } = vi.hoisted(() => {
   };
 });
 
+const { readdirMock, readFileMock, uploadProductImageMock } = vi.hoisted(() => ({
+  readdirMock: vi.fn(),
+  readFileMock: vi.fn(),
+  uploadProductImageMock: vi.fn(),
+}));
+
+vi.mock("node:fs/promises", () => ({
+  readdir: readdirMock,
+  readFile: readFileMock,
+  default: {
+    readdir: readdirMock,
+    readFile: readFileMock,
+  },
+}));
+
 vi.mock("@/src/lib/firebaseAdmin", () => ({
   adminDb: {
     collection: collectionMock,
@@ -43,7 +58,8 @@ vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
       materialTags: [],
       seasonalTags: [],
       price: { price: 100, priceMin: 100, priceMax: 120, currency: "BRL" },
-      photoIds: ["https://placehold.co/600x750"],
+      photoAssets: [],
+      lifeStylePhotos: [],
       totalStock: 10,
       vectorEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
       searchEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
@@ -51,6 +67,10 @@ vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
       updatedAt: "2026-04-15T00:00:00.000Z",
     },
   ],
+}));
+
+vi.mock("@/src/lib/repositories/productImageUpload", () => ({
+  uploadProductImage: uploadProductImageMock,
 }));
 
 import { POST } from "@/src/app/api/dev/seed-mock-data/route";
@@ -61,6 +81,19 @@ describe("POST /api/dev/seed-mock-data", () => {
   beforeEach(() => {
     docStore.clear();
     collectionMock.mockClear();
+    readdirMock.mockReset();
+    readFileMock.mockReset();
+    uploadProductImageMock.mockReset();
+    readdirMock.mockResolvedValue([
+      { isFile: () => true, name: "IMG_9532.jpg" },
+      { isFile: () => true, name: "IMG_9481.jpg" },
+    ]);
+    readFileMock.mockResolvedValue(Buffer.from("image-binary"));
+    uploadProductImageMock.mockResolvedValue({
+      productId: "prod_1",
+      imageAsset: {},
+      photoAssets: [],
+    });
   });
 
   afterEach(() => {
@@ -75,6 +108,7 @@ describe("POST /api/dev/seed-mock-data", () => {
 
     expect(response.status).toBe(404);
     expect(payload.message).toBe("Not found");
+    expect(uploadProductImageMock).not.toHaveBeenCalled();
   });
 
   it("seeds categories and products in development mode", async () => {
@@ -86,6 +120,49 @@ describe("POST /api/dev/seed-mock-data", () => {
     expect(response.status).toBe(200);
     expect(payload.categoriesCreated).toBe(2);
     expect(payload.productsCreated).toBe(1);
+    expect(payload.uploadedImages).toBe(3);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(3);
+    expect(uploadProductImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId: "prod_1",
+        fileBuffer: expect.any(Buffer),
+        fileName: "IMG_9481.jpg",
+        alt: "Produto 1 — imagem seed 1",
+      }),
+    );
+  });
+
+  it("ignores non-image files and directories when seeding uploads", async () => {
+    process.env.NODE_ENV = "development";
+    readdirMock.mockResolvedValueOnce([
+      { isFile: () => false, name: "nested-folder" },
+      { isFile: () => true, name: "README.md" },
+      { isFile: () => true, name: "IMG_34562.png" },
+    ]);
+
+    const response = await POST();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.uploadedImages).toBe(3);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(3);
+    expect(uploadProductImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: "IMG_34562.png" }),
+    );
+  });
+
+  it("returns success without uploads when test-images directory does not exist", async () => {
+    process.env.NODE_ENV = "development";
+    const enoentError = Object.assign(new Error("missing"), { code: "ENOENT" });
+    readdirMock.mockRejectedValueOnce(enoentError);
+
+    const response = await POST();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.productsCreated).toBe(1);
+    expect(payload.uploadedImages).toBe(0);
+    expect(uploadProductImageMock).not.toHaveBeenCalled();
     expect(docStore.get("products:prod_1")).toMatchObject({
       vectorEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
       searchEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],

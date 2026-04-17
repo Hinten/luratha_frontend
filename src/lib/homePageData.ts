@@ -7,17 +7,16 @@ import {
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { dbServer } from "@/src/lib/firebaseServer";
-import type { Category, Product } from "@/src/lib/types";
-import { mockCategories, mockFeatured, mockNewArrivals, mockSale } from "@/src/lib/mockData";
-
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+import type { Category } from "@/src/lib/types";
+import { mockCategories } from "@/src/lib/mockData";
+import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 const HOME_DATA_TIMEOUT_MS = 1_500;
 
 type HomePageData = {
   categories: Category[];
-  newArrivals: Product[];
-  featured: Product[];
-  sale: Product[];
+  newArrivals: FirestoreProduct[];
+  featured: FirestoreProduct[];
+  sale: FirestoreProduct[];
 };
 
 export async function getHomePageData(): Promise<HomePageData> {
@@ -31,25 +30,24 @@ export async function getHomePageData(): Promise<HomePageData> {
       HOME_DATA_TIMEOUT_MS,
     );
 
-    const categoryById = new Map(categories.map((category) => [category.id, category]));
-    const mappedProducts = products.map((product) => mapFirestoreProductToCard(product, categoryById));
     const mappedCategories = categories.map(mapFirestoreCategoryToHomeCategory);
 
     return {
       categories: mappedCategories,
-      newArrivals: mappedProducts.slice(0, 4),
-      featured: [...mappedProducts]
-        .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+      newArrivals: products.slice(0, 4),
+      featured: [...products]
+        .sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0))
         .slice(0, 4),
-      sale: mappedProducts.filter((product) => product.originalPrice !== undefined).slice(0, 5),
+      sale: products.filter((product) => product.price.salePrice !== null).slice(0, 5),
     };
   } catch (error) {
     console.error("[homePageData] failed to load data from Firestore, using mock fallback", error);
+    const mockProducts = buildMockProducts();
     return {
       categories: mockCategories,
-      newArrivals: mockNewArrivals,
-      featured: mockFeatured,
-      sale: mockSale,
+      newArrivals: mockProducts.slice(0, 4),
+      featured: [...mockProducts].sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0)).slice(0, 4),
+      sale: mockProducts.filter((product) => product.price.salePrice !== null).slice(0, 5),
     };
   }
 }
@@ -70,25 +68,6 @@ function mapFirestoreCategoryToHomeCategory(category: FirestoreCategory): Catego
     label: category.name,
     href: `/categoria/${category.slug}`,
     imageUrl: `https://placehold.co/600x700/EDE4D9/3A2F2A?text=${encodeURIComponent(category.name)}`,
-  };
-}
-
-function mapFirestoreProductToCard(
-  product: FirestoreProduct,
-  categoryById: Map<string, FirestoreCategory>,
-): Product {
-  const imageUrl = product.photoIds[0] ?? DEFAULT_PRODUCT_IMAGE_URL;
-  const currentPrice = product.price.salePrice ?? product.price.price;
-  const category = categoryById.get(product.categoryId);
-
-  return {
-    id: product.id,
-    name: product.title,
-    slug: product.slug,
-    categorySlug: category?.slug,
-    price: currentPrice,
-    originalPrice: product.price.salePrice ? product.price.price : undefined,
-    imageUrl,
   };
 }
 

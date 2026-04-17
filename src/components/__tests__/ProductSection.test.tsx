@@ -1,23 +1,49 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductSection from "@/src/components/produto/ProductSection";
-import type { Product } from "@/src/lib/types";
+import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+function createProduct(id: string, title: string, price: number): Product {
+  return validateProduct({
+    id,
+    title,
+    slug: buildProductSlug(title, `LURATHA_${id}`),
+    description: "Descrição",
+    sku: `LURATHA_${id}`,
+    status: "active",
+    isPurchasable: true,
+    brandName: "Luratha",
+    categoryId: "cat_vestidos",
+    tags: [],
+    materialTags: [],
+    seasonalTags: [],
+    price: { price, salePrice: null, priceMin: price, priceMax: price, currency: "BRL" },
+    photoAssets: [],
+    lifeStylePhotos: [],
+    totalStock: 10,
+    createdAt: "2026-04-15T00:00:00.000Z",
+    updatedAt: "2026-04-15T00:00:00.000Z",
+  });
+}
 
 const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Vestido A",
-    slug: "vestido-a",
-    price: 199.9,
-    imageUrl: "https://placehold.co/400x500",
-  },
-  {
-    id: "2",
-    name: "Blusa B",
-    slug: "blusa-b",
-    price: 99.9,
-    imageUrl: "https://placehold.co/400x500",
-  },
+  createProduct("1", "Vestido A", 199.9),
+  createProduct("2", "Blusa B", 99.9),
 ];
 
 describe("ProductSection", () => {
@@ -44,7 +70,7 @@ describe("ProductSection", () => {
         products={mockProducts}
         viewAllHref="/colecao"
         viewAllLabel="Ver todos os lançamentos"
-      />
+      />,
     );
     const link = screen.getByRole("link", { name: "Ver todos os lançamentos" });
     expect(link).toBeInTheDocument();
@@ -53,7 +79,7 @@ describe("ProductSection", () => {
 
   it("renders default viewAllLabel when only viewAllHref is provided", () => {
     render(
-      <ProductSection title="Destaques" products={mockProducts} viewAllHref="/colecao" />
+      <ProductSection title="Destaques" products={mockProducts} viewAllHref="/colecao" />,
     );
     expect(screen.getByRole("link", { name: "Ver todos" })).toBeInTheDocument();
   });

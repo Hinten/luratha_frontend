@@ -125,7 +125,54 @@ describe("CategoriaPage", () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe("Vestidos Artesanais");
+    expect(metadata.title).toBe("Vestidos");
     expect(metadata.alternates?.canonical).toBe("https://www.luratha.com.br/categoria/vestidos");
   });
 });
+
+function createFirestoreProduct(
+  input: Partial<FirestoreProduct> & {
+    id: string;
+    title: string;
+    slug: string;
+    price: { price: number; salePrice: number | null };
+  },
+): FirestoreProduct {
+  return {
+    id: input.id,
+    title: input.title,
+    slug: input.slug,
+    description: "Descrição",
+    isPurchasable: true,
+    brandName: "Luratha",
+    sku: "LURATHA_9999",
+    categoryId: "cat_vestidos",
+    tags: [],
+    materialTags: [],
+    seasonalTags: [],
+    price: {
+      price: input.price.price,
+      salePrice: input.price.salePrice,
+      priceMin: null,
+      priceMax: null,
+      currency: "BRL",
+      startDate: null,
+      endDate: null,
+    },
+    condition: "new",
+    adult: false,
+    isBundle: false,
+    multipack: 1,
+    material: [],
+    pattern: [],
+    photoAssets: [],
+    lifeStylePhotos: [],
+    videoUrls: [],
+    totalStock: 10,
+    status: "active",
+    vectorEmbedding: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    createdAt: "2026-04-16T00:00:00.000Z",
+    updatedAt: "2026-04-16T00:00:00.000Z",
+    ...input,
+  } as FirestoreProduct;
+}

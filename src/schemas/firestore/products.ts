@@ -91,6 +91,29 @@ export const productVariantSchema = z.object({
   active: z.boolean().default(true),
   
 });
+
+const productImageResolutionSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  storagePath: nonEmptyStringSchema,
+  downloadUrl: z.url(),
+  temporaryUrl: z.url().nullable().default(null),
+  format: z.literal("webp").default("webp"),
+});
+
+export const productImageAssetSchema = z.object({
+  id: nonEmptyStringSchema.max(120),
+  alt: nonEmptyStringSchema.max(300).nullable().default(null),
+  resolutions: z.object({
+    card: productImageResolutionSchema.optional(),
+    zoom: productImageResolutionSchema.optional(),
+    mobile: productImageResolutionSchema,
+    tablet: productImageResolutionSchema,
+    desktop: productImageResolutionSchema,
+  }),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
 //https://support.google.com/merchants/answer/7052112?hl=en
 const productSchemaBase = z
   .preprocess((input) => {
@@ -175,8 +198,8 @@ const productSchemaBase = z
     productDetail: z.array(productDetailsSchema).nullable().default(null),
     productHighlight: z.array(nonEmptyStringSchema.max(150)).min(2).max(100).nullable().default(null),
     
-    photoIds: z.array(nonEmptyStringSchema),
-    lifeStylePhotoIds: z.array(nonEmptyStringSchema).nullable().default(null),
+    photoAssets: z.array(productImageAssetSchema).default([]),
+    lifeStylePhotos: z.array(productImageAssetSchema).default([]),
     videoUrls: z.array(z.url()).default([]),
 
     // shipping verificar se é possível usar isso no brasil https://support.google.com/merchants/answer/6324484?visit_id=639118635357846475-888363973&rd=1
@@ -224,6 +247,7 @@ export const productSchema = productSchemaBase.transform((product) => {
 });
 
 export type ProductVariant = z.infer<typeof productVariantSchema>;
+export type ProductImageAsset = z.infer<typeof productImageAssetSchema>;
 export type Product = z.infer<typeof productSchema>;
 
 export function validateProduct(input: unknown): Product {

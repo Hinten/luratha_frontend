@@ -5,6 +5,7 @@ import PriceBlock from "@/src/components/produto/PriceBlock";
 import SizeSelector from "@/src/components/produto/SizeSelector";
 import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import ProductDescription from "@/src/components/produto/ProductDescription";
+import { getProductGalleryImages } from "@/src/lib/productImages";
 import styles from "./ProductDetailPage.module.css";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
@@ -18,7 +19,7 @@ export default function ProductDetailPage({ product, category }: ProductDetailPa
   const categorySlug = category?.slug ?? "outros";
   const categoryLabel = category?.name ?? "Outros";
   const categoryHref = `/categoria/${categorySlug}`;
-  const images = product.photoIds.length > 0 ? product.photoIds : [DEFAULT_PRODUCT_IMAGE_URL];
+  const images = getProductGalleryImages(product, DEFAULT_PRODUCT_IMAGE_URL);
   const currentPrice = product.price.salePrice ?? product.price.price;
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
   const sizes = extractUniqueSizes(product);
@@ -32,7 +33,7 @@ export default function ProductDetailPage({ product, category }: ProductDetailPa
     "@type": "Product",
     name: product.title,
     description: product.description,
-    image: images,
+    image: images.map((image) => image.defaultUrl),
     sku: product.sku,
     brand: { "@type": "Brand", name: product.brandName },
     offers: {
@@ -105,14 +106,14 @@ export default function ProductDetailPage({ product, category }: ProductDetailPa
               />
             </div>
 
-            <SizeSelector
-              sizes={sizes}
-              productName={product.title}
-              productId={product.id}
-              slug={product.slug}
-              imageUrl={images[0]}
-              price={currentPrice}
-            />
+              <SizeSelector
+                sizes={sizes}
+                productName={product.title}
+                productId={product.id}
+                slug={product.slug}
+                imageUrl={images[0]?.defaultUrl ?? DEFAULT_PRODUCT_IMAGE_URL}
+                price={currentPrice}
+              />
 
             {/* Amazon-style bullet-point highlights */}
             {highlights.length > 0 && (

@@ -46,7 +46,57 @@ const validProduct = {
   reviewCount: 28,
   totalStock: 14,
   status: "active" as const,
-  photoIds: ["photo_cream_linen_front", "photo_cream_linen_back"],
+  photoAssets: [
+    {
+      id: "asset_cream_linen_front",
+      alt: "Vestido de linho cru visto de frente",
+      resolutions: {
+        card: {
+          width: 400,
+          height: 533,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/card.webp",
+          downloadUrl: "https://example.com/card.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
+        zoom: {
+          width: 2000,
+          height: 2667,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/zoom.webp",
+          downloadUrl: "https://example.com/zoom.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
+        mobile: {
+          width: 480,
+          height: 640,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/mobile.webp",
+          downloadUrl: "https://example.com/mobile.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
+        tablet: {
+          width: 768,
+          height: 1024,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/tablet.webp",
+          downloadUrl: "https://example.com/tablet.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
+        desktop: {
+          width: 1200,
+          height: 1600,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/desktop.webp",
+          downloadUrl: "https://example.com/desktop.webp",
+          temporaryUrl: "https://example.com/temp-desktop.webp",
+          format: "webp" as const,
+        },
+      },
+      createdAt: now,
+      updatedAt: now,
+    },
+  ],
+  lifeStylePhotos: [],
   variants: [
     {
       sku: "LURATHA_002",
@@ -117,6 +167,7 @@ describe("firestore schemas", () => {
     const parsed = productSchema.parse(validProduct);
     expect(parsed).toMatchObject(validProduct);
     expect(parsed.slug).toBe(buildProductSlug(validProduct.title, validProduct.sku));
+    expect(parsed.photoAssets).toHaveLength(1);
   });
 
   it("rejects product with non-positive prices", () => {
