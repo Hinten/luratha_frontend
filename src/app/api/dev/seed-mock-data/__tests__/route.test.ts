@@ -53,7 +53,7 @@ vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
       status: "active",
       isPurchasable: true,
       brandName: "Luratha",
-      category: [{ id: "cat_1", name: "Vestidos", slug: "vestidos" }],
+      categoryId: "cat_1",
       tags: [],
       materialTags: [],
       seasonalTags: [],

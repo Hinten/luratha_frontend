@@ -24,7 +24,8 @@
       "vitest.emulator.config.mts",
       "README.md",
       "storage.rules",
-      "firestore.rules"
+      "firestore.rules",
+      "playwright-report"
     ]
   },
   "storage": {

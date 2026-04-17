@@ -3,8 +3,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
-import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
 import { dbServer } from "@/src/lib/firebaseServer";
+import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import {
   ProductRepositoryError,
   createProductsRepository,
@@ -18,6 +19,7 @@ interface PageProps {
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 const productsRepository = createProductsRepository(dbServer);
+const categoriesRepository = createCategoriesRepository(dbServer);
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
   try {
@@ -30,6 +32,15 @@ const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProdu
     console.error(`[ProdutoPage] error fetching product with slug "${slug}"`, error);
 
     throw createHttpStatusError(500, "Erro ao carregar dados do produto.");
+  }
+});
+
+const getCachedCategoryById = cache(async (categoryId: string): Promise<FirestoreCategory | null> => {
+  try {
+    return await categoriesRepository.getById(categoryId);
+  } catch (error) {
+    console.error(`[ProdutoPage] error fetching category with id "${categoryId}"`, error);
+    return null;
   }
 });
 
@@ -65,7 +76,9 @@ export default async function ProdutoPage({ params }: PageProps) {
     return notFound();
   }
 
-  return <ProductDetailPage product={product} />;
+  const category = await getCachedCategoryById(product.categoryId);
+
+  return <ProductDetailPage product={product} category={category} />;
 }
 
 function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {

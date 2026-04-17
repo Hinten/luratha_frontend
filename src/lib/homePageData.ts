@@ -9,7 +9,6 @@ import { createProductsRepository } from "@/src/lib/repositories/productsReposit
 import { dbServer } from "@/src/lib/firebaseServer";
 import type { Category, Product } from "@/src/lib/types";
 import { mockCategories, mockFeatured, mockNewArrivals, mockSale } from "@/src/lib/mockData";
-import { getProductPrimaryImage } from "@/src/lib/productImages";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 const HOME_DATA_TIMEOUT_MS = 1_500;
@@ -32,7 +31,8 @@ export async function getHomePageData(): Promise<HomePageData> {
       HOME_DATA_TIMEOUT_MS,
     );
 
-    const mappedProducts = products.map(mapFirestoreProductToCard);
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const mappedProducts = products.map((product) => mapFirestoreProductToCard(product, categoryById));
     const mappedCategories = categories.map(mapFirestoreCategoryToHomeCategory);
 
     return {
@@ -73,15 +73,19 @@ function mapFirestoreCategoryToHomeCategory(category: FirestoreCategory): Catego
   };
 }
 
-function mapFirestoreProductToCard(product: FirestoreProduct): Product {
+function mapFirestoreProductToCard(
+  product: FirestoreProduct,
+  categoryById: Map<string, FirestoreCategory>,
+): Product {
   const imageUrl = getProductPrimaryImage(product, DEFAULT_PRODUCT_IMAGE_URL);
   const currentPrice = product.price.salePrice ?? product.price.price;
+  const category = categoryById.get(product.categoryId);
 
   return {
     id: product.id,
     name: product.title,
     slug: product.slug,
-    categorySlug: product.category[0]?.slug,
+    categorySlug: category?.slug,
     price: currentPrice,
     originalPrice: product.price.salePrice ? product.price.price : undefined,
     imageUrl,

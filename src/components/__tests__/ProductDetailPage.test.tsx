@@ -41,7 +41,7 @@ const mockProduct: Product = {
   isPurchasable: true,
   brandName: "Luratha",
   sku: "LURATHA_001",
-  category: [{ id: "cat_vestidos", name: "Vestidos", slug: "vestidos" }],
+  categoryId: "cat_vestidos",
   tags: ["vestido", "bordado"],
   materialTags: ["linho"],
   seasonalTags: ["verao"],
@@ -80,35 +80,35 @@ describe("ProductDetailPage", () => {
   });
 
   it("renders the product name as an h1", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(
       screen.getByRole("heading", { level: 1, name: mockProduct.title })
     ).toBeInTheDocument();
   });
 
   it("renders the product gallery component", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(screen.getByTestId("product-gallery")).toBeInTheDocument();
   });
 
   it("renders the size selector component", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(screen.getByTestId("size-selector")).toBeInTheDocument();
   });
 
   it("renders the current price", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(screen.getByText(/R\$\s*289/)).toBeInTheDocument();
   });
 
   it("renders the star rating and review count", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(screen.getByText("4.8")).toBeInTheDocument();
     expect(screen.getByText(/24 avaliações/)).toBeInTheDocument();
   });
 
   it("renders highlights bullet list", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(
       screen.getByRole("list", { name: "Destaques do produto" })
     ).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("ProductDetailPage", () => {
   });
 
   it("renders the description in its own section", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     expect(
       screen.getByRole("region", { name: "Descrição do produto" })
     ).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("ProductDetailPage", () => {
   });
 
   it("renders the breadcrumb with Home, category, and product name", () => {
-    render(<ProductDetailPage product={mockProduct} />);
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(nav.querySelector("a[href='/']")).toBeInTheDocument();
     expect(nav.querySelector("a[href='/categoria/vestidos']")).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("ProductDetailPage", () => {
   });
 
   it("renders the schema.org JSON-LD script", () => {
-    const { container } = render(<ProductDetailPage product={mockProduct} />);
+    const { container } = render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
     const data = JSON.parse(script!.textContent!);
@@ -142,3 +142,9 @@ describe("ProductDetailPage", () => {
     expect(data.name).toBe(mockProduct.title);
   });
 });
+
+const mockCategory = {
+  id: "cat_vestidos",
+  name: "Vestidos",
+  slug: "vestidos",
+};

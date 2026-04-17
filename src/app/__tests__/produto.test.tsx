@@ -3,8 +3,9 @@ import { render, screen } from "@testing-library/react";
 import ProdutoPage from "@/src/app/produto/[slug]/page";
 import { buildProductSlug, type Product } from "@/src/schemas/firestore";
 
-const { getBySlugMock } = vi.hoisted(() => ({
+const { getBySlugMock, getCategoryByIdMock } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),
+  getCategoryByIdMock: vi.fn(),
 }));
 
 vi.mock("next/link", () => ({
@@ -47,6 +48,12 @@ vi.mock("@/src/lib/repositories/productsRepository", () => ({
   }),
 }));
 
+vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
+  createCategoriesRepository: () => ({
+    getById: getCategoryByIdMock,
+  }),
+}));
+
 // Mock client components to keep the test synchronous
 vi.mock("@/src/components/produto/ProductGallery", () => ({
   default: ({ productName }: { productName: string }) => (
@@ -72,7 +79,7 @@ const mockFirestoreProduct: Product = {
   isPurchasable: true,
   brandName: "Luratha",
   sku: "LURATHA_001",
-  category: [{ id: "cat_vestidos", name: "Vestidos", slug: "vestidos" }],
+  categoryId: "cat_vestidos",
   tags: ["vestido", "bordado"],
   materialTags: ["linho"],
   seasonalTags: ["verao"],
@@ -106,6 +113,11 @@ const mockFirestoreProduct: Product = {
 describe("ProdutoPage", () => {
   it("renders the product heading for a known slug", async () => {
     getBySlugMock.mockResolvedValueOnce(mockFirestoreProduct);
+    getCategoryByIdMock.mockResolvedValueOnce({
+      id: "cat_vestidos",
+      name: "Vestidos",
+      slug: "vestidos",
+    });
 
     const page = await ProdutoPage({
       params: Promise.resolve({ slug: mockFirestoreProduct.slug }),
@@ -130,6 +142,11 @@ describe("ProdutoPage", () => {
       },
       variants: undefined,
       size: ["P", "M"],
+    });
+    getCategoryByIdMock.mockResolvedValueOnce({
+      id: "cat_vestidos",
+      name: "Vestidos",
+      slug: "vestidos",
     });
 
     const page = await ProdutoPage({
