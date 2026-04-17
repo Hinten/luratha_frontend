@@ -25,7 +25,8 @@
       "README.md",
       "storage.rules",
       "firestore.rules",
-      "playwright-report"
+      "playwright-report",
+      ".playwright-mcp"
     ]
   },
   "storage": {
