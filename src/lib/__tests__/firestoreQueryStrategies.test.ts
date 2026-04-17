@@ -64,9 +64,17 @@ describe("firestore query strategies", () => {
 
   it("recommends pipeline for full text and large tag searches", () => {
     expect(shouldUsePipeline({ term: "vestido artesanal" })).toBe(true);
-    expect(shouldUsePipeline({ tags: Array.from({ length: 11 }, () => "linho") })).toBe(
+    expect(shouldUsePipeline({ tags: Array.from({ length: 5 }, () => "linho") })).toBe(
       true,
     );
     expect(shouldUsePipeline({ categorySlug: "vestidos", tags: ["linho"] })).toBe(false);
+  });
+
+  it("validates vector dimensions with enterprise request limit", () => {
+    expect(() =>
+      buildEnterpriseVectorSearchPlan({
+        embedding: Array.from({ length: 2049 }, () => 0.2),
+      }),
+    ).toThrow();
   });
 });

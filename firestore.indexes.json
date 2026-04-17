@@ -15,6 +15,10 @@
         {
           "fieldPath": "priceMin",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priceMax",
+          "order": "ASCENDING"
         }
       ]
     },

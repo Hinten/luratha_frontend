@@ -1,0 +1,338 @@
+import { type Firestore, collection, getDocs, limit as queryLimit, orderBy, query, where } from "firebase/firestore";
+import {
+  and,
+  execute,
+  field,
+  or,
+  type PipelineSnapshot,
+} from "firebase/firestore/pipelines";
+import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
+import {
+  buildCoreProductQueryPlan,
+  buildEnterprisePipelineSearchPlan,
+  buildEnterpriseVectorSearchPlan,
+  shouldUsePipeline,
+  type ProductSearchFilters,
+  type ProductSort,
+} from "@/src/lib/firestoreQueryStrategies";
+import { dbServer } from "@/src/lib/firebaseServer";
+import {
+  ProductRepositoryError,
+} from "@/src/lib/repositories/productsRepository";
+import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
+import { mapFirestoreProductToCard } from "@/src/lib/repositories/productMapper";
+import { createEmbeddingService, type EmbeddingService } from "@/src/lib/embeddingService";
+import type { Product } from "@/src/lib/types";
+
+export interface SearchOptions {
+  useVectors?: boolean;
+}
+
+export interface ProductsSearchRepository {
+  search(filters: ProductSearchFilters, options?: SearchOptions): Promise<Product[]>;
+}
+
+type CreateProductsSearchRepositoryOptions = {
+  embeddingService?: EmbeddingService;
+};
+
+export function createProductsSearchRepository(
+  dbInstance: Firestore = dbServer,
+  options: CreateProductsSearchRepositoryOptions = {},
+): ProductsSearchRepository {
+  const categoriesRepository = createCategoriesRepository(dbInstance);
+  const embeddingService = options.embeddingService ?? createEmbeddingService();
+
+  async function executeCore(filters: ProductSearchFilters): Promise<Product[]> {
+    const plan = buildCoreProductQueryPlan(filters);
+    const constraints = [];
+
+    for (const clause of plan.where) {
+      if (clause.field === "categorySlug" && typeof clause.value === "string") {
+        const category = await categoriesRepository.getBySlug(clause.value);
+        if (!category) {
+          return [];
+        }
+        constraints.push(where("categoryId", "==", category.id));
+        continue;
+      }
+      constraints.push(where(clause.field, clause.op, clause.value));
+    }
+
+    for (const sortBy of plan.orderBy) {
+      constraints.push(orderBy(sortBy.field, sortBy.direction));
+    }
+
+    constraints.push(queryLimit(Math.min(plan.limit + plan.offset, 100)));
+
+    const snapshot = await getDocs(query(collection(dbInstance, plan.collection), ...constraints));
+    const docs = snapshot.docs.slice(plan.offset, plan.offset + plan.limit);
+    const products = docs.map((entry) => entry.data() as FirestoreProduct);
+
+    return products.map((product) =>
+      mapFirestoreProductToCard(product, {
+        categorySlug: filters.categorySlug,
+      }),
+    );
+  }
+
+  async function executePipelineSearch(filters: ProductSearchFilters): Promise<Product[]> {
+    const plan = buildEnterprisePipelineSearchPlan(filters);
+    let pipeline = dbInstance.pipeline().collection(plan.collection);
+    let categoryId: string | null = null;
+
+    if (filters.categorySlug) {
+      const category = await categoriesRepository.getBySlug(filters.categorySlug);
+      if (!category) {
+        return [];
+      }
+      categoryId = category.id;
+    }
+
+    const pipelineFilters = [field("status").equal("active")];
+    if (categoryId) {
+      pipelineFilters.push(field("categoryId").equal(categoryId));
+    }
+    if (filters.minPrice !== undefined) {
+      pipelineFilters.push(field("price.price").greaterThanOrEqual(filters.minPrice));
+    }
+    if (filters.maxPrice !== undefined) {
+      pipelineFilters.push(field("price.price").lessThanOrEqual(filters.maxPrice));
+    }
+    if (filters.tags?.length) {
+      pipelineFilters.push(field("tags").arrayContainsAny(filters.tags.slice(0, 10)));
+    }
+
+    pipeline = pipeline.where(and(...pipelineFilters));
+
+    const term = (filters.term ?? "").trim();
+    if (term) {
+      const regex = escapeRegex(term.toLowerCase());
+      pipeline = pipeline.where(
+        or(
+          field("title").toLower().regexMatch(regex),
+          field("description").toLower().regexMatch(regex),
+        ),
+      );
+    }
+
+    pipeline = pipeline.sort(mapSortToPipelineOrdering(filters.sort));
+
+    const limit = Math.min(Math.max(filters.limit ?? 24, 1), 100);
+    const offset = Math.max(filters.offset ?? 0, 0);
+
+    pipeline = pipeline
+      .select(
+        "id",
+        "slug",
+        "title",
+        "categoryId",
+        "photoIds",
+        "price",
+        "ratingAverage",
+        "reviewCount",
+      )
+      .offset(offset)
+      .limit(limit);
+
+    const snapshot = await execute(pipeline);
+    return mapPipelineSnapshotToCards(snapshot, filters.categorySlug);
+  }
+
+  async function executeVectorSearch(
+    embedding: number[],
+    filters: ProductSearchFilters,
+  ): Promise<Product[]> {
+    const vectorPlan = buildEnterpriseVectorSearchPlan({
+      embedding,
+      categorySlug: filters.categorySlug,
+      topK: Math.min(Math.max(filters.limit ?? 20, 1), 100),
+      minScore: 0,
+    });
+
+    let pipeline = dbInstance.pipeline().collection(vectorPlan.collection);
+    let categoryId: string | null = null;
+
+    if (filters.categorySlug) {
+      const category = await categoriesRepository.getBySlug(filters.categorySlug);
+      if (!category) {
+        return [];
+      }
+      categoryId = category.id;
+    }
+
+    const pipelineFilters = [field("status").equal("active")];
+    if (categoryId) {
+      pipelineFilters.push(field("categoryId").equal(categoryId));
+    }
+
+    pipeline = pipeline
+      .where(and(...pipelineFilters))
+      .findNearest({
+        field: "searchEmbedding",
+        vectorValue: embedding,
+        distanceMeasure: "cosine",
+        limit: vectorPlan.stages[1]?.details?.topK as number,
+        distanceField: "score",
+      })
+      .select(
+        "id",
+        "slug",
+        "title",
+        "categoryId",
+        "photoIds",
+        "price",
+        "ratingAverage",
+        "reviewCount",
+        "score",
+      );
+
+    const snapshot = await execute(pipeline);
+    return mapPipelineSnapshotToCards(snapshot, filters.categorySlug);
+  }
+
+  async function search(
+    filters: ProductSearchFilters,
+    searchOptions: SearchOptions = {},
+  ): Promise<Product[]> {
+    let vectorError: unknown;
+    let pipelineError: unknown;
+    const useVectors = searchOptions.useVectors ?? false;
+
+    if (useVectors && filters.term) {
+      try {
+        const embedding = await embeddingService.embed(filters.term);
+        const vectorResults = await executeVectorSearch(embedding, filters);
+        console.info("[productsSearchRepository] path=vector");
+        return vectorResults;
+      } catch (error) {
+        vectorError = error;
+        console.warn("[productsSearchRepository] vector fallback triggered", error);
+      }
+    }
+
+    if (shouldUsePipeline(filters)) {
+      try {
+        const pipelineResults = await executePipelineSearch(filters);
+        console.info("[productsSearchRepository] path=pipeline");
+        return pipelineResults;
+      } catch (error) {
+        pipelineError = error;
+        console.warn("[productsSearchRepository] pipeline fallback triggered", error);
+      }
+    }
+
+    try {
+      const coreResults = await executeCore(filters);
+      console.info("[productsSearchRepository] path=core");
+      return coreResults;
+    } catch (error) {
+      throw normalizeSearchError(error, vectorError, pipelineError);
+    }
+  }
+
+  return { search };
+}
+
+function mapSortToPipelineOrdering(sort?: ProductSort) {
+  switch (sort) {
+    case "price_asc":
+      return field("price.price").ascending();
+    case "price_desc":
+      return field("price.price").descending();
+    case "rating_desc":
+      return field("ratingAverage").descending();
+    case "newest":
+    default:
+      return field("updatedAt").descending();
+  }
+}
+
+function mapPipelineSnapshotToCards(snapshot: PipelineSnapshot, categorySlug?: string): Product[] {
+  return snapshot.results.map((entry) => {
+    const data = entry.data() as Partial<FirestoreProduct> & {
+      id?: string;
+      title?: string;
+      slug?: string;
+      categoryId?: string;
+      photoIds?: string[];
+      price?: FirestoreProduct["price"];
+      ratingAverage?: number | null;
+      reviewCount?: number | null;
+    };
+
+    const candidate: FirestoreProduct = {
+      id: data.id ?? entry.id ?? "",
+      slug: data.slug ?? "",
+      title: data.title ?? "",
+      description: "",
+      isPurchasable: true,
+      brandName: "Luratha",
+      sku: "LURATHA_0000",
+      categoryId: data.categoryId ?? "",
+      tags: [],
+      materialTags: [],
+      seasonalTags: [],
+      price: data.price ?? {
+        price: 0,
+        salePrice: null,
+        priceMin: null,
+        priceMax: null,
+        currency: "BRL",
+        startDate: null,
+        endDate: null,
+      },
+      salePrice: null,
+      condition: "new",
+      adult: false,
+      isBundle: false,
+      multipack: 1,
+      age_group: null,
+      gender: null,
+      color: null,
+      size: null,
+      sizeType: null,
+      sizeSystem: null,
+      material: [],
+      pattern: [],
+      dimensions: null,
+      productDetail: null,
+      productHighlight: null,
+      photoIds: data.photoIds ?? [],
+      lifeStylePhotoIds: null,
+      videoUrls: [],
+      ratingAverage: data.ratingAverage ?? null,
+      reviewCount: data.reviewCount ?? null,
+      totalStock: 0,
+      variants: null,
+      vectorEmbedding: null,
+      searchEmbedding: null,
+      status: "active",
+      gtin: null,
+      mpn: null,
+      shortTitle: null,
+      googleProductCategoryId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return mapFirestoreProductToCard(candidate, { categorySlug });
+  });
+}
+
+function normalizeSearchError(
+  error: unknown,
+  vectorError?: unknown,
+  pipelineError?: unknown,
+): ProductRepositoryError {
+  if (error instanceof ProductRepositoryError) {
+    return error;
+  }
+
+  const causes = [vectorError, pipelineError, error].filter(Boolean);
+  return new ProductRepositoryError("Failed to search products", "unknown", causes);
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

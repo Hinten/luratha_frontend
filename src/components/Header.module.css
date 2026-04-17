@@ -65,6 +65,16 @@
   gap: 1rem;
 }
 
+.searchArea {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .searchArea {
+    display: block;
+  }
+}
+
 /*
  * Legibility rule: blush icon on light background has ~1.5:1 contrast.
  * Keep icon dark; add a soft blush background disc as the hover cue.
@@ -190,4 +200,3 @@
   color: var(--color-neutral-dark);
   padding-block: 0.25rem;
 }
-

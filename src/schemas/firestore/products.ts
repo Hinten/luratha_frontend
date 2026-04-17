@@ -119,8 +119,8 @@ const productSchemaBase = z
     shortTitle: nonEmptyStringSchema.min(5).max(65).nullable().default(null),
     description: nonEmptyStringSchema.max(5000),
     
-    vectorEmbedding: z.array(z.number().finite()).min(8).max(4096).nullable().default(null),
-    searchEmbedding: z.array(z.number().finite()).min(8).max(4096).nullable().default(null),
+    vectorEmbedding: z.array(z.number().finite()).min(8).max(2048).nullable().default(null),
+    searchEmbedding: z.array(z.number().finite()).min(8).max(2048).nullable().default(null),
 
     sku: skuSchema,
     gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).nullable().default(null),

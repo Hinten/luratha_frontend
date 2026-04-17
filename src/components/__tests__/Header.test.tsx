@@ -22,6 +22,10 @@ vi.mock("@/src/lib/constants", () => ({
   appData: { name: "Luratha", logo: "/luratha.svg" },
 }));
 
+vi.mock("@/src/components/busca/SearchInput", () => ({
+  default: () => <div data-testid="search-input" />,
+}));
+
 /* Default mocks for contexts — override per test where needed */
 vi.mock("@/src/contexts/CartContext", () => ({
   useCart: () => ({
@@ -130,4 +134,3 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Cadastrar" })).toBeInTheDocument();
   });
 });
-
