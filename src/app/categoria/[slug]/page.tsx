@@ -51,11 +51,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!category) return {};
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
   return {
-    title: `${category.name} Artesanais`,
+    title: `${category.name}`,
     description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro feito com amor e cuidado.`,
     alternates: { canonical: categoryUrl },
     openGraph: {
-      title: `${category.name} Artesanais | Luratha`,
+      title: `${category.name} | Luratha`,
       description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
       url: categoryUrl,
       type: "website",
@@ -101,7 +101,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const collectionPageSchema = {
     "@context": "https://schema.org" as const,
     "@type": "CollectionPage",
-    name: `${category.name} Artesanais | Luratha`,
+    name: `${category.name} | Luratha`,
     description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro.`,
     url: categoryUrl,
     isPartOf: {
