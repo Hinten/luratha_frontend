@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./ProductImageZoom.module.css";
 
 interface ProductImageZoomProps {
@@ -23,9 +24,14 @@ export default function ProductImageZoom({
   onSwipePrevious,
 }: ProductImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -117,7 +123,7 @@ export default function ProductImageZoom({
               Zoom disponível (dev)
             </span>
           )}
-          {isOpen && (
+          {isOpen && isMounted && createPortal(
             <div
               className={styles.overlay}
               role="dialog"
@@ -140,7 +146,8 @@ export default function ProductImageZoom({
                 ×
               </button>
               <img src={zoomUrl} alt={alt} className={styles.zoomedImage} />
-            </div>
+            </div>,
+            document.body,
           )}
         </>
       )}
