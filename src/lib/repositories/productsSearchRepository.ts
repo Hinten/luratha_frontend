@@ -7,7 +7,7 @@ import {
   type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
-import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product as FirestoreProduct, validateProduct } from "@/src/schemas/firestore";
 import {
   buildCoreProductQueryPlan,
   buildEnterprisePipelineSearchPlan,
@@ -21,16 +21,14 @@ import {
   ProductRepositoryError,
 } from "@/src/lib/repositories/productsRepository";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
-import { mapFirestoreProductToCard } from "@/src/lib/repositories/productMapper";
 import { createEmbeddingService, type EmbeddingService } from "@/src/lib/embeddingService";
-import type { Product } from "@/src/lib/types";
 
 export interface SearchOptions {
   useVectors?: boolean;
 }
 
 export interface ProductsSearchRepository {
-  search(filters: ProductSearchFilters, options?: SearchOptions): Promise<Product[]>;
+  search(filters: ProductSearchFilters, options?: SearchOptions): Promise<FirestoreProduct[]>;
 }
 
 type CreateProductsSearchRepositoryOptions = {
@@ -44,7 +42,7 @@ export function createProductsSearchRepository(
   const categoriesRepository = createCategoriesRepository(dbInstance);
   const embeddingService = options.embeddingService ?? createEmbeddingService();
 
-  async function executeCore(filters: ProductSearchFilters): Promise<Product[]> {
+  async function executeCore(filters: ProductSearchFilters): Promise<FirestoreProduct[]> {
     const plan = buildCoreProductQueryPlan(filters);
     const constraints = [];
 
@@ -68,16 +66,10 @@ export function createProductsSearchRepository(
 
     const snapshot = await getDocs(query(collection(dbInstance, plan.collection), ...constraints));
     const docs = snapshot.docs.slice(plan.offset, plan.offset + plan.limit);
-    const products = docs.map((entry) => entry.data() as FirestoreProduct);
-
-    return products.map((product) =>
-      mapFirestoreProductToCard(product, {
-        categorySlug: filters.categorySlug,
-      }),
-    );
+    return docs.map((entry) => normalizeSearchProduct(entry.data(), entry.id));
   }
 
-  async function executePipelineSearch(filters: ProductSearchFilters): Promise<Product[]> {
+  async function executePipelineSearch(filters: ProductSearchFilters): Promise<FirestoreProduct[]> {
     const plan = buildEnterprisePipelineSearchPlan(filters);
     let pipeline = dbInstance.pipeline().collection(plan.collection);
     let categoryId: string | null = null;
@@ -122,28 +114,16 @@ export function createProductsSearchRepository(
     const limit = Math.min(Math.max(filters.limit ?? 24, 1), 100);
     const offset = Math.max(filters.offset ?? 0, 0);
 
-    pipeline = pipeline
-      .select(
-        "id",
-        "slug",
-        "title",
-        "categoryId",
-        "photoIds",
-        "price",
-        "ratingAverage",
-        "reviewCount",
-      )
-      .offset(offset)
-      .limit(limit);
+    pipeline = pipeline.offset(offset).limit(limit);
 
     const snapshot = await execute(pipeline);
-    return mapPipelineSnapshotToCards(snapshot, filters.categorySlug);
+    return mapPipelineSnapshotToProducts(snapshot);
   }
 
   async function executeVectorSearch(
     embedding: number[],
     filters: ProductSearchFilters,
-  ): Promise<Product[]> {
+  ): Promise<FirestoreProduct[]> {
     const vectorPlan = buildEnterpriseVectorSearchPlan({
       embedding,
       categorySlug: filters.categorySlug,
@@ -175,27 +155,16 @@ export function createProductsSearchRepository(
         distanceMeasure: "cosine",
         limit: vectorPlan.stages[1]?.details?.topK as number,
         distanceField: "score",
-      })
-      .select(
-        "id",
-        "slug",
-        "title",
-        "categoryId",
-        "photoIds",
-        "price",
-        "ratingAverage",
-        "reviewCount",
-        "score",
-      );
+      });
 
     const snapshot = await execute(pipeline);
-    return mapPipelineSnapshotToCards(snapshot, filters.categorySlug);
+    return mapPipelineSnapshotToProducts(snapshot);
   }
 
   async function search(
     filters: ProductSearchFilters,
     searchOptions: SearchOptions = {},
-  ): Promise<Product[]> {
+  ): Promise<FirestoreProduct[]> {
     let vectorError: unknown;
     let pipelineError: unknown;
     const useVectors = searchOptions.useVectors ?? false;
@@ -249,32 +218,62 @@ function mapSortToPipelineOrdering(sort?: ProductSort) {
   }
 }
 
-function mapPipelineSnapshotToCards(snapshot: PipelineSnapshot, categorySlug?: string): Product[] {
+function mapPipelineSnapshotToProducts(snapshot: PipelineSnapshot): FirestoreProduct[] {
   return snapshot.results.map((entry) => {
-    const data = entry.data() as Partial<FirestoreProduct> & {
-      id?: string;
-      title?: string;
-      slug?: string;
-      categoryId?: string;
-      photoIds?: string[];
-      price?: FirestoreProduct["price"];
-      ratingAverage?: number | null;
-      reviewCount?: number | null;
-    };
+    return normalizeSearchProduct(entry.data(), entry.id ?? "");
+  });
+}
 
-    const candidate: FirestoreProduct = {
-      id: data.id ?? entry.id ?? "",
-      slug: data.slug ?? "",
-      title: data.title ?? "",
-      description: "",
+function normalizeSearchProduct(
+  input: unknown,
+  fallbackId: string,
+): FirestoreProduct {
+  const record = (input ?? {}) as Partial<FirestoreProduct> & {
+    id?: string;
+    slug?: string | null;
+    title?: string;
+    categoryId?: string;
+    price?: FirestoreProduct["price"];
+    ratingAverage?: number | null;
+    reviewCount?: number | null;
+    sku?: string;
+    brandName?: string;
+    description?: string;
+    status?: FirestoreProduct["status"];
+    createdAt?: string;
+    updatedAt?: string;
+  };
+
+  try {
+    return validateProduct({
+      ...record,
+      id: record.id ?? fallbackId,
+    });
+  } catch {
+    const fallbackSku = record.sku?.trim() || "LURATHA_0000";
+    const fallbackTitle = record.title?.trim() || "Produto";
+    const now = new Date().toISOString();
+
+    return validateProduct({
+      id: record.id ?? fallbackId,
+      slug: record.slug ?? buildProductSlug(fallbackTitle, fallbackSku),
+      title: fallbackTitle,
+      shortTitle: null,
+      description: record.description ?? "",
+      vectorEmbedding: null,
+      searchEmbedding: null,
+      sku: fallbackSku,
+      gtin: null,
+      mpn: null,
+      status: record.status ?? "active",
       isPurchasable: true,
-      brandName: "Luratha",
-      sku: "LURATHA_0000",
-      categoryId: data.categoryId ?? "",
+      brandName: record.brandName ?? "Luratha",
+      categoryId: record.categoryId ?? "categoria-desconhecida",
+      googleProductCategoryId: null,
       tags: [],
       materialTags: [],
       seasonalTags: [],
-      price: data.price ?? {
+      price: record.price ?? {
         price: 0,
         salePrice: null,
         priceMin: null,
@@ -299,26 +298,17 @@ function mapPipelineSnapshotToCards(snapshot: PipelineSnapshot, categorySlug?: s
       dimensions: null,
       productDetail: null,
       productHighlight: null,
-      photoIds: data.photoIds ?? [],
-      lifeStylePhotoIds: null,
+      photoAssets: [],
+      lifeStylePhotos: [],
       videoUrls: [],
-      ratingAverage: data.ratingAverage ?? null,
-      reviewCount: data.reviewCount ?? null,
+      ratingAverage: record.ratingAverage ?? null,
+      reviewCount: record.reviewCount ?? null,
       totalStock: 0,
       variants: null,
-      vectorEmbedding: null,
-      searchEmbedding: null,
-      status: "active",
-      gtin: null,
-      mpn: null,
-      shortTitle: null,
-      googleProductCategoryId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return mapFirestoreProductToCard(candidate, { categorySlug });
-  });
+      createdAt: record.createdAt ?? now,
+      updatedAt: record.updatedAt ?? now,
+    });
+  }
 }
 
 function normalizeSearchError(

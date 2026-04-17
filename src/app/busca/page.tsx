@@ -8,7 +8,7 @@ import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstan
 import { dbServer } from "@/src/lib/firebaseServer";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
-import type { Product } from "@/src/lib/types";
+import type { Product } from "@/src/schemas/firestore";
 
 interface PageProps {
   searchParams: Promise<{

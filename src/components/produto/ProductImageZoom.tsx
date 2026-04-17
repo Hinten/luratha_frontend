@@ -24,14 +24,10 @@ export default function ProductImageZoom({
   onSwipePrevious,
 }: ProductImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const canUsePortal = typeof document !== "undefined";
 
   useEffect(() => {
     if (!isOpen) {
@@ -123,7 +119,7 @@ export default function ProductImageZoom({
               Zoom disponível (dev)
             </span>
           )}
-          {isOpen && isMounted && createPortal(
+          {isOpen && canUsePortal && createPortal(
             <div
               className={styles.overlay}
               role="dialog"

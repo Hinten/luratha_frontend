@@ -102,20 +102,18 @@ async function seedProductImages(products: Product[], createdProductIds: string[
 }
 
 async function getSeedImagePaths(): Promise<string[]> {
-  let imageDirectoryEntries: Awaited<ReturnType<typeof readdir>>;
   try {
-    imageDirectoryEntries = await readdir(SEED_IMAGES_DIRECTORY, { withFileTypes: true });
+    const imageDirectoryEntries = await readdir(SEED_IMAGES_DIRECTORY, { withFileTypes: true });
+    return imageDirectoryEntries
+      .filter((entry) => entry.isFile() && SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+      .map((entry) => path.join(SEED_IMAGES_DIRECTORY, entry.name))
+      .sort();
   } catch (error) {
     if (isMissingDirectoryError(error)) {
       return [];
     }
     throw error;
   }
-
-  return imageDirectoryEntries
-    .filter((entry) => entry.isFile() && SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
-    .map((entry) => path.join(SEED_IMAGES_DIRECTORY, entry.name))
-    .sort();
 }
 
 function isMissingDirectoryError(error: unknown): error is NodeJS.ErrnoException {

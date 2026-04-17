@@ -1,7 +1,7 @@
 import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";

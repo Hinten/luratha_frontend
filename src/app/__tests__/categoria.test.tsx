@@ -125,7 +125,7 @@ describe("CategoriaPage", () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe("Vestidos");
+    expect(metadata.title).toBe("Vestidos Artesanais");
     expect(metadata.alternates?.canonical).toBe("https://www.luratha.com.br/categoria/vestidos");
   });
 });
