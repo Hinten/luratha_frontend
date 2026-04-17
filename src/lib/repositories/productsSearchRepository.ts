@@ -345,7 +345,6 @@ function createFallbackSearchProduct(
   } catch (error) {
     throw new ProductRepositoryError("Failed to normalize search fallback product", "validation", [
       error,
-      record,
     ]);
   }
 }

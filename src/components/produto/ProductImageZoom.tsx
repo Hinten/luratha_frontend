@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ProductImageZoom.module.css";
 
+const CAN_USE_PORTAL = typeof document !== "undefined";
+
 interface ProductImageZoomProps {
   src: string;
   srcSet: string;
@@ -27,7 +29,6 @@ export default function ProductImageZoom({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
-  const canUsePortal = typeof document !== "undefined";
 
   useEffect(() => {
     if (!isOpen) {
@@ -119,7 +120,7 @@ export default function ProductImageZoom({
               Zoom disponível (dev)
             </span>
           )}
-          {isOpen && canUsePortal && createPortal(
+          {isOpen && CAN_USE_PORTAL && createPortal(
             <div
               className={styles.overlay}
               role="dialog"
