@@ -20,7 +20,7 @@ import { db } from "../firebaseClient";
 
 type ProductListFilters = {
   status?: Product["status"];
-  categorySlug?: string;
+  categoryId?: string;
   limit?: number;
 };
 
@@ -154,8 +154,8 @@ export function createProductsRepository(dbInstance: Firestore = db): ProductsRe
       if (filters.status) {
         constraints.push(where("status", "==", filters.status));
       }
-      if (filters.categorySlug) {
-        constraints.push(where("category.0.slug", "==", filters.categorySlug));
+      if (filters.categoryId) {
+        constraints.push(where("categoryId", "==", filters.categoryId));
       }
 
       const normalizedLimit = Math.max(1, Math.min(filters.limit ?? 24, MAX_LIST_LIMIT));

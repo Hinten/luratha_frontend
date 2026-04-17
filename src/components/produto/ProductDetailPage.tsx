@@ -1,4 +1,4 @@
-import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGallery from "@/src/components/produto/ProductGallery";
 import PriceBlock from "@/src/components/produto/PriceBlock";
@@ -11,12 +11,12 @@ const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?te
 
 interface ProductDetailPageProps {
   product: FirestoreProduct;
+  category?: FirestoreCategory | null;
 }
 
-export default function ProductDetailPage({ product }: ProductDetailPageProps) {
-  const primaryCategory = product.category[0];
-  const categorySlug = primaryCategory?.slug ?? "outros";
-  const categoryLabel = primaryCategory?.name ?? "Outros";
+export default function ProductDetailPage({ product, category }: ProductDetailPageProps) {
+  const categorySlug = category?.slug ?? "outros";
+  const categoryLabel = category?.name ?? "Outros";
   const categoryHref = `/categoria/${categorySlug}`;
   const images = product.photoIds.length > 0 ? product.photoIds : [DEFAULT_PRODUCT_IMAGE_URL];
   const currentPrice = product.price.salePrice ?? product.price.price;

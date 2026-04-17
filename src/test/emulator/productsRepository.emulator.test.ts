@@ -140,13 +140,13 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
 
     const all = await repository.list({ limit: 10 });
     const vestidos = await repository.list({
-      categorySlug: "vestidos",
+      categoryId: "cat_vestidos",
       status: "active",
       limit: 10,
     });
 
     expect(all.length).toBeGreaterThanOrEqual(2);
-    expect(vestidos.every((product) => product.category[0]?.slug === "vestidos")).toBe(true);
+    expect(vestidos.every((product) => product.categoryId === "cat_vestidos")).toBe(true);
   });
 
   it("throws validation error on invalid payload", async () => {
