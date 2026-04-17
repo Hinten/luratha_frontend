@@ -35,6 +35,10 @@ type CreateProductsSearchRepositoryOptions = {
   embeddingService?: EmbeddingService;
 };
 
+const DEFAULT_PRODUCT_SKU = "LURATHA_0000";
+const DEFAULT_PRODUCT_TITLE = "Produto";
+const UNKNOWN_CATEGORY_ID = "categoria-desconhecida";
+
 export function createProductsSearchRepository(
   dbInstance: Firestore = dbServer,
   options: CreateProductsSearchRepositoryOptions = {},
@@ -250,8 +254,8 @@ function normalizeSearchProduct(
       id: record.id ?? fallbackId,
     });
   } catch {
-    const fallbackSku = record.sku?.trim() || "LURATHA_0000";
-    const fallbackTitle = record.title?.trim() || "Produto";
+    const fallbackSku = record.sku?.trim() || DEFAULT_PRODUCT_SKU;
+    const fallbackTitle = record.title?.trim() || DEFAULT_PRODUCT_TITLE;
     const now = new Date().toISOString();
 
     return validateProduct({
@@ -268,7 +272,7 @@ function normalizeSearchProduct(
       status: record.status ?? "active",
       isPurchasable: true,
       brandName: record.brandName ?? "Luratha",
-      categoryId: record.categoryId ?? "categoria-desconhecida",
+      categoryId: record.categoryId ?? UNKNOWN_CATEGORY_ID,
       googleProductCategoryId: null,
       tags: [],
       materialTags: [],
