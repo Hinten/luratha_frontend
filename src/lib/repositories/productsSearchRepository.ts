@@ -253,7 +253,11 @@ function normalizeSearchProduct(
       ...record,
       id: record.id ?? fallbackId,
     });
-  } catch {
+  } catch (validationError) {
+    console.warn("[productsSearchRepository] invalid search record, applying fallback mapping", {
+      fallbackId,
+      error: validationError,
+    });
     const fallbackSku = record.sku?.trim() || DEFAULT_PRODUCT_SKU;
     const fallbackTitle = record.title?.trim() || DEFAULT_PRODUCT_TITLE;
     const now = new Date().toISOString();
