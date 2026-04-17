@@ -1,4 +1,4 @@
-import { cache, Suspense } from "react";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
@@ -8,6 +8,7 @@ import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstan
 import { dbServer } from "@/src/lib/firebaseServer";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
+import type { Product } from "@/src/lib/types";
 
 interface PageProps {
   searchParams: Promise<{
@@ -21,6 +22,7 @@ interface PageProps {
 }
 
 const productsSearchRepository = createProductsSearchRepository(dbServer);
+const searchResponseCache = new Map<string, Promise<Product[]>>();
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { q } = await searchParams;
@@ -45,15 +47,22 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   };
 }
 
-const getCachedSearchResults = cache(async (filters: ProductSearchFilters) => {
-  return productsSearchRepository.search(filters);
-});
+async function getCachedSearchResults(cacheKey: string): Promise<Product[]> {
+  if (!searchResponseCache.has(cacheKey)) {
+    searchResponseCache.set(
+      cacheKey,
+      productsSearchRepository.search(parseSearchFiltersCacheKey(cacheKey)),
+    );
+  }
+
+  return searchResponseCache.get(cacheKey)!;
+}
 
 export default async function BuscaPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseSearchParams(params);
   const term = filters.term ?? "";
-  const products = term ? await getCachedSearchResults(filters) : [];
+  const products = term ? await getCachedSearchResults(createSearchFiltersCacheKey(filters)) : [];
   const canonical = `${SITE_URL}/busca${term ? `?q=${encodeURIComponent(term)}` : ""}`;
 
   const searchResultsSchema = {
@@ -145,6 +154,40 @@ export default async function BuscaPage({ searchParams }: PageProps) {
       )}
     </div>
   );
+}
+
+function createSearchFiltersCacheKey(filters: ProductSearchFilters): string {
+  return JSON.stringify({
+    term: filters.term ?? "",
+    sort: filters.sort ?? "newest",
+    minPrice: filters.minPrice ?? null,
+    maxPrice: filters.maxPrice ?? null,
+    tags: filters.tags ?? [],
+    limit: filters.limit ?? 24,
+    offset: filters.offset ?? 0,
+  });
+}
+
+function parseSearchFiltersCacheKey(cacheKey: string): ProductSearchFilters {
+  const parsed = JSON.parse(cacheKey) as {
+    term: string;
+    sort: ProductSort;
+    minPrice: number | null;
+    maxPrice: number | null;
+    tags: string[];
+    limit: number;
+    offset: number;
+  };
+
+  return {
+    term: parsed.term || undefined,
+    sort: parsed.sort,
+    minPrice: parsed.minPrice ?? undefined,
+    maxPrice: parsed.maxPrice ?? undefined,
+    tags: parsed.tags.length ? parsed.tags : undefined,
+    limit: parsed.limit,
+    offset: parsed.offset,
+  };
 }
 
 function parseSearchParams(searchParams: {

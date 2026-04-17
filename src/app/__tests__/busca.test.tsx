@@ -83,6 +83,28 @@ describe("BuscaPage", () => {
     expect(screen.getByText("1 produto encontrado")).toBeInTheDocument();
   });
 
+  it("reuses cached search result for same query parameters", async () => {
+    searchMock.mockResolvedValue([
+      {
+        id: "prod_1",
+        name: "Vestido de Linho",
+        slug: "vestido-linho",
+        categorySlug: "vestidos",
+        price: 320,
+        imageUrl: "https://example.com/a.jpg",
+      },
+    ]);
+
+    await BuscaPage({
+      searchParams: Promise.resolve({ q: "vestido-cache-test", sort: "menor-preco" }),
+    });
+    await BuscaPage({
+      searchParams: Promise.resolve({ q: "vestido-cache-test", sort: "menor-preco" }),
+    });
+
+    expect(searchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("generates noindex metadata for search page", async () => {
     const metadata = await generateMetadata({
       searchParams: Promise.resolve({ q: "vestido de festa" }),

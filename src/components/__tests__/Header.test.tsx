@@ -76,6 +76,17 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Contato" })).toBeInTheDocument();
   });
 
+  it("renders search input right after logo in header flow", () => {
+    render(<Header />);
+
+    const logo = screen.getByAltText("Luratha");
+    const searchInput = screen.getByTestId("search-input");
+
+    expect(
+      logo.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
   it("renders the cart link pointing to /carrinho", () => {
     render(<Header />);
     const cartLink = screen.getByRole("link", { name: "Carrinho" });

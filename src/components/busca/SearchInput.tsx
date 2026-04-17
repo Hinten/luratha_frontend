@@ -37,19 +37,30 @@ export default function SearchInput() {
       <label htmlFor="header-search-input" className={styles.srOnly}>
         Buscar produtos
       </label>
-      <input
-        id="header-search-input"
-        name="q"
-        type="search"
-        value={term}
-        onChange={(event) => setTerm(event.currentTarget.value)}
-        placeholder={placeholder}
-        className={styles.input}
-        aria-label="Buscar produtos"
-      />
-      <button type="submit" className={styles.button} aria-label="Executar busca">
-        <span aria-hidden="true">🔍</span>
-      </button>
+      <div className={styles.inputShell}>
+        <input
+          id="header-search-input"
+          name="q"
+          type="search"
+          value={term}
+          onChange={(event) => setTerm(event.currentTarget.value)}
+          placeholder={placeholder}
+          className={styles.input}
+          aria-label="Buscar produtos"
+        />
+        <button type="submit" className={styles.button} aria-label="Executar busca">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={styles.icon}
+          >
+            <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M16 16L20 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
     </form>
   );
 }
