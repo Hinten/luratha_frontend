@@ -9,7 +9,7 @@ import { useCart } from "@/src/contexts/CartContext";
 import { useAuth } from "@/src/contexts/AuthContext";
 
 const navItems = [
-  { href: "/colecao", label: "Coleção" },
+  { href: "/categoria", label: "Categorias" },
   { href: "/sobre", label: "Sobre" },
   { href: "/contato", label: "Contato" },
 ];
