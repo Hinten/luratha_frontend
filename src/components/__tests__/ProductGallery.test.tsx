@@ -36,7 +36,7 @@ describe("ProductGallery", () => {
 
   it("renders the main image with the correct src", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    const mainImg = screen.getAllByRole("img")[0];
+    const mainImg = screen.getByAltText("Vestido Bordado — imagem 1");
     expect(mainImg).toHaveAttribute("src", images[0].defaultUrl);
   });
 
@@ -55,14 +55,13 @@ describe("ProductGallery", () => {
 
   it("does NOT render thumbnails when there is only one image", () => {
     render(<ProductGallery images={[images[0]]} productName="Vestido Bordado" />);
-    expect(screen.getByRole("button", { name: "Ampliar imagem" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ver imagem 1" })).not.toBeInTheDocument();
   });
 
   it("changes the main image when a thumbnail is clicked", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
     fireEvent.click(screen.getByRole("button", { name: "Ver imagem 2" }));
-    const mainImg = screen.getAllByRole("img")[0];
+    const mainImg = screen.getByAltText("Vestido Bordado — imagem 2");
     expect(mainImg).toHaveAttribute("src", images[1].defaultUrl);
   });
 
@@ -85,9 +84,30 @@ describe("ProductGallery", () => {
 
   it("opens and closes zoom overlay when zoom image exists", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    fireEvent.click(screen.getByRole("button", { name: "Ampliar imagem" }));
+    fireEvent.pointerDown(screen.getByAltText("Vestido Bordado — imagem 1"), { clientX: 120, clientY: 100 });
+    fireEvent.pointerUp(screen.getByAltText("Vestido Bordado — imagem 1"), { clientX: 120, clientY: 100 });
     expect(screen.getByRole("dialog", { name: "Imagem ampliada" })).toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("hidden");
     fireEvent.click(screen.getByRole("button", { name: "Fechar zoom" }));
     expect(screen.queryByRole("dialog", { name: "Imagem ampliada" })).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("changes the active image on desktop hover over thumbnails", () => {
+    render(<ProductGallery images={images} productName="Vestido Bordado" />);
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Ver imagem 3" }));
+    const mainImg = screen.getByAltText("Vestido Bordado — imagem 3");
+    expect(mainImg).toHaveAttribute("src", images[2].defaultUrl);
+  });
+
+  it("changes the active image by dragging the main image", () => {
+    render(<ProductGallery images={images} productName="Vestido Bordado" />);
+    const mainImage = screen.getByAltText("Vestido Bordado — imagem 1");
+
+    fireEvent.pointerDown(mainImage, { clientX: 220, clientY: 100 });
+    fireEvent.pointerMove(mainImage, { clientX: 120, clientY: 102 });
+    fireEvent.pointerUp(mainImage, { clientX: 120, clientY: 102 });
+
+    expect(screen.getByAltText("Vestido Bordado — imagem 2")).toHaveAttribute("src", images[1].defaultUrl);
   });
 });
