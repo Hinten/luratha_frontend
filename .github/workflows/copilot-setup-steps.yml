@@ -55,7 +55,6 @@ jobs:
         run: |
           firebase setup:emulators:firestore
           firebase setup:emulators:storage
-          firebase setup:emulators:auth
       
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
