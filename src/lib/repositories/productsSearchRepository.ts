@@ -254,69 +254,93 @@ function normalizeSearchProduct(
       id: record.id ?? fallbackId,
     });
   } catch (validationError) {
-    console.warn("[productsSearchRepository] invalid search record, applying fallback mapping", {
-      fallbackId,
-      error: validationError,
-    });
-    const fallbackSku = record.sku?.trim() || DEFAULT_PRODUCT_SKU;
-    const fallbackTitle = record.title?.trim() || DEFAULT_PRODUCT_TITLE;
-    const now = new Date().toISOString();
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[productsSearchRepository] invalid search record, applying fallback mapping", {
+        fallbackId,
+        error: validationError,
+      });
+    }
 
-    return validateProduct({
-      id: record.id ?? fallbackId,
-      slug: record.slug ?? buildProductSlug(fallbackTitle, fallbackSku),
-      title: fallbackTitle,
-      shortTitle: null,
-      description: record.description ?? "",
-      vectorEmbedding: null,
-      searchEmbedding: null,
-      sku: fallbackSku,
-      gtin: null,
-      mpn: null,
-      status: record.status ?? "active",
-      isPurchasable: true,
-      brandName: record.brandName ?? "Luratha",
-      categoryId: record.categoryId ?? UNKNOWN_CATEGORY_ID,
-      googleProductCategoryId: null,
-      tags: [],
-      materialTags: [],
-      seasonalTags: [],
-      price: record.price ?? {
-        price: 0,
-        salePrice: null,
-        priceMin: null,
-        priceMax: null,
-        currency: "BRL",
-        startDate: null,
-        endDate: null,
-      },
-      salePrice: null,
-      condition: "new",
-      adult: false,
-      isBundle: false,
-      multipack: 1,
-      age_group: null,
-      gender: null,
-      color: null,
-      size: null,
-      sizeType: null,
-      sizeSystem: null,
-      material: [],
-      pattern: [],
-      dimensions: null,
-      productDetail: null,
-      productHighlight: null,
-      photoAssets: [],
-      lifeStylePhotos: [],
-      videoUrls: [],
-      ratingAverage: record.ratingAverage ?? null,
-      reviewCount: record.reviewCount ?? null,
-      totalStock: 0,
-      variants: null,
-      createdAt: record.createdAt ?? now,
-      updatedAt: record.updatedAt ?? now,
-    });
+    return createFallbackSearchProduct(record, fallbackId);
   }
+}
+
+function createFallbackSearchProduct(
+  record: Partial<FirestoreProduct> & {
+    id?: string;
+    slug?: string | null;
+    title?: string;
+    categoryId?: string;
+    price?: FirestoreProduct["price"];
+    ratingAverage?: number | null;
+    reviewCount?: number | null;
+    sku?: string;
+    brandName?: string;
+    description?: string;
+    status?: FirestoreProduct["status"];
+    createdAt?: string;
+    updatedAt?: string;
+  },
+  fallbackId: string,
+): FirestoreProduct {
+  const fallbackSku = record.sku?.trim() || DEFAULT_PRODUCT_SKU;
+  const fallbackTitle = record.title?.trim() || DEFAULT_PRODUCT_TITLE;
+  const now = new Date().toISOString();
+
+  return validateProduct({
+    id: record.id ?? fallbackId,
+    slug: record.slug ?? buildProductSlug(fallbackTitle, fallbackSku),
+    title: fallbackTitle,
+    shortTitle: null,
+    description: record.description ?? "",
+    vectorEmbedding: null,
+    searchEmbedding: null,
+    sku: fallbackSku,
+    gtin: null,
+    mpn: null,
+    status: record.status ?? "active",
+    isPurchasable: true,
+    brandName: record.brandName ?? "Luratha",
+    categoryId: record.categoryId ?? UNKNOWN_CATEGORY_ID,
+    googleProductCategoryId: null,
+    tags: [],
+    materialTags: [],
+    seasonalTags: [],
+    price: record.price ?? {
+      price: 0,
+      salePrice: null,
+      priceMin: null,
+      priceMax: null,
+      currency: "BRL",
+      startDate: null,
+      endDate: null,
+    },
+    salePrice: null,
+    condition: "new",
+    adult: false,
+    isBundle: false,
+    multipack: 1,
+    age_group: null,
+    gender: null,
+    color: null,
+    size: null,
+    sizeType: null,
+    sizeSystem: null,
+    material: [],
+    pattern: [],
+    dimensions: null,
+    productDetail: null,
+    productHighlight: null,
+    photoAssets: [],
+    lifeStylePhotos: [],
+    videoUrls: [],
+    ratingAverage: record.ratingAverage ?? null,
+    reviewCount: record.reviewCount ?? null,
+    totalStock: 0,
+    variants: null,
+    createdAt: record.createdAt ?? now,
+    updatedAt: record.updatedAt ?? now,
+  });
 }
 
 function normalizeSearchError(
