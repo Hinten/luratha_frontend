@@ -17,6 +17,21 @@ const { docStore, collectionMock } = vi.hoisted(() => {
   };
 });
 
+const { readdirMock, readFileMock, uploadProductImageMock } = vi.hoisted(() => ({
+  readdirMock: vi.fn(),
+  readFileMock: vi.fn(),
+  uploadProductImageMock: vi.fn(),
+}));
+
+vi.mock("node:fs/promises", () => ({
+  readdir: readdirMock,
+  readFile: readFileMock,
+  default: {
+    readdir: readdirMock,
+    readFile: readFileMock,
+  },
+}));
+
 vi.mock("@/src/lib/firebaseAdmin", () => ({
   adminDb: {
     collection: collectionMock,
@@ -52,6 +67,10 @@ vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
   ],
 }));
 
+vi.mock("@/src/lib/repositories/productImageUpload", () => ({
+  uploadProductImage: uploadProductImageMock,
+}));
+
 import { POST } from "@/src/app/api/dev/seed-mock-data/route";
 
 describe("POST /api/dev/seed-mock-data", () => {
@@ -60,6 +79,19 @@ describe("POST /api/dev/seed-mock-data", () => {
   beforeEach(() => {
     docStore.clear();
     collectionMock.mockClear();
+    readdirMock.mockReset();
+    readFileMock.mockReset();
+    uploadProductImageMock.mockReset();
+    readdirMock.mockResolvedValue([
+      { isFile: () => true, name: "IMG_9532.jpg" },
+      { isFile: () => true, name: "IMG_9481.jpg" },
+    ]);
+    readFileMock.mockResolvedValue(Buffer.from("image-binary"));
+    uploadProductImageMock.mockResolvedValue({
+      productId: "prod_1",
+      imageAsset: {},
+      photoAssets: [],
+    });
   });
 
   afterEach(() => {
@@ -74,6 +106,7 @@ describe("POST /api/dev/seed-mock-data", () => {
 
     expect(response.status).toBe(404);
     expect(payload.message).toBe("Not found");
+    expect(uploadProductImageMock).not.toHaveBeenCalled();
   });
 
   it("seeds categories and products in development mode", async () => {
@@ -85,5 +118,48 @@ describe("POST /api/dev/seed-mock-data", () => {
     expect(response.status).toBe(200);
     expect(payload.categoriesCreated).toBe(2);
     expect(payload.productsCreated).toBe(1);
+    expect(payload.uploadedImages).toBe(1);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(1);
+    expect(uploadProductImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId: "prod_1",
+        fileBuffer: expect.any(Buffer),
+        fileName: "IMG_9481.jpg",
+        alt: "Produto 1 — imagem seed",
+      }),
+    );
+  });
+
+  it("ignores non-image files and directories when seeding uploads", async () => {
+    process.env.NODE_ENV = "development";
+    readdirMock.mockResolvedValueOnce([
+      { isFile: () => false, name: "nested-folder" },
+      { isFile: () => true, name: "README.md" },
+      { isFile: () => true, name: "IMG_34562.png" },
+    ]);
+
+    const response = await POST();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.uploadedImages).toBe(1);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(1);
+    expect(uploadProductImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: "IMG_34562.png" }),
+    );
+  });
+
+  it("returns success without uploads when test-images directory does not exist", async () => {
+    process.env.NODE_ENV = "development";
+    const enoentError = Object.assign(new Error("missing"), { code: "ENOENT" });
+    readdirMock.mockRejectedValueOnce(enoentError);
+
+    const response = await POST();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.productsCreated).toBe(1);
+    expect(payload.uploadedImages).toBe(0);
+    expect(uploadProductImageMock).not.toHaveBeenCalled();
   });
 });
