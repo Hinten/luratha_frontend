@@ -4,6 +4,7 @@ import {
   execute,
   field,
   or,
+  type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
 import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
@@ -103,7 +104,7 @@ export function createProductsSearchRepository(
       pipelineFilters.push(field("tags").arrayContainsAny(filters.tags.slice(0, 10)));
     }
 
-    pipeline = pipeline.where(and(...pipelineFilters));
+    pipeline = pipeline.where(combineWithAnd(pipelineFilters));
 
     const term = (filters.term ?? "").trim();
     if (term) {
@@ -167,7 +168,7 @@ export function createProductsSearchRepository(
     }
 
     pipeline = pipeline
-      .where(and(...pipelineFilters))
+      .where(combineWithAnd(pipelineFilters))
       .findNearest({
         field: "searchEmbedding",
         vectorValue: embedding,
@@ -335,4 +336,15 @@ function normalizeSearchError(
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function combineWithAnd(conditions: BooleanExpression[]): BooleanExpression {
+  if (conditions.length === 0) {
+    throw new Error("At least one pipeline condition is required.");
+  }
+  if (conditions.length === 1) {
+    return conditions[0];
+  }
+  const [first, second, ...rest] = conditions;
+  return and(first, second, ...rest);
 }

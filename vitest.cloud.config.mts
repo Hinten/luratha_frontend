@@ -9,7 +9,7 @@ export default defineConfig({
     globalSetup: ["./src/test/cloudTests.globalSetup.ts"],
     include: ["src/test/cloud/**/*.test.ts"],
     testTimeout: 30_000,
-    retries: 1,
+    retry: 1,
     env: {
       CLOUD_TEST_PROJECT_ID: process.env.CLOUD_TEST_PROJECT_ID ?? "luratha-test",
       GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",

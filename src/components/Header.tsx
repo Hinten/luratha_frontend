@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 import DevSeedButton from "@/src/components/home/DevSeedButton";
@@ -47,7 +47,9 @@ export default function Header() {
         {/* Actions */}
         <div className={styles.actions}>
           <div className={styles.searchArea}>
-            <SearchInput />
+            <Suspense fallback={null}>
+              <SearchInput />
+            </Suspense>
           </div>
           <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
 
