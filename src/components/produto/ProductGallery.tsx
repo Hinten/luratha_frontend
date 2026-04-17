@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "./ProductGallery.module.css";
+import ProductImageZoom from "./ProductImageZoom";
 import type { ProductGalleryImage } from "@/src/lib/productImages";
 import { productGalleryImageSizes } from "@/src/lib/productImages";
 
@@ -20,12 +21,12 @@ export default function ProductGallery({
   return (
     <div className={styles.gallery}>
       <div className={styles.mainWrapper}>
-        <img
+        <ProductImageZoom
           src={activeImage.defaultUrl}
           srcSet={activeImage.srcSet}
           sizes={productGalleryImageSizes}
           alt={activeImage.alt || `${productName} — imagem ${activeIndex + 1}`}
-          className={styles.mainImage}
+          zoomUrl={activeImage.zoomUrl}
         />
       </div>
       {images.length > 1 && (
@@ -47,17 +48,6 @@ export default function ProductGallery({
             </button>
           ))}
         </div>
-      )}
-      {activeImage.links.length > 0 && (
-        <ul role="list" aria-label="Links da imagem">
-          {activeImage.links.map((link) => (
-            <li key={`${activeImage.id}-${link.label}`}>
-              <a href={link.url} target="_blank" rel="noreferrer">
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

@@ -51,20 +51,34 @@ describeWhenReady("POST /api/images/upload (emulator)", () => {
     expect(payload.imageAsset.resolutions.tablet.storagePath).toContain("/tablet.webp");
     expect(payload.imageAsset.resolutions.desktop.storagePath).toContain("/desktop.webp");
     expect(payload.imageAsset.resolutions.desktop.temporaryUrl).toBeTruthy();
+    if (payload.imageAsset.resolutions.zoom) {
+      expect(payload.imageAsset.resolutions.zoom.storagePath).toContain("/zoom.webp");
+    }
 
     const updatedDoc = await adminDb.collection(firestoreCollections.products).doc(testProductId).get();
     const parsedProduct = validateProduct(updatedDoc.data());
 
     expect(parsedProduct.photoAssets).toHaveLength(1);
     expect(parsedProduct.photoAssets[0].resolutions.desktop.downloadUrl).toBeTruthy();
+    if (parsedProduct.photoAssets[0].resolutions.zoom) {
+      expect(parsedProduct.photoAssets[0].resolutions.zoom.downloadUrl).toBeTruthy();
+    }
 
     const [mobileExists] = await adminBucket.file(payload.imageAsset.resolutions.mobile.storagePath).exists();
     const [tabletExists] = await adminBucket.file(payload.imageAsset.resolutions.tablet.storagePath).exists();
     const [desktopExists] = await adminBucket.file(payload.imageAsset.resolutions.desktop.storagePath).exists();
+    const zoomExists = payload.imageAsset.resolutions.zoom
+      ? (await adminBucket.file(payload.imageAsset.resolutions.zoom.storagePath).exists())[0]
+      : null;
 
     expect(mobileExists).toBe(true);
     expect(tabletExists).toBe(true);
     expect(desktopExists).toBe(true);
+    if (payload.imageAsset.resolutions.zoom) {
+      expect(zoomExists).toBe(true);
+    } else {
+      expect(zoomExists).toBeNull();
+    }
   });
 });
 

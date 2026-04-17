@@ -31,6 +31,14 @@ const productWithAssets = validateProduct({
           temporaryUrl: "https://example.com/temp-card.webp",
           format: "webp",
         },
+        zoom: {
+          width: 2000,
+          height: 2500,
+          storagePath: "products/prod_assets_1/asset_1/zoom.webp",
+          downloadUrl: "https://example.com/zoom.webp",
+          temporaryUrl: "https://example.com/temp-zoom.webp",
+          format: "webp",
+        },
         mobile: {
           width: 480,
           height: 600,
@@ -77,7 +85,7 @@ describe("productImages", () => {
   it("builds responsive gallery data from product assets", () => {
     const gallery = getProductGalleryImages(productWithAssets, "fallback");
     expect(gallery).toHaveLength(1);
-    expect(gallery[0].links).toHaveLength(3);
+    expect(gallery[0].zoomUrl).toBe("https://example.com/temp-zoom.webp");
     expect(gallery[0].srcSet).toContain("480w");
   });
 });

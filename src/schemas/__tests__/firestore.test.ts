@@ -59,6 +59,14 @@ const validProduct = {
           temporaryUrl: null,
           format: "webp" as const,
         },
+        zoom: {
+          width: 2000,
+          height: 2667,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/zoom.webp",
+          downloadUrl: "https://example.com/zoom.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
         mobile: {
           width: 480,
           height: 640,

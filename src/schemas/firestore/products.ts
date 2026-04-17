@@ -106,6 +106,7 @@ export const productImageAssetSchema = z.object({
   alt: nonEmptyStringSchema.max(300).nullable().default(null),
   resolutions: z.object({
     card: productImageResolutionSchema.optional(),
+    zoom: productImageResolutionSchema.optional(),
     mobile: productImageResolutionSchema,
     tablet: productImageResolutionSchema,
     desktop: productImageResolutionSchema,

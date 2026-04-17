@@ -9,11 +9,7 @@ const images = [
     alt: "Vestido Bordado — imagem 1",
     srcSet:
       "https://placehold.co/480x600/EDE4D9/3A2F2A?text=Imagem+1+Mobile 480w, https://placehold.co/768x960/EDE4D9/3A2F2A?text=Imagem+1+Tablet 768w, https://placehold.co/1200x1500/EDE4D9/3A2F2A?text=Imagem+1 1200w",
-    links: [
-      { label: "Mobile", url: "https://placehold.co/480x600/EDE4D9/3A2F2A?text=Imagem+1+Mobile" },
-      { label: "Tablet", url: "https://placehold.co/768x960/EDE4D9/3A2F2A?text=Imagem+1+Tablet" },
-      { label: "Desktop", url: "https://placehold.co/1200x1500/EDE4D9/3A2F2A?text=Imagem+1" },
-    ],
+    zoomUrl: "https://placehold.co/2000x2500/EDE4D9/3A2F2A?text=Imagem+1+Zoom",
   },
   {
     id: "img-2",
@@ -21,11 +17,7 @@ const images = [
     alt: "Vestido Bordado — imagem 2",
     srcSet:
       "https://placehold.co/480x600/D9D2C7/3A2F2A?text=Imagem+2+Mobile 480w, https://placehold.co/768x960/D9D2C7/3A2F2A?text=Imagem+2+Tablet 768w, https://placehold.co/1200x1500/D9D2C7/3A2F2A?text=Imagem+2 1200w",
-    links: [
-      { label: "Mobile", url: "https://placehold.co/480x600/D9D2C7/3A2F2A?text=Imagem+2+Mobile" },
-      { label: "Tablet", url: "https://placehold.co/768x960/D9D2C7/3A2F2A?text=Imagem+2+Tablet" },
-      { label: "Desktop", url: "https://placehold.co/1200x1500/D9D2C7/3A2F2A?text=Imagem+2" },
-    ],
+    zoomUrl: null,
   },
   {
     id: "img-3",
@@ -33,11 +25,7 @@ const images = [
     alt: "Vestido Bordado — imagem 3",
     srcSet:
       "https://placehold.co/480x600/E8B9C9/3A2F2A?text=Imagem+3+Mobile 480w, https://placehold.co/768x960/E8B9C9/3A2F2A?text=Imagem+3+Tablet 768w, https://placehold.co/1200x1500/E8B9C9/3A2F2A?text=Imagem+3 1200w",
-    links: [
-      { label: "Mobile", url: "https://placehold.co/480x600/E8B9C9/3A2F2A?text=Imagem+3+Mobile" },
-      { label: "Tablet", url: "https://placehold.co/768x960/E8B9C9/3A2F2A?text=Imagem+3+Tablet" },
-      { label: "Desktop", url: "https://placehold.co/1200x1500/E8B9C9/3A2F2A?text=Imagem+3" },
-    ],
+    zoomUrl: null,
   },
 ];
 
@@ -54,52 +42,52 @@ describe("ProductGallery", () => {
 
   it("renders the main image with a descriptive alt text", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    expect(
-      screen.getByAltText("Vestido Bordado — imagem 1")
-    ).toBeInTheDocument();
+    expect(screen.getByAltText("Vestido Bordado — imagem 1")).toBeInTheDocument();
   });
 
   it("renders thumbnail buttons when there are multiple images", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    const thumbBtns = screen.getAllByRole("button");
+    const thumbBtns = images.map((_, index) =>
+      screen.getByRole("button", { name: `Ver imagem ${index + 1}` }),
+    );
     expect(thumbBtns).toHaveLength(images.length);
   });
 
   it("does NOT render thumbnails when there is only one image", () => {
-    render(
-      <ProductGallery
-        images={[images[0]]}
-        productName="Vestido Bordado"
-      />
-    );
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    render(<ProductGallery images={[images[0]]} productName="Vestido Bordado" />);
+    expect(screen.getByRole("button", { name: "Ampliar imagem" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver imagem 1" })).not.toBeInTheDocument();
   });
 
   it("changes the main image when a thumbnail is clicked", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    const thumbBtns = screen.getAllByRole("button");
-    fireEvent.click(thumbBtns[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Ver imagem 2" }));
     const mainImg = screen.getAllByRole("img")[0];
     expect(mainImg).toHaveAttribute("src", images[1].defaultUrl);
   });
 
   it("the first thumbnail is marked as active (aria-pressed=true) by default", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    const thumbBtns = screen.getAllByRole("button");
-    expect(thumbBtns[0]).toHaveAttribute("aria-pressed", "true");
-    expect(thumbBtns[1]).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Ver imagem 1" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Ver imagem 2" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("renders thumbnail list with aria-label", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    expect(
-      screen.getByRole("list", { name: "Miniaturas do produto" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Miniaturas do produto" })).toBeInTheDocument();
   });
 
-  it("renders the links for active image resolutions", () => {
+  it("does not render resolution links", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    expect(screen.getByRole("list", { name: "Links da imagem" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Mobile" })).toHaveAttribute("href", images[0].links[0].url);
+    expect(screen.queryByRole("list", { name: "Links da imagem" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mobile" })).not.toBeInTheDocument();
+  });
+
+  it("opens and closes zoom overlay when zoom image exists", () => {
+    render(<ProductGallery images={images} productName="Vestido Bordado" />);
+    fireEvent.click(screen.getByRole("button", { name: "Ampliar imagem" }));
+    expect(screen.getByRole("dialog", { name: "Imagem ampliada" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fechar zoom" }));
+    expect(screen.queryByRole("dialog", { name: "Imagem ampliada" })).not.toBeInTheDocument();
   });
 });

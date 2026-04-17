@@ -5,7 +5,7 @@ export type ProductGalleryImage = {
   defaultUrl: string;
   alt: string;
   srcSet: string;
-  links: Array<{ label: string; url: string }>;
+  zoomUrl: string | null;
 };
 
 const RESPONSIVE_SIZES = "(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px";
@@ -41,7 +41,7 @@ export function getProductGalleryImages(product: Product, fallbackUrl: string): 
       defaultUrl: fallbackUrl,
       alt: `${product.title} — imagem 1`,
       srcSet: `${fallbackUrl} 1200w`,
-      links: [{ label: "Desktop", url: fallbackUrl }],
+      zoomUrl: null,
     }];
   }
 
@@ -49,17 +49,16 @@ export function getProductGalleryImages(product: Product, fallbackUrl: string): 
     const mobile = asset.resolutions.mobile.temporaryUrl ?? asset.resolutions.mobile.downloadUrl;
     const tablet = asset.resolutions.tablet.temporaryUrl ?? asset.resolutions.tablet.downloadUrl;
     const desktop = asset.resolutions.desktop.temporaryUrl ?? asset.resolutions.desktop.downloadUrl;
+    const zoom = asset.resolutions.zoom
+      ? asset.resolutions.zoom.temporaryUrl ?? asset.resolutions.zoom.downloadUrl
+      : null;
 
     return {
       id: asset.id,
       defaultUrl: desktop,
       alt: asset.alt ?? `${product.title} — imagem ${index + 1}`,
       srcSet: `${mobile} ${asset.resolutions.mobile.width}w, ${tablet} ${asset.resolutions.tablet.width}w, ${desktop} ${asset.resolutions.desktop.width}w`,
-      links: [
-        { label: "Mobile", url: mobile },
-        { label: "Tablet", url: tablet },
-        { label: "Desktop", url: desktop },
-      ],
+      zoomUrl: zoom,
     };
   });
 }

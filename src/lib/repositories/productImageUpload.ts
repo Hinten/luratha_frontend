@@ -18,6 +18,10 @@ const IMAGE_VARIANTS: ImageVariantDefinition[] = [
 ];
 
 const WEBP_QUALITY = 82;
+const ZOOM_WEBP_QUALITY = 88;
+const ZOOM_WIDTH = 2000;
+const ZOOM_MIN_WIDTH = 1500;
+const ZOOM_MIN_HEIGHT = 1500;
 const TEMP_LINK_EXPIRATION_MS = 15 * 60 * 1_000;
 
 type ProductImageResolution = {
@@ -27,6 +31,10 @@ type ProductImageResolution = {
   downloadUrl: string;
   temporaryUrl: string | null;
   format: "webp";
+};
+
+type ProductImageResolutionsMap = Record<ImageVariantName, ProductImageResolution> & {
+  zoom?: ProductImageResolution;
 };
 
 type UploadProductImageInput = {
@@ -75,6 +83,7 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
     alt: input.alt?.trim() || null,
     resolutions: {
       card: uploadedVariants.card,
+      ...(uploadedVariants.zoom ? { zoom: uploadedVariants.zoom } : {}),
       mobile: uploadedVariants.mobile,
       tablet: uploadedVariants.tablet,
       desktop: uploadedVariants.desktop,
@@ -105,7 +114,7 @@ async function createAndUploadVariants(
   productId: string,
   imageId: string,
   fileBuffer: Buffer,
-): Promise<Record<ImageVariantName, ProductImageResolution>> {
+): Promise<ProductImageResolutionsMap> {
   const sourceMetadata = await sharp(fileBuffer).metadata();
   const sourceAspectRatio =
     sourceMetadata.width && sourceMetadata.height ? sourceMetadata.height / sourceMetadata.width : null;
@@ -151,13 +160,64 @@ async function createAndUploadVariants(
     }),
   );
 
-  return uploads.reduce(
+  const requiredVariants = uploads.reduce(
     (accumulator, current) => {
       accumulator[current.name] = current.resolution;
       return accumulator;
     },
     {} as Record<ImageVariantName, ProductImageResolution>,
   );
+
+  const zoomResolution = await createZoomVariant(productId, imageId, fileBuffer, sourceMetadata);
+  return zoomResolution ? { ...requiredVariants, zoom: zoomResolution } : requiredVariants;
+}
+
+async function createZoomVariant(
+  productId: string,
+  imageId: string,
+  fileBuffer: Buffer,
+  sourceMetadata: sharp.Metadata,
+): Promise<ProductImageResolution | undefined> {
+  const sourceWidth = sourceMetadata.width ?? 0;
+  const sourceHeight = sourceMetadata.height ?? 0;
+
+  if (sourceWidth < ZOOM_MIN_WIDTH || sourceHeight < ZOOM_MIN_HEIGHT) {
+    return undefined;
+  }
+
+  const transformed = await sharp(fileBuffer)
+    .rotate()
+    .resize({ width: ZOOM_WIDTH, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: ZOOM_WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+
+  const storagePath = `products/${productId}/${imageId}/zoom.webp`;
+  const downloadUrlToken = randomUUID();
+  const fileRef = adminBucket.file(storagePath);
+
+  await fileRef.save(transformed.data, {
+    contentType: "image/webp",
+    metadata: {
+      cacheControl: "public, max-age=31536000, immutable",
+      metadata: {
+        firebaseStorageDownloadTokens: downloadUrlToken,
+      },
+    },
+  });
+
+  const sourceAspectRatio = sourceWidth > 0 ? sourceHeight / sourceWidth : null;
+  const outputWidth = transformed.info.width ?? Math.min(ZOOM_WIDTH, sourceWidth);
+  const outputHeight = transformed.info.height
+    ?? (sourceAspectRatio ? Math.max(1, Math.round(outputWidth * sourceAspectRatio)) : outputWidth);
+
+  return {
+    width: outputWidth,
+    height: outputHeight,
+    storagePath,
+    downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
+    temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
+    format: "webp",
+  };
 }
 
 async function buildTemporaryUrl(

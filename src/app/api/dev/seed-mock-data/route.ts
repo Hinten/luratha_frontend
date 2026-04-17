@@ -9,6 +9,7 @@ import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const MIN_IMAGES_PER_PRODUCT = 3;
 
 export async function POST() {
   if (process.env.NODE_ENV !== "development") {
@@ -82,17 +83,19 @@ async function seedProductImages(products: Product[], createdProductIds: string[
       continue;
     }
 
-    const imagePath = imagePaths[index % imagePaths.length];
-    const imageBuffer = await readFile(imagePath);
+    for (let imageOffset = 0; imageOffset < MIN_IMAGES_PER_PRODUCT; imageOffset += 1) {
+      const imagePath = imagePaths[(index + imageOffset) % imagePaths.length];
+      const imageBuffer = await readFile(imagePath);
 
-    await uploadProductImage({
-      productId,
-      fileBuffer: imageBuffer,
-      fileName: path.basename(imagePath),
-      alt: `${product.title} — imagem seed`,
-    });
+      await uploadProductImage({
+        productId,
+        fileBuffer: imageBuffer,
+        fileName: path.basename(imagePath),
+        alt: `${product.title} — imagem seed ${imageOffset + 1}`,
+      });
 
-    uploadedImages += 1;
+      uploadedImages += 1;
+    }
   }
 
   return uploadedImages;

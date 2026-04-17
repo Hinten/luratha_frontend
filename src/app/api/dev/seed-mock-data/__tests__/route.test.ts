@@ -118,14 +118,14 @@ describe("POST /api/dev/seed-mock-data", () => {
     expect(response.status).toBe(200);
     expect(payload.categoriesCreated).toBe(2);
     expect(payload.productsCreated).toBe(1);
-    expect(payload.uploadedImages).toBe(1);
-    expect(uploadProductImageMock).toHaveBeenCalledTimes(1);
+    expect(payload.uploadedImages).toBe(3);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(3);
     expect(uploadProductImageMock).toHaveBeenCalledWith(
       expect.objectContaining({
         productId: "prod_1",
         fileBuffer: expect.any(Buffer),
         fileName: "IMG_9481.jpg",
-        alt: "Produto 1 — imagem seed",
+        alt: "Produto 1 — imagem seed 1",
       }),
     );
   });
@@ -142,8 +142,8 @@ describe("POST /api/dev/seed-mock-data", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload.uploadedImages).toBe(1);
-    expect(uploadProductImageMock).toHaveBeenCalledTimes(1);
+    expect(payload.uploadedImages).toBe(3);
+    expect(uploadProductImageMock).toHaveBeenCalledTimes(3);
     expect(uploadProductImageMock).toHaveBeenCalledWith(
       expect.objectContaining({ fileName: "IMG_34562.png" }),
     );
