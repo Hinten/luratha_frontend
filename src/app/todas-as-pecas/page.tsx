@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/lib/types";
+import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
+import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 
 export const metadata: Metadata = {
   title: "Todas as Peças",
@@ -60,20 +60,24 @@ interface PageProps {
   searchParams: Promise<{ sort?: string }>;
 }
 
-function sortProducts(products: Product[], sort?: string): Product[] {
+function sortProducts(products: FirestoreProduct[], sort?: string): FirestoreProduct[] {
   const sorted = [...products];
   switch (sort) {
     case "menor-preco":
-      return sorted.sort((a, b) => a.price - b.price);
+      return sorted.sort((a, b) => getCurrentPrice(a) - getCurrentPrice(b));
     case "maior-preco":
-      return sorted.sort((a, b) => b.price - a.price);
+      return sorted.sort((a, b) => getCurrentPrice(b) - getCurrentPrice(a));
     case "maior-desconto":
       return sorted.sort((a, b) => {
-        const discountA = a.originalPrice
-          ? (a.originalPrice - a.price) / a.originalPrice
+        const originalPriceA = getOriginalPrice(a);
+        const currentPriceA = getCurrentPrice(a);
+        const discountA = originalPriceA
+          ? (originalPriceA - currentPriceA) / originalPriceA
           : 0;
-        const discountB = b.originalPrice
-          ? (b.originalPrice - b.price) / b.originalPrice
+        const originalPriceB = getOriginalPrice(b);
+        const currentPriceB = getCurrentPrice(b);
+        const discountB = originalPriceB
+          ? (originalPriceB - currentPriceB) / originalPriceB
           : 0;
         return discountB - discountA;
       });
@@ -84,7 +88,7 @@ function sortProducts(products: Product[], sort?: string): Product[] {
 
 export default async function TodasAsPecasPage({ searchParams }: PageProps) {
   const { sort } = await searchParams;
-  const products = sortProducts(mockProducts, sort);
+  const products = sortProducts(buildMockProducts(), sort);
 
   return (
     <div className="container-luratha section-padding">
@@ -115,4 +119,12 @@ export default async function TodasAsPecasPage({ searchParams }: PageProps) {
       <ProductGrid products={products} />
     </div>
   );
+}
+
+function getCurrentPrice(product: FirestoreProduct): number {
+  return product.price.salePrice ?? product.price.price;
+}
+
+function getOriginalPrice(product: FirestoreProduct): number | undefined {
+  return product.price.salePrice ? product.price.price : undefined;
 }

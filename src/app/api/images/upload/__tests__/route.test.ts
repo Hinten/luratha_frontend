@@ -41,6 +41,14 @@ describe("POST /api/images/upload", () => {
         id: "asset-1",
         alt: null,
         resolutions: {
+          card: {
+            width: 400,
+            height: 500,
+            storagePath: "products/prod_1/asset-1/card.webp",
+            downloadUrl: "https://example.com/card.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
           mobile: {
             width: 480,
             height: 600,
@@ -111,6 +119,14 @@ describe("POST /api/images/upload", () => {
         id: "asset-1",
         alt: null,
         resolutions: {
+          card: {
+            width: 400,
+            height: 500,
+            storagePath: "products/prod_1/asset-1/card.webp",
+            downloadUrl: "https://example.com/card.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
           mobile: {
             width: 480,
             height: 600,

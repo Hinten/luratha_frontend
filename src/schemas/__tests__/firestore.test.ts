@@ -51,6 +51,14 @@ const validProduct = {
       id: "asset_cream_linen_front",
       alt: "Vestido de linho cru visto de frente",
       resolutions: {
+        card: {
+          width: 400,
+          height: 533,
+          storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/card.webp",
+          downloadUrl: "https://example.com/card.webp",
+          temporaryUrl: null,
+          format: "webp" as const,
+        },
         mobile: {
           width: 480,
           height: 640,

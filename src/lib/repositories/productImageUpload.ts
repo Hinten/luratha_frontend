@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
 import { adminBucket, adminDb } from "@/src/lib/firebaseAdmin";
 
-type ImageVariantName = "mobile" | "tablet" | "desktop";
+type ImageVariantName = "card" | "mobile" | "tablet" | "desktop";
 
 type ImageVariantDefinition = {
   name: ImageVariantName;
@@ -11,6 +11,7 @@ type ImageVariantDefinition = {
 };
 
 const IMAGE_VARIANTS: ImageVariantDefinition[] = [
+  { name: "card", width: 400 },
   { name: "mobile", width: 480 },
   { name: "tablet", width: 768 },
   { name: "desktop", width: 1200 },
@@ -73,6 +74,7 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
     id: imageId,
     alt: input.alt?.trim() || null,
     resolutions: {
+      card: uploadedVariants.card,
       mobile: uploadedVariants.mobile,
       tablet: uploadedVariants.tablet,
       desktop: uploadedVariants.desktop,

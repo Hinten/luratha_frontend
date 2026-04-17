@@ -9,14 +9,29 @@ export type ProductGalleryImage = {
 };
 
 const RESPONSIVE_SIZES = "(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px";
+const PRODUCT_CARD_FALLBACK_SIZES = "(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw";
 
 export function getProductPrimaryImage(product: Product, fallbackUrl: string): string {
   const firstAsset = product.photoAssets[0];
   if (firstAsset) {
-    return firstAsset.resolutions.desktop.temporaryUrl ?? firstAsset.resolutions.desktop.downloadUrl;
+    return resolvePreferredUrl(firstAsset.resolutions.desktop.downloadUrl, firstAsset.resolutions.desktop.temporaryUrl);
   }
 
   return fallbackUrl;
+}
+
+export function getProductCardImage(product: Product, fallbackUrl: string): string {
+  const firstAsset = product.photoAssets[0];
+  if (!firstAsset) {
+    return fallbackUrl;
+  }
+
+  const cardResolution = firstAsset.resolutions.card;
+  if (cardResolution) {
+    return resolvePreferredUrl(cardResolution.downloadUrl, cardResolution.temporaryUrl);
+  }
+
+  return resolvePreferredUrl(firstAsset.resolutions.desktop.downloadUrl, firstAsset.resolutions.desktop.temporaryUrl);
 }
 
 export function getProductGalleryImages(product: Product, fallbackUrl: string): ProductGalleryImage[] {
@@ -50,3 +65,8 @@ export function getProductGalleryImages(product: Product, fallbackUrl: string): 
 }
 
 export const productGalleryImageSizes = RESPONSIVE_SIZES;
+export const productCardImageSizes = PRODUCT_CARD_FALLBACK_SIZES;
+
+function resolvePreferredUrl(downloadUrl: string, temporaryUrl: string | null): string {
+  return temporaryUrl ?? downloadUrl;
+}

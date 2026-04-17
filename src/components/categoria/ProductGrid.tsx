@@ -1,4 +1,4 @@
-import type { Product } from "@/src/lib/types";
+import type { Product } from "@/src/schemas/firestore";
 import styles from "./ProductGrid.module.css";
 import ProductCard from "../produto/ProductCard";
 
@@ -26,4 +26,3 @@ export default function ProductGrid({ products }: ProductGridProps) {
     </div>
   );
 }
-

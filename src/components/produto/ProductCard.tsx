@@ -1,20 +1,27 @@
 import Link from "next/link";
 import styles from "./ProductCard.module.css";
-import type { Product } from "@/src/lib/types";
+import type { Product } from "@/src/schemas/firestore";
+import { getProductCardImage, productCardImageSizes } from "@/src/lib/productImages";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { name, price, originalPrice, imageUrl, rating, reviewCount, installments, slug } =
-    product;
+  const name = product.title;
+  const currentPrice = product.price.salePrice ?? product.price.price;
+  const originalPrice = product.price.salePrice ? product.price.price : undefined;
+  const imageUrl = getProductCardImage(product, DEFAULT_PRODUCT_IMAGE_URL);
+  const rating = product.ratingAverage ?? undefined;
+  const reviewCount = product.reviewCount ?? undefined;
+  const slug = product.slug;
 
   const discountPct = originalPrice
-    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : 0;
 
   const cardBody = (
@@ -25,6 +32,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           alt={name}
           className={styles.image}
           loading="lazy"
+          sizes={productCardImageSizes}
         />
       </div>
       <div className={styles.info}>
@@ -41,12 +49,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {originalPrice !== undefined && (
             <span className={styles.originalPrice}>{formatBRL(originalPrice)}</span>
           )}
-          <span className={styles.currentPrice}>{formatBRL(price)}</span>
-          {installments && (
-            <span className={styles.installments}>
-              {installments.count}x {formatBRL(installments.value)}
-            </span>
-          )}
+          <span className={styles.currentPrice}>{formatBRL(currentPrice)}</span>
         </div>
       </div>
     </>

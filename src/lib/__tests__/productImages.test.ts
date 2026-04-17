@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateProduct } from "@/src/schemas/firestore";
-import { getProductGalleryImages, getProductPrimaryImage } from "@/src/lib/productImages";
+import { getProductCardImage, getProductGalleryImages, getProductPrimaryImage } from "@/src/lib/productImages";
 
 const now = "2026-04-16T00:00:00.000Z";
 
@@ -12,7 +12,7 @@ const productWithAssets = validateProduct({
   status: "active",
   isPurchasable: true,
   brandName: "Luratha",
-  category: [],
+  categoryId: "cat_vestidos",
   tags: [],
   materialTags: [],
   seasonalTags: [],
@@ -23,6 +23,14 @@ const productWithAssets = validateProduct({
       id: "asset_1",
       alt: "Alt principal",
       resolutions: {
+        card: {
+          width: 400,
+          height: 500,
+          storagePath: "products/prod_assets_1/asset_1/card.webp",
+          downloadUrl: "https://example.com/card.webp",
+          temporaryUrl: "https://example.com/temp-card.webp",
+          format: "webp",
+        },
         mobile: {
           width: 480,
           height: 600,
@@ -60,6 +68,10 @@ const productWithAssets = validateProduct({
 describe("productImages", () => {
   it("returns temporary URL as primary image when available", () => {
     expect(getProductPrimaryImage(productWithAssets, "fallback")).toBe("https://example.com/temp-desktop.webp");
+  });
+
+  it("returns card resolution URL for product cards when available", () => {
+    expect(getProductCardImage(productWithAssets, "fallback")).toBe("https://example.com/temp-card.webp");
   });
 
   it("builds responsive gallery data from product assets", () => {

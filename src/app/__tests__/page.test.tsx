@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Home from "@/src/app/page";
-import type { Category, Product } from "@/src/lib/types";
+import type { Category } from "@/src/lib/types";
+import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
 
 const getHomePageDataMock = vi.fn();
 
@@ -53,20 +54,35 @@ const mockCategories: Category[] = [
   },
 ];
 
-const baseProduct: Product = {
-  id: "prod_1",
-  name: "Produto 1",
-  slug: "produto-1",
-  categorySlug: "vestidos",
-  price: 199,
-  imageUrl: "https://placehold.co/600x700/EDE4D9/3A2F2A?text=Produto+1",
-};
+function createProduct(id: string, title: string, price: number, salePrice: number | null = null): Product {
+  const sku = `LURATHA_${id.replace(/[^A-Z0-9_]/g, "_").toUpperCase()}`;
+  return validateProduct({
+    id,
+    title,
+    slug: buildProductSlug(title, sku),
+    description: "Descrição",
+    sku,
+    status: "active",
+    isPurchasable: true,
+    brandName: "Luratha",
+    categoryId: "cat_vestidos",
+    tags: [],
+    materialTags: [],
+    seasonalTags: [],
+    price: { price, salePrice, priceMin: salePrice ?? price, priceMax: price, currency: "BRL" },
+    photoAssets: [],
+    lifeStylePhotos: [],
+    totalStock: 10,
+    createdAt: "2026-04-15T00:00:00.000Z",
+    updatedAt: "2026-04-15T00:00:00.000Z",
+  });
+}
 
 const mockProducts: Product[] = [
-  baseProduct,
-  { ...baseProduct, id: "prod_2", name: "Produto 2", slug: "produto-2", price: 219 },
-  { ...baseProduct, id: "prod_3", name: "Produto 3", slug: "produto-3", price: 239, originalPrice: 269 },
-  { ...baseProduct, id: "prod_4", name: "Produto 4", slug: "produto-4", price: 179, originalPrice: 209 },
+  createProduct("prod_1", "Produto 1", 199),
+  createProduct("prod_2", "Produto 2", 219),
+  createProduct("prod_3", "Produto 3", 269, 239),
+  createProduct("prod_4", "Produto 4", 209, 179),
 ];
 
 describe("Home page", () => {
@@ -75,7 +91,7 @@ describe("Home page", () => {
       categories: mockCategories,
       newArrivals: mockProducts,
       featured: mockProducts,
-      sale: mockProducts.filter((product) => product.originalPrice !== undefined),
+      sale: mockProducts.filter((product) => product.price.salePrice !== null),
     });
 
     const page = await Home();
