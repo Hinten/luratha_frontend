@@ -23,6 +23,7 @@ interface PageProps {
 
 const productsSearchRepository = createProductsSearchRepository(dbServer);
 const searchResponseCache = new Map<string, Promise<Product[]>>();
+const MAX_SEARCH_CACHE_ENTRIES = 200;
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { q } = await searchParams;
@@ -49,6 +50,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
 async function getCachedSearchResults(cacheKey: string): Promise<Product[]> {
   if (!searchResponseCache.has(cacheKey)) {
+    if (searchResponseCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+      const oldestKey = searchResponseCache.keys().next().value;
+      if (oldestKey) {
+        searchResponseCache.delete(oldestKey);
+      }
+    }
     searchResponseCache.set(
       cacheKey,
       productsSearchRepository.search(parseSearchFiltersCacheKey(cacheKey)),
