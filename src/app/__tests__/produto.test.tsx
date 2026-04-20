@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/firebaseServer", () => ({
+vi.mock("@/src/lib/firestore/firebaseServer", () => ({
   dbServer: {},
 }));
 

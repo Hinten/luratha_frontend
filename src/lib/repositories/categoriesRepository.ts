@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type FirestoreCategory, validateCategory } from "@/src/schemas/firestore";
-import { dbServer } from "../firebaseServer";
+import { dbServer } from "@/src/lib/firestore/firebaseServer";
 
 type CategoryRepositoryErrorCode = "validation" | "unknown";
 

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { dbServer } from "@/src/lib/firebaseServer";
+import { dbServer } from "@/src/lib/firestore/firebaseServer";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import {
   ProductRepositoryError,

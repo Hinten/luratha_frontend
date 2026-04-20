@@ -49,8 +49,6 @@ export async function ensureFirestoreEmulator(
   const pollIntervalMs = options.pollIntervalMs ?? 500;
 
   process.env.USE_EMULATOR = process.env.USE_EMULATOR ?? FIREBASE_EMULATOR_ENV.USE_EMULATOR;
-  process.env.NEXT_PUBLIC_USE_EMULATOR =
-    process.env.NEXT_PUBLIC_USE_EMULATOR ?? FIREBASE_EMULATOR_ENV.NEXT_PUBLIC_USE_EMULATOR;
   applyEmulatorEnvironmentDefaults();
 
   process.env.GCLOUD_PROJECT = projectId;

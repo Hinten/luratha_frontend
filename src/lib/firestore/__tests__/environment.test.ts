@@ -15,7 +15,6 @@ afterEach(() => {
 describe("firebase environment", () => {
   it("detects emulator mode from USE_EMULATOR=TRUE", () => {
     process.env.USE_EMULATOR = "TRUE";
-    delete process.env.NEXT_PUBLIC_USE_EMULATOR;
 
     expect(isEmulatorEnabled()).toBe(true);
   });

@@ -16,7 +16,7 @@ import {
   type ProductSearchFilters,
   type ProductSort,
 } from "@/src/lib/firestoreQueryStrategies";
-import { dbServer } from "@/src/lib/firebaseServer";
+import { dbServer } from "@/src/lib/firestore/firebaseServer";
 import {
   ProductRepositoryError,
 } from "@/src/lib/repositories/productsRepository";

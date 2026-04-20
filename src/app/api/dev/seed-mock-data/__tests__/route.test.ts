@@ -32,7 +32,7 @@ vi.mock("node:fs/promises", () => ({
   },
 }));
 
-vi.mock("@/src/lib/firebaseAdmin", () => ({
+vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminDb: {
     collection: collectionMock,
   },

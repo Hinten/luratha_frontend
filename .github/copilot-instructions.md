@@ -110,9 +110,9 @@ Use `.github/skills/luratha-seo/SKILL.md` for implementation details.
 ## Firebase & Security
 
 - Firebase project config is in `firebase.json` (project `luratha-96386`, region `us-east5`, emulators for Auth/Firestore/Storage).
-- Client SDK init lives in `src/lib/firebaseClient.ts`; server-side reads use `src/lib/firebaseServer.ts`; admin seeding uses `src/lib/firebaseAdmin.ts`.
+- Client SDK init lives in `src/lib/firestore/firebaseClient.ts`; server-side reads use `src/lib/firestore/firebaseServer.ts`; admin seeding uses `src/lib/firestore/firebaseAdmin.ts`.
 - Never import client Firebase modules into server-only flows (pages/layout metadata, server actions, route handlers that read Firestore).
-- Keep emulator env wiring coherent when running local test stacks: `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`, `FIREBASE_STORAGE_EMULATOR_HOST`, `NEXT_PUBLIC_*_EMULATOR_HOST`, `NEXT_PUBLIC_USE_EMULATOR=true`.
+- Keep emulator env wiring coherent when running local test stacks: `USE_EMULATOR=TRUE`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`, `FIREBASE_STORAGE_EMULATOR_HOST`, `NEXT_PUBLIC_*_EMULATOR_HOST`.
 - Keep `.env*` files out of commits (excluded in `.gcloudignore`).
 - Preserve `.gcloudignore` exclusions so tests/config/artifacts stay out of Cloud Run build context.
 

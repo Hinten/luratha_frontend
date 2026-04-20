@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
-import { db } from "../firebaseClient";
+import { db } from "@/src/lib/firestore/firebaseClient";
 
 type ProductListFilters = {
   status?: Product["status"];

@@ -5,7 +5,6 @@ export const DEFAULT_FIREBASE_STORAGE_EMULATOR_HOST = "127.0.0.1:9199";
 
 export const FIREBASE_EMULATOR_ENV = {
   USE_EMULATOR: "TRUE",
-  NEXT_PUBLIC_USE_EMULATOR: "true",
   FIREBASE_PROJECT_ID: DEFAULT_FIREBASE_PROJECT_ID,
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: DEFAULT_FIREBASE_PROJECT_ID,
   NEXT_PUBLIC_FIREBASE_API_KEY: "test-key",
@@ -30,7 +29,7 @@ export function isTruthyEnv(value: string | undefined): boolean {
 }
 
 export function isEmulatorEnabled(): boolean {
-  return isTruthyEnv(process.env.USE_EMULATOR) || isTruthyEnv(process.env.NEXT_PUBLIC_USE_EMULATOR);
+  return isTruthyEnv(process.env.USE_EMULATOR);
 }
 
 export function getFirebaseProjectId(): string {
@@ -92,8 +91,6 @@ export function applyEmulatorEnvironmentDefaults(): void {
   }
 
   process.env.USE_EMULATOR = process.env.USE_EMULATOR ?? FIREBASE_EMULATOR_ENV.USE_EMULATOR;
-  process.env.NEXT_PUBLIC_USE_EMULATOR =
-    process.env.NEXT_PUBLIC_USE_EMULATOR ?? FIREBASE_EMULATOR_ENV.NEXT_PUBLIC_USE_EMULATOR;
   process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? FIREBASE_EMULATOR_ENV.FIREBASE_PROJECT_ID;
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID =
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? FIREBASE_EMULATOR_ENV.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
