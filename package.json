@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "emulator": "firebase emulators:start",
+    "emulator": "USE_EMULATOR=TRUE NEXT_PUBLIC_USE_EMULATOR=true firebase emulators:start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
