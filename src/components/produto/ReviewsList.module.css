@@ -89,6 +89,14 @@
   margin: 0;
 }
 
+.title {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  margin: 0;
+}
+
 .empty {
   font-family: var(--font-body);
   font-size: 0.9rem;

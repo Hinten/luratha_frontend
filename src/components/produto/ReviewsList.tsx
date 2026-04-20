@@ -67,7 +67,7 @@ export default function ReviewsList({ reviews }: ReviewsListProps) {
                 {formatReviewDate(review.createdAt)}
               </time>
             </div>
-            <p className={styles.comment}>{review.title}</p>
+            <p className={styles.title}>{review.title}</p>
             <p className={styles.comment}>{review.comment}</p>
           </li>
         ))}
