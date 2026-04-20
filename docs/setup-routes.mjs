@@ -68,8 +68,8 @@ const categoriaPage = [
   'import { Suspense } from "react";',
   'import type { Metadata } from "next";',
   'import { CATEGORIES } from "@/src/lib/constants";',
-  'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/schemas/storefront";',
+  'import { buildMockProducts } from "@/src/lib/repositories/productsMockData";',
+  'import { Product } from "@/src/schemas/firestore/products";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -102,7 +102,7 @@ const categoriaPage = [
   "  const category = CATEGORIES.find((c) => c.slug === slug);",
   "  if (!category) return notFound();",
   "",
-  '  const filtered = mockProducts.filter((p) => p.categorySlug === slug);',
+  '  const filtered = buildMockProducts().filter((p) => p.categorySlug === slug);',
   "  const products = sortProducts(filtered, sort);",
   "",
   "  return (",
@@ -137,8 +137,8 @@ const categoriaPage = [
 const todasAsPecasPage = [
   'import { Suspense } from "react";',
   'import type { Metadata } from "next";',
-  'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/schemas/storefront";',
+  'import { buildMockProducts } from "@/src/lib/repositories/productsMockData";',
+  'import { Product } from "@/src/schemas/firestore/products";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -156,7 +156,7 @@ const todasAsPecasPage = [
   "",
   "export default async function TodasAsPecasPage({ searchParams }: PageProps) {",
   "  const { sort } = await searchParams;",
-  "  const products = sortProducts(mockProducts, sort);",
+  "  const products = sortProducts(buildMockProducts(), sort);",
   "",
   "  return (",
   '    <div className="container-luratha section-padding">',
@@ -192,8 +192,8 @@ const todasAsPecasPage = [
 const salePage = [
   'import { Suspense } from "react";',
   'import type { Metadata } from "next";',
-  'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/schemas/storefront";',
+  'import { buildMockProducts } from "@/src/lib/repositories/productsMockData";',
+  'import { Product } from "@/src/schemas/firestore/products";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -211,7 +211,7 @@ const salePage = [
   "",
   "export default async function SalePage({ searchParams }: PageProps) {",
   "  const { sort } = await searchParams;",
-  "  const saleProducts = mockProducts.filter((p) => p.originalPrice !== undefined);",
+  "  const saleProducts = buildMockProducts().filter((p) => p.originalPrice !== undefined);",
   "  const products = sortProducts(saleProducts, sort);",
   "",
   "  return (",
@@ -265,8 +265,8 @@ const categoriaPage = `import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { CATEGORIES } from "@/src/lib/constants";
-import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/schemas/storefront";
+import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { Product } from "@/src/schemas/firestore/products";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
@@ -319,7 +319,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const category = CATEGORIES.find((c) => c.slug === slug);
   if (!category) return notFound();
 
-  const filtered = mockProducts.filter((p) => p.categorySlug === slug);
+  const filtered = buildMockProducts().filter((p) => p.categorySlug === slug);
   const products = sortProducts(filtered, sort);
 
   return (
@@ -352,8 +352,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
 const todasAsPecasPage = `import { Suspense } from "react";
 import type { Metadata } from "next";
-import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/schemas/storefront";
+import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { Product } from "@/src/schemas/firestore/products";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
@@ -391,7 +391,7 @@ function sortProducts(products: Product[], sort?: string): Product[] {
 
 export default async function TodasAsPecasPage({ searchParams }: PageProps) {
   const { sort } = await searchParams;
-  const products = sortProducts(mockProducts, sort);
+  const products = sortProducts(buildMockProducts(), sort);
 
   return (
     <div className="container-luratha section-padding">
@@ -425,8 +425,8 @@ export default async function TodasAsPecasPage({ searchParams }: PageProps) {
 
 const salePage = `import { Suspense } from "react";
 import type { Metadata } from "next";
-import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/schemas/storefront";
+import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { Product } from "@/src/schemas/firestore/products";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
@@ -464,7 +464,7 @@ function sortProducts(products: Product[], sort?: string): Product[] {
 
 export default async function SalePage({ searchParams }: PageProps) {
   const { sort } = await searchParams;
-  const saleProducts = mockProducts.filter((p) => p.originalPrice !== undefined);
+  const saleProducts = buildMockProducts().filter((p) => p.originalPrice !== undefined);
   const products = sortProducts(saleProducts, sort);
 
   return (

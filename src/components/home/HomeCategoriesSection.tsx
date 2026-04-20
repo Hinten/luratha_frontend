@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import CategoryBlock from "@/src/components/categoria/CategoryBlock";
-import type { Category } from "@/src/schemas/storefront";
+import type { Category } from "@/src/schemas/firestore/category";
 import styles from "./HomeCategoriesSection.module.css";
 
 const SCROLL_THRESHOLD = 1;
@@ -80,7 +80,7 @@ export default function HomeCategoriesSection({
 
         <div ref={trackRef} className={styles.track} data-testid="categories-track">
           {categories.map((category) => (
-            <div key={category.href} className={styles.item}>
+            <div key={category.id} className={styles.item}>
               <CategoryBlock category={category} />
             </div>
           ))}

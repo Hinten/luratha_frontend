@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import HomeCategoriesSection from "@/src/components/home/HomeCategoriesSection";
-import { mockCategories } from "@/src/lib/mockData";
+import { type Category, validateCategory } from "@/src/schemas/firestore";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -57,3 +57,13 @@ describe("HomeCategoriesSection", () => {
     });
   });
 });
+const mockCategories: Category[] = [
+  validateCategory({ id: "vestidos", name: "Vestidos", slug: "vestidos" }),
+  validateCategory({ id: "blusas", name: "Blusas", slug: "blusas" }),
+  validateCategory({ id: "calcas", name: "Calças", slug: "calcas" }),
+  validateCategory({ id: "saias", name: "Saias", slug: "saias" }),
+  validateCategory({ id: "shorts", name: "Shorts", slug: "shorts" }),
+  validateCategory({ id: "conjuntos", name: "Conjuntos", slug: "conjuntos" }),
+  validateCategory({ id: "moletons", name: "Moletons", slug: "moletons" }),
+  validateCategory({ id: "acessorios", name: "Acessórios", slug: "acessorios" }),
+];

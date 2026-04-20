@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Home from "@/src/app/page";
-import type { Category } from "@/src/schemas/storefront";
-import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+import {
+  buildProductSlug,
+  type Category,
+  type Product,
+  validateCategory,
+  validateProduct,
+} from "@/src/schemas/firestore";
 
 const getHomePageDataMock = vi.fn();
 
@@ -37,21 +42,9 @@ vi.mock("@/src/components/home/HeroBanner", () => ({
 }));
 
 const mockCategories: Category[] = [
-  {
-    label: "Vestidos",
-    href: "/categoria/vestidos",
-    imageUrl: "https://placehold.co/600x700/EDE4D9/3A2F2A?text=Vestidos",
-  },
-  {
-    label: "Blusas",
-    href: "/categoria/blusas",
-    imageUrl: "https://placehold.co/600x700/EDE4D9/3A2F2A?text=Blusas",
-  },
-  {
-    label: "Calças",
-    href: "/categoria/calcas",
-    imageUrl: "https://placehold.co/600x700/EDE4D9/3A2F2A?text=Calças",
-  },
+  validateCategory({ id: "vestidos", name: "Vestidos", slug: "vestidos" }),
+  validateCategory({ id: "blusas", name: "Blusas", slug: "blusas" }),
+  validateCategory({ id: "calcas", name: "Calças", slug: "calcas" }),
 ];
 
 function createProduct(id: string, title: string, price: number, salePrice: number | null = null): Product {
