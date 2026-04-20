@@ -174,6 +174,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       ratingAverage: 4.5,
       reviewCount: index + 3,
       vectorEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],
+      searchEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],
       createdAt: now,
       updatedAt: now,
     });

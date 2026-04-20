@@ -12,7 +12,7 @@ export const pipelineSearchRequestSchema = z.object({
 });
 
 export const vectorSearchRequestSchema = z.object({
-  embedding: z.array(z.number()).min(8).max(4096),
+  embedding: z.array(z.number()).min(8).max(2048),
   topK: z.number().int().min(1).max(100).default(20),
   minScore: z.number().min(0).max(1).default(0),
   categorySlug: nonEmptyStringSchema.optional(),

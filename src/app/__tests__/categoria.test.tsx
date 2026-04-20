@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CategoriaPage, { generateMetadata } from "@/src/app/categoria/[slug]/page";
-import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
 
-const { getBySlugMock, listMock, productGridSpy } = vi.hoisted(() => ({
+const { getBySlugMock, searchMock, productGridSpy } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),
-  listMock: vi.fn(),
+  searchMock: vi.fn(),
   productGridSpy: vi.fn(),
 }));
 
@@ -25,9 +24,9 @@ vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/repositories/productsRepository", () => ({
-  createProductsRepository: () => ({
-    list: listMock,
+vi.mock("@/src/lib/repositories/productsSearchRepository", () => ({
+  createProductsSearchRepository: () => ({
+    search: searchMock,
   }),
 }));
 
@@ -61,19 +60,24 @@ describe("CategoriaPage", () => {
       name: "Vestidos",
       slug: "vestidos",
     });
-    listMock.mockResolvedValueOnce([
-      createFirestoreProduct({
+    searchMock.mockResolvedValueOnce([
+      {
         id: "prod_1",
-        title: "Vestido A",
+        name: "Vestido A",
         slug: "vestido-a",
-        price: { price: 300, salePrice: null },
-      }),
-      createFirestoreProduct({
+        categorySlug: "vestidos",
+        price: 300,
+        imageUrl: "https://example.com/a.jpg",
+      },
+      {
         id: "prod_2",
-        title: "Vestido B",
+        name: "Vestido B",
         slug: "vestido-b",
-        price: { price: 280, salePrice: 240 },
-      }),
+        categorySlug: "vestidos",
+        price: 240,
+        originalPrice: 280,
+        imageUrl: "https://example.com/b.jpg",
+      },
     ]);
 
     const page = await CategoriaPage({
@@ -85,10 +89,15 @@ describe("CategoriaPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Vestidos" })).toBeInTheDocument();
     expect(screen.getByText("2 produtos encontrados")).toBeInTheDocument();
     expect(getBySlugMock).toHaveBeenCalledWith("vestidos");
-    expect(listMock).toHaveBeenCalledWith({
-      status: "active",
-      categoryId: "cat_vestidos",
-      limit: 100,
+    expect(searchMock).toHaveBeenCalledWith({
+      categorySlug: "vestidos",
+      sort: "newest",
+      limit: 24,
+      offset: 0,
+      term: undefined,
+      minPrice: undefined,
+      maxPrice: undefined,
+      tags: undefined,
     });
     expect(productGridSpy).toHaveBeenCalledTimes(1);
   });
@@ -116,7 +125,7 @@ describe("CategoriaPage", () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe("Vestidos");
+    expect(metadata.title).toBe("Vestidos Artesanais");
     expect(metadata.alternates?.canonical).toBe("https://www.luratha.com.br/categoria/vestidos");
   });
 });

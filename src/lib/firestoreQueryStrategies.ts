@@ -215,6 +215,6 @@ export function buildEnterpriseVectorSearchPlan(input: {
 
 export function shouldUsePipeline(filters: ProductSearchFilters): boolean {
   const hasSearchTerm = (filters.term ?? "").trim().length > 0;
-  const hasTooManyTags = (filters.tags?.length ?? 0) > 10;
+  const hasTooManyTags = (filters.tags?.length ?? 0) > 4;
   return hasSearchTerm || hasTooManyTags;
 }

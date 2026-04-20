@@ -1,7 +1,7 @@
 import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
@@ -9,15 +9,23 @@ import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import { dbServer } from "@/src/lib/firebaseServer";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
-import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
+import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
+import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    sort?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    tags?: string;
+    page?: string;
+  }>;
 }
 
 const categoriesRepository = createCategoriesRepository(dbServer);
-const productsRepository = createProductsRepository(dbServer);
+const productsSearchRepository = createProductsSearchRepository(dbServer);
 
 const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCategory | null> => {
   try {
@@ -28,18 +36,19 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
   }
 });
 
-const getCachedCategoryProducts = cache(async (category: FirestoreCategory): Promise<FirestoreProduct[]> => {
-  try {
-    return await productsRepository.list({
-      status: "active",
-      categoryId: category.id,
-      limit: 100,
-    });
-  } catch (error) {
-    console.error(`[CategoriaPage] error fetching products for category "${category.slug}"`, error);
-    throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
-  }
-});
+const getCachedCategoryProducts = cache(
+  async (category: FirestoreCategory, filters: ProductSearchFilters) => {
+    try {
+      return await productsSearchRepository.search({
+        ...filters,
+        categorySlug: category.slug,
+      });
+    } catch (error) {
+      console.error(`[CategoriaPage] error fetching products for category "${category.slug}"`, error);
+      throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
+    }
+  },
+);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -47,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!category) return {};
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
   return {
-    title: `${category.name}`,
+    title: `${category.name} Artesanais`,
     description: `Explore a coleção de ${category.name.toLowerCase()} artesanais da Luratha — slow fashion feminino brasileiro feito com amor e cuidado.`,
     alternates: { canonical: categoryUrl },
     openGraph: {
@@ -60,41 +69,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-function sortProducts(products: FirestoreProduct[], sort?: string): FirestoreProduct[] {
-  const sorted = [...products];
-  switch (sort) {
-    case "menor-preco":
-      return sorted.sort((a, b) => getCurrentPrice(a) - getCurrentPrice(b));
-    case "maior-preco":
-      return sorted.sort((a, b) => getCurrentPrice(b) - getCurrentPrice(a));
-    case "maior-desconto":
-      return sorted.sort((a, b) => {
-        const originalPriceA = getOriginalPrice(a);
-        const currentPriceA = getCurrentPrice(a);
-        const discountA = originalPriceA
-          ? (originalPriceA - currentPriceA) / originalPriceA
-          : 0;
-        const originalPriceB = getOriginalPrice(b);
-        const currentPriceB = getCurrentPrice(b);
-        const discountB = originalPriceB
-          ? (originalPriceB - currentPriceB) / originalPriceB
-          : 0;
-        return discountB - discountA;
-      });
-    default:
-      return sorted;
-  }
-}
-
 export default async function CategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { sort } = await searchParams;
+  const parsedParams = parseSearchParams(await searchParams);
 
   const category = await getCachedCategoryBySlug(slug);
   if (!category) return notFound();
 
-  const firestoreProducts = await getCachedCategoryProducts(category);
-  const products = sortProducts(firestoreProducts, sort);
+  const products = await getCachedCategoryProducts(category, parsedParams);
 
   const categoryUrl = `${SITE_URL}/categoria/${slug}`;
 
@@ -145,13 +127,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           <h1 className="font-[family-name:var(--font-heading)]">
             {category.name}
           </h1>
-          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">
+          <p
+            aria-live="polite"
+            className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1"
+          >
             {products.length}{" "}
             {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
           </p>
         </div>
         <Suspense fallback={null}>
-          <SortDropdown currentSort={sort ?? "recentes"} />
+          <SortDropdown currentSort={parsedParams.sort ? toDropdownSort(parsedParams.sort) : "recentes"} />
         </Suspense>
       </div>
       <ProductGrid products={products} />
@@ -163,10 +148,70 @@ function createHttpStatusError(statusCode: number, message: string): Error & { s
   return Object.assign(new Error(message), { statusCode });
 }
 
-function getCurrentPrice(product: FirestoreProduct): number {
-  return product.price.salePrice ?? product.price.price;
+function parseSearchParams(searchParams: {
+  q?: string;
+  sort?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  tags?: string;
+  page?: string;
+}): ProductSearchFilters {
+  const page = Number(searchParams.page ?? "1");
+  const limit = 24;
+  const sort = toQuerySort(searchParams.sort);
+  const minPrice = parseNumber(searchParams.minPrice);
+  const maxPrice = parseNumber(searchParams.maxPrice);
+  const tags = parseTags(searchParams.tags);
+
+  return {
+    term: searchParams.q?.trim() || undefined,
+    minPrice,
+    maxPrice,
+    tags,
+    sort,
+    limit,
+    offset: Number.isInteger(page) && page > 1 ? (page - 1) * limit : 0,
+  };
 }
 
-function getOriginalPrice(product: FirestoreProduct): number | undefined {
-  return product.price.salePrice ? product.price.price : undefined;
+function parseNumber(value?: string): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function parseTags(value?: string): string[] | undefined {
+  if (!value) return undefined;
+  const tags = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return tags.length ? tags : undefined;
+}
+
+function toQuerySort(sort?: string): ProductSort | undefined {
+  switch (sort) {
+    case "menor-preco":
+      return "price_asc";
+    case "maior-preco":
+      return "price_desc";
+    case "maior-desconto":
+      return "rating_desc";
+    default:
+      return "newest";
+  }
+}
+
+function toDropdownSort(sort: ProductSort): string {
+  switch (sort) {
+    case "price_asc":
+      return "menor-preco";
+    case "price_desc":
+      return "maior-preco";
+    case "rating_desc":
+      return "maior-desconto";
+    case "newest":
+    default:
+      return "recentes";
+  }
 }

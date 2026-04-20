@@ -16,5 +16,7 @@ describe("home seed mock data", () => {
     expect(products).toHaveLength(10);
     expect(products.every((product) => typeof product.categoryId === "string")).toBe(true);
     expect(products.every((product) => product.slug)).toBe(true);
+    expect(products.every((product) => (product.vectorEmbedding?.length ?? 0) >= 8)).toBe(true);
+    expect(products.every((product) => (product.searchEmbedding?.length ?? 0) >= 8)).toBe(true);
   });
 });

@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:emulator": "playwright test --config playwright.e2e.emulator.config.ts",
     "test:e2e:ui": "playwright test --ui",
+    "test:cloud": "vitest run --config vitest.cloud.config.mts",
     "setup:routes": "node docs/create-catalog-routes.mjs"
   },
   "dependencies": {

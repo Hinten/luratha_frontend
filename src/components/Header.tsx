@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 import DevSeedButton from "@/src/components/home/DevSeedButton";
+import SearchInput from "@/src/components/busca/SearchInput";
 import styles from "./Header.module.css";
 import { useCart } from "@/src/contexts/CartContext";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -33,6 +34,11 @@ export default function Header() {
     <header className={styles.header}>
       <div className={`container-luratha ${styles.inner}`}>
         <Logo />
+        <div className={styles.searchArea}>
+          <Suspense fallback={null}>
+            <SearchInput />
+          </Suspense>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className={styles.desktopNav}>
@@ -45,11 +51,13 @@ export default function Header() {
 
         {/* Actions */}
         <div className={styles.actions}>
-          <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
+          <div className={styles.desktopOnly}>
+            <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
+          </div>
 
           {/* User: "Entrar" link or first name → account */}
           {isAuthenticated ? (
-            <span className={styles.userGreeting}>
+            <span className={`${styles.userGreeting} ${styles.desktopOnly}`}>
               Olá, {firstName}
               <button
                 type="button"
@@ -61,7 +69,11 @@ export default function Header() {
               </button>
             </span>
           ) : (
-            <Link href="/login" className={styles.navLink} aria-label="Entrar">
+            <Link
+              href="/login"
+              className={`${styles.navLink} ${styles.desktopOnly}`}
+              aria-label="Entrar"
+            >
               Entrar
             </Link>
           )}
@@ -130,6 +142,7 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <span className={styles.mobileUserName}>Olá, {firstName}</span>
+              <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
               <button
                 type="button"
                 className={styles.mobileNavLink}
@@ -140,6 +153,7 @@ export default function Header() {
             </>
           ) : (
             <>
+              <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
               <Link
                 href="/login"
                 onClick={handleMobileLinkClick}

@@ -12,7 +12,7 @@
 .inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
   height: 6rem; /* 96px */
 }
 
@@ -62,7 +62,35 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.searchArea {
+  flex: 1;
+  min-width: 0;
+  max-width: 18rem;
+}
+
+@media (min-width: 768px) {
+  .searchArea {
+    flex: 0 0 20rem;
+  }
+
+  .actions {
+    gap: 1rem;
+  }
+}
+
+.desktopOnly {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktopOnly {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /*
@@ -190,4 +218,3 @@
   color: var(--color-neutral-dark);
   padding-block: 0.25rem;
 }
-

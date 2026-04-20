@@ -61,6 +61,8 @@ vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
       photoAssets: [],
       lifeStylePhotos: [],
       totalStock: 10,
+      vectorEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
+      searchEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
       createdAt: "2026-04-15T00:00:00.000Z",
       updatedAt: "2026-04-15T00:00:00.000Z",
     },
@@ -161,5 +163,9 @@ describe("POST /api/dev/seed-mock-data", () => {
     expect(payload.productsCreated).toBe(1);
     expect(payload.uploadedImages).toBe(0);
     expect(uploadProductImageMock).not.toHaveBeenCalled();
+    expect(docStore.get("products:prod_1")).toMatchObject({
+      vectorEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
+      searchEmbedding: [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
+    });
   });
 });

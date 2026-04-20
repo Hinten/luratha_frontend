@@ -17,6 +17,7 @@ A Luratha acredita que a moda pode ser um ato de amor — amor a si mesma, ao tr
 - [Conjuntos](/categoria/conjuntos): Conjuntos e coordenados artesanais
 - [Moletons](/categoria/moletons): Moletons e agasalhos artesanais
 - [Acessórios](/categoria/acessorios): Acessórios artesanais femininos
+- [Busca](/busca): Página de busca global de produtos por termo, preço e tags
 - [Produto](/produto/[slug]): Página de detalhe de produto (ex: /produto/vestido-bordado-floral)
 - [Vestidos](/colecao/vestidos): Vestidos artesanais femininos
 - [Blusas](/colecao/blusas): Blusas e tops artesanais

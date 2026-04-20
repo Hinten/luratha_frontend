@@ -22,6 +22,10 @@ vi.mock("@/src/lib/constants", () => ({
   appData: { name: "Luratha", logo: "/luratha.svg" },
 }));
 
+vi.mock("@/src/components/busca/SearchInput", () => ({
+  default: () => <div data-testid="search-input" />,
+}));
+
 /* Default mocks for contexts — override per test where needed */
 vi.mock("@/src/contexts/CartContext", () => ({
   useCart: () => ({
@@ -70,6 +74,17 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Coleção" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sobre" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Contato" })).toBeInTheDocument();
+  });
+
+  it("renders search input right after logo in header flow", () => {
+    render(<Header />);
+
+    const logo = screen.getByAltText("Luratha");
+    const searchInput = screen.getByTestId("search-input");
+
+    expect(
+      logo.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("renders the cart link pointing to /carrinho", () => {
@@ -130,4 +145,3 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Cadastrar" })).toBeInTheDocument();
   });
 });
-
