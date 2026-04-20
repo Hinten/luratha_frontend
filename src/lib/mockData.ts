@@ -1,4 +1,4 @@
-import type { Product, Category, ProductDetail } from "./types";
+import type { Product, Category, ProductDetail } from "@/src/schemas/storefront";
 import { CATEGORIES } from "./constants";
 
 // ─── Catalog products (used by /categoria/[slug], /todas-as-pecas, /sale) ─────

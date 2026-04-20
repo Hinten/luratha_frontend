@@ -7,7 +7,7 @@ import {
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { dbServer } from "@/src/lib/firebaseServer";
-import type { Category } from "@/src/lib/types";
+import type { Category } from "@/src/schemas/storefront";
 import { mockCategories } from "@/src/lib/mockData";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 const HOME_DATA_TIMEOUT_MS = 1_500;

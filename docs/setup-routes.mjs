@@ -69,7 +69,7 @@ const categoriaPage = [
   'import type { Metadata } from "next";',
   'import { CATEGORIES } from "@/src/lib/constants";',
   'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/lib/types";',
+  'import { Product } from "@/src/schemas/storefront";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -138,7 +138,7 @@ const todasAsPecasPage = [
   'import { Suspense } from "react";',
   'import type { Metadata } from "next";',
   'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/lib/types";',
+  'import { Product } from "@/src/schemas/storefront";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -193,7 +193,7 @@ const salePage = [
   'import { Suspense } from "react";',
   'import type { Metadata } from "next";',
   'import { mockProducts } from "@/src/lib/mockData";',
-  'import { Product } from "@/src/lib/types";',
+  'import { Product } from "@/src/schemas/storefront";',
   'import Breadcrumb from "@/src/components/Breadcrumb";',
   'import ProductGrid from "@/src/components/ProductGrid";',
   'import SortDropdown from "@/src/components/SortDropdown";',
@@ -266,7 +266,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { CATEGORIES } from "@/src/lib/constants";
 import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/lib/types";
+import { Product } from "@/src/schemas/storefront";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
@@ -353,7 +353,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 const todasAsPecasPage = `import { Suspense } from "react";
 import type { Metadata } from "next";
 import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/lib/types";
+import { Product } from "@/src/schemas/storefront";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";
@@ -426,7 +426,7 @@ export default async function TodasAsPecasPage({ searchParams }: PageProps) {
 const salePage = `import { Suspense } from "react";
 import type { Metadata } from "next";
 import { mockProducts } from "@/src/lib/mockData";
-import { Product } from "@/src/lib/types";
+import { Product } from "@/src/schemas/storefront";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/ProductGrid";
 import SortDropdown from "@/src/components/SortDropdown";

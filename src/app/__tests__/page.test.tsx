@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Home from "@/src/app/page";
-import type { Category } from "@/src/lib/types";
+import type { Category } from "@/src/schemas/storefront";
 import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
 
 const getHomePageDataMock = vi.fn();

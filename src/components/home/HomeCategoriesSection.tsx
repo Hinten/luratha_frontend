@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import CategoryBlock from "@/src/components/categoria/CategoryBlock";
-import type { Category } from "@/src/lib/types";
+import type { Category } from "@/src/schemas/storefront";
 import styles from "./HomeCategoriesSection.module.css";
 
 const SCROLL_THRESHOLD = 1;

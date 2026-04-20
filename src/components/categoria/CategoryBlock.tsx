@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Category } from "@/src/lib/types";
+import type { Category } from "@/src/schemas/storefront";
 import styles from "./CategoryBlock.module.css";
 
 interface CategoryBlockProps {
@@ -23,4 +23,3 @@ export default function CategoryBlock({ category }: CategoryBlockProps) {
     </Link>
   );
 }
-

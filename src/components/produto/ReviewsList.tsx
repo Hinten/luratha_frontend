@@ -1,4 +1,4 @@
-import type { Review } from "@/src/lib/types";
+import type { Review } from "@/src/schemas/storefront";
 import styles from "./ReviewsList.module.css";
 
 function StarRating({ rating }: { rating: number }) {
