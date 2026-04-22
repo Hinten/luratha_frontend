@@ -11,15 +11,10 @@ const firebaseServerConfig = {
   ...getFirebaseWebConfig(),
 };
 
-// const firebaseServerApp =
-//   getApps().find((app) => app.name === FIREBASE_SERVER_APP_NAME) ??
-//   initializeApp(firebaseServerConfig, FIREBASE_SERVER_APP_NAME);
-
-// export const dbServer = getFirestore(firebaseServerApp);
-
-// initializeServerFirestoreEmulator(dbServer);
-
-// ATENÇÃO, NÃO INICIALIZAR A FIREBASE POR AQUI, DEVE-SE UTILIZAR ESSA FUNÇÃO PARA OBTER AS CREDENCIAS DO CLIENT.
+/**
+ * Use este módulo apenas quando o servidor precisar executar chamadas em nome do usuário autenticado.
+ * Ele lê o token `__session` do cliente e inicializa um Firebase Server App autenticado.
+ */
 export async function getAuthenticatedAppForUser() {
   const authIdToken = (await cookies()).get("__session")?.value;
 
@@ -30,5 +25,9 @@ export async function getAuthenticatedAppForUser() {
   const auth = getAuth(authenticatedServerApp);
   await auth.authStateReady();
 
-  return { firebaseServerApp: authenticatedServerApp, currentUser: auth.currentUser, firestore: getFirestore(authenticatedServerApp) };
+  return {
+    firebaseServerApp: authenticatedServerApp,
+    currentUser: auth.currentUser,
+    firestore: getFirestore(authenticatedServerApp),
+  };
 }

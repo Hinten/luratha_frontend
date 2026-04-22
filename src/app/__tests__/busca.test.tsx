@@ -7,14 +7,8 @@ const { searchMock, productGridSpy } = vi.hoisted(() => ({
   productGridSpy: vi.fn(),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseServer", () => ({
-  dbServer: {},
-}));
-
-vi.mock("@/src/lib/repositories/productsSearchRepository", () => ({
-  createProductsSearchRepository: () => ({
-    search: searchMock,
-  }),
+vi.mock("@/src/lib/repositories/publicCatalogAdminRepository", () => ({
+  searchProducts: searchMock,
 }));
 
 vi.mock("@/src/components/Breadcrumb", () => ({

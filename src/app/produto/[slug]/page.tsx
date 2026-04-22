@@ -4,12 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
-import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
-import {
-  ProductRepositoryError,
-  createProductsRepository,
-} from "@/src/lib/repositories/productsRepository";
+import { getCategoryById, getProductBySlug } from "@/src/lib/repositories/publicCatalogAdminRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 import { getProductPrimaryImage } from "@/src/lib/productImages";
 
@@ -20,17 +15,9 @@ interface PageProps {
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
-
-  const authenticatedAppForUser = await getAuthenticatedAppForUser();
-  const productsRepository = createProductsRepository(authenticatedAppForUser.firestore);
-
   try {
-    return await productsRepository.getBySlug(slug);
+    return await getProductBySlug(slug);
   } catch (error) {
-    if (error instanceof ProductRepositoryError && error.code === "not_found") {
-      return null;
-    }
-
     console.error(`[ProdutoPage] error fetching product with slug "${slug}"`, error);
 
     throw createHttpStatusError(500, "Erro ao carregar dados do produto.");
@@ -39,9 +26,7 @@ const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProdu
 
 const getCachedCategoryById = cache(async (categoryId: string): Promise<FirestoreCategory | null> => {
   try {
-    const authenticatedAppForUser = await getAuthenticatedAppForUser();
-    const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
-    return await categoriesRepository.getById(categoryId);
+    return await getCategoryById(categoryId);
   } catch (error) {
     console.error(`[ProdutoPage] error fetching category with id "${categoryId}"`, error);
     return null;

@@ -1,12 +1,8 @@
-import { collection, getDocs, limit as queryLimit, orderBy, query, type Firestore } from "firebase/firestore";
 import {
-  CategorySchema,
-  firestoreCollections,
   type FirestoreCategory,
   type Product as FirestoreProduct,
 } from "@/src/schemas/firestore";
-import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
+import { listActiveProducts, listCategories } from "@/src/lib/repositories/publicCatalogAdminRepository";
 import type { Category } from "@/src/lib/types";
 import { mockCategories } from "@/src/lib/mockData";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
@@ -22,14 +18,10 @@ type HomePageData = {
 
 export async function getHomePageData(): Promise<HomePageData> {
   try {
-
-    const authApp = await getAuthenticatedAppForUser();
-
-    const productsRepository = createProductsRepository(authApp.firestore);
     const [products, categories] = await withTimeout(
       Promise.all([
-        productsRepository.list({ status: "active", limit: 30 }),
-        listCategories(authApp.firestore),
+        listActiveProducts(30),
+        listCategories(20),
       ]),
       HOME_DATA_TIMEOUT_MS,
     );
@@ -54,17 +46,6 @@ export async function getHomePageData(): Promise<HomePageData> {
       sale: mockProducts.filter((product) => product.price.salePrice !== null).slice(0, 5),
     };
   }
-}
-
-async function listCategories(dbInstance: Firestore): Promise<FirestoreCategory[]> {
-  const snapshot = await getDocs(
-    query(
-      collection(dbInstance, firestoreCollections.categories),
-      orderBy("name", "asc"),
-      queryLimit(20),
-    ),
-  );
-  return snapshot.docs.map((document) => CategorySchema.parse(document.data()));
 }
 
 function mapFirestoreCategoryToHomeCategory(category: FirestoreCategory): Category {

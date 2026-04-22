@@ -30,28 +30,9 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseServer", () => ({
-  dbServer: {},
-}));
-
-vi.mock("@/src/lib/repositories/productsRepository", () => ({
-  ProductRepositoryError: class ProductRepositoryError extends Error {
-    readonly code: "validation" | "not_found" | "conflict" | "unknown";
-
-    constructor(message: string, code: "validation" | "not_found" | "conflict" | "unknown") {
-      super(message);
-      this.code = code;
-    }
-  },
-  createProductsRepository: () => ({
-    getBySlug: getBySlugMock,
-  }),
-}));
-
-vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
-  createCategoriesRepository: () => ({
-    getById: getCategoryByIdMock,
-  }),
+vi.mock("@/src/lib/repositories/publicCatalogAdminRepository", () => ({
+  getProductBySlug: getBySlugMock,
+  getCategoryById: getCategoryByIdMock,
 }));
 
 // Mock client components to keep the test synchronous
