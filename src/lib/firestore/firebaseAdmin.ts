@@ -43,21 +43,21 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
     return inlineCredential;
   }
 
-  const credentialsPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath) {
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!serviceAccountPath) {
     return undefined;
   }
 
-  if (!existsSync(credentialsPath)) {
+  if (!existsSync(serviceAccountPath)) {
     throw new Error(
-      `Firebase service account file not found at "${credentialsPath}" (from FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS).`,
+      `Firebase service account file not found at "${serviceAccountPath}" (from FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS).`,
     );
   }
 
-  const fileContents = readFileSync(credentialsPath, "utf8");
+  const fileContents = readFileSync(serviceAccountPath, "utf8");
   const fileCredential = parseServiceAccount(fileContents);
   if (!fileCredential) {
-    throw new Error(`Invalid Firebase service account JSON in file: ${credentialsPath}`);
+    throw new Error(`Invalid Firebase service account JSON in file: ${serviceAccountPath}`);
   }
 
   return fileCredential;
@@ -73,7 +73,9 @@ function parseServiceAccount(rawValue: string | undefined): ServiceAccount | und
     parsedValue = JSON.parse(rawValue);
   } catch (error) {
     const parseMessage = error instanceof Error ? error.message : "unknown parse error";
-    throw new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_JSON value. It must be valid JSON. ${parseMessage}`);
+    throw new Error(
+      `Invalid FIREBASE_SERVICE_ACCOUNT_JSON value. Expected JSON with client_email/private_key (and optional project_id). ${parseMessage}`,
+    );
   }
 
   if (!parsedValue || typeof parsedValue !== "object") {
