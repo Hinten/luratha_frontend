@@ -26,7 +26,6 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
 
   const authenticatedServerApp = initializeServerApp(firebaseServerConfig, {
     authIdToken,
-    releaseOnDeref: requestHeaders,
   });
   const firestore = getFirestore(authenticatedServerApp);
   initializeServerFirestoreEmulator(firestore);

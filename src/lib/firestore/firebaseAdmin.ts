@@ -49,7 +49,9 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   }
 
   if (!existsSync(credentialsPath)) {
-    throw new Error(`Firebase service account file not found: ${credentialsPath}`);
+    throw new Error(
+      `Firebase service account file not found at "${credentialsPath}" (from FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS).`,
+    );
   }
 
   const fileContents = readFileSync(credentialsPath, "utf8");
