@@ -57,9 +57,15 @@ function resolveServiceAccount(): ServiceAccount | null {
 }
 
 function parseServiceAccountJson(content: string): ServiceAccount {
-  const parsed = JSON.parse(content) as ServiceAccount;
-  return {
-    ...parsed,
-    privateKey: parsed.privateKey?.replace(/\\n/g, "\n"),
-  };
+  try {
+    const parsed = JSON.parse(content) as ServiceAccount;
+    return {
+      ...parsed,
+      privateKey: parsed.privateKey?.replace(/\\n/g, "\n"),
+    };
+  } catch (error) {
+    throw new Error("Invalid Firebase service account JSON provided in environment credentials.", {
+      cause: error,
+    });
+  }
 }

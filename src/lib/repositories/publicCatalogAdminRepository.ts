@@ -140,12 +140,16 @@ async function resolveCategoryId(slug: string): Promise<string | null> {
 }
 
 function normalizeProduct(input: unknown, fallbackId: string): FirestoreProduct {
-  if (typeof input === "object" && input !== null && !("id" in input)) {
+  if (isRecord(input) && !("id" in input)) {
     return validateProduct({
-      ...(input as object),
+      ...input,
       id: fallbackId,
     });
   }
 
   return validateProduct(input);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
