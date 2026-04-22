@@ -6,7 +6,7 @@ import {
   type Product as FirestoreProduct,
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
+import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
 import type { Category } from "@/src/lib/types";
 import { mockCategories } from "@/src/lib/mockData";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";

@@ -30,8 +30,12 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseServer", () => ({
-  dbServer: {},
+vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
+  getAuthenticatedAppForUser: vi.fn(async () => ({
+    firestore: {},
+    currentUser: null,
+    firebaseServerApp: {},
+  })),
 }));
 
 vi.mock("@/src/lib/repositories/productsRepository", () => ({
