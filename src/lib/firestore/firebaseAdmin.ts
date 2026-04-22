@@ -56,7 +56,7 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
 
   if (!existsSync(serviceAccountPath)) {
     throw new Error(
-      `Firebase service account file not found at "${serviceAccountPath}" (from ${serviceAccountSource}).`,
+      `Firebase service account file not found at "${serviceAccountPath}" (from ${serviceAccountSource}). Verify the path exists and is accessible, or check your environment variable configuration.`,
     );
   }
 
@@ -75,7 +75,7 @@ function parseServiceAccount(rawValue: string | undefined, sourceLabel: string):
   } catch (error) {
     const parseMessage = error instanceof Error ? error.message : "unknown parse error";
     throw new Error(
-      `Invalid ${sourceLabel}. Expected JSON with client_email/private_key (and optional project_id). ${parseMessage}`,
+      `Invalid ${sourceLabel}: ${parseMessage}. Expected JSON with client_email/private_key (and optional project_id).`,
     );
   }
 

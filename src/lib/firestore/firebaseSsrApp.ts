@@ -34,7 +34,7 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
   if (!firebaseServerConfig.apiKey) {
     if (authIdToken) {
       throw new Error(
-        "NEXT_PUBLIC_FIREBASE_API_KEY is required to initialize authenticated FirebaseServerApp sessions.",
+        "NEXT_PUBLIC_FIREBASE_API_KEY is required to initialize authenticated FirebaseServerApp sessions. Set it in your .env file or deployment environment variables.",
       );
     }
 
