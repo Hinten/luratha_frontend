@@ -52,7 +52,7 @@ export function getFirebaseStorageBucket(projectId = getFirebaseProjectId()): st
 export function getFirebaseWebConfig() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? getFirebaseProjectId();
 
-  return {
+  const firestoreConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
     projectId,
@@ -60,6 +60,8 @@ export function getFirebaseWebConfig() {
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
   };
+
+  return firestoreConfig;
 }
 
 export function parseHostAndPort(value: string, label: string): { host: string; port: number } {

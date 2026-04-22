@@ -7,7 +7,7 @@ import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
-import { dbServer } from "@/src/lib/firestore/firebaseServer";
+import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
@@ -24,10 +24,12 @@ interface PageProps {
   }>;
 }
 
-const categoriesRepository = createCategoriesRepository(dbServer);
-const productsSearchRepository = createProductsSearchRepository(dbServer);
 
 const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCategory | null> => {
+
+  const authenticatedAppForUser = await getAuthenticatedAppForUser();
+  const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
+
   try {
     return await categoriesRepository.getBySlug(slug);
   } catch (error) {
@@ -38,6 +40,10 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
 
 const getCachedCategoryProducts = cache(
   async (category: FirestoreCategory, filters: ProductSearchFilters) => {
+
+    const authenticatedAppForUser = await getAuthenticatedAppForUser();
+    const productsSearchRepository = createProductsSearchRepository(authenticatedAppForUser.firestore);
+
     try {
       return await productsSearchRepository.search({
         ...filters,

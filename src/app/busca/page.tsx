@@ -5,7 +5,7 @@ import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
-import { dbServer } from "@/src/lib/firestore/firebaseServer";
+import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
 import type { Product } from "@/src/schemas/firestore";
@@ -21,7 +21,6 @@ interface PageProps {
   }>;
 }
 
-const productsSearchRepository = createProductsSearchRepository(dbServer);
 const searchResponseCache = new Map<string, Promise<Product[]>>();
 const MAX_SEARCH_CACHE_ENTRIES = 200;
 
@@ -49,6 +48,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 async function getCachedSearchResults(cacheKey: string): Promise<Product[]> {
+
+  const authenticatedAppForUser = await getAuthenticatedAppForUser();
+  const productsSearchRepository = createProductsSearchRepository(authenticatedAppForUser.firestore);
+
   if (!searchResponseCache.has(cacheKey)) {
     if (searchResponseCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
       const oldestKey = searchResponseCache.keys().next().value;

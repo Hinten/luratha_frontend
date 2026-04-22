@@ -16,7 +16,6 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
-import { db } from "@/src/lib/firestore/firebaseClient";
 
 type ProductListFilters = {
   status?: Product["status"];
@@ -24,7 +23,7 @@ type ProductListFilters = {
   limit?: number;
 };
 
-type ProductUpdateInput = Partial<Omit<Product, "id" | "createdAt" | "slug">>;
+type ProductUpdateInput = Partial<Omit<Product, "id" | "createdAt">>;
 
 type ProductRepositoryErrorCode = "validation" | "not_found" | "conflict" | "unknown";
 
@@ -52,7 +51,7 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
-export function createProductsRepository(dbInstance: Firestore = db): ProductsRepository {
+export function createProductsRepository(dbInstance: Firestore): ProductsRepository {
   const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
 
   async function create(input: unknown): Promise<Product> {

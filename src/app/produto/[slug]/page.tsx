@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
-import { dbServer } from "@/src/lib/firestore/firebaseServer";
+import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseServer";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import {
   ProductRepositoryError,
@@ -18,10 +18,12 @@ interface PageProps {
 }
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
-const productsRepository = createProductsRepository(dbServer);
-const categoriesRepository = createCategoriesRepository(dbServer);
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
+
+  const authenticatedAppForUser = await getAuthenticatedAppForUser();
+  const productsRepository = createProductsRepository(authenticatedAppForUser.firestore);
+
   try {
     return await productsRepository.getBySlug(slug);
   } catch (error) {
@@ -37,6 +39,8 @@ const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProdu
 
 const getCachedCategoryById = cache(async (categoryId: string): Promise<FirestoreCategory | null> => {
   try {
+    const authenticatedAppForUser = await getAuthenticatedAppForUser();
+    const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
     return await categoriesRepository.getById(categoryId);
   } catch (error) {
     console.error(`[ProdutoPage] error fetching category with id "${categoryId}"`, error);
