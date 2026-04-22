@@ -32,6 +32,12 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
   initializeServerFirestoreEmulator(firestore);
 
   if (!firebaseServerConfig.apiKey) {
+    if (authIdToken) {
+      throw new Error(
+        "NEXT_PUBLIC_FIREBASE_API_KEY is required to initialize authenticated FirebaseServerApp sessions.",
+      );
+    }
+
     // SSR routes can still read Firestore with FirebaseServerApp without initializing Auth.
     // This avoids auth/invalid-api-key when only project-scoped server reads are needed.
     return {

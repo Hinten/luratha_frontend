@@ -38,11 +38,17 @@ export const adminStorage = getStorage(adminApp);
 export const adminBucket = adminStorage.bucket(storageBucket);
 
 function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
-  const inlineCredential = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const inlineCredential = parseServiceAccount(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    "FIREBASE_SERVICE_ACCOUNT_JSON",
+  );
   if (inlineCredential) {
     return inlineCredential;
   }
 
+  const serviceAccountSource = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+    ? "FIREBASE_SERVICE_ACCOUNT_PATH"
+    : "GOOGLE_APPLICATION_CREDENTIALS";
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (!serviceAccountPath) {
     return undefined;
@@ -50,20 +56,15 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
 
   if (!existsSync(serviceAccountPath)) {
     throw new Error(
-      `Firebase service account file not found at "${serviceAccountPath}" (from FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS).`,
+      `Firebase service account file not found at "${serviceAccountPath}" (from ${serviceAccountSource}).`,
     );
   }
 
   const fileContents = readFileSync(serviceAccountPath, "utf8");
-  const fileCredential = parseServiceAccount(fileContents);
-  if (!fileCredential) {
-    throw new Error(`Invalid Firebase service account JSON in file: ${serviceAccountPath}`);
-  }
-
-  return fileCredential;
+  return parseServiceAccount(fileContents, `service account file ${serviceAccountPath}`);
 }
 
-function parseServiceAccount(rawValue: string | undefined): ServiceAccount | undefined {
+function parseServiceAccount(rawValue: string | undefined, sourceLabel: string): ServiceAccount | undefined {
   if (!rawValue?.trim()) {
     return undefined;
   }
@@ -74,19 +75,19 @@ function parseServiceAccount(rawValue: string | undefined): ServiceAccount | und
   } catch (error) {
     const parseMessage = error instanceof Error ? error.message : "unknown parse error";
     throw new Error(
-      `Invalid FIREBASE_SERVICE_ACCOUNT_JSON value. Expected JSON with client_email/private_key (and optional project_id). ${parseMessage}`,
+      `Invalid ${sourceLabel}. Expected JSON with client_email/private_key (and optional project_id). ${parseMessage}`,
     );
   }
 
   if (!parsedValue || typeof parsedValue !== "object") {
-    return undefined;
+    throw new Error(`Invalid ${sourceLabel}. Expected a JSON object.`);
   }
 
   const credential = parsedValue as Record<string, unknown>;
   const clientEmail = getString(credential.client_email);
   const privateKey = getString(credential.private_key);
   if (!clientEmail || !privateKey) {
-    return undefined;
+    throw new Error(`Invalid ${sourceLabel}. Missing required fields client_email/private_key.`);
   }
 
   return {
