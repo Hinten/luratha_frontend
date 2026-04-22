@@ -9,6 +9,7 @@ import { applyEmulatorEnvironmentDefaults, getFirebaseWebConfig } from "./enviro
 applyEmulatorEnvironmentDefaults();
 
 const firebaseServerConfig = getFirebaseWebConfig();
+const BEARER_PREFIX = "Bearer ";
 
 type AuthenticatedAppForUser = {
   firebaseServerApp: FirebaseServerApp;
@@ -55,9 +56,8 @@ function getAuthIdTokenFromRequest({
   authHeader: string | null;
   sessionCookie: string | undefined;
 }): string | undefined {
-  const bearerPrefix = "Bearer ";
-  if (authHeader?.startsWith(bearerPrefix)) {
-    const token = authHeader.slice(bearerPrefix.length).trim();
+  if (authHeader?.startsWith(BEARER_PREFIX)) {
+    const token = authHeader.slice(BEARER_PREFIX.length).trim();
     if (token) {
       return token;
     }

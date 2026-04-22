@@ -71,8 +71,9 @@ function parseServiceAccount(rawValue: string | undefined): ServiceAccount | und
   let parsedValue: unknown;
   try {
     parsedValue = JSON.parse(rawValue);
-  } catch {
-    throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON value. It must be valid JSON.");
+  } catch (error) {
+    const parseMessage = error instanceof Error ? error.message : "unknown parse error";
+    throw new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_JSON value. It must be valid JSON. ${parseMessage}`);
   }
 
   if (!parsedValue || typeof parsedValue !== "object") {
