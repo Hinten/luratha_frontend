@@ -1,71 +1,30 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 
-export default async function cloudGlobalSetup(): Promise<() => void> {
-  let tempCredentialFile: string | null = null;
+export default async function cloudGlobalSetup(): Promise<void> {
+  // Validate that a service account credential source is available.
+  // firebaseAdmin.ts reads FIREBASE_SERVICE_ACCOUNT_BASE64 / FIREBASE_SERVICE_ACCOUNT_JSON /
+  // FIREBASE_SERVICE_ACCOUNT_PATH / GOOGLE_APPLICATION_CREDENTIALS directly on import.
+  const hasServiceAccount =
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ||
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+    !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-  // 1. Resolve service account credential from FIREBASE_SERVICE_ACCOUNT_BASE64
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-    try {
-      const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8");
-      const parsed = JSON.parse(decoded) as Record<string, unknown>;
-      if (!parsed.client_email || !parsed.private_key) {
-        throw new Error("Missing client_email or private_key in service account JSON");
-      }
-      // Write to temp file so GOOGLE_APPLICATION_CREDENTIALS works (used by firebase-admin ADC)
-      tempCredentialFile = path.join(os.tmpdir(), `luratha-cloud-test-sa-${Date.now()}.json`);
-      fs.writeFileSync(tempCredentialFile, decoded, "utf8");
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = tempCredentialFile;
-      // Also expose as inline JSON for direct cert() usage
-      process.env.FIREBASE_SERVICE_ACCOUNT_JSON = decoded;
-      if (typeof parsed.project_id === "string" && parsed.project_id) {
-        process.env.CLOUD_TEST_PROJECT_ID = parsed.project_id;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      process.env.CLOUD_TEST_SKIP_REASON = `FIREBASE_SERVICE_ACCOUNT_BASE64 inválido: ${message}`;
-      return () => {};
-    }
-  } else {
-    // Fall back to GOOGLE_APPLICATION_CREDENTIALS file path
-    const credentialPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "";
-    if (!credentialPath || !fs.existsSync(credentialPath)) {
-      process.env.CLOUD_TEST_SKIP_REASON =
-        "FIREBASE_SERVICE_ACCOUNT_BASE64 e GOOGLE_APPLICATION_CREDENTIALS ausentes ou inválidos";
-      return () => {};
-    }
+  if (!hasServiceAccount) {
+    process.env.CLOUD_TEST_SKIP_REASON =
+      "FIREBASE_SERVICE_ACCOUNT_BASE64 ou GOOGLE_APPLICATION_CREDENTIALS ausentes";
+    return;
   }
 
-  // 2. Resolve web app config from FIREBASE_WEB_APP_CONFIG_BASE64 (required for client SDK in tests)
-  if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
-    try {
-      const decoded = Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8");
-      const parsed = JSON.parse(decoded) as Record<string, unknown>;
-      if (!parsed.projectId) {
-        throw new Error("Missing projectId in web app config JSON");
-      }
-      process.env.CLOUD_TEST_WEB_APP_CONFIG_JSON = decoded;
-      // Expose individual vars for modules that read NEXT_PUBLIC_* directly
-      if (!process.env.CLOUD_TEST_PROJECT_ID && typeof parsed.projectId === "string") {
-        process.env.CLOUD_TEST_PROJECT_ID = parsed.projectId;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      process.env.CLOUD_TEST_SKIP_REASON = `FIREBASE_WEB_APP_CONFIG_BASE64 inválido: ${message}`;
-      return () => {
-        if (tempCredentialFile) {
-          try { fs.unlinkSync(tempCredentialFile); } catch {}
-        }
-      };
-    }
+  // Validate that the web app config is available.
+  // environment.ts getFirebaseWebConfig() reads FIREBASE_WEB_APP_CONFIG_BASE64 or
+  // the NEXT_PUBLIC_* vars and returns the parsed config.
+  const webConfig = getFirebaseWebConfig();
+  if (!webConfig.projectId) {
+    process.env.CLOUD_TEST_SKIP_REASON =
+      "FIREBASE_WEB_APP_CONFIG_BASE64 ou NEXT_PUBLIC_FIREBASE_PROJECT_ID ausentes";
+    return;
   }
 
   process.env.CLOUD_TEST_SKIP_REASON = "";
-
-  return () => {
-    if (tempCredentialFile) {
-      try { fs.unlinkSync(tempCredentialFile); } catch {}
-    }
-  };
 }

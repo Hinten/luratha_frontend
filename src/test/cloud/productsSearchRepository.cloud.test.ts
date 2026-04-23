@@ -5,6 +5,10 @@
  *   FIREBASE_SERVICE_ACCOUNT_BASE64 – service account for admin-level seeding/cleanup
  *   FIREBASE_WEB_APP_CONFIG_BASE64  – client web-app config used by the repository under test
  *
+ * Credential handling is delegated to the shared modules:
+ *   - src/lib/firestore/firebaseAdmin.ts reads FIREBASE_SERVICE_ACCOUNT_BASE64 directly
+ *   - src/lib/firestore/environment.ts getFirebaseWebConfig() reads FIREBASE_WEB_APP_CONFIG_BASE64
+ *
  * Execute:  npm run test:cloud
  *
  * The suite is automatically skipped when credentials are not available.
@@ -24,14 +28,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import {
-  cert,
-  deleteApp as deleteAdminApp,
-  getApps as getAdminApps,
-  initializeApp as initAdminApp,
-  type App as AdminApp,
-} from "firebase-admin/app";
-import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
+import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 import {
   createProductsSearchRepository,
   type SearchOptions,
@@ -45,55 +43,11 @@ import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSet
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CLOUD_TEST_APP_NAME = "luratha-cloud-test-client";
-const CLOUD_ADMIN_APP_NAME = "luratha-cloud-test-admin";
-const DB_NAME = "default";
-
-/** Parse JSON from a base64-encoded environment variable. */
-function parseBase64Json(envVar: string, label: string): Record<string, unknown> {
-  const raw = process.env[envVar];
-  if (!raw) throw new Error(`${label} (env: ${envVar}) is not set`);
-  return JSON.parse(Buffer.from(raw, "base64").toString("utf8")) as Record<string, unknown>;
-}
-
-/** Initialize (or reuse) the Firebase client app for tests. */
-function getClientApp(): FirebaseApp {
-  const existing = getApps().find((app) => app.name === CLOUD_TEST_APP_NAME);
-  if (existing) return existing;
-
-  let config: Record<string, unknown>;
-  if (process.env.CLOUD_TEST_WEB_APP_CONFIG_JSON) {
-    config = JSON.parse(process.env.CLOUD_TEST_WEB_APP_CONFIG_JSON) as Record<string, unknown>;
-  } else {
-    config = parseBase64Json("FIREBASE_WEB_APP_CONFIG_BASE64", "Firebase web app config");
-  }
-  return initializeApp(config as Parameters<typeof initializeApp>[0], CLOUD_TEST_APP_NAME);
-}
-
-/** Initialize (or reuse) the Firebase Admin app for seeding / cleanup. */
-function getAdminApp(): AdminApp {
-  const existing = getAdminApps().find((app) => app.name === CLOUD_ADMIN_APP_NAME);
-  if (existing) return existing;
-
-  const serviceAccountJson =
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ??
-    (() => {
-      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-      if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is not set");
-      return Buffer.from(raw, "base64").toString("utf8");
-    })();
-
-  const sa = JSON.parse(serviceAccountJson) as { project_id?: string };
-  return initAdminApp(
-    { credential: cert(serviceAccountJson), projectId: sa.project_id },
-    CLOUD_ADMIN_APP_NAME,
-  );
-}
 
 type SeedDocument = { collection: string; id: string };
 
 /** Write a single Firestore document via the admin SDK and track it for cleanup. */
 async function seedDocument(
-  adminDb: FirebaseFirestore.Firestore,
   collectionName: string,
   id: string,
   data: Record<string, unknown>,
@@ -104,10 +58,7 @@ async function seedDocument(
 }
 
 /** Delete all tracked documents via admin SDK. */
-async function cleanupDocuments(
-  adminDb: FirebaseFirestore.Firestore,
-  tracked: SeedDocument[],
-): Promise<void> {
+async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   await Promise.all(
     tracked.map(({ collection, id }) => adminDb.collection(collection).doc(id).delete()),
   );
@@ -126,25 +77,23 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
 
   let clientApp: FirebaseApp;
   let db: Firestore;
-  let adminDb: FirebaseFirestore.Firestore;
   const seededDocs: SeedDocument[] = [];
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   beforeAll(async () => {
-    // Client app (used by productsSearchRepository under test)
-    clientApp = getClientApp();
-    db = getFirestore(clientApp, DB_NAME);
-
-    // Admin app (used for seeding and cleanup)
-    const adminApp = getAdminApp();
-    adminDb = getAdminFirestore(adminApp, DB_NAME);
+    // Client app (used by productsSearchRepository under test).
+    // getFirebaseWebConfig() from environment.ts handles FIREBASE_WEB_APP_CONFIG_BASE64 decoding.
+    const webConfig = getFirebaseWebConfig();
+    clientApp =
+      getApps().find((app) => app.name === CLOUD_TEST_APP_NAME) ??
+      initializeApp(webConfig as Parameters<typeof initializeApp>[0], CLOUD_TEST_APP_NAME);
+    db = getFirestore(clientApp, DATABASE_NAME);
 
     const now = new Date().toISOString();
 
     // Seed category
     await seedDocument(
-      adminDb,
       "categories",
       categoryId,
       { id: categoryId, name: "Test Category", slug: categorySlug },
@@ -194,7 +143,6 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
     };
 
     await seedDocument(
-      adminDb,
       "products",
       `${prefix}-prod-a`,
       {
@@ -210,7 +158,6 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
     );
 
     await seedDocument(
-      adminDb,
       "products",
       `${prefix}-prod-b`,
       {
@@ -226,7 +173,6 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
     );
 
     await seedDocument(
-      adminDb,
       "products",
       `${prefix}-prod-other`,
       {
@@ -244,14 +190,12 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
   });
 
   afterAll(async () => {
-    await cleanupDocuments(adminDb, seededDocs);
+    await cleanupDocuments(seededDocs);
 
-    // Tear down Firebase apps created for this suite only
+    // Tear down the client app created for this suite only.
+    // Do NOT delete the shared adminDb app from firebaseAdmin.ts.
     const clientAppToDelete = getApps().find((app) => app.name === CLOUD_TEST_APP_NAME);
     if (clientAppToDelete) await deleteApp(clientAppToDelete);
-
-    const adminAppToDelete = getAdminApps().find((app) => app.name === CLOUD_ADMIN_APP_NAME);
-    if (adminAppToDelete) await deleteAdminApp(adminAppToDelete);
   });
 
   // ── Tests ─────────────────────────────────────────────────────────────────
