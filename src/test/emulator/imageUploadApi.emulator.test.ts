@@ -3,7 +3,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { describe, it, expect, beforeEach } from "vitest";
 import { POST } from "@/src/app/api/images/upload/route";
-import { adminBucket, adminDb } from "@/src/lib/firebaseAdmin";
+import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 

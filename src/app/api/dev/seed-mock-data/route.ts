@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
-import { adminDb } from "@/src/lib/firebaseAdmin";
+import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");

@@ -12,6 +12,7 @@ import {
   ProductRepositoryError,
   createProductsRepository,
 } from "@/src/lib/repositories/productsRepository";
+import { DEFAULT_FIREBASE_PROJECT_ID } from "@/src/lib/firestore/environment";
 const emulatorReady = process.env.FIRESTORE_EMULATOR_READY === "true";
 if (!emulatorReady) {
   console.warn(
@@ -20,7 +21,7 @@ if (!emulatorReady) {
 }
 
 const describeWhenEmulator = emulatorReady ? describe : describe.skip;
-const projectId = process.env.FIREBASE_PROJECT_ID ?? "luratha-96386";
+const projectId = process.env.FIREBASE_PROJECT_ID ?? DEFAULT_FIREBASE_PROJECT_ID;
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080";
 const [host, portString] = firestoreHost.split(":");
 const port = Number(portString);

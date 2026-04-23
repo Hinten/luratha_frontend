@@ -11,7 +11,6 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type FirestoreCategory, validateCategory } from "@/src/schemas/firestore";
-import { dbServer } from "../firebaseServer";
 
 type CategoryRepositoryErrorCode = "validation" | "unknown";
 
@@ -32,7 +31,7 @@ export interface CategoriesRepository {
   getBySlug(slug: string): Promise<FirestoreCategory | null>;
 }
 
-export function createCategoriesRepository(dbInstance: Firestore = dbServer): CategoriesRepository {
+export function createCategoriesRepository(dbInstance: Firestore): CategoriesRepository {
   const categoriesCollectionRef = collection(dbInstance, firestoreCollections.categories);
 
   async function getById(id: string): Promise<FirestoreCategory | null> {

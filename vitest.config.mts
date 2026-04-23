@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { DEFAULT_FIREBASE_PROJECT_ID } from "./src/lib/firestore/environment";
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
@@ -9,7 +10,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     env: {
-      FIREBASE_PROJECT_ID: "luratha-96386",
+      FIREBASE_PROJECT_ID: DEFAULT_FIREBASE_PROJECT_ID,
       FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
       FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
       FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",
