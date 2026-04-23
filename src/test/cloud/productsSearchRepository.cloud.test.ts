@@ -99,7 +99,7 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
     const webConfig = getFirebaseWebConfig();
     clientApp =
       getApps().find((app) => app.name === CLOUD_TEST_APP_NAME) ??
-      initializeApp(webConfig as Parameters<typeof initializeApp>[0], CLOUD_TEST_APP_NAME);
+      initializeApp(webConfig, CLOUD_TEST_APP_NAME);
     db = getFirestore(clientApp, DATABASE_NAME);
 
     // ── 2. Seed test data via Admin SDK (bypasses security rules) ────────────
