@@ -3,6 +3,7 @@ export const DEFAULT_FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 export const DEFAULT_FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099";
 export const DEFAULT_FIREBASE_STORAGE_EMULATOR_HOST = "127.0.0.1:9199";
 
+
 export const FIREBASE_EMULATOR_ENV = {
   USE_EMULATOR: "TRUE",
   FIREBASE_PROJECT_ID: DEFAULT_FIREBASE_PROJECT_ID,
@@ -32,6 +33,10 @@ export function isEmulatorEnabled(): boolean {
   return isTruthyEnv(process.env.USE_EMULATOR);
 }
 
+//levei alguns dias para entender que no firebase enterprise, o nome do banco de dados é "default" e não "(default)".
+//Se o emulador estiver ativado, precisamos usar o nome correto para evitar erros de conexão.
+export const DATABASE_NAME = isEmulatorEnabled() ? "(default)" : "default";
+
 export function getFirebaseProjectId(): string {
   return (
     process.env.FIREBASE_PROJECT_ID ??
@@ -60,6 +65,8 @@ export function getFirebaseWebConfig() {
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
   };
+
+  console.log("Using Firebase config:", firestoreConfig);
 
   return firestoreConfig;
 }

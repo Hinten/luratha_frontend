@@ -65,7 +65,7 @@ npm run build
 - `src/app/`: routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests.
 - `src/components/`: shared UI plus domain folders (`categoria/`, `produto/`), each with `.module.css`.
 - `src/contexts/`: client state providers (`AuthContext`, `CartContext`).
-- `src/lib/`: constants, SEO constants, Firebase (`firebaseClient.ts`, `firebaseServer.ts`, `firebaseAdmin.ts`), query helpers, repositories, mock data.
+- `src/lib/`: constants, SEO constants, Firebase (`src/lib/firestore/firebaseClient.ts`, `src/lib/firestore/firebaseSsrApp.ts`, `src/lib/firestore/firebaseAdmin.ts`), query helpers, repositories, mock data.
 - `src/lib/repositories/`: Firestore access layer and seed helpers used by server routes/pages.
 - `src/services/`: lightweight service layer (currently minimal; avoid adding duplicate repository logic here).
 - `src/schemas/`: validation and domain schemas.
@@ -78,7 +78,7 @@ npm run build
 
 - Use `@/src/...` imports (alias from `tsconfig.json`).
 - Prefer Server Components; add `"use client"` only when required (hooks/events/browser APIs).
-- For SSR/App Router data fetching and `generateMetadata`, use server-safe Firebase/repository code (`firebaseServer.ts` + repository APIs), never client Firebase SDK instances.
+- For SSR/App Router data fetching and `generateMetadata`, use server-safe Firebase/repository code (`firebaseSsrApp.ts` + repository APIs), never client Firebase SDK instances.
 - Keep Firestore data contracts aligned with `src/schemas/firestore`; avoid introducing new reads based on legacy `src/lib/types.ts` in new server flows.
 - Keep changes small and composable; reuse existing components/utilities before creating new ones.
 - Styling: use CSS Modules for component styles; use design tokens from `src/app/globals.css` (`var(--color-*)`, `var(--font-*)`).
@@ -110,7 +110,10 @@ Use `.github/skills/luratha-seo/SKILL.md` for implementation details.
 ## Firebase & Security
 
 - Firebase project config is in `firebase.json` (project `luratha-96386`, region `us-east5`, emulators for Auth/Firestore/Storage).
-- Client SDK init lives in `src/lib/firestore/firebaseClient.ts`; server-side reads use `src/lib/firestore/firebaseServer.ts`; admin seeding uses `src/lib/firestore/firebaseAdmin.ts`.
+- Client SDK init lives in `src/lib/firestore/firebaseClient.ts`; SSR server-side reads use `src/lib/firestore/firebaseSsrApp.ts`; admin/API seeding uses `src/lib/firestore/firebaseAdmin.ts`.
+- Use `firebaseSsrApp.ts` only for SSR/App Router rendering flows (FirebaseServerApp + optional auth token bridging).
+- Use `firebaseClient.ts` only in browser/client components (`"use client"` paths).
+- Use `firebaseAdmin.ts` only in trusted server API/background environments where service account/ADC credentials are expected.
 - Never import client Firebase modules into server-only flows (pages/layout metadata, server actions, route handlers that read Firestore).
 - Keep emulator env wiring coherent when running local test stacks: `USE_EMULATOR=TRUE`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`, `FIREBASE_STORAGE_EMULATOR_HOST`, `NEXT_PUBLIC_*_EMULATOR_HOST`.
 - Keep `.env*` files out of commits (excluded in `.gcloudignore`).
