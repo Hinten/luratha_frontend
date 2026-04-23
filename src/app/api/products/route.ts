@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 
@@ -48,10 +48,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Falha ao validar o produto." }, { status: 400 });
   }
 
-  // Generate embeddings from title + description (optional – failure is non-fatal)
+  // Generate embeddings from title + description using the admin app credential for
+  // automatic token refresh (no VERTEX_AI_ACCESS_TOKEN env var required).
   const embeddingText = `${product.title} ${product.description}`;
   try {
-    const embeddingService = createEmbeddingService();
+    const embeddingService = createEmbeddingService({
+      credential: adminApp.options.credential,
+    });
     const embedding = await embeddingService.embed(embeddingText);
     product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
   } catch (embeddingError) {
@@ -74,3 +77,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json(product, { status: 201 });
 }
+

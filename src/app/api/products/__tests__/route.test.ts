@@ -13,6 +13,7 @@ const { mockSet, mockGet, mockDoc, mockCollection, mockEmbed } = vi.hoisted(() =
 
 vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
+  adminApp: { options: { credential: undefined } },
 }));
 
 vi.mock("@/src/lib/embeddingService", () => ({
