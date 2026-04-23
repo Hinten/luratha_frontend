@@ -58,6 +58,7 @@ npm run build
 | `npm run test:e2e` | Playwright E2E (headless) |
 | `npm run test:e2e:emulator` | Playwright E2E suite that requires Firebase Emulator (`playwright.e2e.emulator.config.ts`) |
 | `npm run test:e2e:ui` | Playwright UI mode |
+| `npm run test:cloud` | Vitest cloud integration suite (`vitest.cloud.config.mts`) — **run only on explicit request** |
 | `npm run setup:routes` | Run `docs/create-catalog-routes.mjs` scaffolding |
 
 ## Architecture Map (where to change code)
@@ -70,6 +71,7 @@ npm run build
 - `src/services/`: lightweight service layer (currently minimal; avoid adding duplicate repository logic here).
 - `src/schemas/`: validation and domain schemas.
 - `src/test/`: emulator orchestration, seed helpers, and Vitest setup.
+- `src/test/cloud/`: cloud Firestore integration tests (pipeline search, vector search, repository). Run only on explicit request — see note in Testing Expectations.
 - `e2e/`: Playwright specs.
 - `e2e/with-emulator/`: Playwright specs that must run with Firebase Emulator.
 - `public/llms.txt`: GEO/LLM discoverability file.
@@ -94,6 +96,7 @@ npm run build
 - Test naming: `src/**/__tests__/*.test.ts(x)` and `e2e/*.spec.ts`.
 - For schema or Firebase request changes, `npm run test:firestore` and `npm run test:e2e:emulator` are mandatory and must pass before finishing.
 - Do not remove/skip existing tests to make CI pass.
+- **Cloud tests** (`src/test/cloud/`): validate textual-pipeline search plans, vector search plans, and real Firestore Cloud integration (`productsSearchRepository`). Run with `npm run test:cloud`. **Do NOT run these automatically** — they hit live Firebase and incur cost. Execute only when the user explicitly asks. Require `FIREBASE_SERVICE_ACCOUNT_BASE64` and `FIREBASE_WEB_APP_CONFIG_BASE64` env vars; tests auto-skip when credentials are absent.
 - For full patterns and mocks, use `.github/skills/luratha-testing/SKILL.md`.
 
 ## SEO / AEO / GEO Expectations
