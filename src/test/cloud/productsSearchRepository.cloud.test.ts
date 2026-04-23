@@ -28,6 +28,10 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
+// adminDb is the firebase-admin Firestore instance (server SDK).
+// It authenticates via service account credentials and bypasses all
+// Firestore security rules – required so seed/cleanup work regardless
+// of the rules currently deployed to the project.
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 import {
@@ -46,7 +50,11 @@ const CLOUD_TEST_APP_NAME = "luratha-cloud-test-client";
 
 type SeedDocument = { collection: string; id: string };
 
-/** Write a single Firestore document via the admin SDK and track it for cleanup. */
+/**
+ * Write a single Firestore document via the Admin SDK (firebase-admin).
+ * The Admin SDK bypasses Firestore security rules, so this works
+ * regardless of the rules deployed to the project.
+ */
 async function seedDocument(
   collectionName: string,
   id: string,
@@ -57,7 +65,10 @@ async function seedDocument(
   tracked.push({ collection: collectionName, id });
 }
 
-/** Delete all tracked documents via admin SDK. */
+/**
+ * Delete all tracked documents via the Admin SDK (firebase-admin).
+ * Bypasses security rules so cleanup succeeds even after rules are tightened.
+ */
 async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   await Promise.all(
     tracked.map(({ collection, id }) => adminDb.collection(collection).doc(id).delete()),
@@ -82,14 +93,20 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   beforeAll(async () => {
-    // Client app (used by productsSearchRepository under test).
-    // getFirebaseWebConfig() from environment.ts handles FIREBASE_WEB_APP_CONFIG_BASE64 decoding.
+    // ── 1. Client SDK setup (subject to security rules) ─────────────────────
+    // This `db` instance is passed into the repository under test so that
+    // queries run with the same Firestore rules a real user would face.
     const webConfig = getFirebaseWebConfig();
     clientApp =
       getApps().find((app) => app.name === CLOUD_TEST_APP_NAME) ??
       initializeApp(webConfig as Parameters<typeof initializeApp>[0], CLOUD_TEST_APP_NAME);
     db = getFirestore(clientApp, DATABASE_NAME);
 
+    // ── 2. Seed test data via Admin SDK (bypasses security rules) ────────────
+    // All writes below go through `adminDb` (firebase-admin/firestore), which
+    // authenticates with a service-account credential and ignores Firestore
+    // security rules. This guarantees seeding works even after rules are
+    // tightened on the project.
     const now = new Date().toISOString();
 
     // Seed category
