@@ -81,9 +81,9 @@ Benefits:
 
 ## 6) SDK configuration for emulator targets
 
-In frontend code (`src/lib/firebase.ts`):
+In frontend code (`src/lib/firestore/firebaseClient.ts`):
 
-- `NEXT_PUBLIC_USE_EMULATOR=true`
+- `USE_EMULATOR=TRUE`
 - `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`
 - `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`
 - `NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199`

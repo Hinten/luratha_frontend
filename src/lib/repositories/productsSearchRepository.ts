@@ -16,7 +16,6 @@ import {
   type ProductSearchFilters,
   type ProductSort,
 } from "@/src/lib/firestoreQueryStrategies";
-import { dbServer } from "@/src/lib/firebaseServer";
 import {
   ProductRepositoryError,
 } from "@/src/lib/repositories/productsRepository";
@@ -40,7 +39,7 @@ const DEFAULT_PRODUCT_TITLE = "Produto";
 const UNKNOWN_CATEGORY_ID = "categoria-desconhecida";
 
 export function createProductsSearchRepository(
-  dbInstance: Firestore = dbServer,
+  dbInstance: Firestore,
   options: CreateProductsSearchRepositoryOptions = {},
 ): ProductsSearchRepository {
   const categoriesRepository = createCategoriesRepository(dbInstance);

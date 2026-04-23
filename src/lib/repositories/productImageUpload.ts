@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
-import { adminBucket, adminDb } from "@/src/lib/firebaseAdmin";
+import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 
 type ImageVariantName = "card" | "mobile" | "tablet" | "desktop";
 

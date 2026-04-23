@@ -81,13 +81,13 @@ No config de emulator:
 
 ## SDK apontando para Emulator
 
-`src/lib/firebase.ts` agora exporta:
+`src/lib/firestore/firebaseClient.ts` agora exporta:
 
 - `auth`
 - `db`
 - `storage`
 
-Quando `NEXT_PUBLIC_USE_EMULATOR=true` no browser:
+Quando `USE_EMULATOR=TRUE`:
 
 - conecta Auth Emulator
 - conecta Firestore Emulator
