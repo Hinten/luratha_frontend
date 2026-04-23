@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: [
-    "./e2e/with-emulator"              // pode adicionar quantas quiser
+    "with-emulator/**",
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

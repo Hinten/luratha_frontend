@@ -1,4 +1,21 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+type E2ECartItem = {
+  productId: string;
+  name: string;
+  slug: string;
+  imageUrl: string;
+  price: number;
+  size: string;
+  quantity: number;
+};
+
+async function openCartWithItems(page: Page, items: E2ECartItem[]) {
+  await page.addInitScript((cartItems) => {
+    localStorage.setItem("luratha_cart", JSON.stringify(cartItems));
+  }, items);
+  await page.goto("/carrinho");
+}
 
 test.describe("Cart (Carrinho)", () => {
   test.beforeEach(async ({ page }) => {
@@ -46,10 +63,8 @@ test.describe("Cart (Carrinho)", () => {
   });
 
   test("cart with items shows item rows and order summary", async ({ page }) => {
-    // Seed localStorage with a cart item
-    await page.goto("/carrinho");
-    await page.evaluate(() => {
-      const item = {
+    await openCartWithItems(page, [
+      {
         productId: "test-1",
         name: "Vestido Bordado Floral",
         slug: "vestido-bordado-floral",
@@ -57,12 +72,8 @@ test.describe("Cart (Carrinho)", () => {
         price: 389,
         size: "M",
         quantity: 1,
-      };
-      localStorage.setItem("luratha_cart", JSON.stringify([item]));
-    });
-
-    // Reload so the cart context picks up from localStorage
-    await page.reload();
+      },
+    ]);
 
     await expect(page.getByText("Vestido Bordado Floral")).toBeVisible();
     await expect(page.getByText("Tamanho: M")).toBeVisible();
@@ -73,9 +84,8 @@ test.describe("Cart (Carrinho)", () => {
   });
 
   test("quantity stepper increases item count", async ({ page }) => {
-    await page.goto("/carrinho");
-    await page.evaluate(() => {
-      const item = {
+    await openCartWithItems(page, [
+      {
         productId: "test-1",
         name: "Blusa Artesanal",
         slug: "blusa-artesanal",
@@ -83,10 +93,8 @@ test.describe("Cart (Carrinho)", () => {
         price: 150,
         size: "P",
         quantity: 1,
-      };
-      localStorage.setItem("luratha_cart", JSON.stringify([item]));
-    });
-    await page.reload();
+      },
+    ]);
 
     const increaseBtn = page.getByRole("button", { name: "Aumentar quantidade" });
     await increaseBtn.click();
@@ -95,9 +103,8 @@ test.describe("Cart (Carrinho)", () => {
   });
 
   test("remove button removes item from cart", async ({ page }) => {
-    await page.goto("/carrinho");
-    await page.evaluate(() => {
-      const item = {
+    await openCartWithItems(page, [
+      {
         productId: "test-1",
         name: "Saia Boho",
         slug: "saia-boho",
@@ -105,10 +112,8 @@ test.describe("Cart (Carrinho)", () => {
         price: 200,
         size: "G",
         quantity: 1,
-      };
-      localStorage.setItem("luratha_cart", JSON.stringify([item]));
-    });
-    await page.reload();
+      },
+    ]);
 
     await page.getByRole("button", { name: /remover saia boho/i }).click();
 

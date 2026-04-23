@@ -1,10 +1,28 @@
-import fs from "node:fs";
+import { getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 
 export default async function cloudGlobalSetup(): Promise<void> {
-  const credentialPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "";
-  if (!credentialPath || !fs.existsSync(credentialPath)) {
+  // Validate that a service account credential source is available.
+  // firebaseAdmin.ts reads FIREBASE_SERVICE_ACCOUNT_BASE64 / FIREBASE_SERVICE_ACCOUNT_JSON /
+  // FIREBASE_SERVICE_ACCOUNT_PATH / GOOGLE_APPLICATION_CREDENTIALS directly on import.
+  const hasServiceAccount =
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ||
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+    !!process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+    !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (!hasServiceAccount) {
     process.env.CLOUD_TEST_SKIP_REASON =
-      "GOOGLE_APPLICATION_CREDENTIALS ausente ou inválido";
+      "FIREBASE_SERVICE_ACCOUNT_BASE64 ou GOOGLE_APPLICATION_CREDENTIALS ausentes";
+    return;
+  }
+
+  // Validate that the web app config is available.
+  // environment.ts getFirebaseWebConfig() reads FIREBASE_WEB_APP_CONFIG_BASE64 or
+  // the NEXT_PUBLIC_* vars and returns the parsed config.
+  const webConfig = getFirebaseWebConfig();
+  if (!webConfig.projectId) {
+    process.env.CLOUD_TEST_SKIP_REASON =
+      "FIREBASE_WEB_APP_CONFIG_BASE64 ou NEXT_PUBLIC_FIREBASE_PROJECT_ID ausentes";
     return;
   }
 
