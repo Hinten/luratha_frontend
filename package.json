@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "emulator": "USE_EMULATOR=TRUE firebase emulators:start",
+    "emulator": "cross-env USE_EMULATOR=TRUE firebase emulators:start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -38,6 +38,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.2",
     "jsdom": "^29.0.2",
