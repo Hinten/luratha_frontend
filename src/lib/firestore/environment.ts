@@ -55,6 +55,26 @@ export function getFirebaseStorageBucket(projectId = getFirebaseProjectId()): st
 }
 
 export function getFirebaseWebConfig() {
+
+  if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
+    const decodedValue = Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8");  
+    try {
+      console.log("Decoded FIREBASE_WEB_APP_CONFIG_BASE64:", decodedValue);
+      const parsedConfig = JSON.parse(decodedValue);
+      return {
+        apiKey: parsedConfig.apiKey ?? "",
+        authDomain: parsedConfig.authDomain ?? "",
+        projectId: parsedConfig.projectId ?? getFirebaseProjectId(),
+        storageBucket: parsedConfig.storageBucket ?? "",
+        messagingSenderId: parsedConfig.messagingSenderId ?? "",
+        appId: parsedConfig.appId ?? "",
+      };
+    } catch (error) {
+      console.warn("Failed to parse FIREBASE_WEB_APP_CONFIG_BASE64. Ensure it's a valid base64-encoded JSON string.", error);
+    }
+  }
+
+
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? getFirebaseProjectId();
 
   const firestoreConfig = {

@@ -47,6 +47,14 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
     return inlineCredential;
   }
 
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    const decodedValue = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8");
+    const base64Credential = parseServiceAccount(decodedValue, "FIREBASE_SERVICE_ACCOUNT_BASE64");
+    if (base64Credential) {      
+      return base64Credential;
+    }
+  }
+
   const serviceAccountSource = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
     ? "FIREBASE_SERVICE_ACCOUNT_PATH"
     : "GOOGLE_APPLICATION_CREDENTIALS";
