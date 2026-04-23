@@ -14,16 +14,18 @@
  *   2. Register product with photos     – photoAssets array with valid image assets
  *   3. Register product without variants – variants defaults to null
  *   4. Register product with variants   – variants array with size/color entries
- *   5. Vector search                    – products seeded with embeddings are returned by
- *                                         executeVectorSearch via the search repository
+ *   5. Vector search                    – product seeded using real embeddings from Vertex AI
+ *                                         is found by a text-similarity search
+ *   6. Vector search fallback           – graceful fallback when embedding service fails
  */
 
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { adminApp, adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { createEmbeddingService } from "@/src/lib/embeddingService";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import {
   createProductsSearchRepository,
@@ -138,13 +140,6 @@ function buildImageAsset(productId: string, assetId: string): Record<string, unk
   };
 }
 
-/** A static 8-dimensional unit vector used to seed vector-searchable products */
-function buildTestEmbedding(): number[] {
-  const raw = [0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.05];
-  const magnitude = Math.sqrt(raw.reduce((sum, v) => sum + v * v, 0));
-  return raw.map((v) => v / magnitude);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Suite
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,7 +149,6 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
   const skuToken = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
   const categoryId = `cat-${prefix}`;
   const categorySlug = `test-cat-${prefix}`;
-  const testEmbedding = buildTestEmbedding();
 
   let clientApp: FirebaseApp;
   let db: Firestore;
@@ -298,73 +292,62 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     expect(product!.variants![2].active).toBe(false);
   });
 
-  // ── Test 5: Vector search ─────────────────────────────────────────────────
+  // ── Test 5: Vector search with real embeddings ────────────────────────────
 
   /**
-   * 5. Vector search via seeded embeddings
-   * Seeds products that have a pre-computed searchEmbedding, then exercises
-   * the vector search path of createProductsSearchRepository with an injected
-   * embedding service that returns a vector similar to the seeded ones.
-   * Verifies the search returns the expected products without errors.
+   * 5. Vector search via real Vertex AI embeddings
+   * Generates a real embedding for the product text via createEmbeddingService,
+   * seeds a product with that embedding, then performs a text-similarity search
+   * using the same embedding service and verifies the seeded product is returned.
    */
-  it("vector search: returns products with matching embeddings", async () => {
-    // Seed two products with known embeddings
-    const productA = buildBaseProductData(prefix, skuToken, {
-      categoryId,
-      title: `Vestido Vetorial ${prefix}`,
-      description: "Produto com embedding para teste de busca vetorial.",
-      vectorEmbedding: testEmbedding,
-      searchEmbedding: testEmbedding,
-      status: "active",
-    });
-    const productB = buildBaseProductData(prefix, skuToken, {
-      categoryId,
-      title: `Blusa Vetorial ${prefix}`,
-      description: "Segundo produto com embedding para teste de busca vetorial.",
-      vectorEmbedding: testEmbedding,
-      searchEmbedding: testEmbedding,
-      status: "active",
+  it("vector search: finds product seeded with real embedding by similar text", async () => {
+    const embeddingService = createEmbeddingService({
+      projectId: getFirebaseProjectId(),
+      credential: adminApp.options.credential,
     });
 
-    await Promise.all([
-      adminDb.collection(firestoreCollections.products).doc(productA.id as string).set(productA),
-      adminDb.collection(firestoreCollections.products).doc(productB.id as string).set(productB),
-    ]);
-    seededDocs.push({ collection: firestoreCollections.products, id: productA.id as string });
-    seededDocs.push({ collection: firestoreCollections.products, id: productB.id as string });
+    const productTitle = `Vestido Artesanal Linho ${prefix}`;
+    const productDescription = "Vestido artesanal de linho para uso casual e elegante.";
+    const embeddingText = `${productTitle} ${productDescription}`;
 
-    // Inject an embedding service that returns our known test vector
-    const stubEmbeddingService = {
-      async embed(): Promise<number[]> {
-        return testEmbedding;
-      },
-    };
+    // Generate a real embedding from Vertex AI for this product
+    const embedding = await embeddingService.embed(embeddingText);
 
-    const searchRepo = createProductsSearchRepository(db, { embeddingService: stubEmbeddingService });
+    // Seed the product with the real embedding
+    const productData = buildBaseProductData(prefix, skuToken, {
+      categoryId,
+      title: productTitle,
+      description: productDescription,
+      vectorEmbedding: embedding,
+      searchEmbedding: embedding,
+      status: "active",
+    });
+    const productId = productData.id as string;
 
-    // Search with useVectors=true – should use the vector path
+    await adminDb.collection(firestoreCollections.products).doc(productId).set(productData);
+    seededDocs.push({ collection: firestoreCollections.products, id: productId });
+
+    // Search using text similar to the product title — the real embedding service is used
+    const searchRepo = createProductsSearchRepository(db, { embeddingService });
     const searchOptions: SearchOptions = { useVectors: true };
     const results = await searchRepo.search(
-      { term: "vestido artesanal", limit: 50 },
+      { term: "vestido artesanal linho", limit: 50 },
       searchOptions,
     );
 
-    // At least the two vector-seeded products should be in the results
+    // The seeded product should appear in the results
     const resultIds = results.map((p) => p.id);
-    expect(resultIds).toContain(productA.id);
-    expect(resultIds).toContain(productB.id);
+    expect(resultIds).toContain(productId);
 
-    // Verify product shape
-    for (const product of results.filter((p) => [productA.id, productB.id].includes(p.id))) {
-      expect(product).toMatchObject({
-        id: expect.any(String),
-        slug: expect.any(String),
-        title: expect.any(String),
-        status: "active",
-        price: expect.objectContaining({ currency: "BRL" }),
-      });
-    }
-  });
+    // Verify shape of the returned product
+    const found = results.find((p) => p.id === productId)!;
+    expect(found).toMatchObject({
+      id: productId,
+      title: productTitle,
+      status: "active",
+      price: expect.objectContaining({ currency: "BRL" }),
+    });
+  }, 60_000);
 
   // ── Test 6: Vector fallback to pipeline when Vertex AI is unavailable ──────
 
