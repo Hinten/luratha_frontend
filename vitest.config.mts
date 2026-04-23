@@ -16,7 +16,13 @@ export default defineConfig({
       FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",
     },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "e2e", "src/test/emulator/**"],
+    exclude: [
+      "node_modules", 
+      ".next", 
+      "e2e", 
+      "src/test/emulator/**",
+      "src/test/cloud/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
