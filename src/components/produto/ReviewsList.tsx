@@ -1,4 +1,4 @@
-import type { Review } from "@/src/lib/types";
+import type { Review } from "@/src/schemas/firestore/reviews";
 import styles from "./ReviewsList.module.css";
 
 function StarRating({ rating }: { rating: number }) {
@@ -15,6 +15,19 @@ function StarRating({ rating }: { rating: number }) {
       ))}
     </span>
   );
+}
+
+function formatReviewDate(value: string): string {
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 interface ReviewsListProps {
@@ -45,19 +58,16 @@ export default function ReviewsList({ reviews }: ReviewsListProps) {
         {reviews.map((review) => (
           <li key={review.id} className={styles.item}>
             <div className={styles.itemHeader}>
-              <span className={styles.author}>{review.author}</span>
+              <span className={styles.author}>{review.userId}</span>
               <StarRating rating={review.rating} />
               <time
-                dateTime={review.date}
+                dateTime={review.createdAt}
                 className={styles.date}
               >
-                {new Date(review.date).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                })}
+                {formatReviewDate(review.createdAt)}
               </time>
             </div>
+            <p className={styles.title}>{review.title}</p>
             <p className={styles.comment}>{review.comment}</p>
           </li>
         ))}

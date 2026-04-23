@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CategoryBlock from "@/src/components/categoria/CategoryBlock";
-import type { Category } from "@/src/lib/types";
+import { type Category, validateCategory } from "@/src/schemas/firestore";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -19,11 +19,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockCategory: Category = {
-  label: "Vestidos",
-  href: "/categoria/vestidos",
-  imageUrl: "https://placehold.co/600x700/EDE4D9/3A2F2A?text=Vestidos",
-};
+const mockCategory: Category = validateCategory({
+  id: "vestidos",
+  name: "Vestidos",
+  slug: "vestidos",
+});
 
 describe("CategoryBlock", () => {
   it("renders the category label text", () => {
@@ -41,6 +41,6 @@ describe("CategoryBlock", () => {
     const { container } = render(<CategoryBlock category={mockCategory} />);
     const img = container.querySelector("img");
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute("src", mockCategory.imageUrl);
+    expect(img).toHaveAttribute("src", expect.stringContaining("text=Vestidos"));
   });
 });

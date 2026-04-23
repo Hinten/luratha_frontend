@@ -1,23 +1,35 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ReviewsList from "@/src/components/produto/ReviewsList";
-import type { Review } from "@/src/lib/types";
+import { reviewSchema, type Review } from "@/src/schemas/firestore";
 
 const mockReviews: Review[] = [
-  {
+  reviewSchema.parse({
     id: "r1",
-    author: "Ana Claudia",
+    productId: "prod_1",
+    orderId: "order_1",
+    userId: "ana.claudia",
     rating: 5,
+    title: "Excelente compra",
     comment: "Amei o vestido! Qualidade incrível.",
-    date: "2026-03-15",
-  },
-  {
+    helpfulCount: 0,
+    verifiedPurchase: true,
+    createdAt: "2026-03-15T00:00:00.000Z",
+    updatedAt: "2026-03-15T00:00:00.000Z",
+  }),
+  reviewSchema.parse({
     id: "r2",
-    author: "Fernanda Lima",
+    productId: "prod_1",
+    orderId: "order_2",
+    userId: "fernanda.lima",
     rating: 4,
+    title: "Muito bom",
     comment: "Muito bonito, recomendo.",
-    date: "2026-02-28",
-  },
+    helpfulCount: 0,
+    verifiedPurchase: true,
+    createdAt: "2026-02-28T00:00:00.000Z",
+    updatedAt: "2026-02-28T00:00:00.000Z",
+  }),
 ];
 
 describe("ReviewsList", () => {
@@ -30,13 +42,14 @@ describe("ReviewsList", () => {
 
   it("renders the author name for each review", () => {
     render(<ReviewsList reviews={mockReviews} />);
-    expect(screen.getByText("Ana Claudia")).toBeInTheDocument();
-    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+    expect(screen.getByText("ana.claudia")).toBeInTheDocument();
+    expect(screen.getByText("fernanda.lima")).toBeInTheDocument();
   });
 
   it("renders the review comment", () => {
     render(<ReviewsList reviews={mockReviews} />);
     expect(screen.getByText("Amei o vestido! Qualidade incrível.")).toBeInTheDocument();
+    expect(screen.getByText("Excelente compra")).toBeInTheDocument();
   });
 
   it("renders the average score in the summary", () => {

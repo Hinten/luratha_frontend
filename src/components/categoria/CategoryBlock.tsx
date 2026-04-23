@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Category } from "@/src/lib/types";
+import type { Category } from "@/src/schemas/firestore/category";
 import styles from "./CategoryBlock.module.css";
 
 interface CategoryBlockProps {
@@ -7,7 +7,9 @@ interface CategoryBlockProps {
 }
 
 export default function CategoryBlock({ category }: CategoryBlockProps) {
-  const { label, href, imageUrl } = category;
+  const label = category.name;
+  const href = `/categoria/${category.slug}`;
+  const imageUrl = `https://placehold.co/600x700/EDE4D9/3A2F2A?text=${encodeURIComponent(category.name)}`;
 
   return (
     <Link href={href} aria-label={label} className={styles.link}>
@@ -23,4 +25,3 @@ export default function CategoryBlock({ category }: CategoryBlockProps) {
     </Link>
   );
 }
-

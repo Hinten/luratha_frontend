@@ -1,7 +1,7 @@
 export { firestoreCollections } from "@/src/schemas/firestore/collections";
 export {
   CategorySchema,
-  type Category as FirestoreCategory,
+  type Category,
   validateCategory,
 } from "@/src/schemas/firestore/category";
 export { photoSchema, type Photo } from "@/src/schemas/firestore/photos";

@@ -1,38 +1,15 @@
 /* @deprecated
-  * These types are deprecated and should not be used in new code. They are kept here for backward compatibility with existing code that may still reference them. Please use the new types defined in the src/schemas directory instead.
+  * These types are deprecated and should not be used in new code.
+  * Import them from the corresponding schemas under "@/src/schemas/firestore/*" instead.
 */
-export interface Product {
-  id: string;
-  name: string;
-  slug?: string;
-  categorySlug?: string;
-  price: number;
-  originalPrice?: number;
-  imageUrl: string;
-  rating?: number;
-  reviewCount?: number;
-  installments?: { count: number; value: number };
-}
+export type {
+  Product,
+} from "@/src/schemas/firestore/products";
 
-export interface Category {
-  label: string;
-  href: string;
-  imageUrl: string;
-}
+export type {
+  Category,
+} from "@/src/schemas/firestore/category";
 
-export interface Review {
-  id: string;
-  author: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-export interface ProductDetail extends Product {
-  description: string;
-  images: string[];
-  sizes: string[];
-  categorySlug: string;
-  reviews?: Review[];
-  highlights?: string[];
-}
+export type {
+  Review,
+} from "@/src/schemas/firestore/reviews";
