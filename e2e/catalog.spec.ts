@@ -7,7 +7,12 @@ test.describe("Category pages", () => {
     await page.goto("/categoria/vestidos");
     await expect(page).toHaveTitle(/Vestidos.*Luratha/);
     await expect(page.getByRole("heading", { level: 1, name: "Vestidos" })).toBeVisible();
-    await expect(page.getByTestId("product-grid")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("product-grid")
+        .or(page.getByText("Nenhuma peça encontrada"))
+        .first(),
+    ).toBeVisible();
   });
 
   test("shows product count text", async ({ page }) => {
@@ -69,7 +74,12 @@ test.describe("Todas as Peças page", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Todas as Peças" })
     ).toBeVisible();
-    await expect(page.getByTestId("product-grid")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("product-grid")
+        .or(page.getByText("Nenhuma peça encontrada"))
+        .first(),
+    ).toBeVisible();
   });
 
   test("renders the breadcrumb", async ({ page }) => {

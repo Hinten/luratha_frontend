@@ -83,6 +83,7 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const categorySlug = `test-cat-${prefix}`;
   const categoryId = `cat-${prefix}`;
+  const skuToken = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
   // Unique search term embedded in product titles – ensures search only returns test products
   const uniqueTerm = `Luratha_Cloud_Test_${prefix}`;
 
@@ -123,6 +124,7 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
       isPurchasable: true,
       brandName: "Luratha Test",
       categoryId,
+      publishedAt: now,
       tags: [],
       materialTags: [],
       seasonalTags: [],
@@ -165,10 +167,12 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
       {
         ...baseProduct,
         id: `${prefix}-prod-a`,
-        slug: `${prefix}-prod-a`,
-        title: `${uniqueTerm} Vestido Linho`,
+        slug: null,
+        title: uniqueTerm,
         description: "Vestido de linho artesanal exclusivo para testes de integração cloud.",
-        sku: `SKU-${prefix}-A`,
+        sku: `SKU_${skuToken}_A`,
+        priceMin: 200,
+        priceMax: 200,
         price: { price: 200, salePrice: null, priceMin: 200, priceMax: 200, currency: "BRL", startDate: null, endDate: null },
       },
       seededDocs,
@@ -180,10 +184,12 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
       {
         ...baseProduct,
         id: `${prefix}-prod-b`,
-        slug: `${prefix}-prod-b`,
-        title: `${uniqueTerm} Blusa Algodão`,
+        slug: null,
+        title: uniqueTerm,
         description: "Blusa de algodão artesanal exclusiva para testes de integração cloud.",
-        sku: `SKU-${prefix}-B`,
+        sku: `SKU_${skuToken}_B`,
+        priceMin: 120,
+        priceMax: 120,
         price: { price: 120, salePrice: null, priceMin: 120, priceMax: 120, currency: "BRL", startDate: null, endDate: null },
       },
       seededDocs,
@@ -195,11 +201,13 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
       {
         ...baseProduct,
         id: `${prefix}-prod-other`,
-        slug: `${prefix}-prod-other`,
-        title: `${uniqueTerm} Saia Plissada`,
+        slug: null,
+        title: uniqueTerm,
         description: "Saia plissada exclusiva para testes de integração cloud.",
-        sku: `SKU-${prefix}-OTHER`,
+        sku: `SKU_${skuToken}_OTHER`,
         categoryId: "cat-other-not-test",
+        priceMin: 300,
+        priceMax: 300,
         price: { price: 300, salePrice: null, priceMin: 300, priceMax: 300, currency: "BRL", startDate: null, endDate: null },
       },
       seededDocs,

@@ -18,9 +18,9 @@ test.describe("Institutional Pages", () => {
 
     test("shows brand values section", async ({ page }) => {
       await page.goto("/sobre");
-      await expect(page.getByText("Artesanal")).toBeVisible();
-      await expect(page.getByText("Versátil")).toBeVisible();
-      await expect(page.getByText("Sustentável")).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name: "Artesanal" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name: "Versátil" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name: "Sustentável" })).toBeVisible();
     });
 
     test("shows manifesto section", async ({ page }) => {
@@ -108,7 +108,7 @@ test.describe("Institutional Pages", () => {
     test("shows size chart table with all sizes", async ({ page }) => {
       await page.goto("/referencia-de-medidas");
       for (const size of ["PP", "P", "M", "G", "GG", "XGG"]) {
-        await expect(page.getByRole("cell", { name: size })).toBeVisible();
+        await expect(page.getByRole("cell", { name: size, exact: true })).toBeVisible();
       }
     });
 

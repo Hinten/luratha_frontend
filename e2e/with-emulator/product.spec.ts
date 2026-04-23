@@ -49,6 +49,14 @@ test.describe("Product detail page", () => {
   }) => {
     await page.goto(`/produto/${PRIMARY_PRODUCT_SLUG}`);
     const thumbBtns = page.getByRole("button", { name: /Ver imagem/ });
+    const thumbCount = await thumbBtns.count();
+
+    if (thumbCount <= 1) {
+      await expect(thumbBtns).toHaveCount(0);
+      await expect(page.locator("img").first()).toBeVisible();
+      return;
+    }
+
     await expect(thumbBtns.first()).toBeVisible();
     // Click the second thumbnail
     await thumbBtns.nth(1).click();

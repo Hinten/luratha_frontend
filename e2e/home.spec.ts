@@ -33,9 +33,10 @@ test.describe("Home page", () => {
 
   test("renders category section with three categories", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Vestidos" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Blusas" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Calças" })).toBeVisible();
+    const categoriesTrack = page.getByTestId("categories-track");
+    await expect(categoriesTrack.getByRole("link", { name: "Vestidos" })).toBeVisible();
+    await expect(categoriesTrack.getByRole("link", { name: "Blusas" })).toBeVisible();
+    await expect(categoriesTrack.getByRole("link", { name: "Calças" })).toBeVisible();
   });
 
   test("renders Lançamentos section with products", async ({ page }) => {
