@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import {
   applyEmulatorEnvironmentDefaults,
+  DATABASE_NAME,
   getFirebaseProjectId,
   getFirebaseStorageBucket,
   isEmulatorEnabled,
@@ -33,7 +34,7 @@ const adminApp =
     FIREBASE_ADMIN_APP_NAME,
   );
 
-export const adminDb = getFirestore(adminApp);
+export const adminDb = getFirestore(adminApp, DATABASE_NAME);
 export const adminStorage = getStorage(adminApp);
 export const adminBucket = adminStorage.bucket(storageBucket);
 

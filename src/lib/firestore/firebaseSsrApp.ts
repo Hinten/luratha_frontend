@@ -4,7 +4,7 @@ import { getAuth, type User } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { cookies, headers } from "next/headers";
 import { initializeServerFirestoreEmulator } from "./emulator";
-import { applyEmulatorEnvironmentDefaults, getFirebaseWebConfig } from "./environment";
+import { applyEmulatorEnvironmentDefaults, DATABASE_NAME, getFirebaseWebConfig } from "./environment";
 
 applyEmulatorEnvironmentDefaults();
 
@@ -28,7 +28,7 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
   const authenticatedServerApp = initializeServerApp(firebaseServerConfig, {
     authIdToken,
   });
-  const firestore = getFirestore(authenticatedServerApp);
+  const firestore = getFirestore(authenticatedServerApp, DATABASE_NAME);
   initializeServerFirestoreEmulator(firestore);
 
   if (!firebaseServerConfig.apiKey) {
