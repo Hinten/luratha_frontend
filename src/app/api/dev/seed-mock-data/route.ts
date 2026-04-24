@@ -1,11 +1,11 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { toAdminFirestoreDoc } from "@/src/lib/firestore/adminProductUtils";
 import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
@@ -57,11 +57,7 @@ async function seedProducts(products: Product[]): Promise<string[]> {
         return null;
       }
 
-      await productRef.set({
-        ...product,
-        ...(product.vectorEmbedding !== null && { vectorEmbedding: FieldValue.vector(product.vectorEmbedding) }),
-        ...(product.searchEmbedding !== null && { searchEmbedding: FieldValue.vector(product.searchEmbedding) }),
-      });
+      await productRef.set(toAdminFirestoreDoc(product));
       return product.id;
     }),
   );

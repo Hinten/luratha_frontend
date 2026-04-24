@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { FieldValue } from "firebase-admin/firestore";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
+import { toAdminFirestoreDoc } from "@/src/lib/firestore/adminProductUtils";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 
@@ -74,11 +74,7 @@ export async function POST(request: Request) {
     );
   }
 
-  await productRef.set({
-    ...product,
-    ...(product.vectorEmbedding !== null && { vectorEmbedding: FieldValue.vector(product.vectorEmbedding) }),
-    ...(product.searchEmbedding !== null && { searchEmbedding: FieldValue.vector(product.searchEmbedding) }),
-  });
+  await productRef.set(toAdminFirestoreDoc(product));
 
   return NextResponse.json(product, { status: 201 });
 }

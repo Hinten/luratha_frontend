@@ -53,15 +53,16 @@ export interface ProductsRepository {
 const MAX_LIST_LIMIT = 100;
 
 /**
- * Wraps vector embedding fields with the Firestore VectorValue type so that
- * Pipeline findNearest queries can locate the documents. Plain number[] arrays
- * stored via setDoc() are NOT recognised by findNearest.
+ * Converts a validated Product into a plain object suitable for client-SDK writes.
+ * Non-null vectorEmbedding and searchEmbedding fields are wrapped as Firestore
+ * VectorValue so that Pipeline findNearest queries can locate the documents.
  */
 function toFirestoreDoc(product: Product): Record<string, unknown> {
+  const { vectorEmbedding, searchEmbedding, ...rest } = product;
   return {
-    ...(product as unknown as Record<string, unknown>),
-    ...(product.vectorEmbedding !== null && { vectorEmbedding: vector(product.vectorEmbedding) }),
-    ...(product.searchEmbedding !== null && { searchEmbedding: vector(product.searchEmbedding) }),
+    ...rest,
+    vectorEmbedding: vectorEmbedding !== null ? vector(vectorEmbedding) : null,
+    searchEmbedding: searchEmbedding !== null ? vector(searchEmbedding) : null,
   };
 }
 

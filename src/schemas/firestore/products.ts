@@ -32,7 +32,8 @@ function normalizeFirestoreVectorField(val: unknown): unknown {
     "toArray" in val &&
     typeof (val as { toArray: unknown }).toArray === "function"
   ) {
-    return (val as { toArray(): number[] }).toArray();
+    const result = (val as { toArray(): unknown }).toArray();
+    return Array.isArray(result) ? result : val;
   }
   return val;
 }
