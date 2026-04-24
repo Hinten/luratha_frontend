@@ -71,7 +71,7 @@ The DataConverter handles this transparently at the read/write boundary so the r
 
 ```ts
 // src/lib/firestore/adminProductConverter.ts
-import { type FirestoreDataConverter, FieldValue } from "firebase-admin/firestore";
+import { type FirestoreDataConverter, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { type Product, validateProduct } from "@/src/schemas/firestore";
 
 function extractVector(val: unknown): number[] | null {
@@ -85,11 +85,23 @@ function extractVector(val: unknown): number[] | null {
   return null;
 }
 
+// Converts Firestore Timestamp → ISO string; falls through for strings (tests)
+function extractTimestamp(val: unknown): string | unknown {
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  if (typeof val === "object" && val !== null && "toDate" in val &&
+      typeof (val as { toDate: unknown }).toDate === "function") {
+    return (val as { toDate(): Date }).toDate().toISOString();
+  }
+  return val;
+}
+
 export const adminProductConverter: FirestoreDataConverter<Product> = {
   toFirestore(product: Product) {
-    const { vectorEmbedding, searchEmbedding, ...rest } = product;
+    const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = product;
     return {
       ...rest,
+      createdAt: Timestamp.fromDate(new Date(createdAt)),
+      updatedAt: Timestamp.fromDate(new Date(updatedAt)),
       vectorEmbedding: vectorEmbedding !== null ? FieldValue.vector(vectorEmbedding) : null,
       searchEmbedding: searchEmbedding !== null ? FieldValue.vector(searchEmbedding) : null,
     };
@@ -98,6 +110,8 @@ export const adminProductConverter: FirestoreDataConverter<Product> = {
     const data = snapshot.data();
     return validateProduct({
       ...data,
+      createdAt: extractTimestamp(data.createdAt),
+      updatedAt: extractTimestamp(data.updatedAt),
       vectorEmbedding: extractVector(data.vectorEmbedding),
       searchEmbedding: extractVector(data.searchEmbedding),
     });
@@ -109,7 +123,7 @@ export const adminProductConverter: FirestoreDataConverter<Product> = {
 
 ```ts
 // src/lib/firestore/clientProductConverter.ts
-import { type FirestoreDataConverter, VectorValue, vector } from "firebase/firestore";
+import { type FirestoreDataConverter, VectorValue, vector, Timestamp } from "firebase/firestore";
 import { type Product, validateProduct } from "@/src/schemas/firestore";
 
 function extractVector(val: unknown): number[] | null {
@@ -119,11 +133,18 @@ function extractVector(val: unknown): number[] | null {
   return null;
 }
 
+function extractTimestamp(val: unknown): string | unknown {
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  return val;
+}
+
 export const clientProductConverter: FirestoreDataConverter<Product> = {
   toFirestore(product: Product) {
-    const { vectorEmbedding, searchEmbedding, ...rest } = product;
+    const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = product;
     return {
       ...rest,
+      createdAt: Timestamp.fromDate(new Date(createdAt)),
+      updatedAt: Timestamp.fromDate(new Date(updatedAt)),
       vectorEmbedding: vectorEmbedding !== null ? vector(vectorEmbedding) : null,
       searchEmbedding: searchEmbedding !== null ? vector(searchEmbedding) : null,
     };
@@ -132,6 +153,8 @@ export const clientProductConverter: FirestoreDataConverter<Product> = {
     const data = snapshot.data();
     return validateProduct({
       ...data,
+      createdAt: extractTimestamp(data.createdAt),
+      updatedAt: extractTimestamp(data.updatedAt),
       vectorEmbedding: extractVector(data.vectorEmbedding),
       searchEmbedding: extractVector(data.searchEmbedding),
     });
