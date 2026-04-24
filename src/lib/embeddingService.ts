@@ -80,7 +80,8 @@ export function createEmbeddingService(
         });
 
         if (!response.ok) {
-          throw new Error(`Vertex AI embedding request failed with status ${response.status}.`);
+          const errorBody = await response.text();
+          throw new Error(`Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`);
         }
 
         const json = (await response.json()) as {

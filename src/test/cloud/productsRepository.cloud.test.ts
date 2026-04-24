@@ -337,7 +337,10 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
 
     // The seeded product should appear in the results
     const resultIds = results.map((p) => p.id);
-    expect(resultIds).toContain(productId);
+    expect(
+      resultIds,
+      `Expected seeded product '${productId}' to be included in vector search results. Received IDs: ${JSON.stringify(resultIds)}`,
+    ).toContain(productId);
 
     // Verify shape of the returned product
     const found = results.find((p) => p.id === productId)!;
