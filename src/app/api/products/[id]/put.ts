@@ -4,6 +4,7 @@ import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,8 @@ export const runtime = "nodejs";
  * - `id` is always taken from the URL; any `id` field in the body is ignored.
  * - `createdAt` is preserved from the existing document.
  * - `updatedAt` is set to the current timestamp.
- * - Embeddings are regenerated from the new title + description.
+ * - Embeddings are regenerated: vectorEmbedding from title, searchEmbedding
+ *   from title + description + categoryId + variant attributes.
  *
  * Returns 404 if the product does not exist.
  * Returns 400 on validation failure.
@@ -82,13 +84,13 @@ export async function PUT(
     return NextResponse.json({ message: "Falha ao validar o produto." }, { status: 400 });
   }
 
-  const embeddingText = `${product.title} ${product.description}`;
+  // Regenerate vectorEmbedding (title only) and searchEmbedding (rich text).
   try {
     const embeddingService = createEmbeddingService({
       credential: adminApp.options.credential,
     });
-    const embedding = await embeddingService.embed(embeddingText);
-    product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+    const embeddings = await generateProductEmbeddings(product, embeddingService);
+    product = { ...product, ...embeddings };
   } catch (embeddingError) {
     console.warn(
       "[PUT /api/products] Embedding generation skipped:",
@@ -100,3 +102,4 @@ export async function PUT(
 
   return NextResponse.json(product, { status: 200 });
 }
+

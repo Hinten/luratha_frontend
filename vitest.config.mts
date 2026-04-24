@@ -1,10 +1,19 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
+import path from "node:path";
 import { DEFAULT_FIREBASE_PROJECT_ID } from "./src/lib/firestore/environment";
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
+  resolve: {
+    alias: {
+      // "server-only" is a Next.js guard that throws at build time in non-server
+      // contexts. In Vitest's jsdom environment we replace it with an empty no-op
+      // so tests that import server-only modules can still run.
+      "server-only": path.resolve(__dirname, "src/test/__mocks__/server-only.ts"),
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,
@@ -36,3 +45,4 @@ export default defineConfig({
     },
   },
 });
+

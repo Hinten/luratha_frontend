@@ -2,7 +2,13 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { GET } from "@/src/app/api/products/list";
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const { mockQueryGet, mockQueryRef, mockCollection } = vi.hoisted(() => {
+const {
+  mockQueryGet,
+  mockQueryRef,
+  mockCollection,
+  mockExecute,
+  mockPipelineRef,
+} = vi.hoisted(() => {
   const mockQueryGet = vi.fn();
   const mockQueryRef = {
     withConverter: vi.fn(),
@@ -18,13 +24,51 @@ const { mockQueryGet, mockQueryRef, mockCollection } = vi.hoisted(() => {
   mockQueryRef.limit.mockReturnValue(mockQueryRef);
 
   const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
-  return { mockQueryGet, mockQueryRef, mockCollection };
+
+  // Pipeline mocks
+  const mockExecute = vi.fn();
+  const mockPipelineRef = {
+    collection: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn(),
+  };
+  mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+  mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+  mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+
+  return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
 });
 
 vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
   adminApp: { options: { credential: undefined } },
 }));
+
+vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
+  searchDb: { pipeline: vi.fn(() => mockPipelineRef) },
+}));
+
+vi.mock("firebase/firestore/pipelines", () => ({
+  execute: mockExecute,
+  field: vi.fn(() => ({
+    toLower: vi.fn().mockReturnThis(),
+    regexMatch: vi.fn().mockReturnThis(),
+    equal: vi.fn().mockReturnThis(),
+  })),
+  or: vi.fn((...args: unknown[]) => ({ type: "or", args })),
+  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
+}));
+
+vi.mock("firebase/firestore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("firebase/firestore")>();
+  return {
+    ...actual,
+    VectorValue: class {
+      constructor(private _values: number[]) {}
+      toArray() { return this._values; }
+    },
+  };
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -105,6 +149,11 @@ describe("GET /api/products", () => {
     mockQueryRef.where.mockReturnValue(mockQueryRef);
     mockQueryRef.limit.mockReturnValue(mockQueryRef);
     mockQueryGet.mockResolvedValue({ docs: [] });
+    // Reset pipeline chain mocks
+    mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+    mockExecute.mockResolvedValue({ results: [] });
   });
 
   it("returns 200 with an empty array when no products exist", async () => {
@@ -161,5 +210,64 @@ describe("GET /api/products", () => {
   it("does not call where for status when no status param is provided", async () => {
     await GET(makeListRequest({ categoryId: "vestidos" }));
     expect(mockQueryRef.where).not.toHaveBeenCalledWith("status", expect.anything(), expect.anything());
+  });
+});
+
+// ── GET /api/products?q= (pipeline search) ────────────────────────────────────
+
+describe("GET /api/products?q= (pipeline search)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+    mockExecute.mockResolvedValue({ results: [] });
+  });
+
+  it("returns 200 with empty array when pipeline finds no results", async () => {
+    const res = await GET(makeListRequest({ q: "vestido" }));
+    expect(res.status).toBe(200);
+    const products = await res.json();
+    expect(products).toEqual([]);
+  });
+
+  it("returns 200 with products when pipeline finds matches", async () => {
+    const stored = buildStoredProduct();
+    mockExecute.mockResolvedValue({
+      results: [
+        {
+          id: PRODUCT_ID,
+          data: () => stored,
+        },
+      ],
+    });
+    const res = await GET(makeListRequest({ q: "vestido" }));
+    expect(res.status).toBe(200);
+    const products = await res.json();
+    expect(products).toHaveLength(1);
+    expect(products[0].id).toBe(PRODUCT_ID);
+  });
+
+  it("uses pipeline (execute) when q param is provided", async () => {
+    await GET(makeListRequest({ q: "vestido" }));
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    // admin SDK query should NOT be used
+    expect(mockQueryGet).not.toHaveBeenCalled();
+  });
+
+  it("uses admin SDK query (no pipeline) when q is absent", async () => {
+    await GET(makeListRequest());
+    expect(mockExecute).not.toHaveBeenCalled();
+    expect(mockQueryGet).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies limit cap to pipeline search", async () => {
+    await GET(makeListRequest({ q: "vestido", limit: "9999" }));
+    expect(mockPipelineRef.limit).toHaveBeenCalledWith(100);
+  });
+
+  it("applies default limit to pipeline search", async () => {
+    await GET(makeListRequest({ q: "saia" }));
+    expect(mockPipelineRef.limit).toHaveBeenCalledWith(24);
   });
 });

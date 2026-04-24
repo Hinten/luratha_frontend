@@ -4,6 +4,7 @@ import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,8 @@ export const runtime = "nodejs";
  * `updatedAt` is set to the current timestamp.
  *
  * Embeddings are regenerated when `title` or `description` is present in the
- * payload (because the text used to generate them may have changed).
+ * payload: vectorEmbedding from the new title, searchEmbedding from title +
+ * description + categoryId + variant attributes.
  *
  * Returns 404 if the product does not exist.
  * Returns 400 on validation failure.
@@ -97,15 +99,16 @@ export async function PATCH(
   }
 
   // Re-generate embeddings only when the text content may have changed.
+  // Spreads only the successfully generated embeddings onto the product,
+  // so existing embeddings are preserved if the new generation fails.
   const embeddingFieldsChanged = "title" in payload || "description" in payload;
   if (embeddingFieldsChanged) {
-    const embeddingText = `${product.title} ${product.description}`;
     try {
       const embeddingService = createEmbeddingService({
         credential: adminApp.options.credential,
       });
-      const embedding = await embeddingService.embed(embeddingText);
-      product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+      const embeddings = await generateProductEmbeddings(product, embeddingService);
+      product = { ...product, ...embeddings };
     } catch (embeddingError) {
       console.warn(
         "[PATCH /api/products] Embedding generation skipped:",
@@ -118,3 +121,4 @@ export async function PATCH(
 
   return NextResponse.json(product, { status: 200 });
 }
+

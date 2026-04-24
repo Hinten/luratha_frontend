@@ -169,33 +169,62 @@ The `firebase/ai` JS SDK does not expose an embedding API — its `GenerativeMod
 
 `@genkit-ai/vertexai` brings dozens of MB of transitive dependencies (`openai`, `@anthropic-ai/sdk`, `@google-cloud/aiplatform`, etc.) even when only embedding is needed.
 
-### The Right Approach — `embeddingService.ts`
+### The Right Approach — `embeddingService.ts` + `productEmbeddings.ts`
 
 Use `createEmbeddingService` with `adminApp.options.credential`. This fetches a fresh OAuth token on each call via `credential.getAccessToken()` — no static `VERTEX_AI_ACCESS_TOKEN` env var required.
 
+Products have **two distinct embedding fields** with different purposes:
+
+| Field | Content | Purpose |
+|---|---|---|
+| `vectorEmbedding` | Title only | Fast name-based similarity lookups |
+| `searchEmbedding` | Title + description + categoryId + variant sizes/colors | Full semantic search |
+
+Use `generateProductEmbeddings` from `src/lib/productEmbeddings.ts` to generate both in one call:
+
 ```ts
 import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 import { adminApp } from "@/src/lib/firestore/firebaseAdmin";
 
 const embeddingService = createEmbeddingService({
   credential: adminApp.options.credential, // auto-refreshes OAuth token
 });
 
-const embedding = await embeddingService.embed(`${product.title} ${product.description}`);
-// → number[] (up to 2048 dimensions, text-embedding-005)
+const embeddings = await generateProductEmbeddings(product, embeddingService);
+// embeddings = { vectorEmbedding?: number[], searchEmbedding?: number[] }
+// Only keys that succeeded are present — spread onto product:
+product = { ...product, ...embeddings };
 ```
+
+`generateProductEmbeddings` uses `Promise.allSettled` internally, so partial failures are handled gracefully — each embedding is independent. Only successfully generated embeddings are returned (as present keys); failed ones are omitted from the result so spreading won't overwrite existing values.
 
 ### Embedding is Non-Fatal
 
-Embedding generation must **always** be wrapped in try/catch. If Vertex AI is unavailable (e.g., development without service account), the product should still be saved without embeddings:
+Embedding generation must **always** be wrapped in try/catch (in case `createEmbeddingService` itself throws). If Vertex AI is unavailable the product should still be saved:
 
 ```ts
 try {
-  const embedding = await embeddingService.embed(embeddingText);
-  product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+  const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
+  const embeddings = await generateProductEmbeddings(product, embeddingService);
+  product = { ...product, ...embeddings };
 } catch (embeddingError) {
   console.warn("[POST /api/products] Embedding generation skipped:", embeddingError);
 }
+```
+
+### `buildVectorEmbeddingText` and `buildSearchEmbeddingText`
+
+If you need to generate embeddings yourself (e.g., in cloud tests or seed scripts):
+
+```ts
+import {
+  buildVectorEmbeddingText,
+  buildSearchEmbeddingText,
+} from "@/src/lib/productEmbeddings";
+
+const vectorText  = buildVectorEmbeddingText(product);  // product.title
+const searchText  = buildSearchEmbeddingText(product);  // title + description + category + variants
 ```
 
 ### Environment Variables
@@ -243,9 +272,11 @@ export async function GET(
 }
 ```
 
-### GET List — Filter and Paginate Documents
+### GET List — Filter, Paginate, and Search Documents
 
 Reads use `new URL(request.url)` for query-param parsing (works in both production and Vitest — avoid `request.nextUrl` because it is undefined in Vitest's jsdom environment).
+
+#### Simple list (admin SDK query — no `?q=`)
 
 ```ts
 // src/app/api/products/list.ts
@@ -254,13 +285,16 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
+  const q = url.searchParams.get("q")?.trim() || undefined;
   const status = url.searchParams.get("status") ?? undefined;
   const categoryId = url.searchParams.get("categoryId") ?? undefined;
-  const limitParam = url.searchParams.get("limit");
-  const limit = Math.max(
-    1,
-    Math.min(limitParam ? parseInt(limitParam, 10) || DEFAULT_LIMIT : DEFAULT_LIMIT, MAX_LIMIT),
-  );
+  const limit = Math.max(1, Math.min(...));
+
+  if (q) {
+    // ↓ see Pipeline search section below
+    const products = await searchByQuery(q, status, categoryId, limit);
+    return NextResponse.json(products, { status: 200 });
+  }
 
   // Build query chain — each call returns a new Query, so chain conditionally:
   const base = adminDb
@@ -270,12 +304,9 @@ export async function GET(request: Request) {
 
   const withStatus = status ? base.where("status", "==", status) : base;
   const withCategory = categoryId ? withStatus.where("categoryId", "==", categoryId) : withStatus;
-  const finalQuery = withCategory.limit(limit);
+  const snapshot = await withCategory.limit(limit).get();
 
-  const snapshot = await finalQuery.get();
-  const products = snapshot.docs.map((d) => d.data()); // DataConverter handles VectorValue unwrapping
-
-  return NextResponse.json(products, { status: 200 });
+  return NextResponse.json(snapshot.docs.map((d) => d.data()), { status: 200 });
 }
 ```
 
@@ -283,11 +314,69 @@ export async function GET(request: Request) {
 
 | Param | Type | Description |
 |---|---|---|
+| `q` | string | Full-text search term — uses pipeline (title OR sku regex) |
 | `status` | string | Filter by product status (`active`, `archived`, …) |
 | `categoryId` | string | Filter by category ID |
 | `limit` | number | Max results (default 24, max 100) |
 
 > **Firestore index note:** Combining `where()` with `orderBy()` on a different field requires a composite index in production. If deploying to Cloud Firestore (not Emulator), create the index via `firebase.indexes.json` or the Firebase Console.
+
+#### Pipeline search (`?q=` param) — title OR sku
+
+`firebase-admin/firestore` does **not** expose the pipeline API. Use `searchDb` from `src/lib/firestore/firebaseSearchDb.ts` — a server-only anonymous client Firestore instance — and import from `firebase/firestore/pipelines`:
+
+```ts
+import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
+import { and, execute, field, or, type BooleanExpression } from "firebase/firestore/pipelines";
+import { VectorValue } from "firebase/firestore";
+
+async function searchByQuery(q, status, categoryId, limit) {
+  const regex = q.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const filters: BooleanExpression[] = [
+    or(
+      field("title").toLower().regexMatch(regex),
+      field("sku").toLower().regexMatch(regex),
+    ),
+  ];
+  if (status)     filters.push(field("status").equal(status));
+  if (categoryId) filters.push(field("categoryId").equal(categoryId));
+
+  let pipeline = searchDb.pipeline().collection(firestoreCollections.products);
+  pipeline = pipeline.where(combineWithAnd(filters)).limit(limit);
+  const snapshot = await execute(pipeline);
+
+  return snapshot.results.map((entry) => {
+    const data = entry.data() as Record<string, unknown>;
+    return validateProduct({
+      ...data,
+      id: (data.id as string) ?? entry.id ?? "",
+      // Unwrap VectorValue — pipeline API does not use withConverter()
+      vectorEmbedding: data.vectorEmbedding instanceof VectorValue
+        ? data.vectorEmbedding.toArray() : data.vectorEmbedding,
+      searchEmbedding: data.searchEmbedding instanceof VectorValue
+        ? data.searchEmbedding.toArray() : data.searchEmbedding,
+    });
+  });
+}
+```
+
+**`firebaseSearchDb.ts`** — server-only client Firestore for pipeline use:
+
+```ts
+// src/lib/firestore/firebaseSearchDb.ts
+import "server-only";
+import { getApps, initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { initializeServerFirestoreEmulator } from "./emulator";
+import { applyEmulatorEnvironmentDefaults, DATABASE_NAME, getFirebaseWebConfig } from "./environment";
+
+const SEARCH_APP_NAME = "luratha-search-server-app";
+applyEmulatorEnvironmentDefaults();
+const _app = getApps().find((a) => a.name === SEARCH_APP_NAME) ?? initializeApp(getFirebaseWebConfig(), SEARCH_APP_NAME);
+export const searchDb = getFirestore(_app, DATABASE_NAME);
+initializeServerFirestoreEmulator(searchDb);
+```
 
 ### POST — Create
 
@@ -315,11 +404,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "..." }, { status: 400 });
   }
 
-  // 4. Generate embeddings (non-fatal)
+  // 4. Generate embeddings (non-fatal) — vectorEmbedding from title, searchEmbedding from rich text
   try {
     const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-    const embedding = await embeddingService.embed(`${product.title} ${product.description}`);
-    product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+    const embeddings = await generateProductEmbeddings(product, embeddingService);
+    product = { ...product, ...embeddings };
   } catch { /* skip */ }
 
   // 5. Check for ID conflict (409)
@@ -366,11 +455,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { slug: _slug, ...inputWithoutSlug } = input;
   let product = validateProduct(inputWithoutSlug);
 
-  // Regenerate embeddings unconditionally
+  // Regenerate embeddings unconditionally — vectorEmbedding (title) + searchEmbedding (rich text)
   try {
     const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-    const embedding = await embeddingService.embed(`${product.title} ${product.description}`);
-    product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+    const embeddings = await generateProductEmbeddings(product, embeddingService);
+    product = { ...product, ...embeddings };
   } catch { /* skip */ }
 
   await productRef.set(product);
@@ -421,8 +510,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (embeddingFieldsChanged) {
     try {
       const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-      const embedding = await embeddingService.embed(`${product.title} ${product.description}`);
-      product = { ...product, vectorEmbedding: embedding, searchEmbedding: embedding };
+      const embeddings = await generateProductEmbeddings(product, embeddingService);
+      // Spread only succeeded embeddings — existing embeddings are preserved if generation fails
+      product = { ...product, ...embeddings };
     } catch { /* skip */ }
   }
 
@@ -482,26 +572,26 @@ All API route unit tests live in `src/app/api/**/__tests__/route.test.ts` and us
 
 ### GET list (collection) mock setup
 
-The query chain (`.withConverter().orderBy().where().limit()`) must be mocked to return the same `mockQueryRef` object:
+The query chain (`.withConverter().orderBy().where().limit()`) must be mocked to return the same `mockQueryRef` object. When using `?q=` (pipeline search), also mock `firebase/firestore/pipelines` and `@/src/lib/firestore/firebaseSearchDb`:
 
 ```ts
-const { mockQueryGet, mockQueryRef, mockCollection } = vi.hoisted(() => {
+const { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef } = vi.hoisted(() => {
   const mockQueryGet = vi.fn();
-  const mockQueryRef = {
-    withConverter: vi.fn(),
-    orderBy: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-    get: mockQueryGet,
-  };
-  // All chain methods return self so the full chain resolves correctly
+  const mockQueryRef = { withConverter: vi.fn(), orderBy: vi.fn(), where: vi.fn(), limit: vi.fn(), get: mockQueryGet };
   mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
   mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
   mockQueryRef.where.mockReturnValue(mockQueryRef);
   mockQueryRef.limit.mockReturnValue(mockQueryRef);
-
   const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
-  return { mockQueryGet, mockQueryRef, mockCollection };
+
+  // Pipeline mocks
+  const mockExecute = vi.fn();
+  const mockPipelineRef = { collection: vi.fn(), where: vi.fn(), limit: vi.fn() };
+  mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+  mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+  mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+
+  return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
 });
 
 vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
@@ -509,14 +599,36 @@ vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminApp: { options: { credential: undefined } },
 }));
 
-// Simulate results:
-mockQueryGet.mockResolvedValue({ docs: [{ data: () => buildStoredProduct() }] });
+vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
+  searchDb: { pipeline: vi.fn(() => mockPipelineRef) },
+}));
 
-// Check filter was applied:
-expect(mockQueryRef.where).toHaveBeenCalledWith("status", "==", "active");
+vi.mock("firebase/firestore/pipelines", () => ({
+  execute: mockExecute,
+  field: vi.fn(() => ({ toLower: vi.fn().mockReturnThis(), regexMatch: vi.fn().mockReturnThis(), equal: vi.fn().mockReturnThis() })),
+  or: vi.fn((...args) => ({ type: "or", args })),
+  and: vi.fn((...args) => ({ type: "and", args })),
+}));
+
+// In beforeEach, reset pipeline chain:
+mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+mockExecute.mockResolvedValue({ results: [] });
+
+// Simulate pipeline results:
+mockExecute.mockResolvedValue({
+  results: [{ id: "prod-1", data: () => buildStoredProduct() }],
+});
+
+// Check pipeline was used for ?q= search:
+expect(mockExecute).toHaveBeenCalledTimes(1);
+expect(mockQueryGet).not.toHaveBeenCalled(); // admin SDK query should NOT run
 ```
 
 > **Note:** Use `new URL(request.url)` for query params in the handler — `request.nextUrl` is undefined in Vitest's jsdom environment.
+
+> **`server-only` in tests:** `firebaseSearchDb.ts` has `import "server-only"`. The Vitest config (`vitest.config.mts`) aliases `server-only` to `src/test/__mocks__/server-only.ts` (an empty file). This prevents the build-time guard from throwing in tests. Add the same alias if you introduce other `server-only` modules that are imported in testable paths.
 
 ### Key mock setup
 
@@ -640,6 +752,29 @@ The correct merge order is `{ ...existingData, ...payload, ...serverFields }`. R
 
 Use `new NextResponse(null, { status: 204 })`, **not** `NextResponse.json(null, { status: 204 })`. The `json()` helper adds a `Content-Type: application/json` header and may set a non-null body, which violates HTTP 204 semantics.
 
+### 8. Do NOT set `vectorEmbedding` and `searchEmbedding` to the same value
+
+Both embedding fields serve different purposes and must be generated from different text:
+- `vectorEmbedding` = title only (simple, for name-based similarity)
+- `searchEmbedding` = title + description + categoryId + variant sizes/colors (rich, for semantic search)
+
+Use `generateProductEmbeddings` from `src/lib/productEmbeddings.ts` — it generates both correctly in one call.
+
+### 9. `server-only` modules in tests
+
+Files with `import "server-only"` (like `firebaseSearchDb.ts`) will break Vitest unless the alias is configured in `vitest.config.mts`. The alias is already set:
+
+```ts
+// vitest.config.mts
+resolve: {
+  alias: {
+    "server-only": path.resolve(__dirname, "src/test/__mocks__/server-only.ts"),
+  },
+},
+```
+
+If you add a new `server-only` module that gets imported (directly or transitively) in any test file, make sure the alias handles it.
+
 ---
 
 ## Response Status Codes Summary
@@ -663,15 +798,18 @@ Use `new NextResponse(null, { status: 204 })`, **not** `NextResponse.json(null, 
 | File | Purpose |
 |---|---|
 | `src/app/api/products/route.ts` | GET (list) and POST handlers |
-| `src/app/api/products/list.ts` | GET list handler implementation |
+| `src/app/api/products/list.ts` | GET list handler (simple query + `?q=` pipeline search) |
 | `src/app/api/products/[id]/route.ts` | Re-exports GET, PUT, PATCH, DELETE |
 | `src/app/api/products/[id]/get.ts` | GET handler (fetch by ID) |
 | `src/app/api/products/[id]/put.ts` | PUT handler |
 | `src/app/api/products/[id]/patch.ts` | PATCH handler |
 | `src/app/api/products/[id]/delete.ts` | DELETE handler |
+| `src/lib/productEmbeddings.ts` | `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
 | `src/lib/firestore/adminProductConverter.ts` | Admin SDK DataConverter |
 | `src/lib/firestore/clientProductConverter.ts` | Client SDK DataConverter |
+| `src/lib/firestore/firebaseSearchDb.ts` | Server-only client Firestore for pipeline search |
 | `src/lib/embeddingService.ts` | Vertex AI embedding service |
 | `src/lib/firestore/firebaseAdmin.ts` | `adminDb`, `adminApp`, `adminStorage` |
 | `src/schemas/firestore/products.ts` | Zod product schema + `validateProduct` |
 | `src/schemas/firestore/index.ts` | `firestoreCollections` + all schema exports |
+| `src/test/__mocks__/server-only.ts` | Empty no-op mock for `server-only` in Vitest |

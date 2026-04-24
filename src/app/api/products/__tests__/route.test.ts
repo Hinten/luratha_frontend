@@ -26,6 +26,19 @@ vi.mock("@/src/lib/embeddingService", () => ({
   createEmbeddingService: vi.fn(() => ({ embed: mockEmbed })),
 }));
 
+// Prevent the list.ts → firebaseSearchDb import from initialising a real Firebase app.
+vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
+  searchDb: { pipeline: vi.fn(() => ({ collection: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis() })) },
+}));
+
+vi.mock("firebase/firestore/pipelines", () => ({
+  execute: vi.fn().mockResolvedValue({ results: [] }),
+  field: vi.fn(() => ({ toLower: vi.fn().mockReturnThis(), regexMatch: vi.fn().mockReturnThis(), equal: vi.fn().mockReturnThis() })),
+  or: vi.fn(),
+  and: vi.fn(),
+}));
+
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const now = "2026-04-23T00:00:00.000Z";
