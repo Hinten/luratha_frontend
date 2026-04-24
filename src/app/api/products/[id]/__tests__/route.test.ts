@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { GET } from "@/src/app/api/products/[id]/get";
 import { PUT } from "@/src/app/api/products/[id]/put";
 import { PATCH } from "@/src/app/api/products/[id]/patch";
 import { DELETE } from "@/src/app/api/products/[id]/delete";
@@ -120,6 +121,37 @@ function makeRequest(method: "PUT" | "PATCH" | "DELETE", body?: unknown): Reques
 function makeParams(id = PRODUCT_ID) {
   return { params: Promise.resolve({ id }) };
 }
+
+// ── GET tests ─────────────────────────────────────────────────────────────────
+
+describe("GET /api/products/:id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 404 when product does not exist", async () => {
+    mockGet.mockResolvedValue({ exists: false });
+    const res = await GET(new Request(`http://localhost/api/products/${PRODUCT_ID}`), makeParams());
+    expect(res.status).toBe(404);
+    const payload = await res.json();
+    expect(payload.message).toContain("não encontrado");
+  });
+
+  it("returns 200 with the product when it exists", async () => {
+    mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct() });
+    const res = await GET(new Request(`http://localhost/api/products/${PRODUCT_ID}`), makeParams());
+    expect(res.status).toBe(200);
+    const product = await res.json();
+    expect(product.id).toBe(PRODUCT_ID);
+    expect(product.title).toBe("Vestido de Linho Artesanal");
+  });
+
+  it("passes the correct id to the Firestore doc reference", async () => {
+    mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct({ id: "custom-id" }) });
+    await GET(new Request("http://localhost/api/products/custom-id"), makeParams("custom-id"));
+    expect(mockDoc).toHaveBeenCalledWith("custom-id");
+  });
+});
 
 // ── PUT tests ─────────────────────────────────────────────────────────────────
 

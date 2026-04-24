@@ -17,23 +17,27 @@ All product management APIs live under `src/app/api/products/`. Each HTTP method
 ```
 src/app/api/products/
 ├── __tests__/
-│   └── route.test.ts           # POST unit tests
-├── route.ts                    # exports POST
+│   ├── route.test.ts           # POST unit tests
+│   └── list.test.ts            # GET (list) unit tests
+├── list.ts                     # GET list handler
+├── route.ts                    # exports GET (list) and POST
 
 src/app/api/products/[id]/
 ├── __tests__/
-│   └── route.test.ts           # PUT / PATCH / DELETE unit tests
+│   └── route.test.ts           # GET / PUT / PATCH / DELETE unit tests
+├── get.ts                      # GET handler (by ID)
 ├── put.ts                      # PUT handler
 ├── patch.ts                    # PATCH handler
 ├── delete.ts                   # DELETE handler
-└── route.ts                    # re-exports PUT, PATCH, DELETE
+└── route.ts                    # re-exports GET, PUT, PATCH, DELETE
 ```
 
 The thin `route.ts` in `[id]/` simply re-exports:
 
 ```ts
 // src/app/api/products/[id]/route.ts
-export { runtime, PUT } from "./put";
+export { runtime, GET } from "./get";
+export { PUT } from "./put";
 export { PATCH } from "./patch";
 export { DELETE } from "./delete";
 ```
@@ -208,6 +212,82 @@ When using `credential`, none of the above are required except `VERTEX_AI_PROJEC
 ---
 
 ## CRUD Handler Patterns
+
+### GET by ID — Fetch Single Document
+
+```ts
+// src/app/api/products/[id]/get.ts
+export const runtime = "nodejs";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const productRef = adminDb
+    .collection(firestoreCollections.products)
+    .doc(id)
+    .withConverter(adminProductConverter);
+
+  const snapshot = await productRef.get();
+
+  if (!snapshot.exists) {
+    return NextResponse.json(
+      { message: `Produto com id "${id}" não encontrado.` },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(snapshot.data(), { status: 200 });
+}
+```
+
+### GET List — Filter and Paginate Documents
+
+Reads use `new URL(request.url)` for query-param parsing (works in both production and Vitest — avoid `request.nextUrl` because it is undefined in Vitest's jsdom environment).
+
+```ts
+// src/app/api/products/list.ts
+export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+
+  const status = url.searchParams.get("status") ?? undefined;
+  const categoryId = url.searchParams.get("categoryId") ?? undefined;
+  const limitParam = url.searchParams.get("limit");
+  const limit = Math.max(
+    1,
+    Math.min(limitParam ? parseInt(limitParam, 10) || DEFAULT_LIMIT : DEFAULT_LIMIT, MAX_LIMIT),
+  );
+
+  // Build query chain — each call returns a new Query, so chain conditionally:
+  const base = adminDb
+    .collection(firestoreCollections.products)
+    .withConverter(adminProductConverter)
+    .orderBy("updatedAt", "desc");
+
+  const withStatus = status ? base.where("status", "==", status) : base;
+  const withCategory = categoryId ? withStatus.where("categoryId", "==", categoryId) : withStatus;
+  const finalQuery = withCategory.limit(limit);
+
+  const snapshot = await finalQuery.get();
+  const products = snapshot.docs.map((d) => d.data()); // DataConverter handles VectorValue unwrapping
+
+  return NextResponse.json(products, { status: 200 });
+}
+```
+
+**Supported query params:**
+
+| Param | Type | Description |
+|---|---|---|
+| `status` | string | Filter by product status (`active`, `archived`, …) |
+| `categoryId` | string | Filter by category ID |
+| `limit` | number | Max results (default 24, max 100) |
+
+> **Firestore index note:** Combining `where()` with `orderBy()` on a different field requires a composite index in production. If deploying to Cloud Firestore (not Emulator), create the index via `firebase.indexes.json` or the Firebase Console.
 
 ### POST — Create
 
@@ -400,6 +480,44 @@ if (error instanceof z.ZodError) {
 
 All API route unit tests live in `src/app/api/**/__tests__/route.test.ts` and use Vitest.
 
+### GET list (collection) mock setup
+
+The query chain (`.withConverter().orderBy().where().limit()`) must be mocked to return the same `mockQueryRef` object:
+
+```ts
+const { mockQueryGet, mockQueryRef, mockCollection } = vi.hoisted(() => {
+  const mockQueryGet = vi.fn();
+  const mockQueryRef = {
+    withConverter: vi.fn(),
+    orderBy: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn(),
+    get: mockQueryGet,
+  };
+  // All chain methods return self so the full chain resolves correctly
+  mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
+  mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
+  mockQueryRef.where.mockReturnValue(mockQueryRef);
+  mockQueryRef.limit.mockReturnValue(mockQueryRef);
+
+  const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
+  return { mockQueryGet, mockQueryRef, mockCollection };
+});
+
+vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
+  adminDb: { collection: mockCollection },
+  adminApp: { options: { credential: undefined } },
+}));
+
+// Simulate results:
+mockQueryGet.mockResolvedValue({ docs: [{ data: () => buildStoredProduct() }] });
+
+// Check filter was applied:
+expect(mockQueryRef.where).toHaveBeenCalledWith("status", "==", "active");
+```
+
+> **Note:** Use `new URL(request.url)` for query params in the handler — `request.nextUrl` is undefined in Vitest's jsdom environment.
+
 ### Key mock setup
 
 The Firestore `withConverter` chain must be mocked to return the same `mockDocRef` object:
@@ -528,12 +646,14 @@ Use `new NextResponse(null, { status: 204 })`, **not** `NextResponse.json(null, 
 
 | Scenario | Status |
 |---|---|
+| Successful fetch (GET by ID) | `200 OK` |
+| Successful list (GET collection) | `200 OK` |
 | Successful creation | `201 Created` |
 | Successful update (PUT/PATCH) | `200 OK` |
 | Successful deletion | `204 No Content` |
 | Invalid JSON body | `400 Bad Request` |
 | Zod validation failure | `400 Bad Request` (with `errors: issue[]`) |
-| Document not found (PUT/PATCH/DELETE) | `404 Not Found` |
+| Document not found (GET/PUT/PATCH/DELETE) | `404 Not Found` |
 | ID conflict (POST) | `409 Conflict` |
 
 ---
@@ -542,11 +662,13 @@ Use `new NextResponse(null, { status: 204 })`, **not** `NextResponse.json(null, 
 
 | File | Purpose |
 |---|---|
-| `src/app/api/products/route.ts` | POST handler |
+| `src/app/api/products/route.ts` | GET (list) and POST handlers |
+| `src/app/api/products/list.ts` | GET list handler implementation |
+| `src/app/api/products/[id]/route.ts` | Re-exports GET, PUT, PATCH, DELETE |
+| `src/app/api/products/[id]/get.ts` | GET handler (fetch by ID) |
 | `src/app/api/products/[id]/put.ts` | PUT handler |
 | `src/app/api/products/[id]/patch.ts` | PATCH handler |
 | `src/app/api/products/[id]/delete.ts` | DELETE handler |
-| `src/app/api/products/[id]/route.ts` | Re-exports PUT, PATCH, DELETE |
 | `src/lib/firestore/adminProductConverter.ts` | Admin SDK DataConverter |
 | `src/lib/firestore/clientProductConverter.ts` | Client SDK DataConverter |
 | `src/lib/embeddingService.ts` | Vertex AI embedding service |

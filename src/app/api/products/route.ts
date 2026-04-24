@@ -7,6 +7,7 @@ import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 
 export const runtime = "nodejs";
+export { GET } from "./list";
 
 export async function POST(request: Request) {
   let body: unknown;
