@@ -23,6 +23,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminApp, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
@@ -324,7 +325,13 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     });
     const productId = productData.id as string;
 
-    await adminDb.collection(firestoreCollections.products).doc(productId).set(productData);
+    await adminDb.collection(firestoreCollections.products).doc(productId).set({
+      ...productData,
+      // Firestore Pipeline's findNearest requires fields stored as VectorValue,
+      // not plain number arrays. FieldValue.vector() creates the correct type.
+      vectorEmbedding: FieldValue.vector(embedding),
+      searchEmbedding: FieldValue.vector(embedding),
+    });
     seededDocs.push({ collection: firestoreCollections.products, id: productId });
 
     // Search using text similar to the product title — the real embedding service is used
