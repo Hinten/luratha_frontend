@@ -12,6 +12,7 @@ import {
   query,
   runTransaction,
   setDoc,
+  vector,
   where,
 } from "firebase/firestore";
 import { z } from "zod";
@@ -51,6 +52,19 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
+/**
+ * Wraps vector embedding fields with the Firestore VectorValue type so that
+ * Pipeline findNearest queries can locate the documents. Plain number[] arrays
+ * stored via setDoc() are NOT recognised by findNearest.
+ */
+function toFirestoreDoc(product: Product): Record<string, unknown> {
+  return {
+    ...(product as unknown as Record<string, unknown>),
+    ...(product.vectorEmbedding !== null && { vectorEmbedding: vector(product.vectorEmbedding) }),
+    ...(product.searchEmbedding !== null && { searchEmbedding: vector(product.searchEmbedding) }),
+  };
+}
+
 export function createProductsRepository(dbInstance: Firestore): ProductsRepository {
   const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
 
@@ -67,7 +81,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
             "conflict",
           );
         }
-        transaction.set(productRef, parsed);
+        transaction.set(productRef, toFirestoreDoc(parsed));
       });
 
       return parsed;
@@ -125,7 +139,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
         updatedAt: new Date().toISOString(),
       });
 
-      await setDoc(productRef, merged);
+      await setDoc(productRef, toFirestoreDoc(merged));
       return merged;
     } catch (error) {
       throw normalizeRepositoryError(error, `update product "${id}"`);

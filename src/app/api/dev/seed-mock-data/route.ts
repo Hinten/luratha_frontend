@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
@@ -56,7 +57,11 @@ async function seedProducts(products: Product[]): Promise<string[]> {
         return null;
       }
 
-      await productRef.set(product);
+      await productRef.set({
+        ...product,
+        ...(product.vectorEmbedding !== null && { vectorEmbedding: FieldValue.vector(product.vectorEmbedding) }),
+        ...(product.searchEmbedding !== null && { searchEmbedding: FieldValue.vector(product.searchEmbedding) }),
+      });
       return product.id;
     }),
   );
