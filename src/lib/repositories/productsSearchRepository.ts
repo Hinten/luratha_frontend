@@ -1,4 +1,13 @@
-import { type Firestore, collection, getDocs, limit as queryLimit, orderBy, query, where } from "firebase/firestore";
+import {
+  type Firestore,
+  VectorValue,
+  collection,
+  getDocs,
+  limit as queryLimit,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import {
   and,
   execute,
@@ -245,12 +254,20 @@ function normalizeSearchProduct(
     status?: FirestoreProduct["status"];
     createdAt?: string;
     updatedAt?: string;
+    vectorEmbedding?: unknown;
+    searchEmbedding?: unknown;
   };
 
   try {
     return validateProduct({
       ...record,
       id: record.id ?? fallbackId,
+      vectorEmbedding: record.vectorEmbedding instanceof VectorValue
+        ? record.vectorEmbedding.toArray()
+        : record.vectorEmbedding,
+      searchEmbedding: record.searchEmbedding instanceof VectorValue
+        ? record.searchEmbedding.toArray()
+        : record.searchEmbedding,
     });
   } catch (validationError) {
     if (process.env.NODE_ENV !== "production") {

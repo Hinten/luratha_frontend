@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
-import { toAdminFirestoreDoc } from "@/src/lib/firestore/adminProductUtils";
+import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 
@@ -65,7 +65,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(product.id);
+  const productRef = adminDb
+    .collection(firestoreCollections.products)
+    .doc(product.id)
+    .withConverter(adminProductConverter);
   const existing = await productRef.get();
   if (existing.exists) {
     return NextResponse.json(
@@ -74,7 +77,7 @@ export async function POST(request: Request) {
     );
   }
 
-  await productRef.set(toAdminFirestoreDoc(product));
+  await productRef.set(product);
 
   return NextResponse.json(product, { status: 201 });
 }

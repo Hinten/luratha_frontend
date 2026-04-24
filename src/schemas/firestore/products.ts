@@ -12,32 +12,6 @@ const productSlugSchema = z
   .trim()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-/**
- * Normalizes an incoming vector field to a plain number[].
- *
- * When reading a product from Firestore, both the client SDK (firebase/firestore)
- * and the admin SDK (firebase-admin/firestore) return vector fields as VectorValue
- * objects – not plain arrays. Both expose a toArray() method, so we duck-type here
- * to stay environment-agnostic (no firebase-admin import inside the schema).
- *
- * Input                     → Output
- * null / undefined          → null / undefined  (handled by .nullable().default(null))
- * number[]                  → number[]           (pass-through for API input)
- * VectorValue (toArray())   → number[]           (Firestore read normalisation)
- */
-function normalizeFirestoreVectorField(val: unknown): unknown {
-  if (val === null || val === undefined) return val;
-  if (
-    typeof val === "object" &&
-    "toArray" in val &&
-    typeof (val as { toArray: unknown }).toArray === "function"
-  ) {
-    const result = (val as { toArray(): unknown }).toArray();
-    return Array.isArray(result) ? result : val;
-  }
-  return val;
-}
-
 
 export function slugifyProductPart(value: string): string {
   return value
@@ -168,8 +142,8 @@ const productSchemaBase = z
     shortTitle: nonEmptyStringSchema.min(5).max(65).nullable().default(null),
     description: nonEmptyStringSchema.max(5000),
     
-    vectorEmbedding: z.preprocess(normalizeFirestoreVectorField, z.array(z.number().finite()).min(8).max(2048).nullable().default(null)),
-    searchEmbedding: z.preprocess(normalizeFirestoreVectorField, z.array(z.number().finite()).min(8).max(2048).nullable().default(null)),
+    vectorEmbedding: z.array(z.number().finite()).min(8).max(2048).nullable().default(null),
+    searchEmbedding: z.array(z.number().finite()).min(8).max(2048).nullable().default(null),
 
     sku: skuSchema,
     gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).nullable().default(null),

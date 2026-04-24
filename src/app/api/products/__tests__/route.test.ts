@@ -5,7 +5,13 @@ import { POST } from "@/src/app/api/products/route";
 const { mockSet, mockGet, mockDoc, mockCollection, mockEmbed } = vi.hoisted(() => {
   const mockSet = vi.fn().mockResolvedValue(undefined);
   const mockGet = vi.fn().mockResolvedValue({ exists: false });
-  const mockDoc = vi.fn().mockReturnValue({ get: mockGet, set: mockSet });
+  const mockDocRef = {
+    get: mockGet,
+    set: mockSet,
+    withConverter: vi.fn(),
+  };
+  mockDocRef.withConverter.mockReturnValue(mockDocRef);
+  const mockDoc = vi.fn().mockReturnValue(mockDocRef);
   const mockCollection = vi.fn().mockReturnValue({ doc: mockDoc });
   const mockEmbed = vi.fn();
   return { mockSet, mockGet, mockDoc, mockCollection, mockEmbed };

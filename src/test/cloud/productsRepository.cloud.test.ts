@@ -23,8 +23,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { FieldValue } from "firebase-admin/firestore";
 import { adminApp, adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
@@ -32,7 +32,7 @@ import {
   createProductsSearchRepository,
   type SearchOptions,
 } from "@/src/lib/repositories/productsSearchRepository";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     // Generate a real embedding from Vertex AI for this product
     const embedding = await embeddingService.embed(embeddingText);
 
-    // Seed the product with the real embedding
+    // Seed the product with the real embedding via the DataConverter
     const productData = buildBaseProductData(prefix, skuToken, {
       categoryId,
       title: productTitle,
@@ -325,13 +325,12 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     });
     const productId = productData.id as string;
 
-    await adminDb.collection(firestoreCollections.products).doc(productId).set({
-      ...productData,
-      // Firestore Pipeline's findNearest requires fields stored as VectorValue,
-      // not plain number arrays. FieldValue.vector() creates the correct type.
-      vectorEmbedding: FieldValue.vector(embedding),
-      searchEmbedding: FieldValue.vector(embedding),
-    });
+    const validatedProduct = validateProduct(productData);
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .withConverter(adminProductConverter)
+      .set(validatedProduct);
     seededDocs.push({ collection: firestoreCollections.products, id: productId });
 
     // Search using text similar to the product title — the real embedding service is used

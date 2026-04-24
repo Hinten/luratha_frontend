@@ -5,7 +5,7 @@ import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { toAdminFirestoreDoc } from "@/src/lib/firestore/adminProductUtils";
+import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
@@ -51,13 +51,16 @@ async function seedCategories(categories: FirestoreCategory[]): Promise<number> 
 async function seedProducts(products: Product[]): Promise<string[]> {
   const results = await Promise.all(
     products.map(async (product) => {
-      const productRef = adminDb.collection(firestoreCollections.products).doc(product.id);
+      const productRef = adminDb
+        .collection(firestoreCollections.products)
+        .doc(product.id)
+        .withConverter(adminProductConverter);
       const existingProduct = await productRef.get();
       if (existingProduct.exists) {
         return null;
       }
 
-      await productRef.set(toAdminFirestoreDoc(product));
+      await productRef.set(product);
       return product.id;
     }),
   );

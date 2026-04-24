@@ -12,11 +12,11 @@ import {
   query,
   runTransaction,
   setDoc,
-  vector,
   where,
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { clientProductConverter } from "@/src/lib/firestore/clientProductConverter";
 
 type ProductListFilters = {
   status?: Product["status"];
@@ -52,22 +52,8 @@ export interface ProductsRepository {
 
 const MAX_LIST_LIMIT = 100;
 
-/**
- * Converts a validated Product into a plain object suitable for client-SDK writes.
- * Non-null vectorEmbedding and searchEmbedding fields are wrapped as Firestore
- * VectorValue so that Pipeline findNearest queries can locate the documents.
- */
-function toFirestoreDoc(product: Product): Record<string, unknown> {
-  const { vectorEmbedding, searchEmbedding, ...rest } = product;
-  return {
-    ...rest,
-    vectorEmbedding: vectorEmbedding !== null ? vector(vectorEmbedding) : null,
-    searchEmbedding: searchEmbedding !== null ? vector(searchEmbedding) : null,
-  };
-}
-
 export function createProductsRepository(dbInstance: Firestore): ProductsRepository {
-  const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
+  const productsCollectionRef = collection(dbInstance, firestoreCollections.products).withConverter(clientProductConverter);
 
   async function create(input: unknown): Promise<Product> {
     try {
@@ -82,7 +68,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
             "conflict",
           );
         }
-        transaction.set(productRef, toFirestoreDoc(parsed));
+        transaction.set(productRef, parsed);
       });
 
       return parsed;
@@ -100,7 +86,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
         return null;
       }
 
-      return validateProduct(snapshot.data());
+      return snapshot.data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read product "${id}"`);
     }
@@ -118,7 +104,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
       }
       
 
-      return validateProduct(snapshot.docs[0].data());
+      return snapshot.docs[0].data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read product by slug "${slug}"`);
     }
@@ -133,14 +119,14 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
         throw new ProductRepositoryError(`Product "${id}" was not found`, "not_found");
       }
 
-      const current = validateProduct(snapshot.data());
+      const current = snapshot.data();
       const merged = validateProduct({
         ...current,
         ...patch,
         updatedAt: new Date().toISOString(),
       });
 
-      await setDoc(productRef, toFirestoreDoc(merged));
+      await setDoc(productRef, merged);
       return merged;
     } catch (error) {
       throw normalizeRepositoryError(error, `update product "${id}"`);
@@ -176,7 +162,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
       constraints.push(queryLimit(normalizedLimit));
 
       const snapshot = await getDocs(query(productsCollectionRef, ...constraints));
-      return snapshot.docs.map((entry) => validateProduct(entry.data()));
+      return snapshot.docs.map((entry) => entry.data());
     } catch (error) {
       throw normalizeRepositoryError(error, "list products");
     }
