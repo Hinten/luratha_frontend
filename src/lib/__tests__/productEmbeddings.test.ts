@@ -8,7 +8,9 @@ import type { Product } from "@/src/schemas/firestore";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-function makeProduct(overrides: Partial<Pick<Product, "title" | "description" | "categoryId" | "variants">> = {}): Pick<Product, "title" | "description" | "categoryId" | "variants"> {
+type ProductEmbeddingInput = Pick<Product, "title" | "description" | "categoryId" | "variants">;
+
+function makeProduct(overrides: Partial<ProductEmbeddingInput> = {}): ProductEmbeddingInput {
   return {
     title: "Vestido de Linho Artesanal",
     description: "Vestido leve feito com linho natural de alta qualidade, perfeito para o verão.",
