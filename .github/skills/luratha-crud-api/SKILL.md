@@ -1,6 +1,6 @@
 ---
 name: luratha-crud-api
-description: Activate this skill whenever implementing, reviewing, or debugging a CRUD API endpoint for the Luratha project. Covers route structure, Zod validation, Firestore DataConverters, embedding generation with Vertex AI, PATCH partial-update semantics, common pitfalls, and unit-test patterns.
+description: Activate this skill whenever implementing, reviewing, or debugging a CRUD API endpoint for the Luratha project. Covers route structure, Zod validation, Firestore DataConverters, embedding generation with Vertex AI, PATCH partial-update semantics, common pitfalls, and unit-test patterns. Applies to any Firestore-backed entity, not just products.
 compatibility: Next.js 16 App Router, firebase-admin v13, firebase/firestore v11, Zod v4, Vitest 4, TypeScript strict
 ---
 
@@ -8,21 +8,35 @@ compatibility: Next.js 16 App Router, firebase-admin v13, firebase/firestore v11
 
 ## Overview
 
-All product management APIs live under `src/app/api/products/`. Each HTTP method is implemented in its own file and re-exported through a thin `route.ts`. This guide documents the patterns, pitfalls, and examples that apply to building any Firestore-backed CRUD endpoint in this project.
+This guide covers the patterns for building any Firestore-backed CRUD API in this project. The examples below use **products** as the reference entity, but every pattern applies to any schema — replace `product`/`Product`/`products` with your entity name throughout.
+
+Each HTTP method lives in its own file and is re-exported through a thin `route.ts`. The collection name, Zod schema, DataConverter, and (optionally) embedding helper are the only entity-specific pieces to supply.
+
+**Naming conventions** (substitute your entity name):
+
+| Placeholder | Example for products |
+|---|---|
+| `{entity}` | `product` |
+| `{Entity}` | `Product` |
+| `{entities}` | `products` |
+| `src/app/api/{entities}/` | `src/app/api/products/` |
+| `admin{Entity}Converter` | `adminProductConverter` |
+| `validate{Entity}` | `validateProduct` |
+| `firestoreCollections.{entities}` | `firestoreCollections.products` |
 
 ---
 
 ## Directory Layout
 
 ```
-src/app/api/products/
+src/app/api/{entities}/
 ├── __tests__/
 │   ├── route.test.ts           # POST unit tests
 │   └── list.test.ts            # GET (list) unit tests
 ├── list.ts                     # GET list handler
 ├── route.ts                    # exports GET (list) and POST
 
-src/app/api/products/[id]/
+src/app/api/{entities}/[id]/
 ├── __tests__/
 │   └── route.test.ts           # GET / PUT / PATCH / DELETE unit tests
 ├── get.ts                      # GET handler (by ID)
@@ -35,7 +49,7 @@ src/app/api/products/[id]/
 The thin `route.ts` in `[id]/` simply re-exports:
 
 ```ts
-// src/app/api/products/[id]/route.ts
+// src/app/api/{entities}/[id]/route.ts
 export { runtime, GET } from "./get";
 export { PUT } from "./put";
 export { PATCH } from "./patch";
@@ -53,9 +67,9 @@ export const runtime = "nodejs"; // REQUIRED — firebase-admin won't work in Ed
 All handlers use:
 
 - **`adminDb`** from `@/src/lib/firestore/firebaseAdmin` — bypasses Firestore security rules
-- **`adminProductConverter`** from `@/src/lib/firestore/adminProductConverter` — handles VectorValue ↔ `number[]` conversion
-- **`validateProduct`** from `@/src/schemas/firestore` — Zod validation
-- **`createEmbeddingService`** from `@/src/lib/embeddingService` — Vertex AI embedding
+- **`admin{Entity}Converter`** from `@/src/lib/firestore/admin{Entity}Converter` — handles special Firestore types (VectorValue, Timestamp) ↔ plain JS conversion
+- **`validate{Entity}`** from `@/src/schemas/firestore` — Zod validation
+- **`createEmbeddingService`** from `@/src/lib/embeddingService` — Vertex AI embedding *(only when the entity has vector fields)*
 
 ---
 
@@ -63,27 +77,21 @@ All handlers use:
 
 ### Why a DataConverter is required
 
-Firestore vector fields must be stored as `VectorValue` (native Firestore type). If you store a plain JavaScript `number[]`, the `findNearest` pipeline operation will **silently return 0 results** — it simply ignores plain arrays.
+Firestore stores some types natively (e.g. `Timestamp`, `VectorValue`) that have no equivalent in plain JavaScript. A DataConverter converts between the Firestore representation and the plain JS/TypeScript type your Zod schema expects at the read/write boundary.
 
-The DataConverter handles this transparently at the read/write boundary so the rest of the code always deals with plain `number[]`.
+Two specific cases relevant to this codebase:
+
+- **`Timestamp`** fields (e.g. `createdAt`, `updatedAt`) — stored as Firestore Timestamps, must be converted to ISO strings for Zod.
+- **Vector fields** (e.g. `vectorEmbedding`, `searchEmbedding`) — stored as `VectorValue`; if stored as a plain `number[]`, `findNearest` will **silently return 0 results**.
+
+Every entity with `Timestamp` or vector fields **must** use a DataConverter. Entities with neither can use a simpler converter that only calls `validate{Entity}`.
 
 ### Admin SDK DataConverter (`firebase-admin/firestore`)
 
 ```ts
-// src/lib/firestore/adminProductConverter.ts
+// src/lib/firestore/admin{Entity}Converter.ts
 import { type FirestoreDataConverter, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { type Product, validateProduct } from "@/src/schemas/firestore";
-
-function extractVector(val: unknown): number[] | null {
-  if (val === null || val === undefined) return null;
-  if (Array.isArray(val)) return val as number[];
-  // Admin SDK does NOT export VectorValue, so duck-type via .toArray()
-  if (typeof val === "object" && "toArray" in val && typeof (val as { toArray: unknown }).toArray === "function") {
-    const result = (val as { toArray(): unknown }).toArray();
-    return Array.isArray(result) ? (result as number[]) : null;
-  }
-  return null;
-}
+import { type {Entity}, validate{Entity} } from "@/src/schemas/firestore";
 
 // Converts Firestore Timestamp → ISO string; falls through for strings (tests)
 function extractTimestamp(val: unknown): string | unknown {
@@ -95,6 +103,47 @@ function extractTimestamp(val: unknown): string | unknown {
   return val;
 }
 
+// Only needed for entities with vector fields:
+// Admin SDK does NOT export VectorValue, so duck-type via .toArray()
+function extractVector(val: unknown): number[] | null {
+  if (val === null || val === undefined) return null;
+  if (Array.isArray(val)) return val as number[];
+  if (typeof val === "object" && "toArray" in val && typeof (val as { toArray: unknown }).toArray === "function") {
+    const result = (val as { toArray(): unknown }).toArray();
+    return Array.isArray(result) ? (result as number[]) : null;
+  }
+  return null;
+}
+
+export const admin{Entity}Converter: FirestoreDataConverter<{Entity}> = {
+  toFirestore(entity: {Entity}) {
+    // Destructure every field that needs conversion; spread the rest unchanged
+    const { createdAt, updatedAt, /* vectorField, */ ...rest } = entity;
+    return {
+      ...rest,
+      createdAt: Timestamp.fromDate(new Date(createdAt)),
+      updatedAt: Timestamp.fromDate(new Date(updatedAt)),
+      // For vector fields:
+      // vectorField: vectorField !== null ? FieldValue.vector(vectorField) : null,
+    };
+  },
+  fromFirestore(snapshot) {
+    const data = snapshot.data();
+    return validate{Entity}({
+      ...data,
+      createdAt: extractTimestamp(data.createdAt),
+      updatedAt: extractTimestamp(data.updatedAt),
+      // For vector fields:
+      // vectorField: extractVector(data.vectorField),
+    });
+  },
+};
+```
+
+**Product example** (entity with both Timestamps and two vector fields):
+
+```ts
+// src/lib/firestore/adminProductConverter.ts
 export const adminProductConverter: FirestoreDataConverter<Product> = {
   toFirestore(product: Product) {
     const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = product;
@@ -122,10 +171,16 @@ export const adminProductConverter: FirestoreDataConverter<Product> = {
 ### Client SDK DataConverter (`firebase/firestore`)
 
 ```ts
-// src/lib/firestore/clientProductConverter.ts
+// src/lib/firestore/client{Entity}Converter.ts
 import { type FirestoreDataConverter, VectorValue, vector, Timestamp } from "firebase/firestore";
-import { type Product, validateProduct } from "@/src/schemas/firestore";
+import { type {Entity}, validate{Entity} } from "@/src/schemas/firestore";
 
+function extractTimestamp(val: unknown): string | unknown {
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  return val;
+}
+
+// Only needed for entities with vector fields:
 function extractVector(val: unknown): number[] | null {
   if (val === null || val === undefined) return null;
   if (val instanceof VectorValue) return val.toArray(); // client SDK exports VectorValue
@@ -133,30 +188,23 @@ function extractVector(val: unknown): number[] | null {
   return null;
 }
 
-function extractTimestamp(val: unknown): string | unknown {
-  if (val instanceof Timestamp) return val.toDate().toISOString();
-  return val;
-}
-
-export const clientProductConverter: FirestoreDataConverter<Product> = {
-  toFirestore(product: Product) {
-    const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = product;
+export const client{Entity}Converter: FirestoreDataConverter<{Entity}> = {
+  toFirestore(entity: {Entity}) {
+    const { createdAt, updatedAt, /* vectorField, */ ...rest } = entity;
     return {
       ...rest,
       createdAt: Timestamp.fromDate(new Date(createdAt)),
       updatedAt: Timestamp.fromDate(new Date(updatedAt)),
-      vectorEmbedding: vectorEmbedding !== null ? vector(vectorEmbedding) : null,
-      searchEmbedding: searchEmbedding !== null ? vector(searchEmbedding) : null,
+      // vectorField: vectorField !== null ? vector(vectorField) : null,
     };
   },
   fromFirestore(snapshot) {
     const data = snapshot.data();
-    return validateProduct({
+    return validate{Entity}({
       ...data,
       createdAt: extractTimestamp(data.createdAt),
       updatedAt: extractTimestamp(data.updatedAt),
-      vectorEmbedding: extractVector(data.vectorEmbedding),
-      searchEmbedding: extractVector(data.searchEmbedding),
+      // vectorField: extractVector(data.vectorField),
     });
   },
 };
@@ -166,23 +214,25 @@ export const clientProductConverter: FirestoreDataConverter<Product> = {
 
 ```ts
 // Admin paths (API routes, seed scripts)
-const productRef = adminDb
-  .collection(firestoreCollections.products)
+const entityRef = adminDb
+  .collection(firestoreCollections.{entities})
   .doc(id)
-  .withConverter(adminProductConverter);
+  .withConverter(admin{Entity}Converter);
 
-await productRef.set(validatedProduct);            // wraps VectorValue automatically
-const product = (await productRef.get()).data();   // unwraps VectorValue automatically
+await entityRef.set(validatedEntity);            // wraps Timestamps/VectorValues automatically
+const entity = (await entityRef.get()).data();   // unwraps them automatically
 
 // Client paths (repositories called from Server Components or Client Components)
-const col = collection(db, firestoreCollections.products).withConverter(clientProductConverter);
+const col = collection(db, firestoreCollections.{entities}).withConverter(client{Entity}Converter);
 ```
 
-> **Note:** `productsSearchRepository.ts` uses the Firestore Pipeline API which **does not support** `.withConverter()`. It handles `VectorValue` inline via `instanceof VectorValue` in `normalizeSearchProduct`.
+> **Note:** The Firestore Pipeline API does **not** support `.withConverter()`. When using pipelines for search, handle type conversions inline (e.g. `instanceof VectorValue` checks) as done in `productsSearchRepository.ts`.
 
 ---
 
 ## Embedding Generation
+
+> **This section applies only to entities that require semantic/vector search.** If your entity has no `vectorEmbedding` or `searchEmbedding` fields, skip this section entirely.
 
 ### Why not `firebase/ai`?
 
@@ -192,20 +242,21 @@ The `firebase/ai` JS SDK does not expose an embedding API — its `GenerativeMod
 
 `@genkit-ai/vertexai` brings dozens of MB of transitive dependencies (`openai`, `@anthropic-ai/sdk`, `@google-cloud/aiplatform`, etc.) even when only embedding is needed.
 
-### The Right Approach — `embeddingService.ts` + `productEmbeddings.ts`
+### The Right Approach — `embeddingService.ts` + an entity-specific embeddings helper
 
 Use `createEmbeddingService` with `adminApp.options.credential`. This fetches a fresh OAuth token on each call via `credential.getAccessToken()` — no static `VERTEX_AI_ACCESS_TOKEN` env var required.
 
-Products have **two distinct embedding fields** with different purposes:
+**Determine the embedding fields your entity needs.** For products, two fields are used:
 
 | Field | Content | Purpose |
 |---|---|---|
 | `vectorEmbedding` | Title only | Fast name-based similarity lookups |
 | `searchEmbedding` | Title + description + categoryId + variant sizes/colors | Full semantic search |
 
-Use `generateProductEmbeddings` from `src/lib/productEmbeddings.ts` to generate both in one call:
+If your entity only needs one embedding field, create a simpler helper that generates just that field. Use `src/lib/productEmbeddings.ts` as a reference implementation.
 
 ```ts
+// Example: using the product embedding helper
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 import { adminApp } from "@/src/lib/firestore/firebaseAdmin";
@@ -214,40 +265,25 @@ const embeddingService = createEmbeddingService({
   credential: adminApp.options.credential, // auto-refreshes OAuth token
 });
 
-const embeddings = await generateProductEmbeddings(product, embeddingService);
-// embeddings = { vectorEmbedding?: number[], searchEmbedding?: number[] }
-// Only keys that succeeded are present — spread onto product:
-product = { ...product, ...embeddings };
+const embeddings = await generateProductEmbeddings(entity, embeddingService);
+// Returns only keys that succeeded — spread onto entity:
+entity = { ...entity, ...embeddings };
 ```
 
-`generateProductEmbeddings` uses `Promise.allSettled` internally, so partial failures are handled gracefully — each embedding is independent. Only successfully generated embeddings are returned (as present keys); failed ones are omitted from the result so spreading won't overwrite existing values.
+The helper must use `Promise.allSettled` so each field is independent — a failure on one field does not block the others. Only successfully generated embeddings are returned.
 
 ### Embedding is Non-Fatal
 
-Embedding generation must **always** be wrapped in try/catch (in case `createEmbeddingService` itself throws). If Vertex AI is unavailable the product should still be saved:
+Embedding generation must **always** be wrapped in try/catch. If Vertex AI is unavailable, the entity should still be saved:
 
 ```ts
 try {
   const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-  const embeddings = await generateProductEmbeddings(product, embeddingService);
-  product = { ...product, ...embeddings };
+  const embeddings = await generate{Entity}Embeddings(entity, embeddingService);
+  entity = { ...entity, ...embeddings };
 } catch (embeddingError) {
-  console.warn("[POST /api/products] Embedding generation skipped:", embeddingError);
+  console.warn("[POST /api/{entities}] Embedding generation skipped:", embeddingError);
 }
-```
-
-### `buildVectorEmbeddingText` and `buildSearchEmbeddingText`
-
-If you need to generate embeddings yourself (e.g., in cloud tests or seed scripts):
-
-```ts
-import {
-  buildVectorEmbeddingText,
-  buildSearchEmbeddingText,
-} from "@/src/lib/productEmbeddings";
-
-const vectorText  = buildVectorEmbeddingText(product);  // product.title
-const searchText  = buildSearchEmbeddingText(product);  // title + description + category + variants
 ```
 
 ### Environment Variables
@@ -268,7 +304,7 @@ When using `credential`, none of the above are required except `VERTEX_AI_PROJEC
 ### GET by ID — Fetch Single Document
 
 ```ts
-// src/app/api/products/[id]/get.ts
+// src/app/api/{entities}/[id]/get.ts
 export const runtime = "nodejs";
 
 export async function GET(
@@ -277,16 +313,16 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const productRef = adminDb
-    .collection(firestoreCollections.products)
+  const entityRef = adminDb
+    .collection(firestoreCollections.{entities})
     .doc(id)
-    .withConverter(adminProductConverter);
+    .withConverter(admin{Entity}Converter);
 
-  const snapshot = await productRef.get();
+  const snapshot = await entityRef.get();
 
   if (!snapshot.exists) {
     return NextResponse.json(
-      { message: `Produto com id "${id}" não encontrado.` },
+      { message: `{Entity} com id "${id}" não encontrado.` },
       { status: 404 },
     );
   }
@@ -302,49 +338,49 @@ Reads use `new URL(request.url)` for query-param parsing (works in both producti
 #### Simple list (admin SDK query — no `?q=`)
 
 ```ts
-// src/app/api/products/list.ts
+// src/app/api/{entities}/list.ts
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
   const q = url.searchParams.get("q")?.trim() || undefined;
+  // Add entity-specific filter params here (e.g. status, categoryId)
   const status = url.searchParams.get("status") ?? undefined;
-  const categoryId = url.searchParams.get("categoryId") ?? undefined;
-  const limit = Math.max(1, Math.min(...));
+  const limit = Math.max(1, Math.min(/* max */, parseInt(url.searchParams.get("limit") ?? "24", 10)));
 
   if (q) {
-    // ↓ see Pipeline search section below
-    const products = await searchByQuery(q, status, categoryId, limit);
-    return NextResponse.json(products, { status: 200 });
+    // ↓ see Pipeline search section below (only if entity supports full-text search)
+    const items = await searchByQuery(q, status, limit);
+    return NextResponse.json(items, { status: 200 });
   }
 
   // Build query chain — each call returns a new Query, so chain conditionally:
   const base = adminDb
-    .collection(firestoreCollections.products)
-    .withConverter(adminProductConverter)
+    .collection(firestoreCollections.{entities})
+    .withConverter(admin{Entity}Converter)
     .orderBy("updatedAt", "desc");
 
   const withStatus = status ? base.where("status", "==", status) : base;
-  const withCategory = categoryId ? withStatus.where("categoryId", "==", categoryId) : withStatus;
-  const snapshot = await withCategory.limit(limit).get();
+  const snapshot = await withStatus.limit(limit).get();
 
   return NextResponse.json(snapshot.docs.map((d) => d.data()), { status: 200 });
 }
 ```
 
-**Supported query params:**
+**Adapt the supported query params to the entity's filterable fields:**
 
 | Param | Type | Description |
 |---|---|---|
-| `q` | string | Full-text search term — uses pipeline (title OR sku regex) |
-| `status` | string | Filter by product status (`active`, `archived`, …) |
-| `categoryId` | string | Filter by category ID |
+| `q` | string | Full-text search term — uses pipeline (regex on key fields) |
+| `status` | string | Filter by a status field (if present in schema) |
 | `limit` | number | Max results (default 24, max 100) |
 
-> **Firestore index note:** Combining `where()` with `orderBy()` on a different field requires a composite index in production. If deploying to Cloud Firestore (not Emulator), create the index via `firebase.indexes.json` or the Firebase Console.
+> **Firestore index note:** Combining `where()` with `orderBy()` on a different field requires a composite index in production. Create the index via `firestore.indexes.json` or the Firebase Console.
 
-#### Pipeline search (`?q=` param) — title OR sku
+#### Pipeline search (`?q=` param)
+
+> **Only implement this when the entity requires full-text search.** If the entity does not need `?q=` search, omit the pipeline path entirely.
 
 `firebase-admin/firestore` does **not** expose the pipeline API. Use `searchDb` from `src/lib/firestore/firebaseSearchDb.ts` — a server-only anonymous client Firestore instance — and import from `firebase/firestore/pipelines`:
 
@@ -353,38 +389,36 @@ import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
 import { and, execute, field, or, type BooleanExpression } from "firebase/firestore/pipelines";
 import { VectorValue } from "firebase/firestore";
 
-async function searchByQuery(q, status, categoryId, limit) {
+// Adjust the regex-matched fields to the entity's searchable text fields:
+async function searchByQuery(q: string, status: string | undefined, limit: number) {
   const regex = q.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   const filters: BooleanExpression[] = [
     or(
-      field("title").toLower().regexMatch(regex),
-      field("sku").toLower().regexMatch(regex),
+      field("name").toLower().regexMatch(regex),   // ← entity-specific searchable fields
+      field("code").toLower().regexMatch(regex),
     ),
   ];
-  if (status)     filters.push(field("status").equal(status));
-  if (categoryId) filters.push(field("categoryId").equal(categoryId));
+  if (status) filters.push(field("status").equal(status));
 
-  let pipeline = searchDb.pipeline().collection(firestoreCollections.products);
+  let pipeline = searchDb.pipeline().collection(firestoreCollections.{entities});
   pipeline = pipeline.where(combineWithAnd(filters)).limit(limit);
   const snapshot = await execute(pipeline);
 
   return snapshot.results.map((entry) => {
     const data = entry.data() as Record<string, unknown>;
-    return validateProduct({
+    return validate{Entity}({
       ...data,
       id: (data.id as string) ?? entry.id ?? "",
-      // Unwrap VectorValue — pipeline API does not use withConverter()
-      vectorEmbedding: data.vectorEmbedding instanceof VectorValue
-        ? data.vectorEmbedding.toArray() : data.vectorEmbedding,
-      searchEmbedding: data.searchEmbedding instanceof VectorValue
-        ? data.searchEmbedding.toArray() : data.searchEmbedding,
+      // Unwrap VectorValue inline — pipeline does not use withConverter()
+      // vectorField: data.vectorField instanceof VectorValue
+      //   ? data.vectorField.toArray() : data.vectorField,
     });
   });
 }
 ```
 
-**`firebaseSearchDb.ts`** — server-only client Firestore for pipeline use:
+**`firebaseSearchDb.ts`** — server-only client Firestore for pipeline use (already exists, do not duplicate):
 
 ```ts
 // src/lib/firestore/firebaseSearchDb.ts
@@ -409,9 +443,9 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   // 1. Parse JSON body (400 on parse error)
   let body: unknown;
-  try { body = await request.json(); } catch { return NextResponse.json({ message: "..." }, { status: 400 }); }
+  try { body = await request.json(); } catch { return NextResponse.json({ message: "Corpo inválido." }, { status: 400 }); }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return NextResponse.json({ message: "..." }, { status: 400 });
+    return NextResponse.json({ message: "Corpo deve ser um objeto JSON." }, { status: 400 });
   }
 
   // 2. Server-generated fields
@@ -420,28 +454,28 @@ export async function POST(request: Request) {
   const input = { ...(body as Record<string, unknown>), id, createdAt: now, updatedAt: now };
 
   // 3. Validate with Zod (400 on failure, use error.issues — Zod v4 removed .errors)
-  let product;
-  try { product = validateProduct(input); }
+  let entity: {Entity};
+  try { entity = validate{Entity}(input); }
   catch (error) {
-    if (error instanceof z.ZodError) return NextResponse.json({ message: "...", errors: error.issues }, { status: 400 });
-    return NextResponse.json({ message: "..." }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ message: "Dados inválidos.", errors: error.issues }, { status: 400 });
+    return NextResponse.json({ message: "Erro de validação." }, { status: 400 });
   }
 
-  // 4. Generate embeddings (non-fatal) — vectorEmbedding from title, searchEmbedding from rich text
-  try {
-    const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-    const embeddings = await generateProductEmbeddings(product, embeddingService);
-    product = { ...product, ...embeddings };
-  } catch { /* skip */ }
+  // 4. Generate embeddings (non-fatal) — only for entities with vector fields
+  // try {
+  //   const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
+  //   const embeddings = await generate{Entity}Embeddings(entity, embeddingService);
+  //   entity = { ...entity, ...embeddings };
+  // } catch { /* skip — entity is saved without embeddings */ }
 
   // 5. Check for ID conflict (409)
-  const productRef = adminDb.collection(firestoreCollections.products).doc(product.id).withConverter(adminProductConverter);
-  const existing = await productRef.get();
-  if (existing.exists) return NextResponse.json({ message: "..." }, { status: 409 });
+  const entityRef = adminDb.collection(firestoreCollections.{entities}).doc(entity.id).withConverter(admin{Entity}Converter);
+  const existing = await entityRef.get();
+  if (existing.exists) return NextResponse.json({ message: `{Entity} com id "${entity.id}" já existe.` }, { status: 409 });
 
   // 6. Write and respond
-  await productRef.set(product);
-  return NextResponse.json(product, { status: 201 });
+  await entityRef.set(entity);
+  return NextResponse.json(entity, { status: 201 });
 }
 ```
 
@@ -451,18 +485,18 @@ Rules:
 - `id` is always from the URL parameter (body value is discarded)
 - `createdAt` is preserved from the existing document
 - `updatedAt` is set to now
-- `slug` is stripped before validation so the schema regenerates it from title + SKU
-- Embeddings are always regenerated
-- Returns 404 if the product does not exist
+- Schema-computed fields (e.g. `slug`) must be stripped before re-validation so the schema can regenerate them — see [Schema-computed Fields](#schema-computed-fields)
+- Embeddings are always regenerated (if applicable)
+- Returns 404 if the entity does not exist
 
 ```ts
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // ... parse body ...
+  // ... parse body (same pattern as POST step 1) ...
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(id).withConverter(adminProductConverter);
-  const existing = await productRef.get();
-  if (!existing.exists) return NextResponse.json({ message: "..." }, { status: 404 });
+  const entityRef = adminDb.collection(firestoreCollections.{entities}).doc(id).withConverter(admin{Entity}Converter);
+  const existing = await entityRef.get();
+  if (!existing.exists) return NextResponse.json({ message: `{Entity} com id "${id}" não encontrado.` }, { status: 404 });
 
   const existingData = existing.data()!;
   const now = new Date().toISOString();
@@ -474,19 +508,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     updatedAt: now,
   };
 
-  // Strip slug so schema regenerates it
-  const { slug: _slug, ...inputWithoutSlug } = input;
-  let product = validateProduct(inputWithoutSlug);
+  // Strip schema-computed fields so the schema regenerates them (e.g. slug):
+  // const { slug: _slug, ...inputWithoutComputed } = input;
+  let entity = validate{Entity}(input /* or inputWithoutComputed */);
 
-  // Regenerate embeddings unconditionally — vectorEmbedding (title) + searchEmbedding (rich text)
-  try {
-    const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-    const embeddings = await generateProductEmbeddings(product, embeddingService);
-    product = { ...product, ...embeddings };
-  } catch { /* skip */ }
+  // Regenerate embeddings unconditionally (only for entities with vector fields):
+  // try {
+  //   const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
+  //   const embeddings = await generate{Entity}Embeddings(entity, embeddingService);
+  //   entity = { ...entity, ...embeddings };
+  // } catch { /* skip */ }
 
-  await productRef.set(product);
-  return NextResponse.json(product, { status: 200 });
+  await entityRef.set(entity);
+  return NextResponse.json(entity, { status: 200 });
 }
 ```
 
@@ -500,16 +534,16 @@ Rules (critical — must be exactly this semantics):
 | **Present with `null`** | Set to `null` |
 | **Present with a value** | Updated to that value |
 
-`id` and `createdAt` are always forced from the stored document. Embeddings are only regenerated when `title` or `description` appear in the payload.
+`id` and `createdAt` are always forced from the stored document. Embeddings are only regenerated when the text fields they depend on appear in the payload.
 
 ```ts
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // ... parse body ...
+  // ... parse body (same pattern as POST step 1) ...
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(id).withConverter(adminProductConverter);
-  const existing = await productRef.get();
-  if (!existing.exists) return NextResponse.json({ message: "..." }, { status: 404 });
+  const entityRef = adminDb.collection(firestoreCollections.{entities}).doc(id).withConverter(admin{Entity}Converter);
+  const existing = await entityRef.get();
+  if (!existing.exists) return NextResponse.json({ message: `{Entity} com id "${id}" não encontrado.` }, { status: 404 });
 
   const existingData = existing.data()!;
   const payload = body as Record<string, unknown>;
@@ -518,29 +552,28 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // Spread order is critical: existingData first, then payload, then server-controlled fields
   const merged: Record<string, unknown> = {
     ...existingData,
-    ...payload,          // only keys present in payload are overwritten
-    id,                  // always from URL
+    ...payload,                        // only keys present in payload are overwritten
+    id,                                // always from URL
     createdAt: existingData.createdAt, // always from stored doc
     updatedAt: now,
   };
 
-  // Strip slug so schema always regenerates it
-  const { slug: _slug, ...mergedWithoutSlug } = merged;
-  let product = validateProduct(mergedWithoutSlug);
+  // Strip schema-computed fields so the schema regenerates them:
+  // const { slug: _slug, ...mergedWithoutComputed } = merged;
+  let entity = validate{Entity}(merged /* or mergedWithoutComputed */);
 
-  // Only regenerate embeddings when text content may have changed
-  const embeddingFieldsChanged = "title" in payload || "description" in payload;
-  if (embeddingFieldsChanged) {
-    try {
-      const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
-      const embeddings = await generateProductEmbeddings(product, embeddingService);
-      // Spread only succeeded embeddings — existing embeddings are preserved if generation fails
-      product = { ...product, ...embeddings };
-    } catch { /* skip */ }
-  }
+  // Only regenerate embeddings when the relevant text fields changed:
+  // const embeddingFieldsChanged = "title" in payload || "description" in payload;
+  // if (embeddingFieldsChanged) {
+  //   try {
+  //     const embeddingService = createEmbeddingService({ credential: adminApp.options.credential });
+  //     const embeddings = await generate{Entity}Embeddings(entity, embeddingService);
+  //     entity = { ...entity, ...embeddings };
+  //   } catch { /* skip */ }
+  // }
 
-  await productRef.set(product);
-  return NextResponse.json(product, { status: 200 });
+  await entityRef.set(entity);
+  return NextResponse.json(entity, { status: 200 });
 }
 ```
 
@@ -552,28 +585,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(id);
-  const existing = await productRef.get();
-  if (!existing.exists) return NextResponse.json({ message: "..." }, { status: 404 });
+  const entityRef = adminDb.collection(firestoreCollections.{entities}).doc(id);
+  const existing = await entityRef.get();
+  if (!existing.exists) return NextResponse.json({ message: `{Entity} com id "${id}" não encontrado.` }, { status: 404 });
 
-  await productRef.delete();
+  await entityRef.delete();
   return new NextResponse(null, { status: 204 }); // No Content — do NOT use NextResponse.json()
 }
 ```
 
 ---
 
-## Slug Handling
+## Schema-computed Fields
 
-The product schema auto-generates `slug` from `title` + `sku` via a Zod `transform`. **Never pass an existing slug when re-validating** after a PUT or PATCH — it will cause a validation error because the slug in the payload may not match the newly computed one.
+Some Zod schemas auto-generate fields via a `transform` — for example, the product schema generates `slug` from `title` + `sku`. **Never pass an existing computed field when re-validating** after PUT or PATCH — the stored value may not match what the schema would generate from the current data, causing a validation error.
 
-Always strip it before calling `validateProduct`:
+Always strip computed fields before calling `validate{Entity}`:
 
 ```ts
-const { slug: _slug, ...inputWithoutSlug } = input;
-const product = validateProduct(inputWithoutSlug);
-// product.slug is now correctly regenerated
+const { slug: _slug, ...inputWithoutComputed } = input;
+const entity = validate{Entity}(inputWithoutComputed);
+// entity.slug is now correctly regenerated
 ```
+
+Check your entity's Zod schema in `src/schemas/firestore/` for any `.transform()` calls that produce derived fields.
 
 ---
 
@@ -607,7 +642,7 @@ const { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef
   mockQueryRef.limit.mockReturnValue(mockQueryRef);
   const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
 
-  // Pipeline mocks
+  // Pipeline mocks (only needed when entity supports ?q= search)
   const mockExecute = vi.fn();
   const mockPipelineRef = { collection: vi.fn(), where: vi.fn(), limit: vi.fn() };
   mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
@@ -622,6 +657,7 @@ vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminApp: { options: { credential: undefined } },
 }));
 
+// Only needed when entity supports ?q= pipeline search:
 vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
   searchDb: { pipeline: vi.fn(() => mockPipelineRef) },
 }));
@@ -641,7 +677,7 @@ mockExecute.mockResolvedValue({ results: [] });
 
 // Simulate pipeline results:
 mockExecute.mockResolvedValue({
-  results: [{ id: "prod-1", data: () => buildStoredProduct() }],
+  results: [{ id: "entity-1", data: () => buildStoredEntity() }],
 });
 
 // Check pipeline was used for ?q= search:
@@ -653,7 +689,7 @@ expect(mockQueryGet).not.toHaveBeenCalled(); // admin SDK query should NOT run
 
 > **`server-only` in tests:** `firebaseSearchDb.ts` has `import "server-only"`. The Vitest config (`vitest.config.mts`) aliases `server-only` to `src/test/__mocks__/server-only.ts` (an empty file). This prevents the build-time guard from throwing in tests. Add the same alias if you introduce other `server-only` modules that are imported in testable paths.
 
-### Key mock setup
+### Key mock setup for [id] routes
 
 The Firestore `withConverter` chain must be mocked to return the same `mockDocRef` object:
 
@@ -671,7 +707,7 @@ const { mockSet, mockGet, mockDelete, mockDoc, mockCollection, mockEmbed } = vi.
   mockDocRef.withConverter.mockReturnValue(mockDocRef); // ← critical: chain returns same ref
   const mockDoc = vi.fn().mockReturnValue(mockDocRef);
   const mockCollection = vi.fn().mockReturnValue({ doc: mockDoc });
-  const mockEmbed = vi.fn();
+  const mockEmbed = vi.fn(); // only needed for entities with embeddings
   return { mockSet, mockGet, mockDelete, mockDoc, mockCollection, mockEmbed };
 });
 
@@ -680,12 +716,31 @@ vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminApp: { options: { credential: undefined } },
 }));
 
+// Only needed for entities with embeddings:
 vi.mock("@/src/lib/embeddingService", () => ({
   createEmbeddingService: vi.fn(() => ({ embed: mockEmbed })),
 }));
 ```
 
-### Simulating stored product for PUT/PATCH/DELETE
+### Simulating a stored entity for PUT/PATCH/DELETE
+
+```ts
+// Replace with all required fields of your entity's Zod schema
+function buildStoredEntity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: ENTITY_ID,
+    // ... all required fields from the entity schema ...
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// In test:
+mockGet.mockResolvedValue({ exists: true, data: () => buildStoredEntity() });
+```
+
+**Product example** (for reference):
 
 ```ts
 function buildStoredProduct(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -702,16 +757,13 @@ function buildStoredProduct(overrides: Record<string, unknown> = {}): Record<str
     ...overrides,
   };
 }
-
-// In test:
-mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct() });
 ```
 
 ### Request factory for [id] routes
 
 ```ts
 function makeRequest(method: string, body: unknown): Request {
-  return new Request(`http://localhost/api/products/${PRODUCT_ID}`, {
+  return new Request(`http://localhost/api/{entities}/${ENTITY_ID}`, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -719,7 +771,7 @@ function makeRequest(method: string, body: unknown): Request {
 }
 
 // Params are async in Next.js 16:
-const params = Promise.resolve({ id: PRODUCT_ID });
+const params = Promise.resolve({ id: ENTITY_ID });
 const response = await PUT(makeRequest("PUT", body), { params });
 ```
 
@@ -727,19 +779,19 @@ const response = await PUT(makeRequest("PUT", body), { params });
 
 ```ts
 it("sets field to null when payload contains null", async () => {
-  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct({ shortTitle: "Vestido Bonito" }) });
-  const response = await PATCH(makeRequest("PATCH", { shortTitle: null }), { params });
+  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredEntity({ optionalField: "some value" }) });
+  const response = await PATCH(makeRequest("PATCH", { optionalField: null }), { params });
   expect(response.status).toBe(200);
   const data = await response.json();
-  expect(data.shortTitle).toBeNull();
+  expect(data.optionalField).toBeNull();
 });
 
 it("does not change field when it is absent from payload", async () => {
-  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct({ shortTitle: "Vestido Bonito" }) });
+  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredEntity({ optionalField: "some value" }) });
   const response = await PATCH(makeRequest("PATCH", { status: "inactive" }), { params });
   expect(response.status).toBe(200);
   const data = await response.json();
-  expect(data.shortTitle).toBe("Vestido Bonito"); // unchanged
+  expect(data.optionalField).toBe("some value"); // unchanged
 });
 ```
 
@@ -753,15 +805,15 @@ Without this, Next.js may attempt to run the route in the Edge runtime where `fi
 
 ### 2. VectorValue stored as plain array
 
-Calling `adminDb.collection(...).doc(id).set({ ...product })` without `.withConverter(adminProductConverter)` will store `vectorEmbedding` as a plain JavaScript array. The `findNearest` pipeline operation will silently return 0 results. Always use `.withConverter(adminProductConverter)`.
+Calling `adminDb.collection(...).doc(id).set({ ...entity })` without `.withConverter(admin{Entity}Converter)` will store vector fields as plain JavaScript arrays. The `findNearest` pipeline operation will silently return 0 results. Always use `.withConverter(admin{Entity}Converter)`.
 
 ### 3. `VectorValue` not exportable from admin SDK
 
-The `firebase-admin/firestore` package does **not** export `VectorValue` as a class, so `instanceof VectorValue` will throw at runtime in admin code. Use duck-typing via `.toArray()` instead (see `adminProductConverter.ts`).
+The `firebase-admin/firestore` package does **not** export `VectorValue` as a class, so `instanceof VectorValue` will throw at runtime in admin code. Use duck-typing via `.toArray()` instead (see `adminProductConverter.ts` as reference).
 
-### 4. Slug validation mismatch on re-validate
+### 4. Schema-computed fields break re-validation
 
-When updating an existing product, the stored `slug` may not match what the schema would generate from the current title + sku. Always strip `slug` before passing to `validateProduct`. The schema will regenerate it.
+When updating an existing entity, any field auto-generated by a Zod `transform` (e.g. `slug` from `title` + `sku`) must be stripped before re-calling `validate{Entity}`. The stored value will differ from what the schema would regenerate from the updated data, causing a validation error.
 
 ### 5. Zod v4 `.errors` removed
 
@@ -769,19 +821,15 @@ Use `error.issues`, not `error.errors`. In Zod v4, the `.errors` alias was remov
 
 ### 6. PATCH merge order matters
 
-The correct merge order is `{ ...existingData, ...payload, ...serverFields }`. Reversing `existingData` and `payload` will make payload fields be silently overwritten.
+The correct merge order is `{ ...existingData, ...payload, ...serverFields }`. Reversing `existingData` and `payload` will make payload fields be silently overwritten by the stored values.
 
 ### 7. 204 No Content response
 
 Use `new NextResponse(null, { status: 204 })`, **not** `NextResponse.json(null, { status: 204 })`. The `json()` helper adds a `Content-Type: application/json` header and may set a non-null body, which violates HTTP 204 semantics.
 
-### 8. Do NOT set `vectorEmbedding` and `searchEmbedding` to the same value
+### 8. Do NOT reuse the same text for multiple embedding fields
 
-Both embedding fields serve different purposes and must be generated from different text:
-- `vectorEmbedding` = title only (simple, for name-based similarity)
-- `searchEmbedding` = title + description + categoryId + variant sizes/colors (rich, for semantic search)
-
-Use `generateProductEmbeddings` from `src/lib/productEmbeddings.ts` — it generates both correctly in one call.
+Each embedding field must be generated from different text appropriate to its purpose (e.g. title-only for quick similarity vs. rich combined text for semantic search). Use the entity-specific embedding helper and check `src/lib/productEmbeddings.ts` for the pattern.
 
 ### 9. `server-only` modules in tests
 
@@ -818,6 +866,8 @@ If you add a new `server-only` module that gets imported (directly or transitive
 
 ## File References
 
+These are the existing files for the **products** entity — use them as templates when creating a new entity:
+
 | File | Purpose |
 |---|---|
 | `src/app/api/products/route.ts` | GET (list) and POST handlers |
@@ -827,12 +877,12 @@ If you add a new `server-only` module that gets imported (directly or transitive
 | `src/app/api/products/[id]/put.ts` | PUT handler |
 | `src/app/api/products/[id]/patch.ts` | PATCH handler |
 | `src/app/api/products/[id]/delete.ts` | DELETE handler |
-| `src/lib/productEmbeddings.ts` | `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
-| `src/lib/firestore/adminProductConverter.ts` | Admin SDK DataConverter |
-| `src/lib/firestore/clientProductConverter.ts` | Client SDK DataConverter |
-| `src/lib/firestore/firebaseSearchDb.ts` | Server-only client Firestore for pipeline search |
-| `src/lib/embeddingService.ts` | Vertex AI embedding service |
-| `src/lib/firestore/firebaseAdmin.ts` | `adminDb`, `adminApp`, `adminStorage` |
-| `src/schemas/firestore/products.ts` | Zod product schema + `validateProduct` |
+| `src/lib/productEmbeddings.ts` | Reference embedding helper — `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
+| `src/lib/firestore/adminProductConverter.ts` | Reference Admin SDK DataConverter |
+| `src/lib/firestore/clientProductConverter.ts` | Reference Client SDK DataConverter |
+| `src/lib/firestore/firebaseSearchDb.ts` | Server-only client Firestore for pipeline search (shared — do not duplicate) |
+| `src/lib/embeddingService.ts` | Vertex AI embedding service (shared) |
+| `src/lib/firestore/firebaseAdmin.ts` | `adminDb`, `adminApp`, `adminStorage` (shared) |
+| `src/schemas/firestore/products.ts` | Reference Zod product schema + `validateProduct` |
 | `src/schemas/firestore/index.ts` | `firestoreCollections` + all schema exports |
 | `src/test/__mocks__/server-only.ts` | Empty no-op mock for `server-only` in Vitest |
