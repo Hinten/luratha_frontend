@@ -1,6 +1,7 @@
 import {
   type Firestore,
   VectorValue,
+  Timestamp,
   collection,
   getDocs,
   limit as queryLimit,
@@ -236,6 +237,18 @@ function mapPipelineSnapshotToProducts(snapshot: PipelineSnapshot): FirestorePro
   });
 }
 
+/**
+ * Converts a Firestore Timestamp to an ISO-8601 string.
+ * Falls through if the value is already a string (e.g. when stored without converter).
+ * Returns undefined for null/undefined inputs so callers can apply a fallback with ??.
+ */
+function extractTimestamp(val: unknown): string | undefined {
+  if (val === null || val === undefined) return undefined;
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  if (typeof val === "string") return val;
+  return undefined;
+}
+
 function normalizeSearchProduct(
   input: unknown,
   fallbackId: string,
@@ -252,8 +265,8 @@ function normalizeSearchProduct(
     brandName?: string;
     description?: string;
     status?: FirestoreProduct["status"];
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: unknown;
+    updatedAt?: unknown;
     vectorEmbedding?: unknown;
     searchEmbedding?: unknown;
   };
@@ -262,6 +275,8 @@ function normalizeSearchProduct(
     return validateProduct({
       ...record,
       id: record.id ?? fallbackId,
+      createdAt: extractTimestamp(record.createdAt),
+      updatedAt: extractTimestamp(record.updatedAt),
       vectorEmbedding: record.vectorEmbedding instanceof VectorValue
         ? record.vectorEmbedding.toArray()
         : record.vectorEmbedding,
@@ -291,8 +306,8 @@ function createFallbackSearchProduct(
     brandName?: string;
     description?: string;
     status?: FirestoreProduct["status"];
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: unknown;
+    updatedAt?: unknown;
   },
   fallbackId: string,
 ): FirestoreProduct {
@@ -355,8 +370,8 @@ function createFallbackSearchProduct(
       reviewCount: record.reviewCount ?? null,
       totalStock: 0,
       variants: null,
-      createdAt: record.createdAt ?? now,
-      updatedAt: record.updatedAt ?? now,
+      createdAt: extractTimestamp(record.createdAt) ?? now,
+      updatedAt: extractTimestamp(record.updatedAt) ?? now,
     });
   } catch (error) {
     throw new ProductRepositoryError("Failed to normalize search fallback product", "validation", [
