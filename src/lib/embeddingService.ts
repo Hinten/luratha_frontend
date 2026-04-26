@@ -1,4 +1,6 @@
-const DEFAULT_TIMEOUT_MS = 3_000;
+import type { Credential } from "firebase-admin/app";
+
+const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_EMBEDDING_DIMENSIONS = 2048;
 const MIN_EMBEDDING_DIMENSIONS = 8;
 
@@ -10,7 +12,14 @@ type CreateEmbeddingServiceOptions = {
   projectId?: string;
   location?: string;
   model?: string;
+  /** Static access token. Takes precedence over `credential`. */
   accessToken?: string;
+  /**
+   * Firebase Admin credential (from `firebase-admin/app`).
+   * When provided, a fresh OAuth token is fetched via `credential.getAccessToken()`
+   * on every call, so tokens are automatically refreshed.
+   */
+  credential?: Credential;
   timeoutMs?: number;
 };
 
@@ -28,7 +37,8 @@ export function createEmbeddingService(
   const projectId = options.projectId ?? process.env.VERTEX_AI_PROJECT_ID;
   const location = options.location ?? process.env.VERTEX_AI_LOCATION ?? "us-central1";
   const model = options.model ?? process.env.VERTEX_AI_EMBEDDING_MODEL ?? "text-embedding-005";
-  const accessToken = options.accessToken ?? process.env.VERTEX_AI_ACCESS_TOKEN;
+  const staticAccessToken = options.accessToken ?? process.env.VERTEX_AI_ACCESS_TOKEN;
+  const credential = options.credential;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
@@ -37,7 +47,18 @@ export function createEmbeddingService(
       if (!term) {
         throw new Error("Embedding input cannot be empty.");
       }
-      if (!projectId || !accessToken) {
+      if (!projectId) {
+        throw new Error("Vertex AI configuration is missing.");
+      }
+
+      // Resolve access token: static value takes precedence; otherwise use credential
+      let accessToken: string;
+      if (staticAccessToken) {
+        accessToken = staticAccessToken;
+      } else if (credential) {
+        const tokenResult = await credential.getAccessToken();
+        accessToken = tokenResult.access_token;
+      } else {
         throw new Error("Vertex AI configuration is missing.");
       }
 
@@ -59,7 +80,8 @@ export function createEmbeddingService(
         });
 
         if (!response.ok) {
-          throw new Error(`Vertex AI embedding request failed with status ${response.status}.`);
+          const errorBody = await response.text();
+          throw new Error(`Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`);
         }
 
         const json = (await response.json()) as {
@@ -81,3 +103,4 @@ export function createEmbeddingService(
     },
   };
 }
+

@@ -142,3 +142,4 @@ Current workflow: `.github/workflows/copilot-setup-steps.yml`
   - Testing: `.github/skills/luratha-testing/SKILL.md`
   - SEO/AEO/GEO: `.github/skills/luratha-seo/SKILL.md`
   - Visual system: `.github/skills/visual-identity/SKILL.md`
+  - CRUD API (Firestore, embeddings, DataConverters): `.github/skills/luratha-crud-api/SKILL.md`

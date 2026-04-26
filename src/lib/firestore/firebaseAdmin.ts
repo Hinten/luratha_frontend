@@ -37,6 +37,7 @@ const adminApp =
 export const adminDb = getFirestore(adminApp, DATABASE_NAME);
 export const adminStorage = getStorage(adminApp);
 export const adminBucket = adminStorage.bucket(storageBucket);
+export { adminApp };
 
 function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   const inlineCredential = parseServiceAccount(

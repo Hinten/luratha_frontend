@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { clientProductConverter } from "@/src/lib/firestore/clientProductConverter";
 
 type ProductListFilters = {
   status?: Product["status"];
@@ -52,7 +53,7 @@ export interface ProductsRepository {
 const MAX_LIST_LIMIT = 100;
 
 export function createProductsRepository(dbInstance: Firestore): ProductsRepository {
-  const productsCollectionRef = collection(dbInstance, firestoreCollections.products);
+  const productsCollectionRef = collection(dbInstance, firestoreCollections.products).withConverter(clientProductConverter);
 
   async function create(input: unknown): Promise<Product> {
     try {
@@ -85,7 +86,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
         return null;
       }
 
-      return validateProduct(snapshot.data());
+      return snapshot.data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read product "${id}"`);
     }
@@ -103,7 +104,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
       }
       
 
-      return validateProduct(snapshot.docs[0].data());
+      return snapshot.docs[0].data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read product by slug "${slug}"`);
     }
@@ -118,7 +119,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
         throw new ProductRepositoryError(`Product "${id}" was not found`, "not_found");
       }
 
-      const current = validateProduct(snapshot.data());
+      const current = snapshot.data();
       const merged = validateProduct({
         ...current,
         ...patch,
@@ -161,7 +162,7 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
       constraints.push(queryLimit(normalizedLimit));
 
       const snapshot = await getDocs(query(productsCollectionRef, ...constraints));
-      return snapshot.docs.map((entry) => validateProduct(entry.data()));
+      return snapshot.docs.map((entry) => entry.data());
     } catch (error) {
       throw normalizeRepositoryError(error, "list products");
     }
