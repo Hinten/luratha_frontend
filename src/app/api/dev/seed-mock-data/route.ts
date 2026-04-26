@@ -1,9 +1,13 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product, Stock } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
-import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
+import {
+  buildHomeSeedCategories,
+  buildHomeSeedProducts,
+  buildHomeSeedStock,
+} from "@/src/lib/repositories/homeSeedMockData";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
@@ -19,15 +23,18 @@ export async function POST() {
 
   const categories = buildHomeSeedCategories();
   const products = buildHomeSeedProducts(categories);
+  const stockItems = buildHomeSeedStock(products);
 
   const categoriesCreated = await seedCategories(categories);
   const createdProductIds = await seedProducts(products);
+  const stockCreated = await seedStock(stockItems);
   const uploadedImages = await seedProductImages(products, createdProductIds);
 
   return NextResponse.json({
     message: "Dados mock cadastrados com sucesso.",
     categoriesCreated,
     productsCreated: createdProductIds.length,
+    stockCreated,
     uploadedImages,
   });
 }
@@ -66,6 +73,22 @@ async function seedProducts(products: Product[]): Promise<string[]> {
   );
 
   return results.filter((productId): productId is string => productId !== null);
+}
+
+async function seedStock(stocks: Stock[]): Promise<number> {
+  const results = await Promise.all(
+    stocks.map(async (stock) => {
+      const stockRef = adminDb.collection(firestoreCollections.stock).doc(stock.productId);
+      const existing = await stockRef.get();
+      if (existing.exists) {
+        return false;
+      }
+
+      await stockRef.set(stock);
+      return true;
+    }),
+  );
+  return results.filter(Boolean).length;
 }
 
 async function seedProductImages(products: Product[], createdProductIds: string[]): Promise<number> {

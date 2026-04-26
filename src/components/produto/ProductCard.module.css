@@ -41,6 +41,20 @@
   border-radius: 9999px;
 }
 
+/* Out-of-stock badge */
+.outOfStockBadge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 10;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
 /* Favorite button */
 .favoriteBtn {
   position: absolute;

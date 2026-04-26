@@ -17,6 +17,11 @@ export {
   validateProduct,
 } from "@/src/schemas/firestore/products";
 export {
+  stockSchema,
+  type Stock,
+  validateStock,
+} from "@/src/schemas/firestore/stock";
+export {
   cartItemSchema,
   cartSchema,
   type CartItem,

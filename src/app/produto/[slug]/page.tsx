@@ -3,13 +3,14 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
-import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import {
   ProductRepositoryError,
   createProductsRepository,
 } from "@/src/lib/repositories/productsRepository";
+import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 import { getProductPrimaryImage } from "@/src/lib/productImages";
 
@@ -48,6 +49,17 @@ const getCachedCategoryById = cache(async (categoryId: string): Promise<Firestor
   }
 });
 
+const getCachedStockByProductId = cache(async (productId: string): Promise<Stock | null> => {
+  try {
+    const authenticatedAppForUser = await getAuthenticatedAppForUser();
+    const stockRepository = createStockRepository(authenticatedAppForUser.firestore);
+    return await stockRepository.getByProductId(productId);
+  } catch (error) {
+    console.error(`[ProdutoPage] error fetching stock for product "${productId}"`, error);
+    return null;
+  }
+});
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const product = await getCacheProductBySlug(slug);
@@ -80,9 +92,12 @@ export default async function ProdutoPage({ params }: PageProps) {
     return notFound();
   }
 
-  const category = await getCachedCategoryById(product.categoryId);
+  const [category, stock] = await Promise.all([
+    getCachedCategoryById(product.categoryId),
+    getCachedStockByProductId(product.id),
+  ]);
 
-  return <ProductDetailPage product={product} category={category} />;
+  return <ProductDetailPage product={product} category={category} stock={stock} />;
 }
 
 function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {

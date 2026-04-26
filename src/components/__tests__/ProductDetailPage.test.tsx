@@ -141,6 +141,54 @@ describe("ProductDetailPage", () => {
     expect(data["@type"]).toBe("Product");
     expect(data.name).toBe(mockProduct.title);
   });
+
+  it("shows stock quantity when stock prop is provided (simple product)", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 8,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByText(/8 unidades disponíveis/)).toBeInTheDocument();
+  });
+
+  it("shows 'Esgotado' when stock quantity is 0", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 0,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByLabelText("Disponibilidade do produto")).toHaveTextContent("Esgotado");
+  });
+
+  it("shows 'Últimas N unidades' when stock is low (<=3)", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 2,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByText(/Últimas 2 unidades/)).toBeInTheDocument();
+  });
+
+  it("falls back to product.totalStock when stock prop is not provided", () => {
+    const productWithStock = { ...mockProduct, totalStock: 5 };
+    render(<ProductDetailPage product={productWithStock} category={mockCategory} />);
+    expect(screen.getByText(/5 unidades disponíveis/)).toBeInTheDocument();
+  });
 });
 
 const mockCategory = {

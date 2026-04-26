@@ -2,6 +2,7 @@ export const firestoreCollections = {
   categories: "categories",
   photos: "photos",
   products: "products",
+  stock: "stock",
   carts: "carts",
   cartItems: "items",
   orders: "orders",

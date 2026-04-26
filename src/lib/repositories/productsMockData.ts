@@ -1,4 +1,4 @@
-import { type Product, validateProduct } from "@/src/schemas/firestore";
+import { type Product, type Stock, validateProduct, validateStock } from "@/src/schemas/firestore";
 
 function createIsoDate(offsetMinutes: number): string {
   return new Date(Date.now() + offsetMinutes * 60_000).toISOString();
@@ -68,6 +68,32 @@ export function buildMockProducts(): Product[] {
       size: ["M"],
       vectorEmbedding: [0.21, 0.11, 0.35, 0.49, 0.19, 0.28, 0.4, 0.55],
       createdAt,
+      updatedAt,
+    }),
+  ];
+}
+
+export function buildMockStock(): Stock[] {
+  const updatedAt = createIsoDate(-15);
+  const [productWithVariants, productWithoutVariants] = buildMockProducts();
+
+  return [
+    validateStock({
+      productId: productWithVariants.id,
+      sku: productWithVariants.sku,
+      quantity: 12,
+      hasVariants: true,
+      variants: {
+        LURATHA_101: 12,
+      },
+      updatedAt,
+    }),
+    validateStock({
+      productId: productWithoutVariants.id,
+      sku: productWithoutVariants.sku,
+      quantity: 7,
+      hasVariants: false,
+      variants: null,
       updatedAt,
     }),
   ];

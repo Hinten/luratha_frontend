@@ -24,6 +24,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : 0;
 
+  const isOutOfStock = product.totalStock === 0;
+
   const cardBody = (
     <>
       <div className={styles.imageWrapper}>
@@ -57,8 +59,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div className={styles.card}>
-      {discountPct > 0 && (
+      {discountPct > 0 && !isOutOfStock && (
         <span className={styles.discountBadge}>-{discountPct}%</span>
+      )}
+      {isOutOfStock && (
+        <span className={styles.outOfStockBadge}>Esgotado</span>
       )}
       <button
         className={styles.favoriteBtn}

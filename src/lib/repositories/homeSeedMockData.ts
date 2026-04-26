@@ -2,7 +2,9 @@ import {
   CategorySchema,
   type FirestoreCategory,
   type Product,
+  type Stock,
   validateProduct,
+  validateStock,
 } from "@/src/schemas/firestore";
 
 type ProductSeed = {
@@ -179,4 +181,18 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       updatedAt: now,
     });
   });
+}
+
+export function buildHomeSeedStock(products = buildHomeSeedProducts()): Stock[] {
+  const now = new Date().toISOString();
+  return products.map((product) =>
+    validateStock({
+      productId: product.id,
+      sku: product.sku,
+      quantity: product.totalStock,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    }),
+  );
 }

@@ -122,4 +122,25 @@ describe("ProductCard", () => {
       `/produto/${baseProduct.slug}`,
     );
   });
+
+  it("shows 'Esgotado' badge when totalStock is 0", () => {
+    const outOfStockProduct = createProduct({ totalStock: 0 });
+    render(<ProductCard product={outOfStockProduct} />);
+    expect(screen.getByText("Esgotado")).toBeInTheDocument();
+  });
+
+  it("does NOT show 'Esgotado' badge when product is in stock", () => {
+    render(<ProductCard product={baseProduct} />);
+    expect(screen.queryByText("Esgotado")).not.toBeInTheDocument();
+  });
+
+  it("does NOT show discount badge when product is out of stock", () => {
+    const outOfStockSaleProduct = createProduct({
+      totalStock: 0,
+      price: { price: 499, salePrice: 389, priceMin: 389, priceMax: 499, currency: "BRL" },
+    });
+    render(<ProductCard product={outOfStockSaleProduct} />);
+    expect(screen.queryByText(/-\d+%/)).not.toBeInTheDocument();
+    expect(screen.getByText("Esgotado")).toBeInTheDocument();
+  });
 });

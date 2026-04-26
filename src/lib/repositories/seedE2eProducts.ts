@@ -1,4 +1,4 @@
-import { type Product, validateProduct } from "@/src/schemas/firestore";
+import { type Product, type Stock, validateProduct, validateStock } from "@/src/schemas/firestore";
 
 /**
  * E2E test product data.
@@ -90,6 +90,41 @@ export function buildE2eTestProducts(): Product[] {
       ratingAverage: 4.6,
       reviewCount: 4,
       createdAt: now,
+      updatedAt: now,
+    }),
+  ];
+}
+
+export function buildE2eTestStock(): Stock[] {
+  const now = new Date().toISOString();
+  const products = buildE2eTestProducts();
+  const [withVariants, withoutVariants1, withoutVariants2] = products;
+
+  return [
+    validateStock({
+      productId: withVariants.id,
+      sku: withVariants.sku,
+      quantity: 12,
+      hasVariants: true,
+      variants: {
+        LURATHA_E2E_001_VARIANT: 12,
+      },
+      updatedAt: now,
+    }),
+    validateStock({
+      productId: withoutVariants1.id,
+      sku: withoutVariants1.sku,
+      quantity: 8,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    }),
+    validateStock({
+      productId: withoutVariants2.id,
+      sku: withoutVariants2.sku,
+      quantity: 7,
+      hasVariants: false,
+      variants: null,
       updatedAt: now,
     }),
   ];
