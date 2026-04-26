@@ -485,7 +485,7 @@ Rules:
 - `id` is always from the URL parameter (body value is discarded)
 - `createdAt` is preserved from the existing document
 - `updatedAt` is set to now
-- Schema-computed fields (e.g. `slug`) must be stripped before re-validation so the schema can regenerate them — see [Schema-computed Fields](#schema-computed-fields)
+- Schema-computed fields (e.g. `slug`) must be stripped before re-validation so the schema can regenerate them
 - Embeddings are always regenerated (if applicable)
 - Returns 404 if the entity does not exist
 
