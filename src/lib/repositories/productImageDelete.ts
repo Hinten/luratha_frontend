@@ -128,7 +128,8 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
       try {
         await adminBucket.file(storagePath).delete();
         deletedStorageFiles.push(storagePath);
-      } catch {
+      } catch (error) {
+        console.warn(`Failed to delete storage file "${storagePath}":`, error);
         // The file may have been removed manually; do not fail the whole operation.
       }
     }),

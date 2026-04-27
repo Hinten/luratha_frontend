@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import type { FirestoreCategory, Product } from "@/src/schemas/firestore";
+import type { Category, Product } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
@@ -32,7 +32,7 @@ export async function POST() {
   });
 }
 
-async function seedCategories(categories: FirestoreCategory[]): Promise<number> {
+async function seedCategories(categories: Category[]): Promise<number> {
   const results = await Promise.all(
     categories.map(async (category) => {
       const categoryRef = adminDb.collection(firestoreCollections.categories).doc(category.id);
