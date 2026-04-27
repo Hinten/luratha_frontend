@@ -12,7 +12,7 @@ This guide covers the patterns for building any Firestore-backed CRUD API in thi
 
 Each HTTP method lives in its own file and is re-exported through a thin `route.ts`. The collection name, Zod schema, DataConverter, and (optionally) embedding helper are the only entity-specific pieces to supply.
 
-**Pipeline search (`?q=`) is mandatory** for every entity that has user-facing text fields (see the [Pipeline search section](#pipeline-search-q-param)). The implementation varies by entity type:
+**Pipeline search (`?q=`) is mandatory** for every entity that has user-facing text fields. The implementation varies by entity type:
 
 - **Entity without vector fields** (e.g. categories): search by `name` and `slug`. Reference: `src/app/api/categories/list.ts`.
 - **Entity with vector fields** (e.g. products): search by the same text fields used for embeddings (e.g. `title` + `sku`). Reference: `src/app/api/products/list.ts`.
