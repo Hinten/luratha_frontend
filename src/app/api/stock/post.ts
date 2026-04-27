@@ -86,8 +86,16 @@ export async function POST(request: Request) {
       .collection(firestoreCollections.products)
       .withConverter(adminProductConverter)
       .where("sku", "==", sku!)
-      .limit(1)
+      .limit(2)
       .get();
+
+    
+    if (productsSnapshot.size > 1) {
+      return NextResponse.json(
+        { message: `Múltiplos produtos encontrados com SKU "${sku}". Use productId para identificar unicamente.` },
+        { status: 400 },
+      );
+    }
 
     if (productsSnapshot.empty) {
       return NextResponse.json(
