@@ -18,9 +18,9 @@ const validVariantStock = {
   quantity: 15,
   hasVariants: true,
   variants: {
-    LURATHA_002_P: 5,
-    LURATHA_002_M: 7,
-    "LURATHA_002_GG": 3,
+    var_002_p: 5,
+    var_002_m: 7,
+    var_002_gg: 3,
   },
   updatedAt: now,
 };
@@ -39,7 +39,7 @@ describe("stockSchema", () => {
       expect(() =>
         validateStock({
           ...validSimpleStock,
-          variants: { LURATHA_001_P: 5 },
+          variants: { var_001_p: 5 },
         }),
       ).toThrow();
     });
@@ -63,9 +63,9 @@ describe("stockSchema", () => {
       expect(result.quantity).toBe(15);
       expect(result.hasVariants).toBe(true);
       expect(result.variants).toEqual({
-        LURATHA_002_P: 5,
-        LURATHA_002_M: 7,
-        LURATHA_002_GG: 3,
+        var_002_p: 5,
+        var_002_m: 7,
+        var_002_gg: 3,
       });
     });
 
@@ -94,8 +94,8 @@ describe("stockSchema", () => {
         quantity: 0,
         hasVariants: true,
         variants: {
-          LURATHA_003_P: 0,
-          LURATHA_003_M: 0,
+          var_003_p: 0,
+          var_003_m: 0,
         },
         updatedAt: now,
       });
@@ -106,7 +106,7 @@ describe("stockSchema", () => {
       expect(() =>
         validateStock({
           ...validVariantStock,
-          variants: { LURATHA_002_P: -1, LURATHA_002_M: 7, LURATHA_002_GG: 9 },
+          variants: { var_002_p: -1, var_002_m: 7, var_002_gg: 9 },
           quantity: 15,
         }),
       ).toThrow();

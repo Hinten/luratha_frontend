@@ -113,16 +113,16 @@ describeCloud("Stock Repository (Cloud Firebase)", () => {
   it("sets and reads stock for a product with variants", async () => {
     const productId = `${prefix}-variants`;
     const sku = `${skuBase}_VAR`;
-    const variantSku1 = `${skuBase}_VAR_P`;
-    const variantSku2 = `${skuBase}_VAR_M`;
+    const variantId1 = `var_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
+    const variantId2 = `var_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
     const repository = createStockRepository(db);
 
     const stockData = buildBaseStockData(productId, sku, {
       quantity: 9,
       hasVariants: true,
       variants: {
-        [variantSku1]: 4,
-        [variantSku2]: 5,
+        [variantId1]: 4,
+        [variantId2]: 5,
       },
     });
     const stock = validateStock(stockData);
@@ -131,8 +131,8 @@ describeCloud("Stock Repository (Cloud Firebase)", () => {
 
     expect(created.hasVariants).toBe(true);
     expect(created.variants).not.toBeNull();
-    expect(created.variants?.[variantSku1]).toBe(4);
-    expect(created.variants?.[variantSku2]).toBe(5);
+    expect(created.variants?.[variantId1]).toBe(4);
+    expect(created.variants?.[variantId2]).toBe(5);
     expect(created.quantity).toBe(9);
   });
 

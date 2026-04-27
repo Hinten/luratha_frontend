@@ -31,11 +31,14 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   const id = randomUUID();
 
+  const inputRaw = body as Record<string, unknown>;
   const input: Record<string, unknown> = {
-    ...(body as Record<string, unknown>),
+    ...inputRaw,
     id,
     createdAt: now,
     updatedAt: now,
+    // Auto-generate an immutable id for any variant that doesn't supply one.
+    variants: assignVariantIds(inputRaw.variants),
   };
 
   let product;
@@ -82,5 +85,18 @@ export async function POST(request: Request) {
   await productRef.set(product);
 
   return NextResponse.json(product, { status: 201 });
+}
+
+/**
+ * Assigns a unique immutable `id` to each variant that does not already have one.
+ * Existing IDs are preserved (idempotent for update flows).
+ */
+function assignVariantIds(variants: unknown): unknown {
+  if (!Array.isArray(variants)) return variants;
+  return variants.map((variant) => {
+    if (!variant || typeof variant !== "object" || Array.isArray(variant)) return variant;
+    const v = variant as Record<string, unknown>;
+    return v.id ? v : { ...v, id: randomUUID() };
+  });
 }
 

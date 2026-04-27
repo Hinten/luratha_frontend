@@ -95,7 +95,7 @@ describeWhenEmulator("stock repository (Firestore Emulator)", () => {
     expect(Object.keys(created.variants ?? {})).toHaveLength(1);
 
     const loaded = await repository.getByProductId(stockWithVariants.productId);
-    expect(loaded?.variants?.LURATHA_101).toBe(12);
+    expect(loaded?.variants?.["var_luratha_101"]).toBe(12);
   });
 
   it("returns null when stock document does not exist", async () => {

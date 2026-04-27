@@ -7,8 +7,11 @@ import { nonEmptyStringSchema, skuSchema, timestampSchema } from "@/src/schemas/
  *
  * One document per product.
  * - Simple products  (hasVariants = false): quantity holds the total, variants = null.
- * - Variable products (hasVariants = true):  variants maps each variantSku → quantity;
+ * - Variable products (hasVariants = true):  variants maps each variantId → quantity;
  *   quantity equals the sum of all variant quantities (denormalised for fast filtering).
+ *
+ * The variant map key is the variant's immutable `id` field (not the variant SKU).
+ * This ensures stock records remain stable even when a variant's SKU is changed.
  */
 export const stockSchema = z
   .object({

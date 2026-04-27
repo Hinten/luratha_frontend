@@ -199,7 +199,7 @@ describe("POST /api/stock", () => {
       makeRequest({
         productId: PRODUCT_ID,
         quantity: 5,
-        variants: { LURATHA_001_P: 3, LURATHA_001_M: 2 },
+        variants: { var_001_p: 3, var_001_m: 2 },
       }),
     );
     expect(res.status).toBe(400);
@@ -247,7 +247,7 @@ describe("POST /api/stock", () => {
   });
 
   it("returns 200 and sets stock for a variable product by productId", async () => {
-    const variants = { LURATHA_001_P: 3, LURATHA_001_M: 5 };
+    const variants = { var_001_p: 3, var_001_m: 5 };
     const res = await POST(makeRequest({ productId: PRODUCT_ID, variants }));
     expect(res.status).toBe(200);
     const stock = await res.json();
@@ -258,7 +258,7 @@ describe("POST /api/stock", () => {
   });
 
   it("computes quantity as the sum of variant quantities", async () => {
-    const variants = { SKU_P: 4, SKU_M: 7, SKU_GG: 1 };
+    const variants = { var_p: 4, var_m: 7, var_gg: 1 };
     const res = await POST(makeRequest({ productId: PRODUCT_ID, variants }));
     expect(res.status).toBe(200);
     const stock = await res.json();
@@ -285,7 +285,7 @@ describe("POST /api/stock", () => {
   });
 
   it("sets stock with variants when identified by sku", async () => {
-    const variants = { LURATHA_001_P: 3, LURATHA_001_M: 4 };
+    const variants = { var_001_p: 3, var_001_m: 4 };
     const res = await POST(makeRequest({ sku: PRODUCT_SKU, variants }));
     expect(res.status).toBe(200);
     const stock = await res.json();
@@ -304,7 +304,7 @@ describe("POST /api/stock", () => {
   });
 
   it("accepts all variant quantities = 0 (all variants out of stock)", async () => {
-    const variants = { LURATHA_001_P: 0, LURATHA_001_M: 0 };
+    const variants = { var_001_p: 0, var_001_m: 0 };
     const res = await POST(makeRequest({ productId: PRODUCT_ID, variants }));
     expect(res.status).toBe(200);
     const stock = await res.json();

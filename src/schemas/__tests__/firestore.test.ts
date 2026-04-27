@@ -99,6 +99,7 @@ const validProduct = {
   lifeStylePhotos: [],
   variants: [
     {
+      id: "var_luratha_002",
       sku: "LURATHA_002",
       size: ["P"],
       stock: 6,
@@ -106,6 +107,7 @@ const validProduct = {
       active: true,
     },
     {
+      id: "var_luratha_003",
       sku: "LURATHA_003",
       size: ["M"],
       stock: 8,

@@ -33,6 +33,7 @@ export function buildMockProducts(): Product[] {
       status: "active",
       variants: [
         {
+          id: "var_luratha_101",
           sku: "LURATHA_101",
           size: ["P"],
           stock: 12,
@@ -84,7 +85,7 @@ export function buildMockStock(): Stock[] {
       quantity: 12,
       hasVariants: true,
       variants: {
-        LURATHA_101: 12,
+        var_luratha_101: 12,
       },
       updatedAt,
     }),

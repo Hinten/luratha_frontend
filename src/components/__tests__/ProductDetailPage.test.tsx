@@ -62,6 +62,7 @@ const mockProduct: Product = {
   size: ["PP", "P", "M", "G", "GG"],
   variants: [
     {
+      id: "var_luratha_001_m",
       sku: "LURATHA_001_M",
       size: ["M"],
       stock: 12,

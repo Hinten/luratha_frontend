@@ -32,6 +32,7 @@ export function buildE2eTestProducts(): Product[] {
       reviewCount: 5,
       variants: [
         {
+          id: "var_luratha_e2e_001_v1",
           sku: "LURATHA_E2E_001_VARIANT",
           size: ["PP", "M", "GG"],
           stock: 12,
@@ -107,7 +108,7 @@ export function buildE2eTestStock(): Stock[] {
       quantity: 12,
       hasVariants: true,
       variants: {
-        LURATHA_E2E_001_VARIANT: 12,
+        var_luratha_e2e_001_v1: 12,
       },
       updatedAt: now,
     }),

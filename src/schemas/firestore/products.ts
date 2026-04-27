@@ -78,6 +78,8 @@ export const productDetailsSchema = z.object({
 });
 
 export const productVariantSchema = z.object({
+  /** Unique, immutable identifier for this variant. Set by the server on creation; never changes. */
+  id: nonEmptyStringSchema.max(50),
   sku: skuSchema,
   gtin: z.string().trim().regex(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/).nullable().default(null),
   mpn: nonEmptyStringSchema.nullable().default(null),
@@ -89,7 +91,6 @@ export const productVariantSchema = z.object({
   stock: z.number().int().min(0),
   photoIds: z.array(nonEmptyStringSchema).min(1),
   active: z.boolean().default(true),
-  
 });
 
 const productImageResolutionSchema = z.object({
@@ -222,6 +223,20 @@ const productSchemaBase = z
         code: "custom",
         path: ["variants"],
         message: "variant SKU must be unique inside the product",
+      });
+    }
+
+    const seenIds = new Set<string>();
+    const hasDuplicateVariantId = product.variants?.some((variant) => {
+      if (seenIds.has(variant.id)) return true;
+      seenIds.add(variant.id);
+      return false;
+    });
+    if (hasDuplicateVariantId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["variants"],
+        message: "variant id must be unique within the product",
       });
     }
 

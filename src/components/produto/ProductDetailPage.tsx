@@ -164,12 +164,12 @@ function StockInfo({ stock, product }: StockInfoProps) {
   if (stock?.hasVariants && stock.variants) {
     return (
       <div className={styles.stockInfo} aria-label="Estoque por variação">
-        {Object.entries(stock.variants).map(([variantSku, qty]) => {
-          const variant = product.variants?.find((v) => v.sku === variantSku);
-          const label = variant?.size?.join(" / ") ?? variantSku;
+        {Object.entries(stock.variants).map(([variantId, qty]) => {
+          const variant = product.variants?.find((v) => v.id === variantId);
+          const label = variant?.size?.join(" / ") ?? variant?.sku ?? variantId;
           const isLow = qty > 0 && qty <= 3;
           return (
-            <p key={variantSku} className={qty === 0 ? styles.stockVariantOut : styles.stockVariantIn}>
+            <p key={variantId} className={qty === 0 ? styles.stockVariantOut : styles.stockVariantIn}>
               {label}:{" "}
               {qty === 0 ? (
                 "Esgotado"

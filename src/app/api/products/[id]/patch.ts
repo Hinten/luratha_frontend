@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
@@ -78,6 +79,9 @@ export async function PATCH(
     id,
     createdAt: existingData.createdAt,
     updatedAt: now,
+    // Auto-generate an immutable id for any new variant that doesn't supply one.
+    // Variants with an existing id are left unchanged.
+    variants: "variants" in payload ? assignVariantIds(payload.variants) : existingData.variants,
   };
 
   // Remove slug from the merged data so the schema always regenerates it
@@ -122,3 +126,15 @@ export async function PATCH(
   return NextResponse.json(product, { status: 200 });
 }
 
+/**
+ * Assigns a unique immutable `id` to each variant that does not already have one.
+ * Existing IDs are preserved (idempotent for update flows).
+ */
+function assignVariantIds(variants: unknown): unknown {
+  if (!Array.isArray(variants)) return variants;
+  return variants.map((variant) => {
+    if (!variant || typeof variant !== "object" || Array.isArray(variant)) return variant;
+    const v = variant as Record<string, unknown>;
+    return v.id ? v : { ...v, id: randomUUID() };
+  });
+}
