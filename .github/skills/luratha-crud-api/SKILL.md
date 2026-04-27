@@ -12,6 +12,11 @@ This guide covers the patterns for building any Firestore-backed CRUD API in thi
 
 Each HTTP method lives in its own file and is re-exported through a thin `route.ts`. The collection name, Zod schema, DataConverter, and (optionally) embedding helper are the only entity-specific pieces to supply.
 
+**Pipeline search (`?q=`) is mandatory** for every entity that has user-facing text fields (see the [Pipeline search section](#pipeline-search-q-param)). The implementation varies by entity type:
+
+- **Entity without vector fields** (e.g. categories): search by `name` and `slug`. Reference: `src/app/api/categories/list.ts`.
+- **Entity with vector fields** (e.g. products): search by the same text fields used for embeddings (e.g. `title` + `sku`). Reference: `src/app/api/products/list.ts`.
+
 **Naming conventions** (substitute your entity name):
 
 | Placeholder | Example for products |
@@ -380,7 +385,11 @@ export async function GET(request: Request) {
 
 #### Pipeline search (`?q=` param)
 
-> **Only implement this when the entity requires full-text search.** If the entity does not need `?q=` search, omit the pipeline path entirely.
+> **`?q=` pipeline search is mandatory for every entity that has searchable text fields** (e.g. `name`, `title`, `slug`, `code`, `sku`). This applies even when the entity has **no** vector embedding fields. Omit pipeline search only for purely system/reference collections that are never searched by human users (e.g. internal config documents).
+>
+> **For entities without vector fields**, search by `name` and `slug` (or whichever text fields are meaningful for users). See `src/app/api/categories/list.ts` as the canonical reference.
+>
+> **For entities with vector fields**, search by the rich text fields used for embeddings (e.g. `title` and `sku` for products). See `src/app/api/products/list.ts`.
 
 `firebase-admin/firestore` does **not** expose the pipeline API. Use `searchDb` from `src/lib/firestore/firebaseSearchDb.ts` — a server-only anonymous client Firestore instance — and import from `firebase/firestore/pipelines`:
 
@@ -396,7 +405,7 @@ async function searchByQuery(q: string, status: string | undefined, limit: numbe
   const filters: BooleanExpression[] = [
     or(
       field("name").toLower().regexMatch(regex),   // ← entity-specific searchable fields
-      field("code").toLower().regexMatch(regex),
+      field("slug").toLower().regexMatch(regex),
     ),
   ];
   if (status) filters.push(field("status").equal(status));
@@ -866,23 +875,26 @@ If you add a new `server-only` module that gets imported (directly or transitive
 
 ## File References
 
-These are the existing files for the **products** entity — use them as templates when creating a new entity:
+These are the existing files for the **products** entity (with vector fields) and **categories** entity (without vector fields) — use them as templates when creating a new entity:
 
 | File | Purpose |
 |---|---|
 | `src/app/api/products/route.ts` | GET (list) and POST handlers |
-| `src/app/api/products/list.ts` | GET list handler (simple query + `?q=` pipeline search) |
+| `src/app/api/products/list.ts` | GET list handler — simple query + `?q=` pipeline search (entity **with** vector fields) |
+| `src/app/api/categories/list.ts` | GET list handler — simple query + `?q=` pipeline search (entity **without** vector fields) |
 | `src/app/api/products/[id]/route.ts` | Re-exports GET, PUT, PATCH, DELETE |
 | `src/app/api/products/[id]/get.ts` | GET handler (fetch by ID) |
 | `src/app/api/products/[id]/put.ts` | PUT handler |
 | `src/app/api/products/[id]/patch.ts` | PATCH handler |
 | `src/app/api/products/[id]/delete.ts` | DELETE handler |
 | `src/lib/productEmbeddings.ts` | Reference embedding helper — `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
-| `src/lib/firestore/adminProductConverter.ts` | Reference Admin SDK DataConverter |
+| `src/lib/firestore/adminProductConverter.ts` | Reference Admin SDK DataConverter (entity with Timestamps and vector fields) |
+| `src/lib/firestore/adminCategoryConverter.ts` | Reference Admin SDK DataConverter (entity without Timestamps or vector fields) |
 | `src/lib/firestore/clientProductConverter.ts` | Reference Client SDK DataConverter |
 | `src/lib/firestore/firebaseSearchDb.ts` | Server-only client Firestore for pipeline search (shared — do not duplicate) |
 | `src/lib/embeddingService.ts` | Vertex AI embedding service (shared) |
 | `src/lib/firestore/firebaseAdmin.ts` | `adminDb`, `adminApp`, `adminStorage` (shared) |
 | `src/schemas/firestore/products.ts` | Reference Zod product schema + `validateProduct` |
+| `src/schemas/firestore/category.ts` | Reference Zod category schema + `validateCategory` (simple schema, no Timestamps) |
 | `src/schemas/firestore/index.ts` | `firestoreCollections` + all schema exports |
 | `src/test/__mocks__/server-only.ts` | Empty no-op mock for `server-only` in Vitest |
