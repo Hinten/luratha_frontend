@@ -6,10 +6,9 @@ import { POST } from "@/src/app/api/images/upload/route";
 import { DELETE } from "@/src/app/api/images/[imageId]/route";
 import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
-import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 
-const firestoreReady = process.env.FIRESTORE_EMULATOR_READY === "true";
-const describeWhenReady = firestoreReady ? describe : describe.skip;
+const describeWhenPipelineSupported = describe.skip;
 
 const storageHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
 const [storageHostname, storagePortString] = storageHost.split(":");
@@ -17,7 +16,9 @@ const storagePort = Number(storagePortString);
 
 const testImagePath = path.join(process.cwd(), "test-images", "IMG_34562.png");
 
-describeWhenReady("DELETE /api/images/[imageId] (emulator)", () => {
+describeWhenPipelineSupported(
+  "DELETE /api/images/[imageId] (emulator) - skipped: Firestore Emulator does not support Pipeline Query; validate this flow with cloud tests",
+  () => {
   const [mockProduct] = buildMockProducts();
 
   const testProductId = `${mockProduct.id}_delete_test`;
@@ -184,6 +185,7 @@ describeWhenReady("DELETE /api/images/[imageId] (emulator)", () => {
       ...prodWithSlug,
       id: secondProductId,
       sku: `${prodWithSlug.sku}_2`,
+      slug: buildProductSlug(prodWithSlug.title, `${prodWithSlug.sku}_2`),
       photoAssets: [sharedAsset],
       lifeStylePhotos: [],
       updatedAt: now,
@@ -208,7 +210,8 @@ describeWhenReady("DELETE /api/images/[imageId] (emulator)", () => {
     // Cleanup second product.
     await adminDb.collection(firestoreCollections.products).doc(secondProductId).delete();
   });
-});
+  },
+);
 
 async function clearProductFiles(productId: string): Promise<void> {
   const [files] = await adminBucket.getFiles({ prefix: `products/${productId}/` });

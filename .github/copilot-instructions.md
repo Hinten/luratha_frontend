@@ -95,6 +95,7 @@ npm run build
 - Playwright emulator config: `playwright.e2e.emulator.config.ts` (sets emulator env + global emulator setup/teardown).
 - Test naming: `src/**/__tests__/*.test.ts(x)` and `e2e/*.spec.ts`.
 - For schema or Firebase request changes, `npm run test:firestore` and `npm run test:e2e:emulator` are mandatory and must pass before finishing.
+- **Firestore Pipeline Query limitation:** Firebase Emulator does not support Firestore Pipeline Query reliably for this project. Tests that depend on `firebase/firestore/pipelines` (including pipeline/vector flows) must be validated against Cloud Firestore, not emulator suites.
 - Do not remove/skip existing tests to make CI pass.
 - **Cloud tests** (`src/test/cloud/`): validate textual-pipeline search plans, vector search plans, and real Firestore Cloud integration (`productsSearchRepository`). Run with `npm run test:cloud`. **Do NOT run these automatically** — they hit live Firebase and incur cost. Execute only when the user explicitly asks. Require `FIREBASE_SERVICE_ACCOUNT_BASE64` and `FIREBASE_WEB_APP_CONFIG_BASE64` env vars; tests auto-skip when credentials are absent.
 - For full patterns and mocks, use `.github/skills/luratha-testing/SKILL.md`.

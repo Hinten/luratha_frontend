@@ -59,13 +59,13 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
 
   beforeEach(async () => {
     if (testEnv) {
-      await testEnv.clearFirestore();
+      await clearSeededProducts(db, [mockProductWithVariants.id, mockProductWithoutVariants.id]);
     }
   });
 
   afterAll(async () => {
     if (testEnv) {
-      await testEnv.clearFirestore();
+      await clearSeededProducts(db, [mockProductWithVariants.id, mockProductWithoutVariants.id]);
       await testEnv.cleanup();
     }
   });
@@ -211,4 +211,16 @@ function shouldSkipTests(
   emulatorReachable: boolean,
 ): boolean {
   return !emulatorReachable || !repository;
+}
+
+async function clearSeededProducts(
+  db: Parameters<typeof createProductsRepository>[0] | undefined,
+  productIds: string[],
+): Promise<void> {
+  if (!db) {
+    return;
+  }
+
+  const { doc, deleteDoc } = await import("firebase/firestore");
+  await Promise.all(productIds.map((productId) => deleteDoc(doc(db, "products", productId)).catch(() => undefined)));
 }
