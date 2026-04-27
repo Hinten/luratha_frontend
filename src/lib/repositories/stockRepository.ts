@@ -109,9 +109,13 @@ export function createStockRepository(dbInstance: Firestore): StockRepository {
   }
 
   async function seedMockStock(stocks: unknown[]): Promise<Stock[]> {
-    return Promise.all(
-      stocks.map((candidate) => set(validateStock(candidate))),
-    );
+    try {
+      return await Promise.all(
+        stocks.map((candidate) => set(validateStock(candidate))),
+      );
+    } catch (error) {
+      throw normalizeRepositoryError(error, "seed mock stock");
+    }
   }
 
   return {

@@ -77,6 +77,11 @@ service cloud.firestore {
         ));
     }
 
+    match /stock/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     match /coupons/{couponId} {
       allow read, write: if isAdmin();
     }
