@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { appData, contactData, CATEGORIES } from "@/src/lib/constants";
+import { appData, contactData } from "@/src/lib/constants";
 import Logo from "./Logo";
 import styles from "./Footer.module.css";
 
@@ -62,13 +62,7 @@ export default function Footer() {
           <div>
             <h3 className={styles.columnHeading}>Categorias</h3>
             <ul className={`${styles.linkList} ${styles.linkListCompact}`}>
-              {CATEGORIES.map(({ href, label }) => (
-                <li key={href}>
-                  <Link href={href} className={styles.link}>
-                    {label}
-                  </Link>
-                </li>
-              ))}
+              //todo corrigir para gerar dinamicamente a partir das categorias reais
             </ul>
           </div>
 

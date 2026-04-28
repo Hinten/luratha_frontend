@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { appData, contactData, CATEGORIES } from "@/src/lib/constants";
+import { appData, contactData } from "@/src/lib/constants";
 
 describe("appData constants", () => {
   it("has the correct app name", () => {
@@ -33,20 +33,5 @@ describe("contactData constants", () => {
     expect(contactData.facebook).toContain("facebook.com");
     expect(contactData.instagram).toContain("instagram.com");
     expect(contactData.youtube).toContain("youtube.com");
-  });
-});
-
-describe("CATEGORIES constants", () => {
-  it("is a non-empty array", () => {
-    expect(Array.isArray(CATEGORIES)).toBe(true);
-    expect(CATEGORIES.length).toBeGreaterThan(0);
-  });
-
-  it("each category has href and label", () => {
-    for (const cat of CATEGORIES) {
-      expect(cat).toHaveProperty("href");
-      expect(cat).toHaveProperty("label");
-      expect(cat.href).toMatch(/^\/categoria\//);
-    }
   });
 });

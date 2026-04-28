@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/src/lib/seoConstants";
-import { CATEGORIES } from "@/src/lib/constants";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
@@ -13,13 +12,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/sale", priority: 0.9, changeFrequency: "daily" as const },
   ];
 
-  const categoryRoutes = CATEGORIES.map(({ slug }) => ({
-    path: `/categoria/${slug}`,
-    priority: 0.8,
-    changeFrequency: "weekly" as const,
-  }));
+  //todo corrigir para gerar dinamicamente a partir das categorias reais
 
-  return [...staticRoutes, ...categoryRoutes].map(({ path, priority, changeFrequency }) => ({
+  return [...staticRoutes].map(({ path, priority, changeFrequency }) => ({
     url: `${SITE_URL}${path}`,
     lastModified: new Date(),
     changeFrequency,

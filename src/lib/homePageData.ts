@@ -7,7 +7,6 @@ import {
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
-import { CATEGORIES } from "@/src/lib/constants";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 const HOME_DATA_TIMEOUT_MS = 1_500;
 
@@ -45,7 +44,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     console.error("[homePageData] failed to load data from Firestore, using mock fallback", error);
     const mockProducts = buildMockProducts();
     return {
-      categories: buildFallbackCategories(),
+      categories: [],
       newArrivals: mockProducts.slice(0, 4),
       featured: [...mockProducts].sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0)).slice(0, 4),
       sale: mockProducts.filter((product) => product.price.salePrice !== null).slice(0, 5),
@@ -64,13 +63,6 @@ async function listCategories(dbInstance: Firestore): Promise<FirestoreCategory[
   return snapshot.docs.map((document) => CategorySchema.parse(document.data()));
 }
 
-function buildFallbackCategories(): FirestoreCategory[] {
-  return CATEGORIES.map((category) => ({
-    id: category.slug,
-    name: category.label,
-    slug: category.slug,
-  }));
-}
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
