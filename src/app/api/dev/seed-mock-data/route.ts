@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import type { Category, Product } from "@/src/schemas/firestore";
+import type { Category, Product, Stock } from "@/src/schemas/firestore";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import {
   buildHomeSeedCategories,
