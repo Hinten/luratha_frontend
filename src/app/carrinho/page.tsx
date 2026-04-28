@@ -28,8 +28,8 @@ export default function CarrinhoPage() {
             <p className={styles.emptyText}>
               Explore nossas peças e adicione seus favoritos aqui.
             </p>
-            <Link href="/colecao" className={styles.emptyLink}>
-              Ver coleção
+            <Link href="/todas-as-pecas" className={styles.emptyLink}>
+              Ver Categorias
             </Link>
           </div>
         ) : (

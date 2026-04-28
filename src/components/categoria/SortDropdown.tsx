@@ -1,4 +1,5 @@
 "use client";
+import type { Route } from "next";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import styles from "./SortDropdown.module.css";
@@ -32,7 +33,8 @@ export default function SortDropdown({
         params.set("sort", value);
       }
       const query = params.toString();
-      router.push(query ? `${pathname}?${query}` : pathname);
+      const href = query ? `${pathname}?${query}` : pathname;
+      router.push(href as Route);
     },
     [router, pathname, searchParams]
   );

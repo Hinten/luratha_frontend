@@ -1,9 +1,10 @@
-"use client";
 import React from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { appData, contactData } from "@/src/lib/constants";
 import Logo from "./Logo";
 import styles from "./Footer.module.css";
+import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 
 const CNPJ = "43.123.456/0001-78";
 
@@ -12,11 +13,12 @@ const INSTITUTIONAL_LINKS = [
   { href: "/contato", label: "Fale Conosco" },
   { href: "/politica-de-trocas", label: "Política de Trocas" },
   { href: "/referencia-de-medidas", label: "Referência de Medidas" },
-];
+] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 const PAYMENT_METHODS = ["Pix", "Boleto", "Visa", "Mastercard"];
 
-export default function Footer() {
+export default async function Footer() {
+  const categories = await getCachedCategories();
   return (
     <footer className={styles.footer}>
       {/* Main columns */}
@@ -62,7 +64,13 @@ export default function Footer() {
           <div>
             <h3 className={styles.columnHeading}>Categorias</h3>
             <ul className={`${styles.linkList} ${styles.linkListCompact}`}>
-              //todo corrigir para gerar dinamicamente a partir das categorias reais
+              {categories.map(({ id, name, slug }) => (
+                <li key={id}>
+                  <Link href={`/categoria/${slug}` as Route} className={styles.link}>
+                    {name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
