@@ -10,6 +10,7 @@ import { initializeApp, getApp, getApps } from "firebase/app";
 import { type Firestore, connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import {
   DEFAULT_FIREBASE_PROJECT_ID,
+  DEFAULT_FIREBASE_FUNCTIONS_EMULATOR_HOST,
   FIREBASE_EMULATOR_ENV,
   applyEmulatorEnvironmentDefaults,
   getFirestoreEmulatorHost,
@@ -22,6 +23,7 @@ type EnsureFirestoreEmulatorOptions = {
   port?: number;
   timeoutMs?: number;
   pollIntervalMs?: number;
+  includeFunctions?: boolean;
 };
 
 export type FirestoreEmulatorSession = {
@@ -47,6 +49,7 @@ export async function ensureFirestoreEmulator(
   const port = options.port ?? 8080;
   const timeoutMs = options.timeoutMs ?? 25_000;
   const pollIntervalMs = options.pollIntervalMs ?? 500;
+  const includeFunctions = options.includeFunctions ?? false;
 
   process.env.USE_EMULATOR = process.env.USE_EMULATOR ?? FIREBASE_EMULATOR_ENV.USE_EMULATOR;
   applyEmulatorEnvironmentDefaults();
@@ -72,15 +75,15 @@ export async function ensureFirestoreEmulator(
   process.env.CLOUDSDK_CORE_DISABLE_PROMPTS =
     process.env.CLOUDSDK_CORE_DISABLE_PROMPTS ?? "1";
 
-  if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs))) {
+  if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs), includeFunctions)) {
     return { ready: true, startedByTest: false };
   }
 
-  const emulatorProcess = spawnFirebaseEmulatorProcess(projectId);
+  const emulatorProcess = spawnFirebaseEmulatorProcess(projectId, includeFunctions);
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs))) {
+    if (await areFirebaseEmulatorsReady(host, port, Math.min(700, pollIntervalMs), includeFunctions)) {
       return {
         ready: true,
         startedByTest: true,
@@ -106,7 +109,7 @@ export async function ensureFirestoreEmulator(
   return {
     ready: false,
     startedByTest: true,
-    reason: `Firebase emulators (firestore/auth/storage) did not become available within ${timeoutMs}ms`,
+    reason: `Firebase emulators (firestore/auth/storage${includeFunctions ? "/functions" : ""}) did not become available within ${timeoutMs}ms`,
   };
 }
 
@@ -239,6 +242,7 @@ async function areFirebaseEmulatorsReady(
   firestoreHost: string,
   firestorePort: number,
   timeoutMs: number,
+  includeFunctions = false,
 ): Promise<boolean> {
   const authAddress = parseHostAndPort(
     process.env.FIREBASE_AUTH_EMULATOR_HOST ?? FIREBASE_EMULATOR_ENV.FIREBASE_AUTH_EMULATOR_HOST,
@@ -248,13 +252,22 @@ async function areFirebaseEmulatorsReady(
     process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? FIREBASE_EMULATOR_ENV.FIREBASE_STORAGE_EMULATOR_HOST,
     "FIREBASE_STORAGE_EMULATOR_HOST",
   );
+  const functionsAddress = parseHostAndPort(
+    process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST ?? DEFAULT_FIREBASE_FUNCTIONS_EMULATOR_HOST,
+    "FIREBASE_FUNCTIONS_EMULATOR_HOST",
+  );
 
-  const statuses = await Promise.all([
+  const checks = [
     isPortOpen(firestoreHost, firestorePort, timeoutMs),
     isPortOpen(authAddress.host, authAddress.port, timeoutMs),
     isPortOpen(storageAddress.host, storageAddress.port, timeoutMs),
-  ]);
+  ];
 
+  if (includeFunctions) {
+    checks.push(isPortOpen(functionsAddress.host, functionsAddress.port, timeoutMs));
+  }
+
+  const statuses = await Promise.all(checks);
   return statuses.every(Boolean);
 }
 
@@ -277,12 +290,16 @@ async function terminateProcessTreeByPid(pid: number): Promise<void> {
   process.kill(pid, "SIGTERM");
 }
 
-function spawnFirebaseEmulatorProcess(projectId: string): ChildProcess {
+function spawnFirebaseEmulatorProcess(projectId: string, includeFunctions = false): ChildProcess {
+  const onlyServices = includeFunctions
+    ? "firestore,auth,storage,functions"
+    : "firestore,auth,storage";
+
   const firebaseArgs = [
     "firebase",
     "emulators:start",
     "--only",
-    "firestore,auth,storage",
+    onlyServices,
     "--project",
     projectId,
     "--config",

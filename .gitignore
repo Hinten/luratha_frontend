@@ -51,5 +51,9 @@ next-env.d.ts
 firestore-debug.log
 firebase-debug.log
 
+# functions build artifacts and dependencies
+/functions/node_modules
+/functions/lib
+
 ignore/*
 .idea

@@ -10,13 +10,16 @@
     "lint": "eslint",
     "test": "vitest run --config vitest.config.mts",
     "test:firestore": "vitest run --config vitest.emulator.config.mts",
+    "test:functions": "vitest run --config vitest.functions.config.mts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:emulator": "playwright test --config playwright.e2e.emulator.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:cloud": "vitest run --config vitest.cloud.config.mts",
-    "setup:routes": "node docs/create-catalog-routes.mjs"
+    "setup:routes": "node docs/create-catalog-routes.mjs",
+    "functions:build": "npm --prefix functions run build",
+    "functions:install": "npm --prefix functions install"
   },
   "dependencies": {
     "firebase": "^12.11.0",
