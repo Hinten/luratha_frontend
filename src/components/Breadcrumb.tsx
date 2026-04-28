@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import styles from "./Breadcrumb.module.css";
 
 export interface BreadcrumbItem {
@@ -38,7 +39,7 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
                 </span>
               )}
               {item.href ? (
-                <Link href={item.href} className={styles.link}>
+                <Link href={item.href as Route} className={styles.link}>
                   {item.label}
                 </Link>
               ) : (

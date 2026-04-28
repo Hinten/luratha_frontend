@@ -8,11 +8,10 @@ interface CategoryBlockProps {
 
 export default function CategoryBlock({ category }: CategoryBlockProps) {
   const label = category.name;
-  const href = `/categoria/${category.slug}`;
   const imageUrl = `https://placehold.co/600x700/EDE4D9/3A2F2A?text=${encodeURIComponent(category.name)}`;
 
   return (
-    <Link href={href} aria-label={label} className={styles.link}>
+    <Link href={`/categoria/${category.slug}`} aria-label={label} className={styles.link}>
       <img
         src={imageUrl}
         alt=""

@@ -12,8 +12,7 @@ const MAX_CATEGORIES = 100;
  * (sitemap, layout, page components) without incurring extra round-trips.
  */
 export const getCachedCategories = cache(async (): Promise<Category[]> => {
-  try {
-    const snapshot = await adminDb
+  const snapshot = await adminDb
       .collection(firestoreCollections.categories)
       .withConverter(adminCategoryConverter)
       .orderBy("name", "asc")
@@ -21,8 +20,4 @@ export const getCachedCategories = cache(async (): Promise<Category[]> => {
       .get();
 
     return snapshot.docs.map((d) => d.data());
-  } catch (error) {
-    console.error("[getCachedCategories] failed to fetch categories from Firestore", error);
-    return [];
-  }
 });

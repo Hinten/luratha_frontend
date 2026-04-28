@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { appData, contactData } from "@/src/lib/constants";
 import Logo from "./Logo";
 import styles from "./Footer.module.css";
@@ -12,7 +13,7 @@ const INSTITUTIONAL_LINKS = [
   { href: "/contato", label: "Fale Conosco" },
   { href: "/politica-de-trocas", label: "Política de Trocas" },
   { href: "/referencia-de-medidas", label: "Referência de Medidas" },
-];
+] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 const PAYMENT_METHODS = ["Pix", "Boleto", "Visa", "Mastercard"];
 
@@ -65,7 +66,7 @@ export default async function Footer() {
             <ul className={`${styles.linkList} ${styles.linkListCompact}`}>
               {categories.map(({ id, name, slug }) => (
                 <li key={id}>
-                  <Link href={`/colecao/${slug}`} className={styles.link}>
+                  <Link href={`/categoria/${slug}` as Route} className={styles.link}>
                     {name}
                   </Link>
                 </li>
