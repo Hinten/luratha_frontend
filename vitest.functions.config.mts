@@ -24,6 +24,7 @@ export default defineConfig({
       "src/test/emulator/**/*.functions.test.ts",
       "src/test/emulator/**/*.functions.test.tsx",
     ],
+    fileParallelism: false,
     exclude: ["node_modules", ".next", "e2e"],
     // Functions trigger tests can be slow — allow up to 60s per test to account
     // for the function worker warmup on first invocation.

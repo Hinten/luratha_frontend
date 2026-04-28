@@ -125,11 +125,10 @@ async function deleteProductStorageFiles(productId: string, productData: Product
   }
 
   if (!bucketName) {
-    console.error(
+    throw new Error(
       `[onProductDeleted] Cannot determine storage bucket for product "${productId}". ` +
         "Set FIREBASE_STORAGE_BUCKET or ensure GCLOUD_PROJECT is available.",
     );
-    return;
   }
 
   const bucket = getStorage().bucket(bucketName);
@@ -140,7 +139,7 @@ async function deleteProductStorageFiles(productId: string, productData: Product
         await bucket.file(storagePath).delete();
         console.log(`[onProductDeleted] Deleted storage file: "${storagePath}"`);
       } catch (error) {
-        console.warn(`[onProductDeleted] Could not delete storage file "${storagePath}":`, error);
+        throw new Error(`[onProductDeleted] Could not delete storage file "${storagePath}": ${error}`);
       }
     }),
   );
