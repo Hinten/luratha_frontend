@@ -15,7 +15,7 @@
  */
 
 import net from "node:net";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { adminDb, adminBucket } from "@/src/lib/firestore/firebaseAdmin";
 import { buildMockProducts, buildMockStock } from "@/src/lib/repositories/productsMockData";
 import { firestoreCollections } from "@/src/schemas/firestore";
@@ -40,7 +40,7 @@ const describeWhenFunctions = functionsEmulatorReady ? describe : describe.skip;
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FUNCTION_SETTLE_TIMEOUT_MS = 12_000;
+const FUNCTION_SETTLE_TIMEOUT_MS = 25_000;
 const POLL_INTERVAL_MS = 300;
 
 /**
@@ -93,6 +93,23 @@ describeWhenFunctions("onProductDeleted (Functions Emulator)", () => {
 
   const testProductId = `fn_test_${mockProduct.id}`;
   const testStockId = testProductId; // stock doc ID == productId
+  const warmupProductId = `fn_warmup_${mockProduct.id}`;
+
+  // Warm up the Functions emulator worker by triggering a dummy product delete.
+  // The first invocation starts a new worker process which can take 15-20 seconds;
+  // subsequent invocations use the warm worker and complete in < 1 second.
+  beforeAll(async () => {
+    await adminDb.collection(firestoreCollections.products).doc(warmupProductId).set({
+      id: warmupProductId,
+      title: "Warmup product for Functions emulator",
+      photoAssets: [],
+      lifeStylePhotos: [],
+    });
+    await adminDb.collection(firestoreCollections.products).doc(warmupProductId).delete();
+    // Wait for the worker to finish starting up.
+    await sleep(FUNCTION_SETTLE_TIMEOUT_MS);
+    await adminDb.collection(firestoreCollections.stock).doc(warmupProductId).delete().catch(() => {});
+  }, FUNCTION_SETTLE_TIMEOUT_MS + 10_000);
 
   beforeEach(async () => {
     // Remove any leftover documents from previous test runs.
@@ -110,14 +127,6 @@ describeWhenFunctions("onProductDeleted (Functions Emulator)", () => {
   });
 
   it("deletes the stock document when a product is deleted", async () => {
-    const storageHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
-    const [storageHostname, storagePortStr] = storageHost.split(":");
-    const storageReachable = await isPortOpen(storageHostname, Number(storagePortStr), 500);
-    if (!storageReachable) {
-      console.warn("[onProductDeleted test] skipped: storage emulator not reachable");
-      return;
-    }
-
     // Seed product and its stock.
     await adminDb
       .collection(firestoreCollections.products)

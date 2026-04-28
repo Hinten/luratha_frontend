@@ -57,7 +57,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 async function buildFunctions(): Promise<boolean> {
   try {
     console.log("[firestoreEmulator.functions.globalSetup] Installing functions dependencies…");
-    execSync("npm install --prefer-offline", {
+    execSync("npm ci", {
       cwd: "functions",
       stdio: "pipe",
       timeout: FUNCTIONS_BUILD_TIMEOUT_MS,
