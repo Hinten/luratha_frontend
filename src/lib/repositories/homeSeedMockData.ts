@@ -24,6 +24,7 @@ type ProductSeed = {
   price: number;
   salePrice?: number;
   stock: number;
+  color?: string[];
   variants?: VariantSeed[];
 };
 
@@ -85,6 +86,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       price: 329,
       salePrice: 289,
       stock: 12,
+      color: ["Bege", "Off White"],
     },
     {
       id: "prod_home_02",
@@ -95,6 +97,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["vestido", "bordado"],
       price: 359,
       stock: 8,
+      color: ["Azul Marinho"],
     },
     {
       id: "prod_home_03",
@@ -105,6 +108,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["blusa", "algodao"],
       price: 169,
       stock: 15,
+      color: ["Branco", "Preto", "Rosé"],
     },
     {
       id: "prod_home_04",
@@ -116,6 +120,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       price: 189,
       salePrice: 169,
       stock: 10,
+      color: ["Off White"],
     },
     {
       id: "prod_home_05",
@@ -126,6 +131,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["calca", "wide-leg"],
       price: 279,
       stock: 9,
+      color: ["Preto", "Caramelo"],
     },
     {
       id: "prod_home_06",
@@ -136,6 +142,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["saia", "plissada"],
       price: 239,
       stock: 11,
+      color: ["Verde Sálvia"],
     },
     {
       id: "prod_home_07",
@@ -147,6 +154,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       price: 419,
       salePrice: 379,
       stock: 6,
+      color: ["Terracota"],
     },
     {
       id: "prod_home_08",
@@ -157,6 +165,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["moletom", "bordado"],
       price: 319,
       stock: 7,
+      color: ["Cinza", "Off White"],
     },
     {
       id: "prod_home_09",
@@ -167,6 +176,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["short", "linho"],
       price: 179,
       stock: 13,
+      color: ["Bege"],
     },
     {
       id: "prod_home_10",
@@ -177,6 +187,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["bolsa", "acessorio"],
       price: 199,
       stock: 10,
+      color: ["Natural"],
     },
     // ── Products with size variants ────────────────────────────────────────────
     {
@@ -189,11 +200,12 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       price: 379,
       salePrice: 349,
       stock: 9, // pp:3 + p:4 + m:2 + g:0
+      color: ["Preto"],
       variants: [
-        { id: "var_prod11_pp", sku: "LURATHA_1011_PP", size: ["PP"] },
-        { id: "var_prod11_p",  sku: "LURATHA_1011_P",  size: ["P"] },
-        { id: "var_prod11_m",  sku: "LURATHA_1011_M",  size: ["M"] },
-        { id: "var_prod11_g",  sku: "LURATHA_1011_G",  size: ["G"] },
+        { id: "var_prod11_pp", sku: "LURATHA_1011_PP", size: ["PP"], color: ["Preto"] },
+        { id: "var_prod11_p",  sku: "LURATHA_1011_P",  size: ["P"],  color: ["Preto"] },
+        { id: "var_prod11_m",  sku: "LURATHA_1011_M",  size: ["M"],  color: ["Preto"] },
+        { id: "var_prod11_g",  sku: "LURATHA_1011_G",  size: ["G"],  color: ["Preto"] },
       ],
     },
     {
@@ -205,10 +217,11 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["blusa", "linho", "manga-longa"],
       price: 199,
       stock: 6, // p:2 + m:2 + g:2
+      color: ["Off White"],
       variants: [
-        { id: "var_prod12_p", sku: "LURATHA_1012_P", size: ["P"] },
-        { id: "var_prod12_m", sku: "LURATHA_1012_M", size: ["M"] },
-        { id: "var_prod12_g", sku: "LURATHA_1012_G", size: ["G"] },
+        { id: "var_prod12_p", sku: "LURATHA_1012_P", size: ["P"], color: ["Off White"] },
+        { id: "var_prod12_m", sku: "LURATHA_1012_M", size: ["M"], color: ["Off White"] },
+        { id: "var_prod12_g", sku: "LURATHA_1012_G", size: ["G"], color: ["Off White"] },
       ],
     },
     // ── Out-of-stock product (sem variações) ───────────────────────────────────
@@ -221,6 +234,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["calca", "jeans"],
       price: 299,
       stock: 0, // out of stock
+      color: ["Azul"],
     },
     // ── Low-stock product (sem variações) ──────────────────────────────────────
     {
@@ -232,6 +246,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["tricot", "basico"],
       price: 229,
       stock: 2, // low stock
+      color: ["Off White"],
     },
     // ── Product with variants — mixed availability ─────────────────────────────
     {
@@ -243,11 +258,12 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       tags: ["saia", "plissada"],
       price: 259,
       stock: 3, // p:0 + m:2 + g:1 + gg:0
+      color: ["Rosé", "Verde Sálvia", "Azul", "Bege"],
       variants: [
-        { id: "var_prod15_p",  sku: "LURATHA_1015_P",  size: ["P"] },
-        { id: "var_prod15_m",  sku: "LURATHA_1015_M",  size: ["M"] },
-        { id: "var_prod15_g",  sku: "LURATHA_1015_G",  size: ["G"] },
-        { id: "var_prod15_gg", sku: "LURATHA_1015_GG", size: ["GG"] },
+        { id: "var_prod15_p",  sku: "LURATHA_1015_P",  size: ["P"],  color: ["Rosé"] },
+        { id: "var_prod15_m",  sku: "LURATHA_1015_M",  size: ["M"],  color: ["Verde Sálvia"] },
+        { id: "var_prod15_g",  sku: "LURATHA_1015_G",  size: ["G"],  color: ["Azul"] },
+        { id: "var_prod15_gg", sku: "LURATHA_1015_GG", size: ["GG"], color: ["Bege"] },
       ],
     },
   ];
@@ -290,6 +306,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
         currency: "BRL",
       },
       totalStock: seed.stock,
+      color: seed.color ?? null,
       ratingAverage: 4.5,
       reviewCount: index + 3,
       vectorEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],

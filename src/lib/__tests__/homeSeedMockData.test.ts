@@ -29,6 +29,31 @@ describe("home seed mock data", () => {
     expect(vestidoFesta?.variants?.[0].size).toEqual(["PP"]);
   });
 
+  it("populates product-level color on simple products", () => {
+    const products = buildHomeSeedProducts();
+    const simpleProducts = products.filter((p) => !p.variants);
+    expect(simpleProducts.length).toBeGreaterThan(0);
+    expect(simpleProducts.every((p) => Array.isArray(p.color) && p.color.length > 0)).toBe(true);
+  });
+
+  it("populates color on every variant of variant products", () => {
+    const products = buildHomeSeedProducts();
+    const variantProducts = products.filter((p) => p.variants && p.variants.length > 0);
+    expect(variantProducts.length).toBeGreaterThan(0);
+    for (const product of variantProducts) {
+      expect(
+        product.variants?.every((v) => Array.isArray(v.color) && v.color.length > 0),
+      ).toBe(true);
+    }
+  });
+
+  it("supports color-differentiated variants on Saia Plissada Colorida", () => {
+    const products = buildHomeSeedProducts();
+    const saia = products.find((p) => p.id === "prod_home_15");
+    const variantColors = saia?.variants?.flatMap((v) => v.color ?? []) ?? [];
+    expect(new Set(variantColors).size).toBe(4);
+  });
+
   it("includes at least one out-of-stock product", () => {
     const products = buildHomeSeedProducts();
     const outOfStock = products.filter((p) => p.totalStock === 0);
