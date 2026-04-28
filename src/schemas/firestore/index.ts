@@ -2,6 +2,7 @@ export { firestoreCollections } from "@/src/schemas/firestore/collections";
 export {
   CategorySchema,
   type Category,
+  type Category as FirestoreCategory,
   validateCategory,
 } from "@/src/schemas/firestore/category";
 export { photoSchema, type Photo } from "@/src/schemas/firestore/photos";
@@ -16,6 +17,11 @@ export {
   type Product,
   validateProduct,
 } from "@/src/schemas/firestore/products";
+export {
+  stockSchema,
+  type Stock,
+  validateStock,
+} from "@/src/schemas/firestore/stock";
 export {
   cartItemSchema,
   cartSchema,

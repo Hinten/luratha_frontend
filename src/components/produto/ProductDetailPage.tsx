@@ -1,4 +1,4 @@
-import type { FirestoreCategory, Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGallery from "@/src/components/produto/ProductGallery";
 import PriceBlock from "@/src/components/produto/PriceBlock";
@@ -13,9 +13,10 @@ const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?te
 interface ProductDetailPageProps {
   product: FirestoreProduct;
   category?: FirestoreCategory | null;
+  stock?: Stock | null;
 }
 
-export default function ProductDetailPage({ product, category }: ProductDetailPageProps) {
+export default function ProductDetailPage({ product, category, stock }: ProductDetailPageProps) {
   const categorySlug = category?.slug ?? "outros";
   const categoryLabel = category?.name ?? "Outros";
   const categoryHref = `/categoria/${categorySlug}`;
@@ -24,7 +25,10 @@ export default function ProductDetailPage({ product, category }: ProductDetailPa
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
   const sizes = extractUniqueSizes(product);
   const highlights = product.productHighlight ?? [];
-  const availability = product.totalStock > 0
+
+  // Use stock collection data when available; fall back to embedded product data
+  const totalQuantity = stock?.quantity ?? product.totalStock;
+  const availability = totalQuantity > 0
     ? "https://schema.org/InStock"
     : "https://schema.org/OutOfStock";
 
@@ -115,6 +119,8 @@ export default function ProductDetailPage({ product, category }: ProductDetailPa
                 price={currentPrice}
               />
 
+            <StockInfo stock={stock} product={product} />
+
             {/* Amazon-style bullet-point highlights */}
             {highlights.length > 0 && (
               <ProductHighlights highlights={highlights} />
@@ -135,5 +141,61 @@ function extractUniqueSizes(product: FirestoreProduct): string[] {
       ...(product.size ?? []),
       ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
     ]),
+  );
+}
+
+interface StockInfoProps {
+  stock?: Stock | null;
+  product: FirestoreProduct;
+}
+
+function StockInfo({ stock, product }: StockInfoProps) {
+  // Prefer stock collection data; fall back to embedded product fields
+  const totalQuantity = stock?.quantity ?? product.totalStock;
+
+  if (totalQuantity === 0) {
+    return (
+      <p className={styles.stockOutOfStock} aria-label="Disponibilidade do produto">
+        Esgotado
+      </p>
+    );
+  }
+
+  if (stock?.hasVariants && stock.variants) {
+    return (
+      <div className={styles.stockInfo} aria-label="Estoque por variação">
+        {Object.entries(stock.variants).map(([variantId, qty]) => {
+          const variant = product.variants?.find((v) => v.id === variantId);
+          const label = variant?.size?.join(" / ") ?? variant?.sku ?? variantId;
+          const isLow = qty > 0 && qty <= 3;
+          return (
+            <p key={variantId} className={qty === 0 ? styles.stockVariantOut : styles.stockVariantIn}>
+              {label}:{" "}
+              {qty === 0 ? (
+                "Esgotado"
+              ) : isLow ? (
+                <span className={styles.stockLow}>Últimas {qty} unid.</span>
+              ) : (
+                `${qty} disponíveis`
+              )}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (totalQuantity <= 3) {
+    return (
+      <p className={styles.stockLow} aria-label="Disponibilidade do produto">
+        Últimas {totalQuantity} unidades
+      </p>
+    );
+  }
+
+  return (
+    <p className={styles.stockInStock} aria-label="Disponibilidade do produto">
+      {totalQuantity} unidades disponíveis
+    </p>
   );
 }

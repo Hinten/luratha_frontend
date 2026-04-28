@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
@@ -61,11 +62,14 @@ export async function PUT(
   const existingData = existing.data()!;
   const now = new Date().toISOString();
 
+  const bodyRaw = body as Record<string, unknown>;
   const input: Record<string, unknown> = {
-    ...(body as Record<string, unknown>),
+    ...bodyRaw,
     id,
     createdAt: existingData.createdAt,
     updatedAt: now,
+    // Auto-generate an immutable id for any variant that doesn't supply one.
+    variants: assignVariantIds(bodyRaw.variants),
   };
 
   // Remove slug so the schema always regenerates it from the new title + sku.
@@ -101,5 +105,18 @@ export async function PUT(
   await productRef.set(product);
 
   return NextResponse.json(product, { status: 200 });
+}
+
+/**
+ * Assigns a unique immutable `id` to each variant that does not already have one.
+ * Existing IDs are preserved (idempotent for update flows).
+ */
+function assignVariantIds(variants: unknown): unknown {
+  if (!Array.isArray(variants)) return variants;
+  return variants.map((variant) => {
+    if (!variant || typeof variant !== "object" || Array.isArray(variant)) return variant;
+    const v = variant as Record<string, unknown>;
+    return v.id ? v : { ...v, id: randomUUID() };
+  });
 }
 

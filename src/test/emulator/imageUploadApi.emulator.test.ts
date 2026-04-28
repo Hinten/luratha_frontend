@@ -6,6 +6,7 @@ import { POST } from "@/src/app/api/images/upload/route";
 import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
+import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 
 const firestoreReady = process.env.FIRESTORE_EMULATOR_READY === "true";
 const describeWhenReady = firestoreReady ? describe : describe.skip;
@@ -55,7 +56,11 @@ describeWhenReady("POST /api/images/upload (emulator)", () => {
       expect(payload.imageAsset.resolutions.zoom.storagePath).toContain("/zoom.webp");
     }
 
-    const updatedDoc = await adminDb.collection(firestoreCollections.products).doc(testProductId).get();
+    const updatedDoc = await adminDb
+    .collection(firestoreCollections.products)
+    .doc(testProductId)
+    .withConverter(adminProductConverter)
+    .get();
     const parsedProduct = validateProduct(updatedDoc.data());
 
     expect(parsedProduct.photoAssets).toHaveLength(1);

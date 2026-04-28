@@ -182,6 +182,10 @@ describe("POST /api/products", () => {
     const product = await response.json();
     expect(product.variants).toHaveLength(2);
     expect(product.variants[0].sku).toBe("VLA-001-BR-P");
+    // Server should have assigned an immutable id to each variant
+    expect(typeof product.variants[0].id).toBe("string");
+    expect(product.variants[0].id.length).toBeGreaterThan(0);
+    expect(product.variants[1].id).not.toBe(product.variants[0].id);
   });
 
   it("returns 201 with embeddings when embedding service succeeds", async () => {

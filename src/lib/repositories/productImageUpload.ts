@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
 import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 
 type ImageVariantName = "card" | "mobile" | "tablet" | "desktop";
 
@@ -69,14 +70,14 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
     throw new ProductImageUploadError("productId is required", "validation");
   }
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(input.productId);
+  const productRef = adminDb.collection(firestoreCollections.products).doc(input.productId).withConverter(adminProductConverter);
   const snapshot = await productRef.get();
 
   if (!snapshot.exists) {
     throw new ProductImageUploadError(`Product "${input.productId}" not found`, "not_found");
   }
 
-  const currentProduct = validateProduct(snapshot.data());
+  const currentProduct = snapshot.data()!;
   const uploadedVariants = await createAndUploadVariants(input.productId, imageId, input.fileBuffer);
   const imageAsset = {
     id: imageId,

@@ -108,7 +108,6 @@ describeWhenEmulator("products repository (Firestore Emulator)", () => {
         {
           ...mockProductWithVariants.variants![0],
           size: ["M"],
-          stock: 10,
         },
       ],
       price: {

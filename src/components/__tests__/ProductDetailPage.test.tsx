@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
-import { buildProductSlug, type Product } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -33,7 +33,7 @@ vi.mock("@/src/components/produto/SizeSelector", () => ({
   ),
 }));
 
-const mockProduct: Product = {
+const mockProduct: Product = validateProduct({
   id: "prod_test_vestido",
   title: "Vestido Bordado Floral",
   slug: buildProductSlug("Vestido Bordado Floral", "LURATHA_001"),
@@ -52,6 +52,8 @@ const mockProduct: Product = {
     priceMin: 289,
     priceMax: 389,
     currency: "BRL",
+    startDate: null,
+    endDate: null,
   },
   ratingAverage: 4.8,
   reviewCount: 24,
@@ -62,9 +64,13 @@ const mockProduct: Product = {
   size: ["PP", "P", "M", "G", "GG"],
   variants: [
     {
+      id: "var_luratha_001_m",
       sku: "LURATHA_001_M",
       size: ["M"],
-      stock: 12,
+      gtin: null,
+      mpn: null,
+      item_group_id: null,
+      color: null,
       photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1"],
       active: true,
     },
@@ -72,7 +78,7 @@ const mockProduct: Product = {
   vectorEmbedding: [0.01, 0.22, 0.09, 0.41, 0.37, 0.12, 0.08, 0.74],
   createdAt: "2026-03-15T00:00:00.000Z",
   updatedAt: "2026-03-15T00:00:00.000Z",
-};
+});
 
 describe("ProductDetailPage", () => {
   beforeEach(() => {
@@ -140,6 +146,54 @@ describe("ProductDetailPage", () => {
     const data = JSON.parse(script!.textContent!);
     expect(data["@type"]).toBe("Product");
     expect(data.name).toBe(mockProduct.title);
+  });
+
+  it("shows stock quantity when stock prop is provided (simple product)", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 8,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByText(/8 unidades disponíveis/)).toBeInTheDocument();
+  });
+
+  it("shows 'Esgotado' when stock quantity is 0", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 0,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByLabelText("Disponibilidade do produto")).toHaveTextContent("Esgotado");
+  });
+
+  it("shows 'Últimas N unidades' when stock is low (<=3)", () => {
+    const now = "2026-04-26T18:00:00.000Z";
+    const stock = {
+      productId: mockProduct.id,
+      sku: mockProduct.sku,
+      quantity: 2,
+      hasVariants: false,
+      variants: null,
+      updatedAt: now,
+    };
+    render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
+    expect(screen.getByText(/Últimas 2 unidades/)).toBeInTheDocument();
+  });
+
+  it("falls back to product.totalStock when stock prop is not provided", () => {
+    const productWithStock = { ...mockProduct, totalStock: 5 };
+    render(<ProductDetailPage product={productWithStock} category={mockCategory} />);
+    expect(screen.getByText(/5 unidades disponíveis/)).toBeInTheDocument();
   });
 });
 
