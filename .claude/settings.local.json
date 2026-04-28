@@ -5,5 +5,10 @@
       "Bash(npx tsc *)",
       "Bash(npm test *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "next-devtools",
+    "playwright",
+    "vitest"
+  ]
 }
