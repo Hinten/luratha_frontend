@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import type { Firestore } from "firebase/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
@@ -48,10 +49,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   };
 }
 
-async function getCachedSearchResults(cacheKey: string): Promise<Product[]> {
+async function getCachedSearchResults(cacheKey: string, firestore: Firestore): Promise<Product[]> {
 
-  const authenticatedAppForUser = await getAuthenticatedAppForUser();
-  const productsSearchRepository = createProductsSearchRepository(authenticatedAppForUser.firestore);
+  const productsSearchRepository = createProductsSearchRepository(firestore);
 
   if (!searchResponseCache.has(cacheKey)) {
     if (searchResponseCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
@@ -73,17 +73,21 @@ export default async function BuscaPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseSearchParams(params);
   const term = filters.term ?? "";
-  const products = term ? await getCachedSearchResults(createSearchFiltersCacheKey(filters)) : [];
   const canonical = `${SITE_URL}/busca${term ? `?q=${encodeURIComponent(term)}` : ""}`;
 
+  let products: Product[] = [];
   let stockMap = new Map<string, Stock>();
-  if (products.length > 0) {
-    try {
-      const { firestore } = await getAuthenticatedAppForUser();
-      const stockRepository = createStockRepository(firestore);
-      stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
-    } catch (stockError) {
-      console.error("[BuscaPage] failed to load stock data, continuing without it", stockError);
+
+  if (term) {
+    const { firestore } = await getAuthenticatedAppForUser();
+    products = await getCachedSearchResults(createSearchFiltersCacheKey(filters), firestore);
+    if (products.length > 0) {
+      try {
+        const stockRepository = createStockRepository(firestore);
+        stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
+      } catch (stockError) {
+        console.error("[BuscaPage] failed to load stock data, continuing without it", stockError);
+      }
     }
   }
 

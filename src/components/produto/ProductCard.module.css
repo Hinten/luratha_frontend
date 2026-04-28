@@ -162,5 +162,5 @@
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-warning);
 }
