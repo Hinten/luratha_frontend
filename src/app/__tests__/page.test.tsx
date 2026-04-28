@@ -85,6 +85,7 @@ describe("Home page", () => {
       newArrivals: mockProducts,
       featured: mockProducts,
       sale: mockProducts.filter((product) => product.price.salePrice !== null),
+      stockMap: new Map(),
     });
 
     const page = await Home();

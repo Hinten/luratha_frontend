@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildHomeSeedCategories, buildHomeSeedProducts } from "@/src/lib/repositories/homeSeedMockData";
+import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@/src/lib/repositories/homeSeedMockData";
 
 describe("home seed mock data", () => {
   it("creates ten mock categories", () => {
@@ -9,14 +9,71 @@ describe("home seed mock data", () => {
     expect(categories[0].slug).toBe("vestidos");
   });
 
-  it("creates ten valid products linked to seeded categories", () => {
+  it("creates fifteen valid products linked to seeded categories", () => {
     const categories = buildHomeSeedCategories();
     const products = buildHomeSeedProducts(categories);
 
-    expect(products).toHaveLength(10);
+    expect(products).toHaveLength(15);
     expect(products.every((product) => typeof product.categoryId === "string")).toBe(true);
     expect(products.every((product) => product.slug)).toBe(true);
     expect(products.every((product) => (product.vectorEmbedding?.length ?? 0) >= 8)).toBe(true);
     expect(products.every((product) => (product.searchEmbedding?.length ?? 0) >= 8)).toBe(true);
+  });
+
+  it("includes products with size variants", () => {
+    const products = buildHomeSeedProducts();
+    const variantProducts = products.filter((p) => p.variants && p.variants.length > 0);
+    expect(variantProducts.length).toBeGreaterThanOrEqual(3);
+    const vestidoFesta = products.find((p) => p.id === "prod_home_11");
+    expect(vestidoFesta?.variants).toHaveLength(4);
+    expect(vestidoFesta?.variants?.[0].size).toEqual(["PP"]);
+  });
+
+  it("includes at least one out-of-stock product", () => {
+    const products = buildHomeSeedProducts();
+    const outOfStock = products.filter((p) => p.totalStock === 0);
+    expect(outOfStock.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("includes at least one low-stock product (1–3 units)", () => {
+    const products = buildHomeSeedProducts();
+    const lowStock = products.filter((p) => p.totalStock > 0 && p.totalStock <= 3);
+    expect(lowStock.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("creates stock documents for all products", () => {
+    const products = buildHomeSeedProducts();
+    const stocks = buildHomeSeedStock(products);
+    expect(stocks).toHaveLength(products.length);
+  });
+
+  it("creates variant stock for products that have variants", () => {
+    const products = buildHomeSeedProducts();
+    const stocks = buildHomeSeedStock(products);
+
+    const vestidoFestaStock = stocks.find((s) => s.productId === "prod_home_11");
+    expect(vestidoFestaStock?.hasVariants).toBe(true);
+    expect(vestidoFestaStock?.variants).not.toBeNull();
+    expect(vestidoFestaStock?.quantity).toBe(9);
+    const variantSum = Object.values(vestidoFestaStock?.variants ?? {}).reduce((a, b) => a + b, 0);
+    expect(variantSum).toBe(vestidoFestaStock?.quantity);
+  });
+
+  it("creates simple stock for products without variants", () => {
+    const products = buildHomeSeedProducts();
+    const stocks = buildHomeSeedStock(products);
+
+    const simpleStock = stocks.find((s) => s.productId === "prod_home_01");
+    expect(simpleStock?.hasVariants).toBe(false);
+    expect(simpleStock?.variants).toBeNull();
+  });
+
+  it("creates zero-quantity stock for out-of-stock products", () => {
+    const products = buildHomeSeedProducts();
+    const stocks = buildHomeSeedStock(products);
+
+    const outOfStockDoc = stocks.find((s) => s.productId === "prod_home_13");
+    expect(outOfStockDoc?.quantity).toBe(0);
+    expect(outOfStockDoc?.hasVariants).toBe(false);
   });
 });

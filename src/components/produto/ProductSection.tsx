@@ -1,5 +1,5 @@
 import ProductCard from "@/src/components/produto/ProductCard";
-import type { Product } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@/src/schemas/firestore";
 import styles from "./ProductSection.module.css";
 
 interface ProductSectionProps {
@@ -7,6 +7,7 @@ interface ProductSectionProps {
   products: Product[];
   viewAllHref?: string;
   viewAllLabel?: string;
+  stockMap?: Map<string, Stock>;
 }
 
 export default function ProductSection({
@@ -14,6 +15,7 @@ export default function ProductSection({
   products,
   viewAllHref,
   viewAllLabel = "Ver todos",
+  stockMap,
 }: ProductSectionProps) {
   return (
     <section className="section-padding">
@@ -29,7 +31,7 @@ export default function ProductSection({
 
         <div className={styles.grid}>
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} stock={stockMap?.get(product.id)} />
           ))}
         </div>
       </div>

@@ -7,6 +7,13 @@ import {
   validateStock,
 } from "@/src/schemas/firestore";
 
+type VariantSeed = {
+  id: string;
+  sku: string;
+  size?: string[];
+  color?: string[];
+};
+
 type ProductSeed = {
   id: string;
   title: string;
@@ -17,6 +24,32 @@ type ProductSeed = {
   price: number;
   salePrice?: number;
   stock: number;
+  variants?: VariantSeed[];
+};
+
+/**
+ * Per-variant stock quantities for products that have variants.
+ * Key: productId → (variantId → quantity).
+ * The sum of quantities must equal the product's totalStock.
+ */
+const VARIANT_STOCK: Record<string, Record<string, number>> = {
+  prod_home_11: {
+    var_prod11_pp: 3,
+    var_prod11_p: 4,
+    var_prod11_m: 2,
+    var_prod11_g: 0,
+  },
+  prod_home_12: {
+    var_prod12_p: 2,
+    var_prod12_m: 2,
+    var_prod12_g: 2,
+  },
+  prod_home_15: {
+    var_prod15_p: 0,
+    var_prod15_m: 2,
+    var_prod15_g: 1,
+    var_prod15_gg: 0,
+  },
 };
 
 function createIsoDate(offsetMinutes: number): string {
@@ -145,6 +178,78 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       price: 199,
       stock: 10,
     },
+    // ── Products with size variants ────────────────────────────────────────────
+    {
+      id: "prod_home_11",
+      title: "Vestido Festa Tecido Nobre",
+      description: "Vestido de festa confeccionado em tecido nobre com acabamento artesanal delicado.",
+      sku: "LURATHA_1011",
+      categorySlug: "vestidos",
+      tags: ["vestido", "festa"],
+      price: 379,
+      salePrice: 349,
+      stock: 9, // pp:3 + p:4 + m:2 + g:0
+      variants: [
+        { id: "var_prod11_pp", sku: "LURATHA_1011_PP", size: ["PP"] },
+        { id: "var_prod11_p",  sku: "LURATHA_1011_P",  size: ["P"] },
+        { id: "var_prod11_m",  sku: "LURATHA_1011_M",  size: ["M"] },
+        { id: "var_prod11_g",  sku: "LURATHA_1011_G",  size: ["G"] },
+      ],
+    },
+    {
+      id: "prod_home_12",
+      title: "Blusa Manga Longa Linho",
+      description: "Blusa de manga longa em linho com modelagem solta e tecido de alta qualidade.",
+      sku: "LURATHA_1012",
+      categorySlug: "blusas",
+      tags: ["blusa", "linho", "manga-longa"],
+      price: 199,
+      stock: 6, // p:2 + m:2 + g:2
+      variants: [
+        { id: "var_prod12_p", sku: "LURATHA_1012_P", size: ["P"] },
+        { id: "var_prod12_m", sku: "LURATHA_1012_M", size: ["M"] },
+        { id: "var_prod12_g", sku: "LURATHA_1012_G", size: ["G"] },
+      ],
+    },
+    // ── Out-of-stock product (sem variações) ───────────────────────────────────
+    {
+      id: "prod_home_13",
+      title: "Calça Jeans Slim Artesanal",
+      description: "Calça jeans slim com lavagem artesanal e caimento perfeito.",
+      sku: "LURATHA_1013",
+      categorySlug: "calcas",
+      tags: ["calca", "jeans"],
+      price: 299,
+      stock: 0, // out of stock
+    },
+    // ── Low-stock product (sem variações) ──────────────────────────────────────
+    {
+      id: "prod_home_14",
+      title: "Tricot Básico Off White",
+      description: "Tricot básico off white com textura delicada e caimento relaxado.",
+      sku: "LURATHA_1014",
+      categorySlug: "tricots",
+      tags: ["tricot", "basico"],
+      price: 229,
+      stock: 2, // low stock
+    },
+    // ── Product with variants — mixed availability ─────────────────────────────
+    {
+      id: "prod_home_15",
+      title: "Saia Plissada Colorida",
+      description: "Saia plissada com estampa vibrante e tecido leve para o dia a dia.",
+      sku: "LURATHA_1015",
+      categorySlug: "saias",
+      tags: ["saia", "plissada"],
+      price: 259,
+      stock: 3, // p:0 + m:2 + g:1 + gg:0
+      variants: [
+        { id: "var_prod15_p",  sku: "LURATHA_1015_P",  size: ["P"] },
+        { id: "var_prod15_m",  sku: "LURATHA_1015_M",  size: ["M"] },
+        { id: "var_prod15_g",  sku: "LURATHA_1015_G",  size: ["G"] },
+        { id: "var_prod15_gg", sku: "LURATHA_1015_GG", size: ["GG"] },
+      ],
+    },
   ];
 
   return seeds.map((seed, index) => {
@@ -152,6 +257,18 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
     if (!category) {
       throw new Error(`Category "${seed.categorySlug}" not found for seed product "${seed.id}"`);
     }
+
+    const variants = seed.variants?.map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      size: v.size ?? null,
+      color: v.color ?? null,
+      gtin: null,
+      mpn: null,
+      item_group_id: null,
+      photoIds: ["seed_placeholder"],
+      active: true,
+    }));
 
     return validateProduct({
       id: seed.id,
@@ -177,6 +294,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       reviewCount: index + 3,
       vectorEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],
       searchEmbedding: [0.13, 0.27, 0.44, 0.35, 0.56, 0.12, 0.67, 0.31],
+      variants: variants ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -185,14 +303,27 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
 
 export function buildHomeSeedStock(products = buildHomeSeedProducts()): Stock[] {
   const now = new Date().toISOString();
-  return products.map((product) =>
-    validateStock({
+  return products.map((product) => {
+    const variantStockMap = VARIANT_STOCK[product.id];
+
+    if (product.variants && variantStockMap) {
+      return validateStock({
+        productId: product.id,
+        sku: product.sku,
+        quantity: product.totalStock,
+        hasVariants: true,
+        variants: variantStockMap,
+        updatedAt: now,
+      });
+    }
+
+    return validateStock({
       productId: product.id,
       sku: product.sku,
       quantity: product.totalStock,
       hasVariants: false,
       variants: null,
       updatedAt: now,
-    }),
-  );
+    });
+  });
 }

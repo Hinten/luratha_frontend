@@ -1,6 +1,6 @@
 import Link from "next/link";
 import styles from "./ProductCard.module.css";
-import type { Product } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@/src/schemas/firestore";
 import { getProductCardImage, productCardImageSizes } from "@/src/lib/productImages";
 
 const formatBRL = (value: number) =>
@@ -9,9 +9,10 @@ const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?te
 
 interface ProductCardProps {
   product: Product;
+  stock?: Stock | null;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, stock }: ProductCardProps) {
   const name = product.title;
   const currentPrice = product.price.salePrice ?? product.price.price;
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
@@ -24,7 +25,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : 0;
 
-  const isOutOfStock = product.totalStock === 0;
+  // Prefer authoritative stock-collection data; fall back to the denormalised product field
+  const effectiveStock = stock?.quantity ?? product.totalStock;
+  const isOutOfStock = effectiveStock === 0;
+  const isLowStock = !isOutOfStock && effectiveStock <= 3;
 
   const cardBody = (
     <>
@@ -53,6 +57,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
           <span className={styles.currentPrice}>{formatBRL(currentPrice)}</span>
         </div>
+        {isLowStock && (
+          <span className={styles.lowStockText}>
+            Últimas {effectiveStock} unid.
+          </span>
+        )}
       </div>
     </>
   );

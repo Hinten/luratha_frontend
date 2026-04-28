@@ -155,3 +155,12 @@
   font-size: 0.75rem;
   color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
 }
+
+/* Low-stock inline indicator (shown below the price block in .info) */
+.lowStockText {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+}

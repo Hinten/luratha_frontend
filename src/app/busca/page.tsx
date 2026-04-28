@@ -7,8 +7,9 @@ import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
+import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
-import type { Product } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@/src/schemas/firestore";
 
 interface PageProps {
   searchParams: Promise<{
@@ -74,6 +75,17 @@ export default async function BuscaPage({ searchParams }: PageProps) {
   const term = filters.term ?? "";
   const products = term ? await getCachedSearchResults(createSearchFiltersCacheKey(filters)) : [];
   const canonical = `${SITE_URL}/busca${term ? `?q=${encodeURIComponent(term)}` : ""}`;
+
+  let stockMap = new Map<string, Stock>();
+  if (products.length > 0) {
+    try {
+      const { firestore } = await getAuthenticatedAppForUser();
+      const stockRepository = createStockRepository(firestore);
+      stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
+    } catch (stockError) {
+      console.error("[BuscaPage] failed to load stock data, continuing without it", stockError);
+    }
+  }
 
   const searchResultsSchema = {
     "@context": "https://schema.org" as const,
@@ -154,7 +166,7 @@ export default async function BuscaPage({ searchParams }: PageProps) {
       </div>
 
       {term ? (
-        <ProductGrid products={products} />
+        <ProductGrid products={products} stockMap={stockMap} />
       ) : (
         <section aria-label="Guia de busca">
           <p className="font-[family-name:var(--font-body)] text-[var(--color-neutral-dark)]/80">
