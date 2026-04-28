@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/src/lib/seoConstants";
+import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = [
     { path: "/", priority: 1.0, changeFrequency: "daily" as const },
     { path: "/sobre", priority: 0.8, changeFrequency: "weekly" as const },
@@ -12,9 +13,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/sale", priority: 0.9, changeFrequency: "daily" as const },
   ];
 
-  //todo corrigir para gerar dinamicamente a partir das categorias reais
+  const categories = await getCachedCategories();
+  const categoryRoutes = categories.map(({ slug }) => ({
+    path: `/colecao/${slug}`,
+    priority: 0.8 as const,
+    changeFrequency: "weekly" as const,
+  }));
 
-  return [...staticRoutes].map(({ path, priority, changeFrequency }) => ({
+  return [...staticRoutes, ...categoryRoutes].map(({ path, priority, changeFrequency }) => ({
     url: `${SITE_URL}${path}`,
     lastModified: new Date(),
     changeFrequency,

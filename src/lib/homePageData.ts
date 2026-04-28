@@ -1,13 +1,11 @@
-import { collection, getDocs, limit as queryLimit, orderBy, query, type Firestore } from "firebase/firestore";
 import {
-  CategorySchema,
-  firestoreCollections,
   type Category as FirestoreCategory,
   type Product as FirestoreProduct,
 } from "@/src/schemas/firestore";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 const HOME_DATA_TIMEOUT_MS = 1_500;
 
 type HomePageData = {
@@ -27,7 +25,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     const [products, categories] = await withTimeout(
       Promise.all([
         productsRepository.list({ status: "active", limit: 30 }),
-        listCategories(authApp.firestore),
+        getCachedCategories(),
       ]),
       HOME_DATA_TIMEOUT_MS,
     );
@@ -52,16 +50,6 @@ export async function getHomePageData(): Promise<HomePageData> {
   }
 }
 
-async function listCategories(dbInstance: Firestore): Promise<FirestoreCategory[]> {
-  const snapshot = await getDocs(
-    query(
-      collection(dbInstance, firestoreCollections.categories),
-      orderBy("name", "asc"),
-      queryLimit(20),
-    ),
-  );
-  return snapshot.docs.map((document) => CategorySchema.parse(document.data()));
-}
 
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
