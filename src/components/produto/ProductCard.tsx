@@ -67,7 +67,7 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
   );
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card}${isOutOfStock ? ` ${styles.cardOutOfStock}` : ""}`}>
       {discountPct > 0 && !isOutOfStock && (
         <span className={styles.discountBadge}>-{discountPct}%</span>
       )}

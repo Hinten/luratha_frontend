@@ -13,6 +13,19 @@
   transform: translateY(-2px);
 }
 
+.cardOutOfStock {
+  filter: grayscale(0.9);
+  opacity: 0.75;
+}
+
+.cardOutOfStock:hover {
+  transform: none;
+}
+
+.cardOutOfStock:hover .image {
+  transform: none;
+}
+
 /* Link wrapper that covers the card body (image + info) */
 .cardLink {
   display: flex;
@@ -47,12 +60,13 @@
   top: 0.75rem;
   left: 0.75rem;
   z-index: 10;
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--color-neutral-mid);
+  color: var(--color-neutral-dark);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
+  letter-spacing: 0.02em;
 }
 
 /* Favorite button */
