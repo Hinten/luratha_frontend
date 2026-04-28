@@ -49,7 +49,15 @@ const saleProduct = createProduct({
   title: "Conjunto Crochet",
   sku: "LURATHA_9002",
   slug: buildProductSlug("Conjunto Crochet", "LURATHA_9002"),
-  price: { price: 499, salePrice: 389, priceMin: 389, priceMax: 499, currency: "BRL" },
+  price: {
+    price: 499,
+    salePrice: 389,
+    priceMin: 389,
+    priceMax: 499,
+    currency: "BRL",
+    startDate: null,
+    endDate: null,
+  },
   ratingAverage: 4.9,
   reviewCount: 36,
 });
@@ -137,7 +145,15 @@ describe("ProductCard", () => {
   it("does NOT show discount badge when product is out of stock", () => {
     const outOfStockSaleProduct = createProduct({
       totalStock: 0,
-      price: { price: 499, salePrice: 389, priceMin: 389, priceMax: 499, currency: "BRL" },
+      price: {
+        price: 499,
+        salePrice: 389,
+        priceMin: 389,
+        priceMax: 499,
+        currency: "BRL",
+        startDate: null,
+        endDate: null,
+      },
     });
     render(<ProductCard product={outOfStockSaleProduct} />);
     expect(screen.queryByText(/-\d+%/)).not.toBeInTheDocument();

@@ -87,8 +87,6 @@ export const productVariantSchema = z.object({
   item_group_id: nonEmptyStringSchema.nullable().default(null), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
   color: z.array(nonEmptyStringSchema).nullable().default(null),
   size: z.array(nonEmptyStringSchema).nullable().default(null),
-
-  stock: z.number().int().min(0),
   photoIds: z.array(nonEmptyStringSchema).min(1),
   active: z.boolean().default(true),
 });

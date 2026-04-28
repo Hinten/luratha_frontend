@@ -52,8 +52,8 @@ describe("buildSearchEmbeddingText", () => {
     const text = buildSearchEmbeddingText(
       makeProduct({
         variants: [
-          { sku: "SKU-P", size: ["P", "M"], color: null, stock: 10, photoIds: ["a"], gtin: null, mpn: null, item_group_id: null, active: true },
-          { sku: "SKU-G", size: ["G", "GG"], color: null, stock: 5, photoIds: ["b"], gtin: null, mpn: null, item_group_id: null, active: true },
+          { id: "var-1", sku: "SKU-P", size: ["P", "M"], color: null, photoIds: ["a"], gtin: null, mpn: null, item_group_id: null, active: true },
+          { id: "var-2", sku: "SKU-G", size: ["G", "GG"], color: null, photoIds: ["b"], gtin: null, mpn: null, item_group_id: null, active: true },
         ],
       }),
     );
@@ -67,7 +67,7 @@ describe("buildSearchEmbeddingText", () => {
     const text = buildSearchEmbeddingText(
       makeProduct({
         variants: [
-          { sku: "SKU-A", size: null, color: ["azul", "branco"], stock: 3, photoIds: ["c"], gtin: null, mpn: null, item_group_id: null, active: true },
+          { id: "var-3", sku: "SKU-A", size: null, color: ["azul", "branco"], photoIds: ["c"], gtin: null, mpn: null, item_group_id: null, active: true },
         ],
       }),
     );
@@ -79,7 +79,7 @@ describe("buildSearchEmbeddingText", () => {
     const withVariants = buildSearchEmbeddingText(
       makeProduct({
         variants: [
-          { sku: "SKU-X", size: ["P"], color: null, stock: 1, photoIds: ["d"], gtin: null, mpn: null, item_group_id: null, active: true },
+          { id: "var-4", sku: "SKU-X", size: ["P"], color: null, photoIds: ["d"], gtin: null, mpn: null, item_group_id: null, active: true },
         ],
       }),
     );
