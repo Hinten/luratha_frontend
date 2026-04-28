@@ -263,8 +263,8 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
 
   /**
    * 4. Register product with variants
-   * Creates a variable product with size variants and verifies the variants array
-   * is stored and retrieved with correct SKUs and stock values.
+  * Creates a variable product with size variants and verifies the variants array
+  * is stored and retrieved with correct SKUs and active flags.
    */
   it("registers product with variants: variant array is stored and retrieved", async () => {
     const baseData = buildBaseProductData(prefix, skuToken, { categoryId });
@@ -272,9 +272,9 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     const id = baseData.id as string;
 
     const variants = [
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-P`, stock: 10, photoIds: ["photo-001"], active: true },
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-M`, stock: 8, photoIds: ["photo-001"], active: true },
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-G`, stock: 3, photoIds: ["photo-001"], active: false },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-P`, photoIds: ["photo-001"], active: true },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-M`, photoIds: ["photo-001"], active: true },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-G`, photoIds: ["photo-001"], active: false },
     ];
 
     await adminDb.collection(firestoreCollections.products).doc(id).set({
@@ -289,7 +289,7 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     expect(product).not.toBeNull();
     expect(product!.variants).toHaveLength(3);
     expect(product!.variants![0].sku).toBe(`${parentSku}-P`);
-    expect(product!.variants![1].stock).toBe(8);
+    expect(product!.variants![1].sku).toBe(`${parentSku}-M`);
     expect(product!.variants![2].active).toBe(false);
   });
 

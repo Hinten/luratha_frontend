@@ -26,7 +26,9 @@ npm run emulator              # start Firebase emulators locally
 
 Run a single Playwright spec: `npx playwright test e2e/home.spec.ts`
 
-**Mandatory order for any code change:** `npm run lint` → `npm test` → `npm run test:e2e`
+**Mandatory order for any code change:** `npx tsc` → `npm run lint` → `npm test` → `npm run test:e2e`
+
+TypeScript check is mandatory: always run `npx tsc` to detect type errors. If errors are found, fix them.
 
 For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `npm run test:firestore` → `npm run test:e2e:emulator`
 

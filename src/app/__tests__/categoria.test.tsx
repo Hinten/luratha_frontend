@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CategoriaPage, { generateMetadata } from "@/src/app/categoria/[slug]/page";
+import { Product } from "../../schemas/firestore";
 
 const { getBySlugMock, searchMock, productGridSpy } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),
@@ -135,17 +136,14 @@ describe("CategoriaPage", () => {
 });
 
 function createFirestoreProduct(
-  input: Partial<FirestoreProduct> & {
+  input: Partial<Product> & {
     id: string;
     title: string;
     slug: string;
     price: { price: number; salePrice: number | null };
   },
-): FirestoreProduct {
+): Product {
   return {
-    id: input.id,
-    title: input.title,
-    slug: input.slug,
     description: "Descrição",
     isPurchasable: true,
     brandName: "Luratha",
@@ -154,15 +152,6 @@ function createFirestoreProduct(
     tags: [],
     materialTags: [],
     seasonalTags: [],
-    price: {
-      price: input.price.price,
-      salePrice: input.price.salePrice,
-      priceMin: null,
-      priceMax: null,
-      currency: "BRL",
-      startDate: null,
-      endDate: null,
-    },
     condition: "new",
     adult: false,
     isBundle: false,
@@ -178,5 +167,5 @@ function createFirestoreProduct(
     createdAt: "2026-04-16T00:00:00.000Z",
     updatedAt: "2026-04-16T00:00:00.000Z",
     ...input,
-  } as FirestoreProduct;
+  } as Product;
 }
