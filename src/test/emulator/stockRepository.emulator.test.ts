@@ -61,13 +61,13 @@ describeWhenEmulator("stock repository (Firestore Emulator)", () => {
 
   beforeEach(async () => {
     if (testEnv) {
-      await testEnv.clearFirestore();
+      await clearSeededStock(db, [stockWithVariants.productId, stockWithoutVariants.productId]);
     }
   });
 
   afterAll(async () => {
     if (testEnv) {
-      await testEnv.clearFirestore();
+      await clearSeededStock(db, [stockWithVariants.productId, stockWithoutVariants.productId]);
       await testEnv.cleanup();
     }
   });
@@ -200,4 +200,16 @@ function shouldSkipTests(
   emulatorReachable: boolean,
 ): boolean {
   return !emulatorReachable || !repository;
+}
+
+async function clearSeededStock(
+  db: Parameters<typeof createStockRepository>[0] | undefined,
+  productIds: string[],
+): Promise<void> {
+  if (!db) {
+    return;
+  }
+
+  const { doc, deleteDoc } = await import("firebase/firestore");
+  await Promise.all(productIds.map((productId) => deleteDoc(doc(db, "stock", productId)).catch(() => undefined)));
 }
