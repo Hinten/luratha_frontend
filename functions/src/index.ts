@@ -88,7 +88,51 @@ async function deleteProductStorageFiles(productId: string, productData: Product
     return;
   }
 
-  const bucket = getStorage().bucket();
+  // Determine the storage bucket name.
+  //
+  // In a deployed Cloud Functions environment, `FIREBASE_CONFIG` is set by the
+  // runtime and includes `storageBucket`, so `initializeApp()` (called without
+  // arguments above) picks it up automatically and `getStorage().bucket()` works
+  // fine with no explicit name.
+  //
+  // In the local Functions emulator the emulator may warn "Unable to fetch project
+  // Admin SDK configuration", which means `FIREBASE_CONFIG.storageBucket` is
+  // absent.  In that case `getStorage().bucket()` throws
+  // "Bucket name not specified or invalid", the rejection is swallowed by
+  // Promise.allSettled, and no files are deleted.
+  //
+  // We therefore resolve the bucket name explicitly:
+  //   1. FIREBASE_STORAGE_BUCKET  – set by some environments
+  //   2. storageBucket from FIREBASE_CONFIG  – standard production path
+  //   3. {GCLOUD_PROJECT}.appspot.com  – reliable fallback; GCLOUD_PROJECT is
+  //      always injected by the Functions runtime and the local emulator
+  let bucketName: string | undefined;
+  if (process.env.FIREBASE_STORAGE_BUCKET) {
+    bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+  } else {
+    try {
+      const cfg = JSON.parse(process.env.FIREBASE_CONFIG ?? "{}") as Record<string, unknown>;
+      if (typeof cfg.storageBucket === "string" && cfg.storageBucket) {
+        bucketName = cfg.storageBucket;
+      }
+    } catch {
+      // Malformed FIREBASE_CONFIG — fall through to the GCLOUD_PROJECT fallback
+    }
+  }
+  if (!bucketName) {
+    const projectId = process.env.GCLOUD_PROJECT ?? process.env.PROJECT_ID;
+    if (projectId) bucketName = `${projectId}.appspot.com`;
+  }
+
+  if (!bucketName) {
+    console.error(
+      `[onProductDeleted] Cannot determine storage bucket for product "${productId}". ` +
+        "Set FIREBASE_STORAGE_BUCKET or ensure GCLOUD_PROJECT is available.",
+    );
+    return;
+  }
+
+  const bucket = getStorage().bucket(bucketName);
 
   await Promise.allSettled(
     storagePaths.map(async (storagePath) => {
