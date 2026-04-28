@@ -1,6 +1,7 @@
 "use client";
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import Logo from "./Logo";
 import DevSeedButton from "@/src/components/home/DevSeedButton";
 import SearchInput from "@/src/components/busca/SearchInput";
@@ -9,10 +10,10 @@ import { useCart } from "@/src/contexts/CartContext";
 import { useAuth } from "@/src/contexts/AuthContext";
 
 const navItems = [
-  { href: "/colecao", label: "Coleção" },
+  { href: "/todas-as-pecas", label: "Coleção" },
   { href: "/sobre", label: "Sobre" },
   { href: "/contato", label: "Contato" },
-];
+] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);

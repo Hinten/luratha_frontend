@@ -53,3 +53,7 @@ firebase-debug.log
 
 ignore/*
 .idea
+
+#functions 
+functions/node_modules
+functions/lib
