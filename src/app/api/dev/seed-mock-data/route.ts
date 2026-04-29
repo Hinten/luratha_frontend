@@ -29,6 +29,7 @@ export async function POST() {
   const createdProductIds = await seedProducts(products);
   const stockCreated = await seedStock(stockItems);
   const uploadedImages = await seedProductImages(products, createdProductIds);
+  const variantImagesUploaded = await seedVariantImages(products, createdProductIds);
 
   return NextResponse.json({
     message: "Dados mock cadastrados com sucesso.",
@@ -36,6 +37,7 @@ export async function POST() {
     productsCreated: createdProductIds.length,
     stockCreated,
     uploadedImages,
+    variantImagesUploaded,
   });
 }
 
@@ -126,6 +128,49 @@ async function seedProductImages(products: Product[], createdProductIds: string[
   }
 
   return uploadedImages;
+}
+
+async function seedVariantImages(products: Product[], createdProductIds: string[]): Promise<number> {
+  if (createdProductIds.length === 0) {
+    return 0;
+  }
+
+  const imagePaths = await getSeedImagePaths();
+  if (imagePaths.length === 0) {
+    return 0;
+  }
+
+  const productById = new Map(products.map((product) => [product.id, product]));
+  let uploaded = 0;
+  let imagePoolOffset = 0;
+
+  for (const productId of createdProductIds) {
+    const product = productById.get(productId);
+    if (!product?.variants) continue;
+
+    const seenColors = new Set<string>();
+    for (const variant of product.variants) {
+      const variantColor = variant.color?.[0];
+      if (!variantColor || seenColors.has(variantColor)) continue;
+      seenColors.add(variantColor);
+
+      const imagePath = imagePaths[imagePoolOffset % imagePaths.length];
+      imagePoolOffset += 1;
+
+      const imageBuffer = await readFile(imagePath);
+      await uploadProductImage({
+        productId,
+        variantId: variant.id,
+        fileBuffer: imageBuffer,
+        fileName: path.basename(imagePath),
+        alt: `${product.title} — ${variantColor}`,
+      });
+
+      uploaded += 1;
+    }
+  }
+
+  return uploaded;
 }
 
 async function getSeedImagePaths(): Promise<string[]> {

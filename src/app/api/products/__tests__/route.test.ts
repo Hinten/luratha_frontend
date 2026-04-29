@@ -164,13 +164,13 @@ describe("POST /api/products", () => {
       {
         sku: "VLA-001-BR-P",
         stock: 10,
-        photoIds: ["photo-001"],
+        photoIds: [],
         active: true,
       },
       {
         sku: "VLA-001-BR-M",
         stock: 5,
-        photoIds: ["photo-001"],
+        photoIds: [],
         active: true,
       },
     ];

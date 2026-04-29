@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const productId = formData.get("productId");
     const imageId = formData.get("imageId");
     const alt = formData.get("alt");
+    const variantId = formData.get("variantId");
     const imageCandidates = formData.getAll("images");
     const fallbackSingleImage = formData.get("image");
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
           alt: typeof alt === "string" ? alt : undefined,
           fileBuffer,
           fileName: image.name || `image-${index + 1}`,
+          variantId: typeof variantId === "string" && variantId.trim().length > 0 ? variantId : undefined,
         });
       }),
     );

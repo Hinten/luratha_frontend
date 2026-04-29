@@ -44,6 +44,7 @@ type UploadProductImageInput = {
   alt?: string;
   fileBuffer: Buffer;
   fileName?: string;
+  variantId?: string;
 };
 
 type UploadProductImageResult = {
@@ -96,9 +97,26 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
   const previousAssets = currentProduct.photoAssets.filter((asset) => asset.id !== imageId);
   const nextAssets = [...previousAssets, imageAsset];
 
+  const variantId = input.variantId?.trim();
+  const nextVariants = variantId
+    ? currentProduct.variants?.map((variant) =>
+        variant.id === variantId && !variant.photoIds.includes(imageId)
+          ? { ...variant, photoIds: [...variant.photoIds, imageId] }
+          : variant,
+      ) ?? null
+    : currentProduct.variants;
+
+  if (variantId && currentProduct.variants && !currentProduct.variants.some((v) => v.id === variantId)) {
+    throw new ProductImageUploadError(
+      `Variant "${variantId}" not found in product "${input.productId}"`,
+      "validation",
+    );
+  }
+
   const updatedProduct = validateProduct({
     ...currentProduct,
     photoAssets: nextAssets,
+    variants: nextVariants,
     updatedAt: now,
   });
 

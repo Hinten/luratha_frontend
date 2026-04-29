@@ -87,7 +87,7 @@ export const productVariantSchema = z.object({
   item_group_id: nonEmptyStringSchema.nullable().default(null), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
   color: z.array(nonEmptyStringSchema).nullable().default(null),
   size: z.array(nonEmptyStringSchema).nullable().default(null),
-  photoIds: z.array(nonEmptyStringSchema).min(1),
+  photoIds: z.array(nonEmptyStringSchema).default([]),
   active: z.boolean().default(true),
 });
 
@@ -245,6 +245,21 @@ const productSchemaBase = z
         path: ["slug"],
         message: "slug must match the generated value based on title and sku",
       });
+    }
+
+    if (product.variants && product.variants.length > 0) {
+      const photoAssetIds = new Set(product.photoAssets.map((asset) => asset.id));
+      for (const variant of product.variants) {
+        for (const photoId of variant.photoIds) {
+          if (!photoAssetIds.has(photoId)) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["variants"],
+              message: `variant "${variant.id}" references photoId "${photoId}" not present in product.photoAssets`,
+            });
+          }
+        }
+      }
     }
   }));
 

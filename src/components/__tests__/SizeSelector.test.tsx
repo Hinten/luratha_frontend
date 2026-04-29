@@ -75,9 +75,9 @@ const productWithSizes = makeProduct({ size: ["PP", "P", "M", "G", "GG"] });
 
 const productWithColorAndSize = makeProduct({
   variants: [
-    { id: "v1", sku: "VB_AP_001", color: ["Azul"], size: ["P"], photoIds: ["ph1"], active: true, gtin: null, mpn: null, item_group_id: null },
-    { id: "v2", sku: "VB_AM_001", color: ["Azul"], size: ["M"], photoIds: ["ph1"], active: true, gtin: null, mpn: null, item_group_id: null },
-    { id: "v3", sku: "VB_VP_001", color: ["Vermelho"], size: ["P"], photoIds: ["ph2"], active: true, gtin: null, mpn: null, item_group_id: null },
+    { id: "v1", sku: "VB_AP_001", color: ["Azul"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+    { id: "v2", sku: "VB_AM_001", color: ["Azul"], size: ["M"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+    { id: "v3", sku: "VB_VP_001", color: ["Vermelho"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
   ],
 });
 
@@ -280,5 +280,129 @@ describe("SizeSelector — color + size with stock-aware variants", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vermelho" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
     expect(screen.queryByRole("button", { name: /Adicionar .* ao carrinho/i })).not.toBeInTheDocument();
+  });
+});
+
+// ─── Color swatch (image variant) and selection callbacks ──────────────────
+
+describe("SizeSelector — color swatch image fallback", () => {
+  it("renders text pill when variants have no photoIds (no swatch available)", () => {
+    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    const azulButton = screen.getByRole("button", { name: "Azul" });
+    expect(azulButton.tagName).toBe("BUTTON");
+    expect(azulButton.querySelector("img")).toBeNull();
+  });
+});
+
+describe("SizeSelector — color swatch image when variant has photo", () => {
+  const productWithSwatchPhotos = makeProduct({
+    photoAssets: [
+      {
+        id: "photo_azul",
+        alt: "Azul",
+        resolutions: {
+          card: {
+            width: 400,
+            height: 533,
+            storagePath: "products/p/azul/card.webp",
+            downloadUrl: "https://example.com/azul-card.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
+          mobile: {
+            width: 480,
+            height: 640,
+            storagePath: "products/p/azul/mobile.webp",
+            downloadUrl: "https://example.com/azul-mobile.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
+          tablet: {
+            width: 768,
+            height: 1024,
+            storagePath: "products/p/azul/tablet.webp",
+            downloadUrl: "https://example.com/azul-tablet.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
+          desktop: {
+            width: 1200,
+            height: 1600,
+            storagePath: "products/p/azul/desktop.webp",
+            downloadUrl: "https://example.com/azul-desktop.webp",
+            temporaryUrl: null,
+            format: "webp",
+          },
+        },
+        createdAt: BASE_TIMESTAMP,
+        updatedAt: BASE_TIMESTAMP,
+      },
+    ],
+    variants: [
+      { id: "v1", sku: "SK_AZ_P", color: ["Azul"], size: ["P"], photoIds: ["photo_azul"], active: true, gtin: null, mpn: null, item_group_id: null },
+      { id: "v2", sku: "SK_VM_P", color: ["Vermelho"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+    ],
+  });
+
+  it("renders an image swatch for a color whose variant has a photoId", () => {
+    render(<SizeSelector product={productWithSwatchPhotos} {...cartProps} />);
+    const azulButton = screen.getByRole("button", { name: "Azul" });
+    const img = azulButton.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute("src")).toBe("https://example.com/azul-card.webp");
+  });
+
+  it("falls back to text pill for a color whose variant has no photoId", () => {
+    render(<SizeSelector product={productWithSwatchPhotos} {...cartProps} />);
+    const vermelhoButton = screen.getByRole("button", { name: "Vermelho" });
+    expect(vermelhoButton.querySelector("img")).toBeNull();
+  });
+});
+
+describe("SizeSelector — onColorChange / onSizeChange callbacks", () => {
+  it("calls onColorChange with the clicked color", () => {
+    const onColorChange = vi.fn();
+    render(
+      <SizeSelector
+        product={productWithColorAndSize}
+        stock={stockWithVariants}
+        onColorChange={onColorChange}
+        {...cartProps}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Azul" }));
+    expect(onColorChange).toHaveBeenCalledWith("Azul");
+  });
+
+  it("calls onSizeChange with the clicked size", () => {
+    const onSizeChange = vi.fn();
+    render(
+      <SizeSelector
+        product={productWithColorAndSize}
+        stock={stockWithVariants}
+        onSizeChange={onSizeChange}
+        {...cartProps}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Azul" }));
+    fireEvent.click(screen.getByRole("button", { name: "P" }));
+    expect(onSizeChange).toHaveBeenCalledWith("P");
+  });
+
+  it("resets size via onSizeChange(null) when color is changed", () => {
+    const onSizeChange = vi.fn();
+    render(
+      <SizeSelector
+        product={productWithColorAndSize}
+        stock={stockWithVariants}
+        onSizeChange={onSizeChange}
+        {...cartProps}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Azul" }));
+    fireEvent.click(screen.getByRole("button", { name: "P" }));
+    onSizeChange.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Vermelho" }));
+    expect(onSizeChange).toHaveBeenCalledWith(null);
   });
 });

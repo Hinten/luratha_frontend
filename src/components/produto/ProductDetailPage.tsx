@@ -1,12 +1,8 @@
 import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
-import ProductGallery from "@/src/components/produto/ProductGallery";
-import PriceBlock from "@/src/components/produto/PriceBlock";
-import SizeSelector from "@/src/components/produto/SizeSelector";
-import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import ProductDescription from "@/src/components/produto/ProductDescription";
-import { getProductGalleryImages } from "@/src/lib/productImages";
-import styles from "./ProductDetailPage.module.css";
+import ProductVariantView from "@/src/components/produto/ProductVariantView";
+import { getVariantGalleryImages } from "@/src/lib/productImages";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
 
@@ -20,7 +16,7 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
   const categorySlug = category?.slug ?? "outros";
   const categoryLabel = category?.name ?? "Outros";
   const categoryHref = `/categoria/${categorySlug}`;
-  const images = getProductGalleryImages(product, DEFAULT_PRODUCT_IMAGE_URL);
+  const ssrImages = getVariantGalleryImages(product, null, null, DEFAULT_PRODUCT_IMAGE_URL);
   const currentPrice = product.price.salePrice ?? product.price.price;
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
   const highlights = product.productHighlight ?? [];
@@ -35,7 +31,7 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
     "@type": "Product",
     name: product.title,
     description: product.description,
-    image: images.map((image) => image.defaultUrl),
+    image: ssrImages.map((image) => image.defaultUrl),
     sku: product.sku,
     brand: { "@type": "Brand", name: product.brandName },
     offers: {
@@ -71,60 +67,15 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
           ]}
         />
 
-        {/* Main two-column layout */}
-        <div className={styles.productLayout}>
-          {/* Gallery column */}
-          <div className={styles.galleryCol}>
-            <ProductGallery
-              images={images}
-              productName={product.title}
-            />
-          </div>
+        <ProductVariantView
+          product={product}
+          stock={stock}
+          currentPrice={currentPrice}
+          originalPrice={originalPrice}
+          highlights={highlights}
+          fallbackUrl={DEFAULT_PRODUCT_IMAGE_URL}
+        />
 
-          {/* Info column */}
-          <div className={styles.infoCol}>
-            <h1 className={styles.productName}>{product.title}</h1>
-
-            {product.ratingAverage !== null && (
-              <div className={styles.ratingRow}>
-                <span className={styles.ratingStar} aria-hidden="true">
-                  ★
-                </span>
-                <span className={styles.ratingValue}>
-                  {product.ratingAverage.toFixed(1)}
-                </span>
-                {product.reviewCount !== null && (
-                  <span className={styles.ratingCount}>
-                    ({product.reviewCount} {product.reviewCount === 1 ? "avaliação" : "avaliações"})
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div className={styles.priceWrapper}>
-              <PriceBlock
-                price={currentPrice}
-                originalPrice={originalPrice}
-              />
-            </div>
-
-            <SizeSelector
-              product={product}
-              stock={stock}
-              productId={product.id}
-              slug={product.slug}
-              imageUrl={images[0]?.defaultUrl ?? DEFAULT_PRODUCT_IMAGE_URL}
-              price={currentPrice}
-            />
-
-            {/* Amazon-style bullet-point highlights */}
-            {highlights.length > 0 && (
-              <ProductHighlights highlights={highlights} />
-            )}
-          </div>
-        </div>
-
-        {/* Full description — always visible, below the two-column layout */}
         <ProductDescription description={product.description} />
       </div>
     </>

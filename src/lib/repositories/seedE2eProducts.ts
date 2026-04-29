@@ -38,9 +38,7 @@ export function buildE2eTestProducts(): Product[] {
           size: ["PP", "M", "GG"],
           color: ["Off White"],
           stock: 12,
-          photoIds: [
-            "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+Floral",
-          ],
+          photoIds: [],
           active: true,
         },
       ],
