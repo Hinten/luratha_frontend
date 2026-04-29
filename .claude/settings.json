@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; echo \"📦 Instalando dependências do projeto...\"; cd \"$CLAUDE_PROJECT_DIR\" && npm ci --prefer-offline && echo \"✅ Dependências instaladas com sucesso!\""
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && npm ci --prefer-offline"
           }
         ]
       }
