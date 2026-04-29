@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const tsParser = require("@typescript-eslint/parser");
 
 module.exports = [
