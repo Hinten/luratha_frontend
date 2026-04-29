@@ -150,9 +150,6 @@ jobs:
 
   e2e-cloud:
     name: E2E (Playwright + cloud)
-    # Heavy job (full browser + dev server). Only runs on PRs targeting
-    # production, where the cost is justified before promoting code.
-    if: github.base_ref == 'production'
     runs-on: ubuntu-latest
     needs: [unit, integration-cloud]
     concurrency:
