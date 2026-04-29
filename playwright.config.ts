@@ -54,8 +54,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 2 : undefined,
   reporter: [
     ["html", { open: "never" }],
     ["list"],
@@ -70,11 +70,15 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  // In CI, use the production build (`next start`) so all routes are
+  // pre-compiled. With `next dev` (Turbopack) every first hit to a route
+  // triggers an on-demand compile, which dominates wall-clock time when
+  // tests run serialized. Locally keep `next dev` for fast iteration.
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "npm run build && npm start" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 240_000,
   },
   globalSetup: hasCredentials
     ? require.resolve("./src/test/playwrightCloudSetup.globalSetup.ts")
