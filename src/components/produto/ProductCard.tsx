@@ -2,6 +2,7 @@ import Link from "next/link";
 import styles from "./ProductCard.module.css";
 import type { Product, Stock } from "@/src/schemas/firestore";
 import { getProductCardImage, productCardImageSizes } from "@/src/lib/productImages";
+import RecentlyViewedBadge from "./RecentlyViewedBadge";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -40,6 +41,7 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
           loading="lazy"
           sizes={productCardImageSizes}
         />
+        {slug && <RecentlyViewedBadge slug={slug} />}
       </div>
       <div className={styles.info}>
         <p className={styles.name}>{name}</p>

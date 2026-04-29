@@ -3,6 +3,10 @@ import { render, screen } from "@testing-library/react";
 import ProductCard from "@/src/components/produto/ProductCard";
 import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
 
+vi.mock("@/src/components/produto/RecentlyViewedBadge", () => ({
+  default: () => null,
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     href,
