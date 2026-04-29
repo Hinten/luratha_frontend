@@ -30,6 +30,8 @@ TypeScript check is mandatory: always run `npx tsc` to detect type errors. If er
 
 For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `npm run test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
 
+**CI matrix**: PRs to `master` run lint/typecheck, unit and integration-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) and `e2e-cloud` (Playwright) suites.
+
 ## Architecture
 
 ### Directory Map
