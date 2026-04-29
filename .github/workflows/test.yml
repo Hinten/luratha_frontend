@@ -93,6 +93,7 @@ jobs:
       cancel-in-progress: false
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_FUNCTIONS_CI_DEPLOYER: ${{ secrets.FIREBASE_FUNCTIONS_CI_DEPLOYER }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
       FIREBASE_PROJECT_ID: luratha-96386
       NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
@@ -105,9 +106,9 @@ jobs:
       - name: Verify cloud test secrets are configured
         id: check_secrets
         run: |
-          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] || [ -z "$FIREBASE_FUNCTIONS_CI_DEPLOYER" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando functions-cloud. Configure os secrets para habilitar."
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64, FIREBASE_WEB_APP_CONFIG_BASE64 ou FIREBASE_FUNCTIONS_CI_DEPLOYER ausentes — pulando functions-cloud. Configure os secrets para habilitar."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -125,12 +126,15 @@ jobs:
         run: |
           npm --prefix functions ci
           npm --prefix functions run build
-      - name: Authenticate Firebase CLI from service account
+      - name: Write deployer service account to disk
         if: steps.check_secrets.outputs.skip != 'true'
+        # FIREBASE_FUNCTIONS_CI_DEPLOYER is the JSON of a SA dedicated to deploy
+        # (cloudfunctions.admin + iam.serviceAccountUser on the runtime SA, etc.).
+        # The Admin SDK in the test step keeps using FIREBASE_SERVICE_ACCOUNT_BASE64.
         run: |
           mkdir -p .ci-secrets
-          echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 -d > .ci-secrets/service-account.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$PWD/.ci-secrets/service-account.json" >> "$GITHUB_ENV"
+          printf '%s' "$FIREBASE_FUNCTIONS_CI_DEPLOYER" > .ci-secrets/deployer.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$PWD/.ci-secrets/deployer.json" >> "$GITHUB_ENV"
       - name: Deploy Functions to luratha-96386
         if: steps.check_secrets.outputs.skip != 'true'
         run: npx firebase-tools deploy --only functions --project luratha-96386 --force --non-interactive
