@@ -2,9 +2,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import BuscaPage, { generateMetadata } from "@/src/app/busca/page";
 
-const { searchMock, productGridSpy } = vi.hoisted(() => ({
+const { searchMock, productGridSpy, getStockByProductIdsMock } = vi.hoisted(() => ({
   searchMock: vi.fn(),
   productGridSpy: vi.fn(),
+  getStockByProductIdsMock: vi.fn(),
 }));
 
 vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
@@ -18,6 +19,12 @@ vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
 vi.mock("@/src/lib/repositories/productsSearchRepository", () => ({
   createProductsSearchRepository: () => ({
     search: searchMock,
+  }),
+}));
+
+vi.mock("@/src/lib/repositories/stockRepository", () => ({
+  createStockRepository: () => ({
+    getByProductIds: getStockByProductIdsMock,
   }),
 }));
 
@@ -43,6 +50,7 @@ vi.mock("@/src/components/categoria/ProductGrid", () => ({
 describe("BuscaPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getStockByProductIdsMock.mockResolvedValue(new Map());
   });
 
   it("shows search guide when q is empty", async () => {

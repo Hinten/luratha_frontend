@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import type { Product as FirestoreProduct } from "@/src/schemas/firestore";
+import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
-import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
+import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
+import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 
 export const metadata: Metadata = {
   title: "Promoções",
@@ -87,8 +89,18 @@ function sortProducts(products: FirestoreProduct[], sort?: string): FirestorePro
 
 export default async function SalePage({ searchParams }: PageProps) {
   const { sort } = await searchParams;
-  const saleProducts = buildMockProducts().filter((product) => product.price.salePrice !== null);
+  const { firestore } = await getAuthenticatedAppForUser();
+  const productsRepository = createProductsRepository(firestore);
+  const stockRepository = createStockRepository(firestore);
+
+  const fetchedProducts = await productsRepository.list({ status: "active", limit: 100 });
+  const saleProducts = fetchedProducts.filter((product) => product.price.salePrice !== null);
   const products = sortProducts(saleProducts, sort);
+
+  let stockMap = new Map<string, Stock>();
+  if (products.length > 0) {
+    stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
+  }
 
   return (
     <div className="container-luratha section-padding">
@@ -112,7 +124,7 @@ export default async function SalePage({ searchParams }: PageProps) {
           <SortDropdown currentSort={sort ?? "recentes"} />
         </Suspense>
       </div>
-      <ProductGrid products={products} />
+      <ProductGrid products={products} stockMap={stockMap} />
     </div>
   );
 }

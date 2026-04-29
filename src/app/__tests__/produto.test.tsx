@@ -1,11 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProdutoPage from "@/src/app/produto/[slug]/page";
 import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
 
-const { getBySlugMock, getCategoryByIdMock } = vi.hoisted(() => ({
+const { getBySlugMock, getCategoryByIdMock, getStockByProductIdMock } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),
   getCategoryByIdMock: vi.fn(),
+  getStockByProductIdMock: vi.fn(),
 }));
 
 vi.mock("next/link", () => ({
@@ -55,6 +56,12 @@ vi.mock("@/src/lib/repositories/productsRepository", () => ({
 vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
   createCategoriesRepository: () => ({
     getById: getCategoryByIdMock,
+  }),
+}));
+
+vi.mock("@/src/lib/repositories/stockRepository", () => ({
+  createStockRepository: () => ({
+    getByProductId: getStockByProductIdMock,
   }),
 }));
 
@@ -120,6 +127,11 @@ const mockFirestoreProduct: Product = validateProduct({
 });
 
 describe("ProdutoPage", () => {
+  beforeEach(() => {
+    getStockByProductIdMock.mockReset();
+    getStockByProductIdMock.mockResolvedValue(null);
+  });
+
   it("renders the product heading for a known slug", async () => {
     getBySlugMock.mockResolvedValueOnce(mockFirestoreProduct);
     getCategoryByIdMock.mockResolvedValueOnce({
