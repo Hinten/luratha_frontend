@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
       testTimeout: 30_000,
       retry: 1,
       env: {
-        CLOUD_TEST_PROJECT_ID: process.env.CLOUD_TEST_PROJECT_ID ?? "luratha-test",
+        CLOUD_TEST_PROJECT_ID: process.env.CLOUD_TEST_PROJECT_ID ?? "luratha-96386",
         GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
         RUN_CLOUD_TESTS: "true",
       },

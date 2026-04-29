@@ -2,10 +2,10 @@
  * Cloud integration tests for the `onProductDeleted` Firebase Function.
  *
  * These tests run against the deployed function in the dedicated test project
- * (`luratha-test`). The CI workflow deploys the function before running the
+ * (`luratha-96386`). The CI workflow deploys the function before running the
  * suite (see .github/workflows/test.yml). For local runs, deploy manually:
  *
- *   firebase deploy --only functions --project luratha-test
+ *   firebase deploy --only functions --project luratha-96386
  *   npm run test:functions:cloud
  *
  * The suite is skipped when cloud credentials are missing.

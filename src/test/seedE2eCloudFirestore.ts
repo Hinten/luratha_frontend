@@ -4,7 +4,7 @@ import { buildE2eTestProducts } from "@/src/lib/repositories/seedE2eProducts";
 import { firestoreCollections } from "@/src/schemas/firestore";
 
 /**
- * Seeds the cloud test Firestore project (`luratha-test`) with deterministic
+ * Seeds the cloud test Firestore project (`luratha-96386`) with deterministic
  * E2E fixtures via Admin SDK. The fixtures use stable slugs/IDs that the
  * Playwright specs rely on. CI serializes the e2e job (concurrency group)
  * so that concurrent PRs don't race on the shared collections.

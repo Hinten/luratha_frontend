@@ -2,13 +2,13 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Playwright E2E config — runs against the dedicated test Firebase project
- * (`luratha-test`). The dev server inherits Firebase credentials from the
+ * (`luratha-96386`). The dev server inherits Firebase credentials from the
  * caller's environment (CI workflow or local `.env`).
  *
  * Required env vars when running:
  *   FIREBASE_SERVICE_ACCOUNT_BASE64 (or GOOGLE_APPLICATION_CREDENTIALS)
  *   FIREBASE_WEB_APP_CONFIG_BASE64 (or NEXT_PUBLIC_FIREBASE_* set)
- *   NEXT_PUBLIC_FIREBASE_PROJECT_ID=luratha-test
+ *   NEXT_PUBLIC_FIREBASE_PROJECT_ID=luratha-96386
  */
 
 export default defineConfig({
