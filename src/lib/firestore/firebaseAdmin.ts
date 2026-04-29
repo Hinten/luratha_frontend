@@ -2,21 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { applicationDefault, cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import {
-  applyEmulatorEnvironmentDefaults,
-  DATABASE_NAME,
-  getFirebaseProjectId,
-  getFirebaseStorageBucket,
-  isEmulatorEnabled,
-} from "./environment";
+import { DATABASE_NAME, getFirebaseProjectId, getFirebaseStorageBucket } from "./environment";
 
 const FIREBASE_ADMIN_APP_NAME = "luratha-admin-app";
 
-applyEmulatorEnvironmentDefaults();
-
 const projectId = getFirebaseProjectId();
 const storageBucket = getFirebaseStorageBucket(projectId);
-const runningWithEmulator = isEmulatorEnabled();
 const serviceAccount = getServiceAccountFromEnvironment();
 
 const adminApp =
@@ -25,11 +16,7 @@ const adminApp =
     {
       projectId,
       storageBucket,
-      ...(runningWithEmulator
-        ? {}
-        : {
-            credential: serviceAccount ? cert(serviceAccount) : applicationDefault(),
-          }),
+      credential: serviceAccount ? cert(serviceAccount) : applicationDefault(),
     },
     FIREBASE_ADMIN_APP_NAME,
   );
@@ -51,7 +38,7 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
     const decodedValue = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8");
     const base64Credential = parseServiceAccount(decodedValue, "FIREBASE_SERVICE_ACCOUNT_BASE64");
-    if (base64Credential) {      
+    if (base64Credential) {
       return base64Credential;
     }
   }

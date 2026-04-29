@@ -3,10 +3,7 @@ import { initializeServerApp, type FirebaseServerApp } from "firebase/app";
 import { getAuth, type User } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { cookies, headers } from "next/headers";
-import { initializeServerFirestoreEmulator } from "./emulator";
-import { applyEmulatorEnvironmentDefaults, DATABASE_NAME, getFirebaseWebConfig } from "./environment";
-
-applyEmulatorEnvironmentDefaults();
+import { DATABASE_NAME, getFirebaseWebConfig } from "./environment";
 
 const firebaseServerConfig = getFirebaseWebConfig();
 const BEARER_PREFIX = "Bearer ";
@@ -29,7 +26,6 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
     authIdToken,
   });
   const firestore = getFirestore(authenticatedServerApp, DATABASE_NAME);
-  initializeServerFirestoreEmulator(firestore);
 
   if (!firebaseServerConfig.apiKey) {
     if (authIdToken) {
