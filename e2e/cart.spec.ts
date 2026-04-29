@@ -41,9 +41,9 @@ test.describe("Cart (Carrinho)", () => {
 
   test("empty cart shows link to browse products", async ({ page }) => {
     await page.goto("/carrinho");
-    const browseLink = page.getByRole("link", { name: "Ver coleção" });
+    const browseLink = page.getByRole("link", { name: "Ver Categorias" });
     await expect(browseLink).toBeVisible();
-    await expect(browseLink).toHaveAttribute("href", "/colecao");
+    await expect(browseLink).toHaveAttribute("href", "/todas-as-pecas");
   });
 
   test("cart link in header navigates to /carrinho", async ({ page }) => {

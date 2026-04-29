@@ -2,7 +2,7 @@ import { type Product, type Stock, validateProduct, validateStock } from "@/src/
 
 /**
  * E2E test product data.
- * Must match the product slugs and data expected in e2e/with-emulator/*.spec.ts
+ * Must match the product slugs and data expected in e2e/*.spec.ts
  */
 export function buildE2eTestProducts(): Product[] {
   const now = new Date().toISOString();

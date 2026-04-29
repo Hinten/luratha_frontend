@@ -258,13 +258,8 @@ async function buildTemporaryUrl(
 
 function buildDownloadUrl(storagePath: string, token: string): string {
   const encodedPath = encodeURIComponent(storagePath);
-  const emulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST;
   const bucketName = adminBucket.name;
-  const baseUrl = emulatorHost
-    ? `http://${emulatorHost}/v0/b/${bucketName}/o`
-    : `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o`;
-
-  return `${baseUrl}/${encodedPath}?alt=media&token=${token}`;
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${token}`;
 }
 
 function createImageId(fileName?: string): string {

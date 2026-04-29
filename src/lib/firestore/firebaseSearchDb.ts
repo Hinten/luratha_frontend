@@ -1,12 +1,7 @@
 import "server-only";
 import { getApps, initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { initializeServerFirestoreEmulator } from "./emulator";
-import {
-  applyEmulatorEnvironmentDefaults,
-  DATABASE_NAME,
-  getFirebaseWebConfig,
-} from "./environment";
+import { DATABASE_NAME, getFirebaseWebConfig } from "./environment";
 
 /**
  * Server-only client Firestore instance used for pipeline searches inside
@@ -18,12 +13,8 @@ import {
 
 const SEARCH_APP_NAME = "luratha-search-server-app";
 
-applyEmulatorEnvironmentDefaults();
-
 const _app =
   getApps().find((a) => a.name === SEARCH_APP_NAME) ??
   initializeApp(getFirebaseWebConfig(), SEARCH_APP_NAME);
 
 export const searchDb = getFirestore(_app, DATABASE_NAME);
-
-initializeServerFirestoreEmulator(searchDb);

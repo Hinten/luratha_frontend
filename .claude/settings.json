@@ -6,7 +6,12 @@
       "Bash(firebase --version)",
       "Bash(npx playwright *)",
       "Bash(nvm --version)",
-      "Bash(fnm --version)"
+      "Bash(fnm --version)",
+      "Bash(echo \"EXIT:$?\")"
+    ],
+    "deny": [
+      "Edit(node_modules/**)",
+      "Write(node_modules/**)"
     ]
   },
   "hooks": {

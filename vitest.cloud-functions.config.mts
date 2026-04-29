@@ -16,9 +16,6 @@ export default defineConfig(({ mode }) => {
     plugins: [tsconfigPaths()],
     resolve: {
       alias: {
-        // "server-only" is a Next.js guard that throws unconditionally outside
-        // the Next.js bundler. Replace it with an empty no-op so server modules
-        // (e.g. firebaseSearchDb.ts) can be imported in the Node.js test runner.
         "server-only": path.resolve(__dirname, "src/test/__mocks__/server-only.ts"),
       },
     },
@@ -26,8 +23,13 @@ export default defineConfig(({ mode }) => {
       environment: "node",
       globals: true,
       globalSetup: ["./src/test/cloudTests.globalSetup.ts"],
-      include: ["src/test/cloud/**/*.test.ts"],
-      testTimeout: 30_000,
+      include: ["src/test/cloud-functions/**/*.test.ts"],
+      // Cloud Function trigger tests have to wait for the deployed function to
+      // execute and write side effects — keep timeouts generous.
+      testTimeout: 90_000,
+      // Functions tests must not run in parallel: deployed triggers fire on shared
+      // collections, so concurrent tests would race on the same documents.
+      fileParallelism: false,
       retry: 1,
       env: {
         CLOUD_TEST_PROJECT_ID: process.env.CLOUD_TEST_PROJECT_ID ?? "luratha-96386",
