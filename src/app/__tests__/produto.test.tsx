@@ -109,7 +109,7 @@ const mockFirestoreProduct: Product = validateProduct({
       item_group_id: "LURATHA_002",
       size: ["P"],
       color: ["Azul"],
-      photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+1"],
+      photoIds: [],
       active: true,
     },
   ],

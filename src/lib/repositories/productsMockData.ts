@@ -39,7 +39,7 @@ export function buildMockProducts(): Product[] {
           size: ["P"],
           color: ["Bege"],
           stock: 12,
-          photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Mock+1"],
+          photoIds: [],
           active: true,
         },
       ],
