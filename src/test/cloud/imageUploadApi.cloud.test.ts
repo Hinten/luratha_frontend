@@ -23,7 +23,9 @@ import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSet
 describeCloud("POST /api/images/upload (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const [mockProduct] = buildMockProducts();
-  const testProductId = `${prefix}_upload_${mockProduct.id}`;
+  // testProductId must stay ≤50 chars (product id schema limit).
+  // prefix (~29 chars) + "_up" leaves enough room without embedding mockProduct.id.
+  const testProductId = `${prefix}_up`;
   const testImagePath = path.join(process.cwd(), "test-images", "IMG_34562.png");
 
   beforeAll(async () => {

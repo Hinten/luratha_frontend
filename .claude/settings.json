@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "deny": [
+      "Edit(node_modules/**)",
+      "Write(node_modules/**)"
+    ],
     "allow": [
       "Bash(npm --version)",
       "Bash(java -version)",
