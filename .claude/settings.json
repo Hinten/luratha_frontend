@@ -25,6 +25,17 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.github/scripts/fetch-ci-logs.sh\"",
+            "timeout": 35
+          }
+        ]
+      }
     ]
   }
 }
