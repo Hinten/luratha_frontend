@@ -7,6 +7,20 @@
       "Bash(npx playwright *)",
       "Bash(nvm --version)",
       "Bash(fnm --version)"
+      "Bash(npm root *)",
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; echo \"📦 Instalando dependências do projeto...\"; cd \"$CLAUDE_PROJECT_DIR\" && npm ci --prefer-offline && echo \"✅ Dependências instaladas com sucesso!\""
+          }
+        ]
+      }
     ]
   }
 }

@@ -56,6 +56,11 @@ jobs:
           firebase setup:emulators:firestore
           firebase setup:emulators:storage
       
+      - name: Install and build Firebase Functions
+        run: |
+          npm --prefix functions ci
+          npm --prefix functions run build
+      
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
