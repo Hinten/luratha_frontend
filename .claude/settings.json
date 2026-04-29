@@ -1,6 +1,12 @@
 {
   "permissions": {
     "allow": [
+      "Bash(npm --version)",
+      "Bash(java -version)",
+      "Bash(firebase --version)",
+      "Bash(npx playwright *)",
+      "Bash(nvm --version)",
+      "Bash(fnm --version)"
       "Bash(npm root *)",
     ]
   },

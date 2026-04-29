@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
-import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product, type Stock, validateProduct } from "@/src/schemas/firestore";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -27,10 +27,35 @@ vi.mock("@/src/components/produto/ProductGallery", () => ({
   ),
 }));
 
+// SizeSelector now handles stock display; render stock info so page-level
+// stock tests can still verify that the correct data flows through.
 vi.mock("@/src/components/produto/SizeSelector", () => ({
-  default: ({ sizes }: { sizes: string[] }) => (
-    <div data-testid="size-selector">{sizes.join(", ")}</div>
-  ),
+  default: ({
+    product,
+    stock,
+  }: {
+    product: Product;
+    stock?: Stock | null;
+  }) => {
+    const qty = stock?.quantity ?? product.totalStock;
+    return (
+      <div data-testid="size-selector">
+        {qty === 0 ? (
+          <button type="button" disabled aria-label="produto esgotado">
+            PRODUTO ESGOTADO
+          </button>
+        ) : qty === 1 ? (
+          <p>Última peça!</p>
+        ) : qty === 2 ? (
+          <p>Últimas 2 peças!</p>
+        ) : qty <= 5 ? (
+          <p>Últimas {qty} peças!</p>
+        ) : (
+          <p>Em estoque</p>
+        )}
+      </div>
+    );
+  },
 }));
 
 const mockProduct: Product = validateProduct({
@@ -148,9 +173,9 @@ describe("ProductDetailPage", () => {
     expect(data.name).toBe(mockProduct.title);
   });
 
-  it("shows stock quantity when stock prop is provided (simple product)", () => {
+  it("shows 'Em estoque' when stock prop is provided with ample quantity (qty=8)", () => {
     const now = "2026-04-26T18:00:00.000Z";
-    const stock = {
+    const stock: Stock = {
       productId: mockProduct.id,
       sku: mockProduct.sku,
       quantity: 8,
@@ -159,12 +184,12 @@ describe("ProductDetailPage", () => {
       updatedAt: now,
     };
     render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
-    expect(screen.getByText(/8 unidades disponíveis/)).toBeInTheDocument();
+    expect(screen.getByText("Em estoque")).toBeInTheDocument();
   });
 
-  it("shows 'Esgotado' when stock quantity is 0", () => {
+  it("shows 'PRODUTO ESGOTADO' button when stock quantity is 0", () => {
     const now = "2026-04-26T18:00:00.000Z";
-    const stock = {
+    const stock: Stock = {
       productId: mockProduct.id,
       sku: mockProduct.sku,
       quantity: 0,
@@ -173,12 +198,12 @@ describe("ProductDetailPage", () => {
       updatedAt: now,
     };
     render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
-    expect(screen.getByLabelText("Disponibilidade do produto")).toHaveTextContent("Esgotado");
+    expect(screen.getByRole("button", { name: /produto esgotado/i })).toBeDisabled();
   });
 
-  it("shows 'Últimas N unidades' when stock is low (<=3)", () => {
+  it("shows urgency message when stock is low (qty=2)", () => {
     const now = "2026-04-26T18:00:00.000Z";
-    const stock = {
+    const stock: Stock = {
       productId: mockProduct.id,
       sku: mockProduct.sku,
       quantity: 2,
@@ -187,13 +212,13 @@ describe("ProductDetailPage", () => {
       updatedAt: now,
     };
     render(<ProductDetailPage product={mockProduct} category={mockCategory} stock={stock} />);
-    expect(screen.getByText(/Últimas 2 unidades/)).toBeInTheDocument();
+    expect(screen.getByText("Últimas 2 peças!")).toBeInTheDocument();
   });
 
   it("falls back to product.totalStock when stock prop is not provided", () => {
     const productWithStock = { ...mockProduct, totalStock: 5 };
     render(<ProductDetailPage product={productWithStock} category={mockCategory} />);
-    expect(screen.getByText(/5 unidades disponíveis/)).toBeInTheDocument();
+    expect(screen.getByText("Últimas 5 peças!")).toBeInTheDocument();
   });
 });
 

@@ -66,9 +66,7 @@ vi.mock("@/src/components/produto/ProductGallery", () => ({
 }));
 
 vi.mock("@/src/components/produto/SizeSelector", () => ({
-  default: ({ sizes }: { sizes: string[] }) => (
-    <div data-testid="size-selector">{sizes.join(", ")}</div>
-  ),
+  default: () => <div data-testid="size-selector" />,
 }));
 
 vi.mock("@/src/components/produto/ProductCard", () => ({
