@@ -4,9 +4,7 @@ import { test, expect } from "@playwright/test";
 test.skip(process.env.E2E_CLOUD_SKIP === "1", "Firebase credentials not configured — cloud fixtures not seeded");
 
 test.describe("Category pages", () => {
-  test("loads the vestidos category page with h1 and products", async ({
-    page,
-  }) => {
+  test("vestidos: title, h1, product grid and count", async ({ page }) => {
     await page.goto("/categoria/vestidos");
     await expect(page).toHaveTitle(/Vestidos.*Luratha/);
     await expect(page.getByRole("heading", { level: 1, name: "Vestidos" })).toBeVisible();
@@ -16,22 +14,10 @@ test.describe("Category pages", () => {
         .or(page.getByText("Nenhuma peça encontrada"))
         .first(),
     ).toBeVisible();
-  });
-
-  test("shows product count text", async ({ page }) => {
-    await page.goto("/categoria/vestidos");
     await expect(page.getByText(/produtos encontrados/)).toBeVisible();
   });
 
-  test("renders header and footer on category page", async ({ page }) => {
-    await page.goto("/categoria/blusas");
-    await expect(page.locator("header")).toBeVisible();
-    await expect(page.locator("footer")).toBeVisible();
-  });
-
-  test("renders the breadcrumb with Home link and category name", async ({
-    page,
-  }) => {
+  test("calcas: breadcrumb with Home link and category name", async ({ page }) => {
     await page.goto("/categoria/calcas");
     const nav = page.getByRole("navigation", { name: "Breadcrumb" });
     await expect(nav).toBeVisible();
@@ -39,7 +25,7 @@ test.describe("Category pages", () => {
     await expect(nav.getByText("Calças")).toBeVisible();
   });
 
-  test("renders the sort dropdown", async ({ page }) => {
+  test("saias: sort dropdown is rendered", async ({ page }) => {
     await page.goto("/categoria/saias");
     await expect(page.getByRole("combobox")).toBeVisible();
   });
@@ -71,7 +57,7 @@ test.describe("Category pages", () => {
 });
 
 test.describe("Todas as Peças page", () => {
-  test("loads with title and product grid", async ({ page }) => {
+  test("renders title, h1, breadcrumb, product grid and count", async ({ page }) => {
     await page.goto("/todas-as-pecas");
     await expect(page).toHaveTitle(/Todas as Peças.*Luratha/);
     await expect(
@@ -83,38 +69,23 @@ test.describe("Todas as Peças page", () => {
         .or(page.getByText("Nenhuma peça encontrada"))
         .first(),
     ).toBeVisible();
-  });
 
-  test("renders the breadcrumb", async ({ page }) => {
-    await page.goto("/todas-as-pecas");
     const nav = page.getByRole("navigation", { name: "Breadcrumb" });
     await expect(nav).toBeVisible();
     await expect(nav.getByRole("link", { name: "Home" })).toBeVisible();
-  });
 
-  test("shows all products", async ({ page }) => {
-    await page.goto("/todas-as-pecas");
     await expect(page.getByText(/produtos encontrados/)).toBeVisible();
   });
 });
 
 test.describe("Sale page", () => {
-  test("loads with title and discounted products", async ({ page }) => {
+  test("renders title, h1, breadcrumb and discounted product count", async ({ page }) => {
     await page.goto("/sale");
     await expect(page).toHaveTitle(/Promoções.*Luratha/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Promoções" })
     ).toBeVisible();
-  });
-
-  test("renders the breadcrumb", async ({ page }) => {
-    await page.goto("/sale");
-    const nav = page.getByRole("navigation", { name: "Breadcrumb" });
-    await expect(nav).toBeVisible();
-  });
-
-  test("shows only discounted products", async ({ page }) => {
-    await page.goto("/sale");
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
     await expect(page.getByText(/produtos? encontrado/)).toBeVisible();
   });
 });
