@@ -46,7 +46,7 @@ const homePageSchema = {
 };
 
 export default async function Home() {
-  const { categories, newArrivals, featured, sale } = await getHomePageData();
+  const { categories, newArrivals, featured, sale, stockMap } = await getHomePageData();
 
   return (
     <main>
@@ -63,6 +63,7 @@ export default async function Home() {
         products={newArrivals}
         viewAllHref="/colecao"
         viewAllLabel="Ver todos os lançamentos"
+        stockMap={stockMap}
       />
 
       {/* 4. Destaques */}
@@ -72,6 +73,7 @@ export default async function Home() {
           products={featured}
           viewAllHref="/colecao"
           viewAllLabel="Ver todos os destaques"
+          stockMap={stockMap}
         />
       </div>
 
@@ -89,7 +91,7 @@ export default async function Home() {
           </div>
           <div className={styles.saleGrid}>
             {sale.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} stock={stockMap.get(product.id)} />
             ))}
           </div>
         </div>

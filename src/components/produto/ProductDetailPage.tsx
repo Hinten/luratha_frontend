@@ -23,10 +23,8 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
   const images = getProductGalleryImages(product, DEFAULT_PRODUCT_IMAGE_URL);
   const currentPrice = product.price.salePrice ?? product.price.price;
   const originalPrice = product.price.salePrice ? product.price.price : undefined;
-  const sizes = extractUniqueSizes(product);
   const highlights = product.productHighlight ?? [];
 
-  // Use stock collection data when available; fall back to embedded product data
   const totalQuantity = stock?.quantity ?? product.totalStock;
   const availability = totalQuantity > 0
     ? "https://schema.org/InStock"
@@ -110,16 +108,14 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
               />
             </div>
 
-              <SizeSelector
-                sizes={sizes}
-                productName={product.title}
-                productId={product.id}
-                slug={product.slug}
-                imageUrl={images[0]?.defaultUrl ?? DEFAULT_PRODUCT_IMAGE_URL}
-                price={currentPrice}
-              />
-
-            <StockInfo stock={stock} product={product} />
+            <SizeSelector
+              product={product}
+              stock={stock}
+              productId={product.id}
+              slug={product.slug}
+              imageUrl={images[0]?.defaultUrl ?? DEFAULT_PRODUCT_IMAGE_URL}
+              price={currentPrice}
+            />
 
             {/* Amazon-style bullet-point highlights */}
             {highlights.length > 0 && (
@@ -132,70 +128,5 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
         <ProductDescription description={product.description} />
       </div>
     </>
-  );
-}
-
-function extractUniqueSizes(product: FirestoreProduct): string[] {
-  return Array.from(
-    new Set([
-      ...(product.size ?? []),
-      ...(product.variants?.flatMap((variant) => variant.size ?? []) ?? []),
-    ]),
-  );
-}
-
-interface StockInfoProps {
-  stock?: Stock | null;
-  product: FirestoreProduct;
-}
-
-function StockInfo({ stock, product }: StockInfoProps) {
-  // Prefer stock collection data; fall back to embedded product fields
-  const totalQuantity = stock?.quantity ?? product.totalStock;
-
-  if (totalQuantity === 0) {
-    return (
-      <p className={styles.stockOutOfStock} aria-label="Disponibilidade do produto">
-        Esgotado
-      </p>
-    );
-  }
-
-  if (stock?.hasVariants && stock.variants) {
-    return (
-      <div className={styles.stockInfo} aria-label="Estoque por variação">
-        {Object.entries(stock.variants).map(([variantId, qty]) => {
-          const variant = product.variants?.find((v) => v.id === variantId);
-          const label = variant?.size?.join(" / ") ?? variant?.sku ?? variantId;
-          const isLow = qty > 0 && qty <= 3;
-          return (
-            <p key={variantId} className={qty === 0 ? styles.stockVariantOut : styles.stockVariantIn}>
-              {label}:{" "}
-              {qty === 0 ? (
-                "Esgotado"
-              ) : isLow ? (
-                <span className={styles.stockLow}>Últimas {qty} unid.</span>
-              ) : (
-                `${qty} disponíveis`
-              )}
-            </p>
-          );
-        })}
-      </div>
-    );
-  }
-
-  if (totalQuantity <= 3) {
-    return (
-      <p className={styles.stockLow} aria-label="Disponibilidade do produto">
-        Últimas {totalQuantity} unidades
-      </p>
-    );
-  }
-
-  return (
-    <p className={styles.stockInStock} aria-label="Disponibilidade do produto">
-      {totalQuantity} unidades disponíveis
-    </p>
   );
 }

@@ -15,6 +15,7 @@
   --color-neutral-light: #F8F5F0; /* Page background                            */
   --color-neutral-mid:   #D9D2C7; /* Dividers, subtle shadows                   */
   --color-error:         #C9A8A8; /* Alerts                                     */
+  --color-warning:       #B45309; /* Low-stock / caution text (amber-700)       */
 
   /* Spacing base unit: 8 px → kept as multiples in Tailwind utilities */
 }

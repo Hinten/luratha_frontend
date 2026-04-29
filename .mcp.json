@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "playwright": {
+      "type": "local",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "vitest": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@djankies/vitest-mcp@latest"]
+    }
+  }
+}

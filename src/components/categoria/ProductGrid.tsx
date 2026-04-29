@@ -1,12 +1,13 @@
-import type { Product } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@/src/schemas/firestore";
 import styles from "./ProductGrid.module.css";
 import ProductCard from "../produto/ProductCard";
 
 interface ProductGridProps {
   products: Product[];
+  stockMap?: Map<string, Stock>;
 }
 
-export default function ProductGrid({ products }: ProductGridProps) {
+export default function ProductGrid({ products, stockMap }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className={styles.empty}>
@@ -21,7 +22,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
   return (
     <div className={styles.grid} data-testid="product-grid">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} stock={stockMap?.get(product.id)} />
       ))}
     </div>
   );

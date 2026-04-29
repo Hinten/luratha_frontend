@@ -1,4 +1,4 @@
-/* ─── SizeSelector ────────────────────────────────────────────────────────── */
+/* ─── SizeSelector / VariantSelector ──────────────────────────────────────── */
 
 .wrapper {
   display: flex;
@@ -6,14 +6,21 @@
   gap: 1rem;
 }
 
-/* Size label + error row */
-.sizeRow {
+/* Wraps label row + buttons for one dimension (color or size) */
+.selectorGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Label + inline error */
+.selectorRow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.sizeLabel {
+.selectorLabel {
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 600;
@@ -29,16 +36,18 @@
   font-weight: 500;
 }
 
-/* Size option buttons */
+/* Pill buttons row (shared by color and size) */
+.variantOptions,
 .sizeOptions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.sizeBtn {
+/* Base pill button */
+.variantBtn {
   min-width: 3rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.875rem;
   border-radius: 9999px;
   border: 1.5px solid var(--color-neutral-mid);
   background: none;
@@ -50,23 +59,62 @@
   transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
 }
 
-.sizeBtn:hover {
+.variantBtn:hover {
   border-color: var(--color-neutral-dark);
   background-color: color-mix(in srgb, var(--color-neutral-dark) 5%, transparent);
 }
 
-.sizeSelected {
+/* Selected state */
+.variantSelected {
   border-color: var(--color-neutral-dark);
   background-color: var(--color-neutral-dark);
   color: var(--color-neutral-light);
 }
 
-.sizeSelected:hover {
+.variantSelected:hover {
   background-color: color-mix(in srgb, var(--color-neutral-dark) 85%, transparent);
   color: var(--color-neutral-light);
 }
 
-/* Add to cart button */
+/* Unavailable / out-of-stock variant — looks disabled, still clickable */
+.variantUnavailable {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.variantUnavailable:hover {
+  border-color: var(--color-neutral-mid);
+  background-color: transparent;
+}
+
+/* ─── Stock urgency messages ─────────────────────────────────────────────── */
+
+.stockMsgLow {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  margin: 0;
+}
+
+.stockMsgMedium {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b45309;
+  margin: 0;
+}
+
+.stockMsgHigh {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin: 0;
+}
+
+/* ─── Action buttons ─────────────────────────────────────────────────────── */
+
 .addToCart {
   width: 100%;
   padding: 1rem 2rem;
@@ -89,6 +137,18 @@
 
 .addToCart:active {
   transform: translateY(0);
+}
+
+/* Out-of-stock disabled state */
+.outOfStockBtn {
+  background-color: color-mix(in srgb, var(--color-neutral-dark) 18%, transparent);
+  color: color-mix(in srgb, var(--color-neutral-dark) 45%, transparent);
+  cursor: not-allowed;
+}
+
+.outOfStockBtn:hover {
+  background-color: color-mix(in srgb, var(--color-neutral-dark) 18%, transparent);
+  transform: none;
 }
 
 /* Favorite button */

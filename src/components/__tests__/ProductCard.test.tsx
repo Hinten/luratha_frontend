@@ -159,4 +159,60 @@ describe("ProductCard", () => {
     expect(screen.queryByText(/-\d+%/)).not.toBeInTheDocument();
     expect(screen.getByText("Esgotado")).toBeInTheDocument();
   });
+
+  // ── Stock prop behaviour ───────────────────────────────────────────────────
+
+  it("shows low-stock text when stock prop quantity is between 1 and 3", () => {
+    const product = createProduct({ totalStock: 10 });
+    const stock = {
+      productId: product.id,
+      sku: product.sku,
+      quantity: 2,
+      hasVariants: false,
+      variants: null,
+      updatedAt: "2026-04-15T00:00:00.000Z",
+    };
+    render(<ProductCard product={product} stock={stock} />);
+    expect(screen.getByText(/Últimas 2 unid\./)).toBeInTheDocument();
+  });
+
+  it("does NOT show low-stock text when stock prop quantity is above 3", () => {
+    const product = createProduct({ totalStock: 10 });
+    const stock = {
+      productId: product.id,
+      sku: product.sku,
+      quantity: 5,
+      hasVariants: false,
+      variants: null,
+      updatedAt: "2026-04-15T00:00:00.000Z",
+    };
+    render(<ProductCard product={product} stock={stock} />);
+    expect(screen.queryByText(/Últimas/)).not.toBeInTheDocument();
+  });
+
+  it("shows 'Esgotado' badge when stock prop quantity is 0, even if product.totalStock > 0", () => {
+    const product = createProduct({ totalStock: 10 });
+    const stock = {
+      productId: product.id,
+      sku: product.sku,
+      quantity: 0,
+      hasVariants: false,
+      variants: null,
+      updatedAt: "2026-04-15T00:00:00.000Z",
+    };
+    render(<ProductCard product={product} stock={stock} />);
+    expect(screen.getByText("Esgotado")).toBeInTheDocument();
+  });
+
+  it("falls back to product.totalStock for low-stock detection when stock prop is not provided", () => {
+    const product = createProduct({ totalStock: 3 });
+    render(<ProductCard product={product} />);
+    expect(screen.getByText(/Últimas 3 unid\./)).toBeInTheDocument();
+  });
+
+  it("falls back to product.totalStock for out-of-stock when stock prop is not provided", () => {
+    const product = createProduct({ totalStock: 0 });
+    render(<ProductCard product={product} />);
+    expect(screen.getByText("Esgotado")).toBeInTheDocument();
+  });
 });

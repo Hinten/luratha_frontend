@@ -1,7 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm root *)",
+      "Bash(npm --version)",
+      "Bash(java -version)",
+      "Bash(firebase --version)",
+      "Bash(npx playwright *)",
+      "Bash(nvm --version)",
+      "Bash(fnm --version)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && npm ci --prefer-offline"
+          }
+        ]
+      }
     ]
   }
 }

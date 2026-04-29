@@ -30,11 +30,13 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 12,
       ratingAverage: 4.5,
       reviewCount: 5,
+      color: ["Off White"],
       variants: [
         {
           id: "var_luratha_e2e_001_v1",
           sku: "LURATHA_E2E_001_VARIANT",
           size: ["PP", "M", "GG"],
+          color: ["Off White"],
           stock: 12,
           photoIds: [
             "https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Bordado+Floral",
@@ -66,6 +68,7 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 8,
       ratingAverage: 4.7,
       reviewCount: 3,
+      color: ["Terracota"],
       createdAt: now,
       updatedAt: now,
     }),
@@ -90,6 +93,7 @@ export function buildE2eTestProducts(): Product[] {
       totalStock: 7,
       ratingAverage: 4.6,
       reviewCount: 4,
+      color: ["Cinza", "Off White"],
       createdAt: now,
       updatedAt: now,
     }),

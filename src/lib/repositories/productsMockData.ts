@@ -31,11 +31,13 @@ export function buildMockProducts(): Product[] {
       reviewCount: 9,
       totalStock: 12,
       status: "active",
+      color: ["Bege"],
       variants: [
         {
           id: "var_luratha_101",
           sku: "LURATHA_101",
           size: ["P"],
+          color: ["Bege"],
           stock: 12,
           photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Vestido+Mock+1"],
           active: true,
@@ -67,6 +69,7 @@ export function buildMockProducts(): Product[] {
       totalStock: 7,
       status: "active",
       size: ["M"],
+      color: ["Off White", "Bege"],
       vectorEmbedding: [0.21, 0.11, 0.35, 0.49, 0.19, 0.28, 0.4, 0.55],
       createdAt,
       updatedAt,
