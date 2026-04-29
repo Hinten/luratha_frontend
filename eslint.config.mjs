@@ -12,9 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Firebase Functions compiled output — linting the compiled JS is not useful.
-    "functions/lib/**",
-    "functions/node_modules/**",
+    // Firebase Functions is a separate project with its own ESLint setup —
+    // skip its source and tooling files in the root lint pass.
+    "functions/**",
   ]),
 ]);
 
