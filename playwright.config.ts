@@ -70,15 +70,11 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // In CI, use the production build (`next start`) so all routes are
-  // pre-compiled. With `next dev` (Turbopack) every first hit to a route
-  // triggers an on-demand compile, which dominates wall-clock time when
-  // tests run serialized. Locally keep `next dev` for fast iteration.
   webServer: {
-    command: process.env.CI ? "npm run build && npm start" : "npm run dev",
+    command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 240_000,
+    timeout: 120_000,
   },
   globalSetup: hasCredentials
     ? require.resolve("./src/test/playwrightCloudSetup.globalSetup.ts")
