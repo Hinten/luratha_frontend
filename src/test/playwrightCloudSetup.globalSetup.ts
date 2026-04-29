@@ -8,9 +8,11 @@ export default async function playwrightCloudGlobalSetup(): Promise<void> {
     !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
   if (!hasServiceAccount) {
-    throw new Error(
-      "Playwright cloud E2E requires Firebase admin credentials. Set FIREBASE_SERVICE_ACCOUNT_BASE64 (or GOOGLE_APPLICATION_CREDENTIALS) before running.",
+    console.warn(
+      "[E2E] globalSetup: no Firebase credentials — skipping cloud fixture seed.",
     );
+    process.env.E2E_CLOUD_SKIP = "1";
+    return;
   }
 
   await seedE2eCloudFirestore();

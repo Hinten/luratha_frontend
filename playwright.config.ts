@@ -1,15 +1,54 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 
 /**
  * Playwright E2E config — runs against the dedicated test Firebase project
  * (`luratha-96386`). The dev server inherits Firebase credentials from the
  * caller's environment (CI workflow or local `.env`).
  *
- * Required env vars when running:
- *   FIREBASE_SERVICE_ACCOUNT_BASE64 (or GOOGLE_APPLICATION_CREDENTIALS)
+ * Required env vars when running cloud tests:
+ *   FIREBASE_SERVICE_ACCOUNT_BASE64 (or FIREBASE_SERVICE_ACCOUNT_PATH)
  *   FIREBASE_WEB_APP_CONFIG_BASE64 (or NEXT_PUBLIC_FIREBASE_* set)
  *   NEXT_PUBLIC_FIREBASE_PROJECT_ID=luratha-96386
+ *
+ * When credentials are absent, cloud-dependent tests auto-skip and the
+ * remaining UI tests (auth, cart, institutional, navigation) still run.
  */
+
+// Explicitly load .env so credential vars are available before globalSetup.
+// Playwright v1.40+ loads .env automatically, but this guards against edge
+// cases (e.g. process already has some vars set, missing trailing newline).
+const envFile = join(__dirname, ".env");
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([^#=\s][^=]*)=(.*)$/);
+    if (!m) continue;
+    const key = m[1].trim();
+    if (key in process.env) continue; // never override already-set vars
+    let val = m[2].trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    process.env[key] = val;
+  }
+}
+
+const hasCredentials = !!(
+  process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ||
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+  process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+  process.env.GOOGLE_APPLICATION_CREDENTIALS
+);
+
+if (!hasCredentials) {
+  console.warn(
+    "\n[E2E] No Firebase credentials found — cloud fixture seeding will be skipped." +
+      "\n      Tests that require Firestore data (home, catalog, product) will auto-skip." +
+      "\n      Set FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT_PATH to run them.\n",
+  );
+  process.env.E2E_CLOUD_SKIP = "1";
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -37,6 +76,10 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  globalSetup: require.resolve("./src/test/playwrightCloudSetup.globalSetup.ts"),
-  globalTeardown: require.resolve("./src/test/playwrightCloudSetup.globalTeardown.ts"),
+  globalSetup: hasCredentials
+    ? require.resolve("./src/test/playwrightCloudSetup.globalSetup.ts")
+    : undefined,
+  globalTeardown: hasCredentials
+    ? require.resolve("./src/test/playwrightCloudSetup.globalTeardown.ts")
+    : undefined,
 });
