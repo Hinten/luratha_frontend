@@ -1,3 +1,4 @@
+import { FirebaseError } from "firebase/app";
 import {
   type Firestore,
   VectorValue,
@@ -57,7 +58,7 @@ export function createProductsSearchRepository(
 
   async function executeCore(filters: ProductSearchFilters): Promise<FirestoreProduct[]> {
     const plan = buildCoreProductQueryPlan(filters);
-    const constraints = [];
+    const baseConstraints = [];
 
     for (const clause of plan.where) {
       if (clause.field === "categorySlug" && typeof clause.value === "string") {
@@ -65,21 +66,43 @@ export function createProductsSearchRepository(
         if (!category) {
           return [];
         }
-        constraints.push(where("categoryId", "==", category.id));
+        baseConstraints.push(where("categoryId", "==", category.id));
         continue;
       }
-      constraints.push(where(clause.field, clause.op, clause.value));
+      baseConstraints.push(where(clause.field, clause.op, clause.value));
     }
 
-    for (const sortBy of plan.orderBy) {
-      constraints.push(orderBy(sortBy.field, sortBy.direction));
+    const orderedConstraints = [
+      ...baseConstraints,
+      ...plan.orderBy.map((sortBy) => orderBy(sortBy.field, sortBy.direction)),
+      queryLimit(Math.min(plan.limit + plan.offset, 100)),
+    ];
+
+    try {
+      const snapshot = await getDocs(
+        query(collection(dbInstance, plan.collection), ...orderedConstraints),
+      );
+      const docs = snapshot.docs.slice(plan.offset, plan.offset + plan.limit);
+      return docs.map((entry) => normalizeSearchProduct(entry.data(), entry.id));
+    } catch (error) {
+      // Firestore throws FAILED_PRECONDITION when an orderBy combined with the
+      // existing equality filters needs a composite index that hasn't been
+      // deployed. Fall back to an unordered query + in-memory sort/slice so the
+      // page still renders products. The fast path returns once the index is
+      // deployed.
+      if (!isMissingIndexError(error)) {
+        throw error;
+      }
+
+      const snapshot = await getDocs(
+        query(collection(dbInstance, plan.collection), ...baseConstraints),
+      );
+      const products = snapshot.docs.map((entry) =>
+        normalizeSearchProduct(entry.data(), entry.id),
+      );
+      const sorted = sortProductsInMemory(products, plan.orderBy);
+      return sorted.slice(plan.offset, plan.offset + plan.limit);
     }
-
-    constraints.push(queryLimit(Math.min(plan.limit + plan.offset, 100)));
-
-    const snapshot = await getDocs(query(collection(dbInstance, plan.collection), ...constraints));
-    const docs = snapshot.docs.slice(plan.offset, plan.offset + plan.limit);
-    return docs.map((entry) => normalizeSearchProduct(entry.data(), entry.id));
   }
 
   async function executePipelineSearch(filters: ProductSearchFilters): Promise<FirestoreProduct[]> {
@@ -395,6 +418,54 @@ function normalizeSearchError(
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isMissingIndexError(error: unknown): boolean {
+  if (error instanceof FirebaseError && error.code === "failed-precondition") {
+    return true;
+  }
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("failed-precondition") ||
+      message.includes("requires an index")
+    );
+  }
+  return false;
+}
+
+function readNestedField(value: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, segment) => {
+    if (acc && typeof acc === "object" && segment in (acc as Record<string, unknown>)) {
+      return (acc as Record<string, unknown>)[segment];
+    }
+    return undefined;
+  }, value);
+}
+
+function compareForSort(a: unknown, b: unknown): number {
+  if (a === b) return 0;
+  if (a === undefined || a === null) return 1;
+  if (b === undefined || b === null) return -1;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b));
+}
+
+function sortProductsInMemory(
+  products: FirestoreProduct[],
+  orderClauses: ReadonlyArray<{ field: string; direction: "asc" | "desc" }>,
+): FirestoreProduct[] {
+  if (orderClauses.length === 0) return products;
+  return [...products].sort((left, right) => {
+    for (const clause of orderClauses) {
+      const cmp = compareForSort(
+        readNestedField(left, clause.field),
+        readNestedField(right, clause.field),
+      );
+      if (cmp !== 0) return clause.direction === "desc" ? -cmp : cmp;
+    }
+    return 0;
+  });
 }
 
 function combineWithAnd(conditions: BooleanExpression[]): BooleanExpression {
