@@ -5,6 +5,10 @@ import {
   buildEnterpriseVectorSearchPlan,
   shouldUsePipeline,
 } from "@/src/lib/firestoreQueryStrategies";
+import {
+  buildHomeSeedCategories,
+  buildHomeSeedProducts,
+} from "@/src/lib/repositories/homeSeedMockData";
 
 describe("firestore query strategies", () => {
   it("builds core query plan with default active filter", () => {
@@ -20,9 +24,16 @@ describe("firestore query strategies", () => {
       expect.arrayContaining([
         { field: "status", op: "==", value: "active" },
         { field: "categorySlug", op: "==", value: "vestidos" },
+        { field: "price.price", op: ">=", value: 100 },
+        { field: "price.price", op: "<=", value: 500 },
       ]),
     );
-    expect(plan.orderBy[0]).toEqual({ field: "priceMin", direction: "asc" });
+    expect(plan.orderBy[0]).toEqual({ field: "price.price", direction: "asc" });
+  });
+
+  it("uses updatedAt for newest sort to match the product schema", () => {
+    const plan = buildCoreProductQueryPlan({ categorySlug: "vestidos", sort: "newest" });
+    expect(plan.orderBy).toEqual([{ field: "updatedAt", direction: "desc" }]);
   });
 
   it("caps tag filter to Firestore array-contains-any limit", () => {
@@ -76,5 +87,53 @@ describe("firestore query strategies", () => {
         embedding: Array.from({ length: 2049 }, () => 0.2),
       }),
     ).toThrow();
+  });
+
+  // Regression: in Firestore, `orderBy` on a missing field excludes documents.
+  // If the core query plan referenced a field the schema/seed do not write
+  // (e.g. `publishedAt`), the categoria/[slug] page would render zero products.
+  describe("core query plan field paths exist on seed products", () => {
+    const categories = buildHomeSeedCategories();
+    const products = buildHomeSeedProducts(categories);
+
+    function readPath(value: unknown, path: string): unknown {
+      return path.split(".").reduce<unknown>((acc, segment) => {
+        if (acc && typeof acc === "object" && segment in (acc as Record<string, unknown>)) {
+          return (acc as Record<string, unknown>)[segment];
+        }
+        return undefined;
+      }, value);
+    }
+
+    it.each(["newest", "price_asc", "price_desc", "rating_desc"] as const)(
+      "every seed product has the orderBy field for sort=%s",
+      (sort) => {
+        const plan = buildCoreProductQueryPlan({ sort });
+        for (const orderClause of plan.orderBy) {
+          for (const product of products) {
+            expect(
+              readPath(product, orderClause.field),
+              `product ${product.id} is missing orderBy field "${orderClause.field}"`,
+            ).toBeDefined();
+          }
+        }
+      },
+    );
+
+    it("every seed product has the price.price field used by min/max filters", () => {
+      const plan = buildCoreProductQueryPlan({ minPrice: 100, maxPrice: 500 });
+      const priceFilters = plan.where.filter((clause) =>
+        clause.field === "price.price" || clause.field === "priceMin",
+      );
+      expect(priceFilters.length).toBeGreaterThan(0);
+      for (const filter of priceFilters) {
+        for (const product of products) {
+          expect(
+            readPath(product, filter.field),
+            `product ${product.id} is missing filter field "${filter.field}"`,
+          ).toBeTypeOf("number");
+        }
+      }
+    });
   });
 });
