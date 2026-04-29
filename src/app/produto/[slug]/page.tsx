@@ -12,6 +12,7 @@ import {
 } from "@/src/lib/repositories/productsRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
+import ViewTracker from "@/src/components/produto/ViewTracker";
 import { getProductPrimaryImage } from "@/src/lib/productImages";
 
 interface PageProps {
@@ -97,7 +98,12 @@ export default async function ProdutoPage({ params }: PageProps) {
     getCachedStockByProductId(product.id),
   ]);
 
-  return <ProductDetailPage product={product} category={category} stock={stock} />;
+  return (
+    <>
+      <ViewTracker slug={product.slug} />
+      <ProductDetailPage product={product} category={category} stock={stock} />
+    </>
+  );
 }
 
 function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
