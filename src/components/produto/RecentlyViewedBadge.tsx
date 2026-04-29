@@ -14,5 +14,5 @@ export default function RecentlyViewedBadge({ slug }: { slug: string }) {
   );
 
   if (!viewed) return null;
-  return <span className={styles.badge}>👁 Visualizado</span>;
+  return <span className={styles.badge}>Visualizado</span>;
 }
