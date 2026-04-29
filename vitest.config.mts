@@ -2,7 +2,6 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
-import { DEFAULT_FIREBASE_PROJECT_ID } from "./src/lib/firestore/environment";
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
@@ -18,19 +17,13 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    env: {
-      FIREBASE_PROJECT_ID: DEFAULT_FIREBASE_PROJECT_ID,
-      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
-      FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
-      FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",
-    },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: [
-      "node_modules", 
-      ".next", 
-      "e2e", 
-      "src/test/emulator/**",
+      "node_modules",
+      ".next",
+      "e2e",
       "src/test/cloud/**",
+      "src/test/cloud-functions/**",
     ],
     coverage: {
       provider: "v8",
@@ -45,4 +38,3 @@ export default defineConfig({
     },
   },
 });
-

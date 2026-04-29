@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+// Requires Firestore fixtures seeded by globalSetup — skip when credentials are absent.
+test.skip(process.env.E2E_CLOUD_SKIP === "1", "Firebase credentials not configured — cloud fixtures not seeded");
+
 test.describe("Category pages", () => {
   test("loads the vestidos category page with h1 and products", async ({
     page,
