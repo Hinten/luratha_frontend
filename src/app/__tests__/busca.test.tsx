@@ -18,6 +18,7 @@ vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
 vi.mock("@/src/lib/repositories/productsSearchRepository", () => ({
   createProductsSearchRepository: () => ({
     search: searchMock,
+    findByIdOrSku: vi.fn(),
   }),
 }));
 
@@ -107,6 +108,28 @@ describe("BuscaPage", () => {
     });
 
     expect(searchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cache empty search results so re-searching after a seed retries Firestore", async () => {
+    // First call returns []; second call (same query) must hit the repository again
+    // — otherwise users would never see products that were seeded after the empty miss.
+    searchMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "prod_seeded",
+          name: "Vestido seeded after empty miss",
+          slug: "vestido-seeded",
+          categorySlug: "vestidos",
+          price: 200,
+          imageUrl: "https://example.com/x.jpg",
+        },
+      ]);
+
+    await BuscaPage({ searchParams: Promise.resolve({ q: "termo-empty-then-seed" }) });
+    await BuscaPage({ searchParams: Promise.resolve({ q: "termo-empty-then-seed" }) });
+
+    expect(searchMock).toHaveBeenCalledTimes(2);
   });
 
   it("generates noindex metadata for search page", async () => {

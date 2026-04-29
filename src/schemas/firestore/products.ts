@@ -277,11 +277,17 @@ const productSchemaBase = z
 export const productSchema = productSchemaBase.transform((product) => {
   const generatedSlug = buildProductSlug(product.title, product.sku);
   const vectorEmbedding = product.vectorEmbedding ?? product.searchEmbedding;
+  // Denormalized arrays so search by variant id/sku can use indexed
+  // array-contains queries instead of scanning every product document.
+  const variantIds = product.variants?.map((variant) => variant.id) ?? [];
+  const variantSkus = product.variants?.map((variant) => variant.sku) ?? [];
 
   return {
     ...product,
     slug: generatedSlug,
     vectorEmbedding,
+    variantIds,
+    variantSkus,
   };
 });
 
