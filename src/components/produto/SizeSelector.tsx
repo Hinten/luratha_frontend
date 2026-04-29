@@ -57,8 +57,9 @@ function getColorSwatchUrl(product: FirestoreProduct, color: string): string | n
   const asset = product.photoAssets.find((candidate) => candidate.id === photoId);
   if (!asset) return null;
 
-  const cardResolution = asset.resolutions.card ?? asset.resolutions.mobile;
-  return cardResolution.temporaryUrl ?? cardResolution.downloadUrl;
+  const resolution =
+    asset.resolutions.swatch ?? asset.resolutions.card ?? asset.resolutions.mobile;
+  return resolution.temporaryUrl ?? resolution.downloadUrl;
 }
 
 function isColorAvailable(

@@ -357,6 +357,69 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     const vermelhoButton = screen.getByRole("button", { name: "Vermelho" });
     expect(vermelhoButton.querySelector("img")).toBeNull();
   });
+
+  it("prefers the swatch resolution over card when both are present", () => {
+    const productWithExplicitSwatch = makeProduct({
+      photoAssets: [
+        {
+          id: "photo_swatch",
+          alt: null,
+          resolutions: {
+            swatch: {
+              width: 128,
+              height: 128,
+              storagePath: "products/p/swatch/swatch.webp",
+              downloadUrl: "https://example.com/swatch.webp",
+              temporaryUrl: null,
+              format: "webp",
+            },
+            card: {
+              width: 400,
+              height: 533,
+              storagePath: "products/p/swatch/card.webp",
+              downloadUrl: "https://example.com/card.webp",
+              temporaryUrl: null,
+              format: "webp",
+            },
+            mobile: {
+              width: 480,
+              height: 640,
+              storagePath: "products/p/swatch/mobile.webp",
+              downloadUrl: "https://example.com/mobile.webp",
+              temporaryUrl: null,
+              format: "webp",
+            },
+            tablet: {
+              width: 768,
+              height: 1024,
+              storagePath: "products/p/swatch/tablet.webp",
+              downloadUrl: "https://example.com/tablet.webp",
+              temporaryUrl: null,
+              format: "webp",
+            },
+            desktop: {
+              width: 1200,
+              height: 1600,
+              storagePath: "products/p/swatch/desktop.webp",
+              downloadUrl: "https://example.com/desktop.webp",
+              temporaryUrl: null,
+              format: "webp",
+            },
+          },
+          createdAt: BASE_TIMESTAMP,
+          updatedAt: BASE_TIMESTAMP,
+        },
+      ],
+      variants: [
+        { id: "v1", sku: "SK_AZ_P", color: ["Azul"], size: ["P"], photoIds: ["photo_swatch"], active: true, gtin: null, mpn: null, item_group_id: null },
+      ],
+    });
+
+    render(<SizeSelector product={productWithExplicitSwatch} {...cartProps} />);
+    const azulButton = screen.getByRole("button", { name: "Azul" });
+    const img = azulButton.querySelector("img");
+    expect(img!.getAttribute("src")).toBe("https://example.com/swatch.webp");
+  });
 });
 
 describe("SizeSelector — onColorChange / onSizeChange callbacks", () => {

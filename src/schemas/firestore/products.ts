@@ -104,6 +104,7 @@ export const productImageAssetSchema = z.object({
   id: nonEmptyStringSchema.max(120),
   alt: nonEmptyStringSchema.max(300).nullable().default(null),
   resolutions: z.object({
+    swatch: productImageResolutionSchema.optional(),
     card: productImageResolutionSchema.optional(),
     zoom: productImageResolutionSchema.optional(),
     mobile: productImageResolutionSchema,
@@ -125,13 +126,38 @@ const productSchemaBase = z
     const hasName = typeof parsedInput.title === "string";
     const hasSku = typeof parsedInput.sku === "string";
 
+    const photoAssetIds = new Set(
+      Array.isArray(parsedInput.photoAssets)
+        ? parsedInput.photoAssets
+            .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+            .map((entry) => entry.id)
+            .filter((id): id is string => typeof id === "string")
+        : [],
+    );
+
+    const sanitizedVariants = Array.isArray(parsedInput.variants)
+      ? parsedInput.variants.map((variant) => {
+          if (!variant || typeof variant !== "object") return variant;
+          const variantRecord = variant as Record<string, unknown>;
+          if (!Array.isArray(variantRecord.photoIds)) return variant;
+          const filtered = variantRecord.photoIds.filter(
+            (id) => typeof id === "string" && photoAssetIds.has(id),
+          );
+          if (filtered.length === variantRecord.photoIds.length) return variant;
+          return { ...variantRecord, photoIds: filtered };
+        })
+      : parsedInput.variants;
+
     if (hasSlug || !hasName || !hasSku) {
-      return input;
+      return sanitizedVariants !== parsedInput.variants
+        ? { ...parsedInput, variants: sanitizedVariants }
+        : input;
     }
 
     return {
       ...parsedInput,
       slug: buildProductSlug(parsedInput.title as string, parsedInput.sku as string),
+      ...(sanitizedVariants !== parsedInput.variants ? { variants: sanitizedVariants } : {}),
     };
   },
   z.object({
@@ -245,21 +271,6 @@ const productSchemaBase = z
         path: ["slug"],
         message: "slug must match the generated value based on title and sku",
       });
-    }
-
-    if (product.variants && product.variants.length > 0) {
-      const photoAssetIds = new Set(product.photoAssets.map((asset) => asset.id));
-      for (const variant of product.variants) {
-        for (const photoId of variant.photoIds) {
-          if (!photoAssetIds.has(photoId)) {
-            ctx.addIssue({
-              code: "custom",
-              path: ["variants"],
-              message: `variant "${variant.id}" references photoId "${photoId}" not present in product.photoAssets`,
-            });
-          }
-        }
-      }
     }
   }));
 

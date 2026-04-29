@@ -218,10 +218,14 @@ async function seedVariantImages(products: Product[], createdProductIds: string[
       const imagePath = imagePaths[imagePoolOffset % imagePaths.length];
       imagePoolOffset += 1;
 
+      const sameColorVariantIds = product.variants
+        .filter((v) => v.color?.[0] === variantColor)
+        .map((v) => v.id);
+
       const imageBuffer = await readFile(imagePath);
       await uploadProductImage({
         productId,
-        variantId: variant.id,
+        variantIds: sameColorVariantIds,
         fileBuffer: imageBuffer,
         fileName: path.basename(imagePath),
         alt: `${product.title} — ${variantColor}`,
