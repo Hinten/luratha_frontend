@@ -7,7 +7,6 @@
       "Bash(npx playwright *)",
       "Bash(nvm --version)",
       "Bash(fnm --version)"
-      "Bash(npm root *)",
     ]
   },
   "hooks": {
