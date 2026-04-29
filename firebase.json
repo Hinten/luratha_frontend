@@ -38,7 +38,8 @@
       "docs",
       "playwright.config.ts",
       "vitest.config.mts",
-      "vitest.emulator.config.mts",
+      "vitest.cloud.config.mts",
+      "vitest.cloud-functions.config.mts",
       "README.md",
       "storage.rules",
       "firestore.rules",
@@ -48,24 +49,6 @@
   },
   "storage": {
     "rules": "storage.rules"
-  },
-  "emulators": {
-    "auth": {
-      "port": 9099
-    },
-    "firestore": {
-      "port": 8080
-    },
-    "storage": {
-      "port": 9199
-    },
-    "functions": {
-      "port": 5001
-    },
-    "ui": {
-      "enabled": false
-    },
-    "singleProjectMode": true
   },
   "auth": {
     "providers": {

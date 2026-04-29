@@ -35,7 +35,10 @@ type ProductData = {
  * Both operations are best-effort — a failure in one does not abort the other.
  */
 export const onProductDeleted = onDocumentDeleted(
-  "products/{productId}",
+  {
+    document: "products/{productId}",
+    database: "default",
+  },
   async (event) => {
     const productId = event.params.productId;
     const productData = event.data?.data() as ProductData | undefined;
@@ -53,7 +56,7 @@ export const onProductDeleted = onDocumentDeleted(
 
 async function deleteStockForProduct(productId: string): Promise<void> {
   try {
-    const db = getFirestore();
+    const db = getFirestore("default");
     const stockRef = db.collection("stock").doc(productId);
     const stockSnap = await stockRef.get();
 
