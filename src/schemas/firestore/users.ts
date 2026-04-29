@@ -17,3 +17,7 @@ export const userProfileSchema = z.object({
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
+
+export function validateUserProfile(input: unknown): UserProfile {
+  return userProfileSchema.parse(input);
+}

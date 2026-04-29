@@ -29,7 +29,11 @@ export {
   type Cart,
   validateCartItem,
 } from "@/src/schemas/firestore/carts";
-export { couponSchema, type Coupon } from "@/src/schemas/firestore/coupons";
+export {
+  couponSchema,
+  type Coupon,
+  validateCoupon,
+} from "@/src/schemas/firestore/coupons";
 export {
   orderItemSchema,
   shippingAddressSchema,
@@ -40,7 +44,11 @@ export {
   validateOrder,
 } from "@/src/schemas/firestore/orders";
 export { reviewSchema, type Review } from "@/src/schemas/firestore/reviews";
-export { userProfileSchema, type UserProfile } from "@/src/schemas/firestore/users";
+export {
+  userProfileSchema,
+  type UserProfile,
+  validateUserProfile,
+} from "@/src/schemas/firestore/users";
 export {
   pipelineSearchRequestSchema,
   vectorSearchRequestSchema,

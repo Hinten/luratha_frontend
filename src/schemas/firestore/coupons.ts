@@ -38,3 +38,7 @@ export const couponSchema = z
   });
 
 export type Coupon = z.infer<typeof couponSchema>;
+
+export function validateCoupon(input: unknown): Coupon {
+  return couponSchema.parse(input);
+}
