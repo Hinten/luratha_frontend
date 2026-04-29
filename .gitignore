@@ -61,3 +61,5 @@ ignore/*
 #functions 
 functions/node_modules
 functions/lib
+
+.claude/worktrees
