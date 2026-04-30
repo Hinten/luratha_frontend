@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { POST } from "@/src/app/api/products/route";
 
 // ── Hoisted mocks (vi.mock is hoisted; variables must be declared via vi.hoisted) ─
-const { mockSet, mockGet, mockDoc, mockCollection, mockEmbed } = vi.hoisted(() => {
+const { mockSet, mockGet, mockCollection, mockEmbed } = vi.hoisted(() => {
   const mockSet = vi.fn().mockResolvedValue(undefined);
   const mockGet = vi.fn().mockResolvedValue({ exists: false });
   const mockDocRef = {
@@ -164,13 +164,13 @@ describe("POST /api/products", () => {
       {
         sku: "VLA-001-BR-P",
         stock: 10,
-        photoIds: ["photo-001"],
+        photoIds: [],
         active: true,
       },
       {
         sku: "VLA-001-BR-M",
         stock: 5,
-        photoIds: ["photo-001"],
+        photoIds: [],
         active: true,
       },
     ];

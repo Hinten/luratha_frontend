@@ -18,6 +18,8 @@ const IMAGE_VARIANTS: ImageVariantDefinition[] = [
   { name: "desktop", width: 1200 },
 ];
 
+const SWATCH_SIZE = 128;
+const SWATCH_WEBP_QUALITY = 80;
 const WEBP_QUALITY = 82;
 const ZOOM_WEBP_QUALITY = 88;
 const ZOOM_WIDTH = 2000;
@@ -36,6 +38,7 @@ type ProductImageResolution = {
 
 type ProductImageResolutionsMap = Record<ImageVariantName, ProductImageResolution> & {
   zoom?: ProductImageResolution;
+  swatch?: ProductImageResolution;
 };
 
 type UploadProductImageInput = {
@@ -44,6 +47,7 @@ type UploadProductImageInput = {
   alt?: string;
   fileBuffer: Buffer;
   fileName?: string;
+  variantIds?: string[];
 };
 
 type UploadProductImageResult = {
@@ -83,6 +87,7 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
     id: imageId,
     alt: input.alt?.trim() || null,
     resolutions: {
+      ...(uploadedVariants.swatch ? { swatch: uploadedVariants.swatch } : {}),
       card: uploadedVariants.card,
       ...(uploadedVariants.zoom ? { zoom: uploadedVariants.zoom } : {}),
       mobile: uploadedVariants.mobile,
@@ -96,9 +101,34 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
   const previousAssets = currentProduct.photoAssets.filter((asset) => asset.id !== imageId);
   const nextAssets = [...previousAssets, imageAsset];
 
+  const variantIds = (input.variantIds ?? [])
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (variantIds.length > 0) {
+    const productVariantIds = new Set(currentProduct.variants?.map((v) => v.id) ?? []);
+    const missing = variantIds.filter((id) => !productVariantIds.has(id));
+    if (missing.length > 0) {
+      throw new ProductImageUploadError(
+        `Variants ${missing.map((id) => `"${id}"`).join(", ")} not found in product "${input.productId}"`,
+        "validation",
+      );
+    }
+  }
+
+  const targetVariantIds = new Set(variantIds);
+  const nextVariants = targetVariantIds.size > 0
+    ? currentProduct.variants?.map((variant) =>
+        targetVariantIds.has(variant.id) && !variant.photoIds.includes(imageId)
+          ? { ...variant, photoIds: [...variant.photoIds, imageId] }
+          : variant,
+      ) ?? null
+    : currentProduct.variants;
+
   const updatedProduct = validateProduct({
     ...currentProduct,
     photoAssets: nextAssets,
+    variants: nextVariants,
     updatedAt: now,
   });
 
@@ -169,8 +199,50 @@ async function createAndUploadVariants(
     {} as Record<ImageVariantName, ProductImageResolution>,
   );
 
-  const zoomResolution = await createZoomVariant(productId, imageId, fileBuffer, sourceMetadata);
-  return zoomResolution ? { ...requiredVariants, zoom: zoomResolution } : requiredVariants;
+  const [zoomResolution, swatchResolution] = await Promise.all([
+    createZoomVariant(productId, imageId, fileBuffer, sourceMetadata),
+    createSwatchVariant(productId, imageId, fileBuffer),
+  ]);
+  return {
+    ...requiredVariants,
+    ...(zoomResolution ? { zoom: zoomResolution } : {}),
+    ...(swatchResolution ? { swatch: swatchResolution } : {}),
+  };
+}
+
+async function createSwatchVariant(
+  productId: string,
+  imageId: string,
+  fileBuffer: Buffer,
+): Promise<ProductImageResolution | undefined> {
+  const transformed = await sharp(fileBuffer)
+    .rotate()
+    .resize({ width: SWATCH_SIZE, height: SWATCH_SIZE, fit: "cover", position: "centre" })
+    .webp({ quality: SWATCH_WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+
+  const storagePath = `products/${productId}/${imageId}/swatch.webp`;
+  const downloadUrlToken = randomUUID();
+  const fileRef = adminBucket.file(storagePath);
+
+  await fileRef.save(transformed.data, {
+    contentType: "image/webp",
+    metadata: {
+      cacheControl: "public, max-age=31536000, immutable",
+      metadata: {
+        firebaseStorageDownloadTokens: downloadUrlToken,
+      },
+    },
+  });
+
+  return {
+    width: transformed.info.width ?? SWATCH_SIZE,
+    height: transformed.info.height ?? SWATCH_SIZE,
+    storagePath,
+    downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
+    temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
+    format: "webp",
+  };
 }
 
 async function createZoomVariant(

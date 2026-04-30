@@ -12,6 +12,8 @@ interface SizeSelectorProps {
   slug?: string;
   imageUrl?: string;
   price?: number;
+  onColorChange?: (color: string | null) => void;
+  onSizeChange?: (size: string | null) => void;
 }
 
 function extractUniqueColors(product: FirestoreProduct): string[] {
@@ -43,6 +45,21 @@ function findMatchingVariant(
 
 function getVariantQty(stock: Stock, variantId: string): number {
   return stock.variants?.[variantId] ?? 0;
+}
+
+function getColorSwatchUrl(product: FirestoreProduct, color: string): string | null {
+  const variantWithPhoto = product.variants?.find(
+    (variant) => (variant.color?.includes(color) ?? false) && variant.photoIds.length > 0,
+  );
+  if (!variantWithPhoto) return null;
+
+  const photoId = variantWithPhoto.photoIds[0];
+  const asset = product.photoAssets.find((candidate) => candidate.id === photoId);
+  if (!asset) return null;
+
+  const resolution =
+    asset.resolutions.swatch ?? asset.resolutions.card ?? asset.resolutions.mobile;
+  return resolution.temporaryUrl ?? resolution.downloadUrl;
 }
 
 function isColorAvailable(
@@ -109,6 +126,8 @@ export default function SizeSelector({
   slug,
   imageUrl,
   price,
+  onColorChange,
+  onSizeChange,
 }: SizeSelectorProps) {
   const colors = extractUniqueColors(product);
   const sizes = extractUniqueSizes(product);
@@ -153,11 +172,14 @@ export default function SizeSelector({
     setColorError(false);
     setSelectedSize(null);
     setSizeError(false);
+    onColorChange?.(color);
+    onSizeChange?.(null);
   }
 
   function handleSizeClick(size: string) {
     setSelectedSize(size);
     setSizeError(false);
+    onSizeChange?.(size);
   }
 
   function handleBeforeAdd(): boolean {
@@ -183,6 +205,29 @@ export default function SizeSelector({
           <div className={styles.variantOptions} role="group" aria-label="Selecione a cor">
             {colors.map((color) => {
               const available = isColorAvailable(product, stock, color);
+              const swatchUrl = getColorSwatchUrl(product, color);
+
+              if (swatchUrl) {
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`${styles.colorSwatchBtn} ${!available ? styles.colorSwatchUnavailable : ""} ${selectedColor === color ? styles.colorSwatchSelected : ""}`}
+                    onClick={() => handleColorClick(color)}
+                    aria-pressed={selectedColor === color}
+                    aria-label={color}
+                  >
+                    <img
+                      src={swatchUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className={styles.colorSwatchImg}
+                    />
+                    <span className={styles.colorSwatchLabel}>{color}</span>
+                  </button>
+                );
+              }
+
               return (
                 <button
                   key={color}

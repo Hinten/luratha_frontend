@@ -307,7 +307,7 @@ function normalizeSearchProduct(
         ? record.searchEmbedding.toArray()
         : record.searchEmbedding,
     });
-  } catch (validationError) {
+  } catch {
     if (process.env.NODE_ENV !== "production") {
       console.warn("[productsSearchRepository] invalid search record, applying fallback mapping");
     }

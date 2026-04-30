@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const productId = formData.get("productId");
     const imageId = formData.get("imageId");
     const alt = formData.get("alt");
+    const variantIds = collectVariantIds(formData);
     const imageCandidates = formData.getAll("images");
     const fallbackSingleImage = formData.get("image");
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
           alt: typeof alt === "string" ? alt : undefined,
           fileBuffer,
           fileName: image.name || `image-${index + 1}`,
+          variantIds: variantIds.length > 0 ? variantIds : undefined,
         });
       }),
     );
@@ -78,4 +80,18 @@ function isFileLike(value: FormDataEntryValue | null): value is File {
     "type" in value &&
     "name" in value,
   );
+}
+
+function collectVariantIds(formData: FormData): string[] {
+  const collected = new Set<string>();
+  for (const key of ["variantIds", "variantId"] as const) {
+    for (const entry of formData.getAll(key)) {
+      if (typeof entry !== "string") continue;
+      for (const value of entry.split(",")) {
+        const trimmed = value.trim();
+        if (trimmed) collected.add(trimmed);
+      }
+    }
+  }
+  return Array.from(collected);
 }

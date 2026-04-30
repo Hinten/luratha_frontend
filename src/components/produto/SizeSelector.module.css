@@ -88,6 +88,57 @@
   background-color: transparent;
 }
 
+/* ─── Color swatch (image variant) ───────────────────────────────────────── */
+
+.colorSwatchBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  transition: border-color 200ms ease;
+}
+
+.colorSwatchBtn:hover {
+  border-color: var(--color-neutral-mid);
+}
+
+.colorSwatchSelected {
+  border-color: var(--color-neutral-dark);
+}
+
+.colorSwatchUnavailable {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.colorSwatchUnavailable:hover {
+  border-color: transparent;
+}
+
+.colorSwatchImg {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.colorSwatchLabel {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-neutral-dark);
+  text-align: center;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ─── Stock urgency messages ─────────────────────────────────────────────── */
 
 .stockMsgLow {

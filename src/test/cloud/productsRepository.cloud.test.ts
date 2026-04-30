@@ -272,9 +272,9 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     const id = baseData.id as string;
 
     const variants = [
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-P`, photoIds: ["photo-001"], active: true },
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-M`, photoIds: ["photo-001"], active: true },
-      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-G`, photoIds: ["photo-001"], active: false },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-P`, photoIds: [], active: true },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-M`, photoIds: [], active: true },
+      { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-G`, photoIds: [], active: false },
     ];
 
     await adminDb.collection(firestoreCollections.products).doc(id).set({

@@ -96,7 +96,7 @@ const mockProduct: Product = validateProduct({
       mpn: null,
       item_group_id: null,
       color: null,
-      photoIds: ["https://placehold.co/600x750/EDE4D9/3A2F2A?text=Imagem+1"],
+      photoIds: [],
       active: true,
     },
   ],
