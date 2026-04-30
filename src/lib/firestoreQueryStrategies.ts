@@ -53,9 +53,9 @@ export function buildCoreProductQueryPlan(filters: ProductSearchFilters): CoreQu
   const sort = filters.sort ?? "newest";
 
   const orderByMap: Record<ProductSort, CoreQueryPlan["orderBy"]> = {
-    newest: [{ field: "publishedAt", direction: "desc" }],
-    price_asc: [{ field: "priceMin", direction: "asc" }],
-    price_desc: [{ field: "priceMin", direction: "desc" }],
+    newest: [{ field: "updatedAt", direction: "desc" }],
+    price_asc: [{ field: "price.price", direction: "asc" }],
+    price_desc: [{ field: "price.price", direction: "desc" }],
     rating_desc: [{ field: "ratingAverage", direction: "desc" }],
   };
 
@@ -65,10 +65,10 @@ export function buildCoreProductQueryPlan(filters: ProductSearchFilters): CoreQu
     where.push({ field: "categorySlug", op: "==", value: filters.categorySlug });
   }
   if (filters.minPrice !== undefined) {
-    where.push({ field: "priceMin", op: ">=", value: filters.minPrice });
+    where.push({ field: "price.price", op: ">=", value: filters.minPrice });
   }
   if (filters.maxPrice !== undefined) {
-    where.push({ field: "priceMin", op: "<=", value: filters.maxPrice });
+    where.push({ field: "price.price", op: "<=", value: filters.maxPrice });
   }
   if (filters.tags?.length) {
     where.push({
