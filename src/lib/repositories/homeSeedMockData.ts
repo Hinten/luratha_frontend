@@ -282,7 +282,7 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       gtin: null,
       mpn: null,
       item_group_id: null,
-      photoIds: ["seed_placeholder"],
+      photoIds: [],
       active: true,
     }));
 

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  colorHexSchema,
   moneySchema,
   nonEmptyStringSchema,
   skuSchema,
@@ -87,7 +86,7 @@ export const productVariantSchema = z.object({
   item_group_id: nonEmptyStringSchema.nullable().default(null), // utilizado para agrupar variantes em feeds de produtos, deve ser igual para variantes do mesmo produto  
   color: z.array(nonEmptyStringSchema).nullable().default(null),
   size: z.array(nonEmptyStringSchema).nullable().default(null),
-  photoIds: z.array(nonEmptyStringSchema).min(1),
+  photoIds: z.array(nonEmptyStringSchema).default([]),
   active: z.boolean().default(true),
 });
 
@@ -104,6 +103,7 @@ export const productImageAssetSchema = z.object({
   id: nonEmptyStringSchema.max(120),
   alt: nonEmptyStringSchema.max(300).nullable().default(null),
   resolutions: z.object({
+    swatch: productImageResolutionSchema.optional(),
     card: productImageResolutionSchema.optional(),
     zoom: productImageResolutionSchema.optional(),
     mobile: productImageResolutionSchema,
@@ -125,13 +125,38 @@ const productSchemaBase = z
     const hasName = typeof parsedInput.title === "string";
     const hasSku = typeof parsedInput.sku === "string";
 
+    const photoAssetIds = new Set(
+      Array.isArray(parsedInput.photoAssets)
+        ? parsedInput.photoAssets
+            .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+            .map((entry) => entry.id)
+            .filter((id): id is string => typeof id === "string")
+        : [],
+    );
+
+    const sanitizedVariants = Array.isArray(parsedInput.variants)
+      ? parsedInput.variants.map((variant) => {
+          if (!variant || typeof variant !== "object") return variant;
+          const variantRecord = variant as Record<string, unknown>;
+          if (!Array.isArray(variantRecord.photoIds)) return variant;
+          const filtered = variantRecord.photoIds.filter(
+            (id) => typeof id === "string" && photoAssetIds.has(id),
+          );
+          if (filtered.length === variantRecord.photoIds.length) return variant;
+          return { ...variantRecord, photoIds: filtered };
+        })
+      : parsedInput.variants;
+
     if (hasSlug || !hasName || !hasSku) {
-      return input;
+      return sanitizedVariants !== parsedInput.variants
+        ? { ...parsedInput, variants: sanitizedVariants }
+        : input;
     }
 
     return {
       ...parsedInput,
       slug: buildProductSlug(parsedInput.title as string, parsedInput.sku as string),
+      ...(sanitizedVariants !== parsedInput.variants ? { variants: sanitizedVariants } : {}),
     };
   },
   z.object({

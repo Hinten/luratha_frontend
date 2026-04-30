@@ -142,10 +142,15 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
   await Promise.all(
     affectedProducts.map(async (product) => {
       const { slug: _slug, ...productWithoutSlug } = product as Record<string, unknown>;
+      const updatedVariants = product.variants?.map((variant) => ({
+        ...variant,
+        photoIds: variant.photoIds.filter((photoId) => photoId !== imageId),
+      })) ?? null;
       const updatedProduct = validateProduct({
         ...productWithoutSlug,
         photoAssets: product.photoAssets.filter((asset) => asset.id !== imageId),
         lifeStylePhotos: product.lifeStylePhotos.filter((asset) => asset.id !== imageId),
+        variants: updatedVariants,
         updatedAt: now,
       });
 

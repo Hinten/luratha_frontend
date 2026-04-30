@@ -1,4 +1,4 @@
-import type { Product } from "@/src/schemas/firestore";
+import type { Product, ProductImageAsset } from "@/src/schemas/firestore";
 
 export type ProductGalleryImage = {
   id: string;
@@ -68,4 +68,133 @@ export const productCardImageSizes = PRODUCT_CARD_FALLBACK_SIZES;
 
 function resolvePreferredUrl(downloadUrl: string, temporaryUrl: string | null): string {
   return temporaryUrl ?? downloadUrl;
+}
+
+function buildGalleryImage(
+  asset: ProductImageAsset,
+  productTitle: string,
+  index: number,
+): ProductGalleryImage {
+  const mobile = asset.resolutions.mobile.temporaryUrl ?? asset.resolutions.mobile.downloadUrl;
+  const tablet = asset.resolutions.tablet.temporaryUrl ?? asset.resolutions.tablet.downloadUrl;
+  const desktop = asset.resolutions.desktop.temporaryUrl ?? asset.resolutions.desktop.downloadUrl;
+  const zoom = asset.resolutions.zoom
+    ? asset.resolutions.zoom.temporaryUrl ?? asset.resolutions.zoom.downloadUrl
+    : null;
+
+  return {
+    id: asset.id,
+    defaultUrl: desktop,
+    alt: asset.alt ?? `${productTitle} — imagem ${index + 1}`,
+    srcSet: `${mobile} ${asset.resolutions.mobile.width}w, ${tablet} ${asset.resolutions.tablet.width}w, ${desktop} ${asset.resolutions.desktop.width}w`,
+    zoomUrl: zoom,
+  };
+}
+
+function fallbackGallery(productTitle: string, fallbackUrl: string): ProductGalleryImage[] {
+  return [
+    {
+      id: "fallback-image",
+      defaultUrl: fallbackUrl,
+      alt: `${productTitle} — imagem 1`,
+      srcSet: `${fallbackUrl} 1200w`,
+      zoomUrl: null,
+    },
+  ];
+}
+
+function findVariantWithPhotos(
+  product: Product,
+  predicate: (variant: NonNullable<Product["variants"]>[number]) => boolean,
+) {
+  return product.variants?.find((variant) => predicate(variant) && variant.photoIds.length > 0) ?? null;
+}
+
+function variantAssetsByPhotoIds(product: Product, photoIds: readonly string[]): ProductImageAsset[] {
+  const assetById = new Map(product.photoAssets.map((asset) => [asset.id, asset]));
+  return photoIds
+    .map((id) => assetById.get(id))
+    .filter((asset): asset is ProductImageAsset => asset !== undefined);
+}
+
+export function getVariantGalleryImages(
+  product: Product,
+  selectedColor: string | null,
+  selectedSize: string | null,
+  fallbackUrl: string,
+): ProductGalleryImage[] {
+  const fallbackToProduct = (): ProductGalleryImage[] => {
+    if (product.photoAssets.length === 0) {
+      return fallbackGallery(product.title, fallbackUrl);
+    }
+    return product.photoAssets.map((asset, index) => buildGalleryImage(asset, product.title, index));
+  };
+
+  if (!product.variants || product.variants.length === 0) {
+    return fallbackToProduct();
+  }
+
+  const variantsToAssets = (variant: NonNullable<Product["variants"]>[number]) => {
+    const assets = variantAssetsByPhotoIds(product, variant.photoIds);
+    if (assets.length === 0) return null;
+    return assets.map((asset, index) => buildGalleryImage(asset, product.title, index));
+  };
+
+  if (selectedColor && selectedSize) {
+    const exact = findVariantWithPhotos(
+      product,
+      (variant) => (variant.color?.includes(selectedColor) ?? false) && (variant.size?.includes(selectedSize) ?? false),
+    );
+    if (exact) {
+      const images = variantsToAssets(exact);
+      if (images) return images;
+    }
+  }
+
+  if (selectedColor) {
+    const colorOnly = findVariantWithPhotos(product, (variant) => variant.color?.includes(selectedColor) ?? false);
+    if (colorOnly) {
+      const images = variantsToAssets(colorOnly);
+      if (images) return images;
+    }
+  }
+
+  if (!selectedColor && selectedSize) {
+    const sizeOnly = findVariantWithPhotos(product, (variant) => variant.size?.includes(selectedSize) ?? false);
+    if (sizeOnly) {
+      const images = variantsToAssets(sizeOnly);
+      if (images) return images;
+    }
+  }
+
+  if (!selectedColor && !selectedSize) {
+    const firstWithPhotos = findVariantWithPhotos(product, () => true);
+    if (firstWithPhotos) {
+      const images = variantsToAssets(firstWithPhotos);
+      if (images) return images;
+    }
+  }
+
+  return fallbackToProduct();
+}
+
+export function getVariantCardImage(
+  product: Product,
+  variantId: string,
+  fallbackUrl: string,
+): string {
+  const variant = product.variants?.find((v) => v.id === variantId);
+  if (!variant || variant.photoIds.length === 0) {
+    return fallbackUrl;
+  }
+  const photoId = variant.photoIds[0];
+  const asset = product.photoAssets.find((candidate) => candidate.id === photoId);
+  if (!asset) {
+    return fallbackUrl;
+  }
+  const cardResolution = asset.resolutions.card;
+  if (cardResolution) {
+    return resolvePreferredUrl(cardResolution.downloadUrl, cardResolution.temporaryUrl);
+  }
+  return resolvePreferredUrl(asset.resolutions.mobile.downloadUrl, asset.resolutions.mobile.temporaryUrl);
 }

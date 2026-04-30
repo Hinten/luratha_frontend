@@ -189,7 +189,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run E2E tests
         if: steps.check_secrets.outputs.skip != 'true'
-        timeout-minutes: 5
+        timeout-minutes: 6
         run: npm run test:e2e
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'

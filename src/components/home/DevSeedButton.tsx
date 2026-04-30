@@ -8,6 +8,7 @@ type DevSeedButtonProps = {
 };
 
 type SeedStatus = "idle" | "loading" | "success" | "error";
+type SeedOperation = "seed" | "delete" | null;
 
 export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -15,6 +16,7 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
   const actionButtonRef = useRef<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState<SeedStatus>("idle");
+  const [operation, setOperation] = useState<SeedOperation>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -55,8 +57,11 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
     return null;
   }
 
+  const isLoading = status === "loading";
+
   async function handleSeedMockData() {
     setStatus("loading");
+    setOperation("seed");
     setMessage("Cadastrando categorias e produtos mock...");
 
     try {
@@ -74,6 +79,33 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Falha ao cadastrar dados mock.");
+    } finally {
+      setOperation(null);
+    }
+  }
+
+  async function handleDeleteMockData() {
+    setStatus("loading");
+    setOperation("delete");
+    setMessage("Deletando categorias, produtos e imagens mock...");
+
+    try {
+      const response = await fetch("/api/dev/seed-mock-data", { method: "DELETE" });
+      const payload = parseDeleteResponse(await response.json());
+
+      if (!response.ok) {
+        throw new Error(payload.message ?? "Falha ao deletar dados mock.");
+      }
+
+      setStatus("success");
+      setMessage(
+        `Deletado: ${payload.categoriesDeleted ?? 0} categorias, ${payload.productsDeleted ?? 0} produtos, ${payload.storageFilesDeleted ?? 0} arquivos.`,
+      );
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Falha ao deletar dados mock.");
+    } finally {
+      setOperation(null);
     }
   }
 
@@ -108,9 +140,19 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
             role="menuitem"
             className={styles.actionButton}
             onClick={handleSeedMockData}
-            disabled={status === "loading"}
+            disabled={isLoading}
           >
-            {status === "loading" ? "Cadastrando..." : "Cadastrar dados mock"}
+            {isLoading && operation === "seed" ? "Cadastrando..." : "Cadastrar dados mock"}
+          </button>
+          <div className={styles.divider} />
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.deleteButton}
+            onClick={handleDeleteMockData}
+            disabled={isLoading}
+          >
+            {isLoading && operation === "delete" ? "Deletando..." : "Deletar dados mock"}
           </button>
           {message && (
             <p className={status === "error" ? styles.errorMessage : styles.successMessage} role="status">
@@ -138,5 +180,26 @@ function parseSeedResponse(input: unknown): {
     categoriesCreated:
       typeof payload.categoriesCreated === "number" ? payload.categoriesCreated : undefined,
     productsCreated: typeof payload.productsCreated === "number" ? payload.productsCreated : undefined,
+  };
+}
+
+function parseDeleteResponse(input: unknown): {
+  message?: string;
+  categoriesDeleted?: number;
+  productsDeleted?: number;
+  stockDeleted?: number;
+  storageFilesDeleted?: number;
+} {
+  if (!input || typeof input !== "object") {
+    return {};
+  }
+
+  const payload = input as Record<string, unknown>;
+  return {
+    message: typeof payload.message === "string" ? payload.message : undefined,
+    categoriesDeleted: typeof payload.categoriesDeleted === "number" ? payload.categoriesDeleted : undefined,
+    productsDeleted: typeof payload.productsDeleted === "number" ? payload.productsDeleted : undefined,
+    stockDeleted: typeof payload.stockDeleted === "number" ? payload.stockDeleted : undefined,
+    storageFilesDeleted: typeof payload.storageFilesDeleted === "number" ? payload.storageFilesDeleted : undefined,
   };
 }

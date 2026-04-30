@@ -32,6 +32,8 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 
 **CI matrix**: PRs to `master` run lint/typecheck, unit, integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite.
 
+**CI failure logs**: when the `Test` workflow fails on a PR, `.github/workflows/post-ci-logs.yml` automatically posts the tail of the failed steps (last ~12KB) as a PR comment. If you (Claude) pushed and the CI broke, **read the most recent PR comment** for the actual error — `pull_request_read` (`get_check_runs`) only returns metadata, not log output.
+
 ## Architecture
 
 ### Directory Map

@@ -82,12 +82,8 @@ export default async function BuscaPage({ searchParams }: PageProps) {
     const { firestore } = await getAuthenticatedAppForUser();
     products = await getCachedSearchResults(createSearchFiltersCacheKey(filters), firestore);
     if (products.length > 0) {
-      try {
-        const stockRepository = createStockRepository(firestore);
-        stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
-      } catch (stockError) {
-        console.error("[BuscaPage] failed to load stock data, continuing without it", stockError);
-      }
+      const stockRepository = createStockRepository(firestore);
+      stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
     }
   }
 

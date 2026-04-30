@@ -46,7 +46,7 @@ const getCachedCategoryById = cache(async (categoryId: string): Promise<Firestor
     return await categoriesRepository.getById(categoryId);
   } catch (error) {
     console.error(`[ProdutoPage] error fetching category with id "${categoryId}"`, error);
-    return null;
+    throw createHttpStatusError(500, "Erro ao carregar dados da categoria do produto.");
   }
 });
 
@@ -57,7 +57,7 @@ const getCachedStockByProductId = cache(async (productId: string): Promise<Stock
     return await stockRepository.getByProductId(productId);
   } catch (error) {
     console.error(`[ProdutoPage] error fetching stock for product "${productId}"`, error);
-    return null;
+    throw createHttpStatusError(500, "Erro ao carregar dados de estoque do produto.");
   }
 });
 
