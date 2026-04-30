@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Category } from "@/src/schemas/firestore/category";
 import styles from "./CategoryBlock.module.css";
@@ -12,10 +13,12 @@ export default function CategoryBlock({ category }: CategoryBlockProps) {
 
   return (
     <Link href={`/categoria/${category.slug}`} aria-label={label} className={styles.link}>
-      <img
+      <Image
         src={imageUrl}
         alt=""
         role="presentation"
+        fill
+        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
         loading="lazy"
         className={styles.image}
       />

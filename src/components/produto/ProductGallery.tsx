@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "./ProductGallery.module.css";
 import ProductImageZoom from "./ProductImageZoom";
@@ -136,9 +137,12 @@ export default function ProductGallery({
                   aria-label={`Ver imagem ${i + 1}`}
                   aria-pressed={i === activeIndex}
                 >
-                  <img
+                  <Image
                     src={image.defaultUrl}
                     alt={`${productName} — miniatura ${i + 1}`}
+                    width={64}
+                    height={64}
+                    sizes="64px"
                     className={styles.thumbImage}
                   />
                 </button>

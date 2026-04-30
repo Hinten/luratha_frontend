@@ -41,6 +41,6 @@ describe("CategoryBlock", () => {
     const { container } = render(<CategoryBlock category={mockCategory} />);
     const img = container.querySelector("img");
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute("src", expect.stringContaining("text=Vestidos"));
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("text=Vestidos");
   });
 });

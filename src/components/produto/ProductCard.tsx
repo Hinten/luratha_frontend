@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import styles from "./ProductCard.module.css";
 import type { Product, Stock } from "@/src/schemas/firestore";
@@ -34,9 +35,10 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
   const cardBody = (
     <>
       <div className={styles.imageWrapper}>
-        <img
+        <Image
           src={imageUrl}
           alt={name}
+          fill
           className={styles.image}
           loading="lazy"
           sizes={productCardImageSizes}

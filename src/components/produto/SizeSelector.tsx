@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import styles from "./SizeSelector.module.css";
 import AddToCartButton from "./AddToCartButton";
@@ -217,10 +218,13 @@ export default function SizeSelector({
                     aria-pressed={selectedColor === color}
                     aria-label={color}
                   >
-                    <img
+                    <Image
                       src={swatchUrl}
                       alt=""
                       aria-hidden="true"
+                      width={56}
+                      height={56}
+                      sizes="56px"
                       className={styles.colorSwatchImg}
                     />
                     <span className={styles.colorSwatchLabel}>{color}</span>

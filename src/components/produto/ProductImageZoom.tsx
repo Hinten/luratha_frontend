@@ -63,6 +63,8 @@ export default function ProductImageZoom({
 
   return (
     <>
+      {/* Uses pre-rendered Firebase Storage variants via custom srcSet — next/image's optimizer would replace them with on-the-fly resizes of the desktop variant. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         srcSet={srcSet}
@@ -142,6 +144,8 @@ export default function ProductImageZoom({
               >
                 ×
               </button>
+              {/* Modal renders the image at viewport-bounded size (max-width/max-height with object-fit:contain) — intrinsic dimensions are unknown here and next/image requires explicit width/height or a fixed-aspect parent. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={zoomUrl} alt={alt} className={styles.zoomedImage} />
             </div>,
             document.body,
