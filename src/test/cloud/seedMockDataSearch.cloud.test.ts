@@ -28,7 +28,7 @@ import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,
 } from "@/src/lib/repositories/homeSeedMockData";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 const CLOUD_TEST_APP_NAME = "luratha-cloud-seed-search-client";
@@ -43,6 +43,9 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
 
 describeCloud("Home seed → /busca search round-trip", () => {
   const prefix = createCloudTestPrefix();
+  // The seed prefix mixes lowercase hex into the SKU; skuSchema only allows
+  // [A-Z0-9_-] so we derive an uppercase-only version for the SKU suffix.
+  const skuPrefix = prefix.replace(/[^A-Za-z0-9_-]/g, "_").toUpperCase();
   let clientApp: FirebaseApp;
   let db: Firestore;
   const seededDocs: SeedDocument[] = [];
@@ -54,6 +57,7 @@ describeCloud("Home seed → /busca search round-trip", () => {
   const seededProductIds = ["prod_home_01", "prod_home_03", "prod_home_11"] as const;
   // Append the prefix to guarantee uniqueness across concurrent CI runs.
   const namespacedId = (rawId: string) => `${rawId}__${prefix}`;
+  const namespacedSku = (rawSku: string) => `${rawSku}_${skuPrefix}`;
 
   beforeAll(async () => {
     const webConfig = getFirebaseWebConfig();
@@ -78,17 +82,21 @@ describeCloud("Home seed → /busca search round-trip", () => {
 
     // Re-namespace the ids/skus to keep the suite isolated. Variant ids/skus
     // are also re-namespaced so we can assert on them in the variant tests.
+    // `slug: null` forces the schema's preprocess to regenerate the slug from
+    // the new title+sku — leaving the old slug in place would trip the
+    // superRefine check that demands slug match the title/sku pair.
     const productsToSeed = allProducts
       .filter((product) => seededProductIds.includes(product.id as typeof seededProductIds[number]))
       .map((product) => ({
         ...product,
         id: namespacedId(product.id),
-        sku: `${product.sku}_${prefix}`,
+        slug: null,
+        sku: namespacedSku(product.sku),
         categoryId: namespacedId(product.categoryId),
         variants: product.variants?.map((variant) => ({
           ...variant,
           id: namespacedId(variant.id),
-          sku: `${variant.sku}_${prefix}`,
+          sku: namespacedSku(variant.sku),
         })) ?? null,
       }));
 
@@ -99,7 +107,6 @@ describeCloud("Home seed → /busca search round-trip", () => {
         .withConverter(adminProductConverter);
       // Re-validate so the schema's transform recomputes slug, variantIds and
       // variantSkus for the namespaced product.
-      const { validateProduct } = await import("@/src/schemas/firestore");
       const revalidated = validateProduct(product);
       await ref.set(revalidated);
       seededDocs.push({ collection: firestoreCollections.products, id: product.id });
@@ -137,7 +144,7 @@ describeCloud("Home seed → /busca search round-trip", () => {
 
   it("findByIdOrSku resolves a product by its (namespaced) sku", async () => {
     const repo = createProductsSearchRepository(db);
-    const found = await repo.findByIdOrSku(`LURATHA_1001_${prefix}`);
+    const found = await repo.findByIdOrSku(namespacedSku("LURATHA_1001"));
     expect(found).not.toBeNull();
     expect(found?.id).toBe(namespacedId("prod_home_01"));
   });
@@ -151,7 +158,7 @@ describeCloud("Home seed → /busca search round-trip", () => {
 
   it("findByIdOrSku resolves the parent product by a variant sku", async () => {
     const repo = createProductsSearchRepository(db);
-    const found = await repo.findByIdOrSku(`LURATHA_1011_M_${prefix}`);
+    const found = await repo.findByIdOrSku(namespacedSku("LURATHA_1011_M"));
     expect(found).not.toBeNull();
     expect(found?.id).toBe(namespacedId("prod_home_11"));
   });
