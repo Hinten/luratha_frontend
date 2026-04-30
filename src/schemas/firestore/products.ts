@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  colorHexSchema,
   moneySchema,
   nonEmptyStringSchema,
   skuSchema,

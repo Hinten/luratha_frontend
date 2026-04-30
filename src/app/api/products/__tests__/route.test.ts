@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { POST } from "@/src/app/api/products/route";
 
 // ── Hoisted mocks (vi.mock is hoisted; variables must be declared via vi.hoisted) ─
-const { mockSet, mockGet, mockDoc, mockCollection, mockEmbed } = vi.hoisted(() => {
+const { mockSet, mockGet, mockCollection, mockEmbed } = vi.hoisted(() => {
   const mockSet = vi.fn().mockResolvedValue(undefined);
   const mockGet = vi.fn().mockResolvedValue({ exists: false });
   const mockDocRef = {

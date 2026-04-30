@@ -12,7 +12,6 @@ import { validateProduct } from "@/src/schemas/firestore";
 const {
   mockAdminGet,
   mockAdminSet,
-  mockAdminDoc,
   mockAdminCollection,
   mockStorageDelete,
   mockBucketFile,
