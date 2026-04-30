@@ -19,7 +19,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+const DEFAULT_PRODUCT_IMAGE_URL = "/image_404.png";
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
 

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import ImageWithFallback from "@/src/components/ImageWithFallback";
 import type { Category } from "@/src/schemas/firestore/category";
 import styles from "./CategoryBlock.module.css";
 
@@ -9,12 +9,11 @@ interface CategoryBlockProps {
 
 export default function CategoryBlock({ category }: CategoryBlockProps) {
   const label = category.name;
-  const imageUrl = `https://placehold.co/600x700/EDE4D9/3A2F2A?text=${encodeURIComponent(category.name)}`;
 
   return (
     <Link href={`/categoria/${category.slug}`} aria-label={label} className={styles.link}>
-      <Image
-        src={imageUrl}
+      <ImageWithFallback
+        src={null}
         alt=""
         role="presentation"
         fill
