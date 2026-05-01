@@ -25,14 +25,12 @@ const ZOOM_WEBP_QUALITY = 88;
 const ZOOM_WIDTH = 2000;
 const ZOOM_MIN_WIDTH = 1500;
 const ZOOM_MIN_HEIGHT = 1500;
-const TEMP_LINK_EXPIRATION_MS = 15 * 60 * 1_000;
 
 type ProductImageResolution = {
   width: number;
   height: number;
   storagePath: string;
   downloadUrl: string;
-  temporaryUrl: string | null;
   format: "webp";
 };
 
@@ -184,7 +182,6 @@ async function createAndUploadVariants(
           height: outputHeight,
           storagePath,
           downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
-          temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
           format: "webp" as const,
         },
       };
@@ -240,7 +237,6 @@ async function createSwatchVariant(
     height: transformed.info.height ?? SWATCH_SIZE,
     storagePath,
     downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
-    temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
     format: "webp",
   };
 }
@@ -288,26 +284,8 @@ async function createZoomVariant(
     height: outputHeight,
     storagePath,
     downloadUrl: buildDownloadUrl(storagePath, downloadUrlToken),
-    temporaryUrl: await buildTemporaryUrl(fileRef, storagePath, downloadUrlToken),
     format: "webp",
   };
-}
-
-async function buildTemporaryUrl(
-  fileRef: ReturnType<typeof adminBucket.file>,
-  storagePath: string,
-  token: string,
-): Promise<string | null> {
-  try {
-    const [url] = await fileRef.getSignedUrl({
-      action: "read",
-      expires: Date.now() + TEMP_LINK_EXPIRATION_MS,
-      version: "v4",
-    });
-    return url;
-  } catch {
-    return buildDownloadUrl(storagePath, token);
-  }
 }
 
 function buildDownloadUrl(storagePath: string, token: string): string {

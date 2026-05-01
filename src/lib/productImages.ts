@@ -14,7 +14,7 @@ const PRODUCT_CARD_FALLBACK_SIZES = "(max-width: 768px) 50vw, (max-width: 1200px
 export function getProductPrimaryImage(product: Product, fallbackUrl: string): string {
   const firstAsset = product.photoAssets[0];
   if (firstAsset) {
-    return resolvePreferredUrl(firstAsset.resolutions.desktop.downloadUrl, firstAsset.resolutions.desktop.temporaryUrl);
+    return firstAsset.resolutions.desktop.downloadUrl;
   }
 
   return fallbackUrl;
@@ -28,10 +28,10 @@ export function getProductCardImage(product: Product, fallbackUrl: string): stri
 
   const cardResolution = firstAsset.resolutions.card;
   if (cardResolution) {
-    return resolvePreferredUrl(cardResolution.downloadUrl, cardResolution.temporaryUrl);
+    return cardResolution.downloadUrl;
   }
 
-  return resolvePreferredUrl(firstAsset.resolutions.desktop.downloadUrl, firstAsset.resolutions.desktop.temporaryUrl);
+  return firstAsset.resolutions.desktop.downloadUrl;
 }
 
 export function getProductGalleryImages(product: Product, fallbackUrl: string): ProductGalleryImage[] {
@@ -45,42 +45,21 @@ export function getProductGalleryImages(product: Product, fallbackUrl: string): 
     }];
   }
 
-  return product.photoAssets.map((asset, index) => {
-    const mobile = asset.resolutions.mobile.temporaryUrl ?? asset.resolutions.mobile.downloadUrl;
-    const tablet = asset.resolutions.tablet.temporaryUrl ?? asset.resolutions.tablet.downloadUrl;
-    const desktop = asset.resolutions.desktop.temporaryUrl ?? asset.resolutions.desktop.downloadUrl;
-    const zoom = asset.resolutions.zoom
-      ? asset.resolutions.zoom.temporaryUrl ?? asset.resolutions.zoom.downloadUrl
-      : null;
-
-    return {
-      id: asset.id,
-      defaultUrl: desktop,
-      alt: asset.alt ?? `${product.title} — imagem ${index + 1}`,
-      srcSet: `${mobile} ${asset.resolutions.mobile.width}w, ${tablet} ${asset.resolutions.tablet.width}w, ${desktop} ${asset.resolutions.desktop.width}w`,
-      zoomUrl: zoom,
-    };
-  });
+  return product.photoAssets.map((asset, index) => buildGalleryImage(asset, product.title, index));
 }
 
 export const productGalleryImageSizes = RESPONSIVE_SIZES;
 export const productCardImageSizes = PRODUCT_CARD_FALLBACK_SIZES;
-
-function resolvePreferredUrl(downloadUrl: string, temporaryUrl: string | null): string {
-  return temporaryUrl ?? downloadUrl;
-}
 
 function buildGalleryImage(
   asset: ProductImageAsset,
   productTitle: string,
   index: number,
 ): ProductGalleryImage {
-  const mobile = asset.resolutions.mobile.temporaryUrl ?? asset.resolutions.mobile.downloadUrl;
-  const tablet = asset.resolutions.tablet.temporaryUrl ?? asset.resolutions.tablet.downloadUrl;
-  const desktop = asset.resolutions.desktop.temporaryUrl ?? asset.resolutions.desktop.downloadUrl;
-  const zoom = asset.resolutions.zoom
-    ? asset.resolutions.zoom.temporaryUrl ?? asset.resolutions.zoom.downloadUrl
-    : null;
+  const mobile = asset.resolutions.mobile.downloadUrl;
+  const tablet = asset.resolutions.tablet.downloadUrl;
+  const desktop = asset.resolutions.desktop.downloadUrl;
+  const zoom = asset.resolutions.zoom?.downloadUrl ?? null;
 
   return {
     id: asset.id,
@@ -194,7 +173,7 @@ export function getVariantCardImage(
   }
   const cardResolution = asset.resolutions.card;
   if (cardResolution) {
-    return resolvePreferredUrl(cardResolution.downloadUrl, cardResolution.temporaryUrl);
+    return cardResolution.downloadUrl;
   }
-  return resolvePreferredUrl(asset.resolutions.mobile.downloadUrl, asset.resolutions.mobile.temporaryUrl);
+  return asset.resolutions.mobile.downloadUrl;
 }

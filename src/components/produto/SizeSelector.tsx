@@ -60,7 +60,7 @@ function getColorSwatchUrl(product: FirestoreProduct, color: string): string | n
 
   const resolution =
     asset.resolutions.swatch ?? asset.resolutions.card ?? asset.resolutions.mobile;
-  return resolution.temporaryUrl ?? resolution.downloadUrl;
+  return resolution.downloadUrl;
 }
 
 function isColorAvailable(
