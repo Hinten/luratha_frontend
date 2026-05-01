@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./SizeSelector.module.css";
 import AddToCartButton from "./AddToCartButton";
 import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
@@ -217,10 +218,13 @@ export default function SizeSelector({
                     aria-pressed={selectedColor === color}
                     aria-label={color}
                   >
-                    <img
+                    <ImageWithFallback
                       src={swatchUrl}
                       alt=""
                       aria-hidden="true"
+                      width={56}
+                      height={56}
+                      sizes="56px"
                       className={styles.colorSwatchImg}
                     />
                     <span className={styles.colorSwatchLabel}>{color}</span>

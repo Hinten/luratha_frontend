@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./ProductGallery.module.css";
 import ProductImageZoom from "./ProductImageZoom";
 import type { ProductGalleryImage } from "@/src/lib/productImages";
@@ -136,9 +137,12 @@ export default function ProductGallery({
                   aria-label={`Ver imagem ${i + 1}`}
                   aria-pressed={i === activeIndex}
                 >
-                  <img
+                  <ImageWithFallback
                     src={image.defaultUrl}
                     alt={`${productName} — miniatura ${i + 1}`}
+                    width={64}
+                    height={64}
+                    sizes="64px"
                     className={styles.thumbImage}
                   />
                 </button>

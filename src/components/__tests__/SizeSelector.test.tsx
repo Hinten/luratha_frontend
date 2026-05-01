@@ -349,7 +349,7 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
     expect(img).not.toBeNull();
-    expect(img!.getAttribute("src")).toBe("https://example.com/azul-card.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/azul-card.webp");
   });
 
   it("falls back to text pill for a color whose variant has no photoId", () => {
@@ -418,7 +418,7 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     render(<SizeSelector product={productWithExplicitSwatch} {...cartProps} />);
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
-    expect(img!.getAttribute("src")).toBe("https://example.com/swatch.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/swatch.webp");
   });
 });
 

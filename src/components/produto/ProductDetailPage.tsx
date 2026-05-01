@@ -4,7 +4,7 @@ import ProductDescription from "@/src/components/produto/ProductDescription";
 import ProductVariantView from "@/src/components/produto/ProductVariantView";
 import { getVariantGalleryImages } from "@/src/lib/productImages";
 
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+const DEFAULT_PRODUCT_IMAGE_URL = "/image_404.png";
 
 interface ProductDetailPageProps {
   product: FirestoreProduct;
