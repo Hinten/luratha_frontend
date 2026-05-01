@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./ProductGallery.module.css";
 import ProductImageZoom from "./ProductImageZoom";
 import type { ProductGalleryImage } from "@/src/lib/productImages";
@@ -137,7 +137,7 @@ export default function ProductGallery({
                   aria-label={`Ver imagem ${i + 1}`}
                   aria-pressed={i === activeIndex}
                 >
-                  <Image
+                  <ImageWithFallback
                     src={image.defaultUrl}
                     alt={`${productName} — miniatura ${i + 1}`}
                     width={64}
