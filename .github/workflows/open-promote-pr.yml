@@ -1,0 +1,86 @@
+name: Open promote PR (master → production)
+
+# Roda todo domingo às 21:00 UTC (18:00 BRT) e abre — ou atualiza —
+# um PR draft de master para production listando os commits a promover.
+# Se as branches estiverem alinhadas, encerra sem criar PR.
+#
+# Observação importante: PRs criados pelo GITHUB_TOKEN padrão NÃO disparam
+# o workflow `test.yml` automaticamente (proteção do GitHub contra loops).
+# Para ativar o CI no PR é preciso fechar e reabrir o PR manualmente, ou
+# trocar este workflow para usar um PAT/GitHub App token no futuro.
+
+on:
+  schedule:
+    - cron: "0 21 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    name: Open or update promote PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Fetch master and production
+        run: git fetch origin master production
+
+      - name: Count commits ahead of production
+        id: diff
+        run: |
+          count=$(git rev-list --count origin/production..origin/master)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Commits em master ainda não promovidos: $count"
+
+      - name: Skip when production is already up to date
+        if: steps.diff.outputs.count == '0'
+        run: echo "::notice::Sem commits para promover — production já está alinhado com master."
+
+      - name: Build PR body
+        if: steps.diff.outputs.count != '0'
+        run: |
+          {
+            echo "## Promote master → production"
+            echo ""
+            echo "_PR aberto automaticamente por \`open-promote-pr.yml\` em $(date -u +'%Y-%m-%d %H:%M UTC')._"
+            echo ""
+            echo "**Commits a promover:** ${{ steps.diff.outputs.count }}"
+            echo ""
+            echo "### Changelog"
+            echo ""
+            git log origin/production..origin/master --pretty=format:'- %s (%h) — %an' --no-merges
+            echo ""
+            echo ""
+            echo "### Checklist antes do merge"
+            echo ""
+            echo "- [ ] CI verde (lint, unit, integration-cloud, e2e-cloud, functions-cloud)"
+            echo "- [ ] Smoke test manual em staging"
+            echo "- [ ] Sem migrações pendentes"
+            echo ""
+            echo "> ⚠️ PRs abertos pelo \`GITHUB_TOKEN\` padrão não disparam o workflow \`test.yml\` automaticamente."
+            echo "> Para rodar o CI, feche e reabra este PR manualmente — ou substitua o token deste workflow por um PAT/GitHub App."
+          } > pr-body.md
+
+      - name: Create or update PR
+        if: steps.diff.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="chore: promote master → production ($(date -u +'%Y-%m-%d'))"
+          existing=$(gh pr list --base production --head master --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "$title" --body-file pr-body.md
+            echo "Atualizado PR existente #$existing"
+          else
+            gh pr create \
+              --base production \
+              --head master \
+              --title "$title" \
+              --body-file pr-body.md \
+              --draft
+          fi
