@@ -53,20 +53,35 @@ async function getCachedSearchResults(cacheKey: string, firestore: Firestore): P
 
   const productsSearchRepository = createProductsSearchRepository(firestore);
 
-  if (!searchResponseCache.has(cacheKey)) {
-    if (searchResponseCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
-      const oldestKey = searchResponseCache.keys().next().value;
-      if (oldestKey) {
-        searchResponseCache.delete(oldestKey);
-      }
-    }
-    searchResponseCache.set(
-      cacheKey,
-      productsSearchRepository.search(parseSearchFiltersCacheKey(cacheKey)),
-    );
+  const cached = searchResponseCache.get(cacheKey);
+  if (cached) {
+    return cached;
   }
 
-  return searchResponseCache.get(cacheKey)!;
+  const promise = productsSearchRepository
+    .search(parseSearchFiltersCacheKey(cacheKey))
+    .then((results) => {
+      // Do not cache empty/error results so the next request retries Firestore.
+      // This prevents stale empty caches (e.g. before seeding) from masking real data.
+      if (results.length === 0) {
+        searchResponseCache.delete(cacheKey);
+      }
+      return results;
+    })
+    .catch((error) => {
+      searchResponseCache.delete(cacheKey);
+      throw error;
+    });
+
+  if (searchResponseCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+    const oldestKey = searchResponseCache.keys().next().value;
+    if (oldestKey) {
+      searchResponseCache.delete(oldestKey);
+    }
+  }
+  searchResponseCache.set(cacheKey, promise);
+
+  return promise;
 }
 
 export default async function BuscaPage({ searchParams }: PageProps) {
