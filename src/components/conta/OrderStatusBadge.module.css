@@ -1,0 +1,29 @@
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.625rem;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.warning {
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  color: color-mix(in srgb, var(--color-warning) 80%, var(--color-neutral-dark) 20%);
+}
+
+.info {
+  background-color: color-mix(in srgb, var(--color-secondary) 22%, transparent);
+  color: var(--color-neutral-dark);
+}
+
+.success {
+  background-color: color-mix(in srgb, var(--color-secondary) 40%, transparent);
+  color: var(--color-neutral-dark);
+}
+
+.muted {
+  background-color: var(--color-neutral-mid);
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+}
