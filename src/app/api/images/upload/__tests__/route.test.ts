@@ -46,7 +46,6 @@ describe("POST /api/images/upload", () => {
             height: 500,
             storagePath: "products/prod_1/asset-1/card.webp",
             downloadUrl: "https://example.com/card.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           mobile: {
@@ -54,7 +53,6 @@ describe("POST /api/images/upload", () => {
             height: 600,
             storagePath: "products/prod_1/asset-1/mobile.webp",
             downloadUrl: "https://example.com/mobile.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           tablet: {
@@ -62,7 +60,6 @@ describe("POST /api/images/upload", () => {
             height: 960,
             storagePath: "products/prod_1/asset-1/tablet.webp",
             downloadUrl: "https://example.com/tablet.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           desktop: {
@@ -70,7 +67,6 @@ describe("POST /api/images/upload", () => {
             height: 1500,
             storagePath: "products/prod_1/asset-1/desktop.webp",
             downloadUrl: "https://example.com/desktop.webp",
-            temporaryUrl: "https://example.com/temp.webp",
             format: "webp",
           },
         },
@@ -124,7 +120,6 @@ describe("POST /api/images/upload", () => {
             height: 500,
             storagePath: "products/prod_1/asset-1/card.webp",
             downloadUrl: "https://example.com/card.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           mobile: {
@@ -132,7 +127,6 @@ describe("POST /api/images/upload", () => {
             height: 600,
             storagePath: "products/prod_1/asset-1/mobile.webp",
             downloadUrl: "https://example.com/mobile.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           tablet: {
@@ -140,7 +134,6 @@ describe("POST /api/images/upload", () => {
             height: 960,
             storagePath: "products/prod_1/asset-1/tablet.webp",
             downloadUrl: "https://example.com/tablet.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           desktop: {
@@ -148,7 +141,6 @@ describe("POST /api/images/upload", () => {
             height: 1500,
             storagePath: "products/prod_1/asset-1/desktop.webp",
             downloadUrl: "https://example.com/desktop.webp",
-            temporaryUrl: "https://example.com/temp.webp",
             format: "webp",
           },
         },

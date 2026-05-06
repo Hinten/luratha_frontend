@@ -65,7 +65,7 @@ describeCloud("POST /api/images/upload (Cloud Firebase)", () => {
     expect(payload.imageAsset.resolutions.mobile.storagePath).toContain("/mobile.webp");
     expect(payload.imageAsset.resolutions.tablet.storagePath).toContain("/tablet.webp");
     expect(payload.imageAsset.resolutions.desktop.storagePath).toContain("/desktop.webp");
-    expect(payload.imageAsset.resolutions.desktop.temporaryUrl).toBeTruthy();
+    expect(payload.imageAsset.resolutions.desktop.downloadUrl).toContain("firebasestorage.googleapis.com");
     if (payload.imageAsset.resolutions.zoom) {
       expect(payload.imageAsset.resolutions.zoom.storagePath).toContain("/zoom.webp");
     }
