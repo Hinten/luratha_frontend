@@ -98,7 +98,6 @@ function buildImageAsset(productId: string, assetId: string): Record<string, unk
         height: 600,
         storagePath: `products/${productId}/${assetId}/mobile.webp`,
         downloadUrl: `https://example.com/${productId}/${assetId}/mobile.webp`,
-        temporaryUrl: null,
         format: "webp",
       },
       tablet: {
@@ -106,7 +105,6 @@ function buildImageAsset(productId: string, assetId: string): Record<string, unk
         height: 960,
         storagePath: `products/${productId}/${assetId}/tablet.webp`,
         downloadUrl: `https://example.com/${productId}/${assetId}/tablet.webp`,
-        temporaryUrl: null,
         format: "webp",
       },
       desktop: {
@@ -114,7 +112,6 @@ function buildImageAsset(productId: string, assetId: string): Record<string, unk
         height: 1500,
         storagePath: `products/${productId}/${assetId}/desktop.webp`,
         downloadUrl: `https://example.com/${productId}/${assetId}/desktop.webp`,
-        temporaryUrl: null,
         format: "webp",
       },
     },

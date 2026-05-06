@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./ProductCard.module.css";
 import type { Product, Stock } from "@/src/schemas/firestore";
 import { getProductCardImage, productCardImageSizes } from "@/src/lib/productImages";
@@ -6,7 +7,7 @@ import RecentlyViewedBadge from "./RecentlyViewedBadge";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const DEFAULT_PRODUCT_IMAGE_URL = "https://placehold.co/600x750/F8F5F0/3A2F2A?text=Produto";
+const DEFAULT_PRODUCT_IMAGE_URL = "/image_404.png";
 
 interface ProductCardProps {
   product: Product;
@@ -34,9 +35,10 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
   const cardBody = (
     <>
       <div className={styles.imageWrapper}>
-        <img
+        <ImageWithFallback
           src={imageUrl}
           alt={name}
+          fill
           className={styles.image}
           loading="lazy"
           sizes={productCardImageSizes}

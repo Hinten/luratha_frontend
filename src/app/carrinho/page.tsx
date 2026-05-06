@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/src/contexts/CartContext";
 import styles from "./page.module.css";
@@ -41,9 +42,12 @@ export default function CarrinhoPage() {
                 {items.map((item) => (
                   <li key={`${item.productId}-${item.size}`} className={styles.item}>
                     {/* Thumbnail */}
-                    <img
+                    <Image
                       src={item.imageUrl}
                       alt={item.name}
+                      width={100}
+                      height={100}
+                      sizes="(max-width: 640px) 88px, 100px"
                       className={styles.itemThumb}
                       loading="lazy"
                     />

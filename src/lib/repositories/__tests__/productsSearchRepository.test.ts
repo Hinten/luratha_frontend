@@ -1,40 +1,65 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { FirebaseError } from "firebase/app";
 import type { Firestore } from "firebase/firestore";
-import {
-  createProductsSearchRepository,
-  isExactMatchCandidate,
-} from "@/src/lib/repositories/productsSearchRepository";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hoisted mocks for the firebase/firestore/pipelines module so we can drive
-// the repository entirely without Firestore. Each test inspects what the
-// repository asked the pipeline to do (or returns canned results).
+// Hoisted mock state shared by both test groups:
+//   1. executeCore fallback tests (this branch + master) — track Firestore SDK
+//      calls (collection/query/where/orderBy/limit/getDocs).
+//   2. exact-match / pipeline tests (this branch) — track pipeline construction
+//      via dbInstance.pipeline() and chainable expression builders.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { pipelineSpy, executeMock, collectionMock, whereMock, sortMock, offsetMock, limitMock, findNearestMock } =
-  vi.hoisted(() => {
-    const collectionMock = vi.fn();
-    const whereMock = vi.fn();
-    const sortMock = vi.fn();
-    const offsetMock = vi.fn();
-    const limitMock = vi.fn();
-    const findNearestMock = vi.fn();
-    const pipelineSpy = vi.fn();
-    const executeMock = vi.fn();
-    return {
-      pipelineSpy,
-      executeMock,
-      collectionMock,
-      whereMock,
-      sortMock,
-      offsetMock,
-      limitMock,
-      findNearestMock,
-    };
-  });
+const {
+  // Firebase Firestore SDK tracking (executeCore path)
+  getDocsMock,
+  queryMock,
+  orderByCalls,
+  whereCalls,
+  // Pipeline tracking (executePipelineSearch / findByIdOrSku paths)
+  pipelineSpy,
+  executeMock,
+  collectionMock,
+  pipelineWhereMock,
+  sortMock,
+  offsetMock,
+  limitMock,
+  findNearestMock,
+} = vi.hoisted(() => ({
+  getDocsMock: vi.fn(),
+  queryMock: vi.fn((..._args: unknown[]) => ({ kind: "query" })),
+  orderByCalls: [] as Array<{ field: string; direction: string }>,
+  whereCalls: [] as Array<{ field: string; op: string; value: unknown }>,
+  pipelineSpy: vi.fn(),
+  executeMock: vi.fn(),
+  collectionMock: vi.fn(),
+  pipelineWhereMock: vi.fn(),
+  sortMock: vi.fn(),
+  offsetMock: vi.fn(),
+  limitMock: vi.fn(),
+  findNearestMock: vi.fn(),
+}));
+
+vi.mock("firebase/firestore", () => ({
+  collection: vi.fn(() => ({ kind: "collection" })),
+  query: queryMock,
+  where: vi.fn((field: string, op: string, value: unknown) => {
+    whereCalls.push({ field, op, value });
+    return { kind: "where", field, op, value };
+  }),
+  orderBy: vi.fn((field: string, direction: string) => {
+    orderByCalls.push({ field, direction });
+    return { kind: "orderBy", field, direction };
+  }),
+  limit: vi.fn(() => ({ kind: "limit" })),
+  getDocs: getDocsMock,
+  Timestamp: class { toDate() { return new Date(); } },
+  VectorValue: class {},
+}));
 
 vi.mock("firebase/firestore/pipelines", () => {
-  // Build a chainable pipeline stub that records every call.
+  // Chainable pipeline stub. Each method records the call and returns the
+  // same pipe so `pipeline().collection(...).where(...).limit(1)` works.
   function buildPipeline() {
     const pipe: Record<string, unknown> = {};
     pipe.collection = (...args: unknown[]) => {
@@ -42,7 +67,7 @@ vi.mock("firebase/firestore/pipelines", () => {
       return pipe;
     };
     pipe.where = (...args: unknown[]) => {
-      whereMock(...args);
+      pipelineWhereMock(...args);
       return pipe;
     };
     pipe.sort = (...args: unknown[]) => {
@@ -105,21 +130,28 @@ vi.mock("firebase/firestore/pipelines", () => {
   };
 });
 
-// Minimal Firestore stub – the repository only calls `.pipeline()` and
-// `collection(...)`/`getDocs(...)` (the latter routed via firebase/firestore).
-vi.mock("firebase/firestore", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("firebase/firestore")>();
-  return {
-    ...actual,
-    getDocs: vi.fn().mockResolvedValue({ docs: [] }),
-  };
-});
-
 vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
   createCategoriesRepository: () => ({
-    getBySlug: vi.fn().mockResolvedValue(null),
+    getBySlug: vi.fn(async (slug: string) =>
+      slug === "vestidos" ? { id: "cat_vestidos", name: "Vestidos", slug: "vestidos" } : null,
+    ),
   }),
 }));
+
+vi.mock("@/src/lib/embeddingService", () => ({
+  createEmbeddingService: () => ({
+    embed: vi.fn(async () => [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+  }),
+}));
+
+import {
+  createProductsSearchRepository,
+  isExactMatchCandidate,
+} from "@/src/lib/repositories/productsSearchRepository";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 function buildFirestoreStub(): Firestore {
   // The repository calls dbInstance.pipeline() to build pipelines. Wire it to
@@ -165,6 +197,37 @@ function buildProductDocResult(overrides: Record<string, unknown> = {}) {
     createdAt: now,
     updatedAt: now,
     ...overrides,
+  };
+}
+
+function buildExecuteCoreSnapshotDoc(id: string, overrides: Record<string, unknown> = {}) {
+  const now = new Date().toISOString();
+  return {
+    id,
+    data: () => ({
+      id,
+      slug: null,
+      title: `Produto ${id}`,
+      description: `Descrição ${id}`,
+      sku: `LURATHA_${id.toUpperCase()}`,
+      status: "active",
+      isPurchasable: true,
+      brandName: "Luratha",
+      categoryId: "cat_vestidos",
+      tags: [],
+      materialTags: [],
+      seasonalTags: [],
+      price: { price: 100, salePrice: null, priceMin: 100, priceMax: 100, currency: "BRL" },
+      totalStock: 5,
+      ratingAverage: 4.5,
+      reviewCount: 3,
+      vectorEmbedding: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+      searchEmbedding: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+      variants: null,
+      createdAt: now,
+      updatedAt: now,
+      ...overrides,
+    }),
   };
 }
 
@@ -230,7 +293,7 @@ describe("productsSearchRepository.findByIdOrSku", () => {
 
     expect(pipelineSpy).toHaveBeenCalledTimes(1);
     expect(collectionMock).toHaveBeenCalledWith("products");
-    expect(whereMock).toHaveBeenCalledTimes(1);
+    expect(pipelineWhereMock).toHaveBeenCalledTimes(1);
     expect(limitMock).toHaveBeenCalledWith(1);
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
@@ -318,5 +381,56 @@ describe("productsSearchRepository.search exact-match short-circuit", () => {
 
     expect(results).toHaveLength(1);
     expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// executeCore: missing-index fallback (from master)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("productsSearchRepository.executeCore", () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    queryMock.mockClear();
+    orderByCalls.length = 0;
+    whereCalls.length = 0;
+  });
+
+  it("falls back to in-memory sort when Firestore reports a missing composite index", async () => {
+    // First call (ordered query) → fails with FAILED_PRECONDITION.
+    // Second call (unordered query) → succeeds with two products in arbitrary order.
+    const olderUpdatedAt = "2026-01-01T00:00:00.000Z";
+    const newerUpdatedAt = "2026-04-29T00:00:00.000Z";
+    getDocsMock
+      .mockRejectedValueOnce(
+        new FirebaseError("failed-precondition", "The query requires an index. ..."),
+      )
+      .mockResolvedValueOnce({
+        docs: [
+          buildExecuteCoreSnapshotDoc("prod_old", { updatedAt: olderUpdatedAt }),
+          buildExecuteCoreSnapshotDoc("prod_new", { updatedAt: newerUpdatedAt }),
+        ],
+      });
+
+    const repo = createProductsSearchRepository({} as never);
+    const products = await repo.search({ categorySlug: "vestidos", sort: "newest", limit: 24 });
+
+    // The retry must happen with the same WHERE clauses but no orderBy.
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+    expect(orderByCalls).toEqual([{ field: "updatedAt", direction: "desc" }]);
+
+    // Products must come back sorted newest-first regardless of Firestore order.
+    expect(products.map((entry) => entry.id)).toEqual(["prod_new", "prod_old"]);
+  });
+
+  it("does not fall back when the failure is not a missing-index error", async () => {
+    getDocsMock.mockRejectedValueOnce(new Error("network unreachable"));
+
+    const repo = createProductsSearchRepository({} as never);
+    await expect(
+      repo.search({ categorySlug: "vestidos", sort: "newest", limit: 24 }),
+    ).rejects.toThrow();
+
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
   });
 });

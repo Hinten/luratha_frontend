@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CategoriaPage, { generateMetadata } from "@/src/app/categoria/[slug]/page";
-import { Product } from "../../schemas/firestore";
 
 const { getBySlugMock, searchMock, productGridSpy } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),
@@ -134,38 +133,3 @@ describe("CategoriaPage", () => {
     expect(metadata.alternates?.canonical).toBe("https://www.luratha.com.br/categoria/vestidos");
   });
 });
-
-function createFirestoreProduct(
-  input: Partial<Product> & {
-    id: string;
-    title: string;
-    slug: string;
-    price: { price: number; salePrice: number | null };
-  },
-): Product {
-  return {
-    description: "Descrição",
-    isPurchasable: true,
-    brandName: "Luratha",
-    sku: "LURATHA_9999",
-    categoryId: "cat_vestidos",
-    tags: [],
-    materialTags: [],
-    seasonalTags: [],
-    condition: "new",
-    adult: false,
-    isBundle: false,
-    multipack: 1,
-    material: [],
-    pattern: [],
-    photoAssets: [],
-    lifeStylePhotos: [],
-    videoUrls: [],
-    totalStock: 10,
-    status: "active",
-    vectorEmbedding: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    createdAt: "2026-04-16T00:00:00.000Z",
-    updatedAt: "2026-04-16T00:00:00.000Z",
-    ...input,
-  } as Product;
-}

@@ -114,7 +114,6 @@ describe("embeddingService", () => {
 
   it("aborts the request when the configured timeout elapses", async () => {
     // Use a very short timeout to trigger abort reliably in tests
-    const controller = new AbortController();
     vi.spyOn(globalThis, "fetch").mockImplementationOnce((_url, opts) => {
       // Immediately abort so the signal fires before the promise resolves
       (opts?.signal as AbortSignal)?.dispatchEvent(new Event("abort"));

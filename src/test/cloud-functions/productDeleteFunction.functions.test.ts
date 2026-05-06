@@ -150,7 +150,6 @@ describeCloud("onProductDeleted (Cloud Functions)", () => {
             height: 600,
             storagePath,
             downloadUrl: `https://example.com/test-mobile.webp`,
-            temporaryUrl: null,
             format: "webp",
           },
           tablet: null,

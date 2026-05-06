@@ -16,6 +16,18 @@ const eslintConfig = defineConfig([
     // skip its source and tooling files in the root lint pass.
     "functions/**",
   ]),
+  {
+    rules: {
+      // Allow _-prefixed bindings as intentionally-unused (standard TS convention).
+      // Covers destructuring tricks like `const { slug: _slug, ...rest } = obj`
+      // and unused catch-clause variables like `catch (_e)`.
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        varsIgnorePattern: "^_",
+        argsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
+    },
+  },
 ]);
 
 export default eslintConfig;

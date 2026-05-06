@@ -26,40 +26,29 @@ test.describe("Cart (Carrinho)", () => {
     });
   });
 
-  test("cart page renders with title", async ({ page }) => {
+  test("empty cart renders title, heading, message and browse link", async ({ page }) => {
     await page.goto("/carrinho");
     await expect(page).toHaveTitle(/Luratha/);
     await expect(
       page.getByRole("heading", { name: "Meu Carrinho" }),
     ).toBeVisible();
-  });
-
-  test("empty cart shows empty state message", async ({ page }) => {
-    await page.goto("/carrinho");
     await expect(page.getByText("Seu carrinho está vazio")).toBeVisible();
-  });
-
-  test("empty cart shows link to browse products", async ({ page }) => {
-    await page.goto("/carrinho");
     const browseLink = page.getByRole("link", { name: "Ver Categorias" });
     await expect(browseLink).toBeVisible();
     await expect(browseLink).toHaveAttribute("href", "/todas-as-pecas");
   });
 
-  test("cart link in header navigates to /carrinho", async ({ page }) => {
+  test("header cart link navigates to /carrinho with no badge when empty", async ({ page }) => {
     await page.goto("/");
+    // With empty cart the badge span should not exist in the DOM
+    const cartBadge = page.getByRole("link", { name: "Carrinho" }).locator("span");
+    await expect(cartBadge).not.toBeVisible();
+
     await page.getByRole("link", { name: "Carrinho" }).click();
     await expect(page).toHaveURL(/\/carrinho/);
     await expect(
       page.getByRole("heading", { name: "Meu Carrinho" }),
     ).toBeVisible();
-  });
-
-  test("header cart link has no badge when cart is empty", async ({ page }) => {
-    await page.goto("/");
-    // With empty cart the badge span should not exist in the DOM
-    const cartBadge = page.getByRole("link", { name: "Carrinho" }).locator("span");
-    await expect(cartBadge).not.toBeVisible();
   });
 
   test("cart with items shows item rows and order summary", async ({ page }) => {

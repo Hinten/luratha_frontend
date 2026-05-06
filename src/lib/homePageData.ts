@@ -6,9 +6,7 @@ import {
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
-import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
-const HOME_DATA_TIMEOUT_MS = 1_500;
 
 type HomePageData = {
   categories: FirestoreCategory[];
@@ -18,56 +16,33 @@ type HomePageData = {
   stockMap: Map<string, Stock>;
 };
 
-
 export async function getHomePageData(): Promise<HomePageData> {
-  const emptyStockMap = new Map<string, Stock>();
+  const authApp = await getAuthenticatedAppForUser();
 
-  try {
+  const productsRepository = createProductsRepository(authApp.firestore);
 
-    const authApp = await getAuthenticatedAppForUser();
+  // Removed timout, using page cache later to ensure data is fresh while avoiding timeouts on slow connections or large datasets.
+  const [products, categories] = await Promise.all([
+      productsRepository.list({ status: "active", limit: 30 }),
+      getCachedCategories(),
+    ]).then((results) => results);
 
-    const productsRepository = createProductsRepository(authApp.firestore);
-    const [products, categories] = await withTimeout(
-      Promise.all([
-        productsRepository.list({ status: "active", limit: 30 }),
-        getCachedCategories(),
-      ]),
-      HOME_DATA_TIMEOUT_MS,
-    );
-
-    let stockMap = emptyStockMap;
-    if (products.length > 0) {
-      try {
-        const stockRepository = createStockRepository(authApp.firestore);
-        stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
-      } catch (stockError) {
-        console.error("[homePageData] failed to load stock data, continuing without it", stockError);
-      }
-    }
-
-    return {
-      categories,
-      newArrivals: products.slice(0, 4),
-      featured: [...products]
-        .sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0))
-        .slice(0, 4),
-      sale: products.filter((product) => product.price.salePrice !== null).slice(0, 5),
-      stockMap,
-    };
-  } catch (error) {
-    console.error("[homePageData] failed to load data from Firestore, using mock fallback", error);
-    const mockProducts = buildMockProducts();
-    return {
-      categories: [],
-      newArrivals: mockProducts.slice(0, 4),
-      featured: [...mockProducts].sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0)).slice(0, 4),
-      sale: mockProducts.filter((product) => product.price.salePrice !== null).slice(0, 5),
-      stockMap: emptyStockMap,
-    };
+  let stockMap = new Map<string, Stock>();
+  if (products.length > 0) {
+    const stockRepository = createStockRepository(authApp.firestore);
+    stockMap = await stockRepository.getByProductIds(products.map((p) => p.id));
   }
+
+  return {
+    categories,
+    newArrivals: products.slice(0, 4),
+    featured: [...products]
+      .sort((a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0))
+      .slice(0, 4),
+    sale: products.filter((product) => product.price.salePrice !== null).slice(0, 5),
+    stockMap,
+  };
 }
-
-
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
