@@ -28,7 +28,6 @@ const productWithAssets = validateProduct({
           height: 500,
           storagePath: "products/prod_assets_1/asset_1/card.webp",
           downloadUrl: "https://example.com/card.webp",
-          temporaryUrl: "https://example.com/temp-card.webp",
           format: "webp",
         },
         zoom: {
@@ -36,7 +35,6 @@ const productWithAssets = validateProduct({
           height: 2500,
           storagePath: "products/prod_assets_1/asset_1/zoom.webp",
           downloadUrl: "https://example.com/zoom.webp",
-          temporaryUrl: "https://example.com/temp-zoom.webp",
           format: "webp",
         },
         mobile: {
@@ -44,7 +42,6 @@ const productWithAssets = validateProduct({
           height: 600,
           storagePath: "products/prod_assets_1/asset_1/mobile.webp",
           downloadUrl: "https://example.com/mobile.webp",
-          temporaryUrl: null,
           format: "webp",
         },
         tablet: {
@@ -52,7 +49,6 @@ const productWithAssets = validateProduct({
           height: 960,
           storagePath: "products/prod_assets_1/asset_1/tablet.webp",
           downloadUrl: "https://example.com/tablet.webp",
-          temporaryUrl: null,
           format: "webp",
         },
         desktop: {
@@ -60,7 +56,6 @@ const productWithAssets = validateProduct({
           height: 1500,
           storagePath: "products/prod_assets_1/asset_1/desktop.webp",
           downloadUrl: "https://example.com/desktop.webp",
-          temporaryUrl: "https://example.com/temp-desktop.webp",
           format: "webp",
         },
       },
@@ -74,18 +69,18 @@ const productWithAssets = validateProduct({
 });
 
 describe("productImages", () => {
-  it("returns temporary URL as primary image when available", () => {
-    expect(getProductPrimaryImage(productWithAssets, "fallback")).toBe("https://example.com/temp-desktop.webp");
+  it("returns the desktop downloadUrl as primary image", () => {
+    expect(getProductPrimaryImage(productWithAssets, "fallback")).toBe("https://example.com/desktop.webp");
   });
 
-  it("returns card resolution URL for product cards when available", () => {
-    expect(getProductCardImage(productWithAssets, "fallback")).toBe("https://example.com/temp-card.webp");
+  it("returns the card downloadUrl for product cards when available", () => {
+    expect(getProductCardImage(productWithAssets, "fallback")).toBe("https://example.com/card.webp");
   });
 
   it("builds responsive gallery data from product assets", () => {
     const gallery = getProductGalleryImages(productWithAssets, "fallback");
     expect(gallery).toHaveLength(1);
-    expect(gallery[0].zoomUrl).toBe("https://example.com/temp-zoom.webp");
+    expect(gallery[0].zoomUrl).toBe("https://example.com/zoom.webp");
     expect(gallery[0].srcSet).toContain("480w");
   });
 });

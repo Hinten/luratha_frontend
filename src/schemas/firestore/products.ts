@@ -95,7 +95,6 @@ const productImageResolutionSchema = z.object({
   height: z.number().int().positive(),
   storagePath: nonEmptyStringSchema,
   downloadUrl: z.url(),
-  temporaryUrl: z.url().nullable().default(null),
   format: z.literal("webp").default("webp"),
 });
 

@@ -37,10 +37,10 @@ describe("CategoryBlock", () => {
     expect(link).toHaveAttribute("href", "/categoria/vestidos");
   });
 
-  it("renders the category image with correct src", () => {
+  it("renders the fallback 404 image when no category image is provided", () => {
     const { container } = render(<CategoryBlock category={mockCategory} />);
     const img = container.querySelector("img");
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute("src", expect.stringContaining("text=Vestidos"));
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("/image_404.png");
   });
 });

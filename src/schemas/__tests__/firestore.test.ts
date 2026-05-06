@@ -56,7 +56,6 @@ const validProduct = {
           height: 533,
           storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/card.webp",
           downloadUrl: "https://example.com/card.webp",
-          temporaryUrl: null,
           format: "webp" as const,
         },
         zoom: {
@@ -64,7 +63,6 @@ const validProduct = {
           height: 2667,
           storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/zoom.webp",
           downloadUrl: "https://example.com/zoom.webp",
-          temporaryUrl: null,
           format: "webp" as const,
         },
         mobile: {
@@ -72,7 +70,6 @@ const validProduct = {
           height: 640,
           storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/mobile.webp",
           downloadUrl: "https://example.com/mobile.webp",
-          temporaryUrl: null,
           format: "webp" as const,
         },
         tablet: {
@@ -80,7 +77,6 @@ const validProduct = {
           height: 1024,
           storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/tablet.webp",
           downloadUrl: "https://example.com/tablet.webp",
-          temporaryUrl: null,
           format: "webp" as const,
         },
         desktop: {
@@ -88,7 +84,6 @@ const validProduct = {
           height: 1600,
           storagePath: "products/prod_vestido_linho_cru/asset_cream_linen_front/desktop.webp",
           downloadUrl: "https://example.com/desktop.webp",
-          temporaryUrl: "https://example.com/temp-desktop.webp",
           format: "webp" as const,
         },
       },

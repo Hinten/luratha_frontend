@@ -306,7 +306,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
             height: 533,
             storagePath: "products/p/azul/card.webp",
             downloadUrl: "https://example.com/azul-card.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           mobile: {
@@ -314,7 +313,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
             height: 640,
             storagePath: "products/p/azul/mobile.webp",
             downloadUrl: "https://example.com/azul-mobile.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           tablet: {
@@ -322,7 +320,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
             height: 1024,
             storagePath: "products/p/azul/tablet.webp",
             downloadUrl: "https://example.com/azul-tablet.webp",
-            temporaryUrl: null,
             format: "webp",
           },
           desktop: {
@@ -330,7 +327,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
             height: 1600,
             storagePath: "products/p/azul/desktop.webp",
             downloadUrl: "https://example.com/azul-desktop.webp",
-            temporaryUrl: null,
             format: "webp",
           },
         },
@@ -349,7 +345,7 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
     expect(img).not.toBeNull();
-    expect(img!.getAttribute("src")).toBe("https://example.com/azul-card.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/azul-card.webp");
   });
 
   it("falls back to text pill for a color whose variant has no photoId", () => {
@@ -370,7 +366,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
               height: 128,
               storagePath: "products/p/swatch/swatch.webp",
               downloadUrl: "https://example.com/swatch.webp",
-              temporaryUrl: null,
               format: "webp",
             },
             card: {
@@ -378,7 +373,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
               height: 533,
               storagePath: "products/p/swatch/card.webp",
               downloadUrl: "https://example.com/card.webp",
-              temporaryUrl: null,
               format: "webp",
             },
             mobile: {
@@ -386,7 +380,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
               height: 640,
               storagePath: "products/p/swatch/mobile.webp",
               downloadUrl: "https://example.com/mobile.webp",
-              temporaryUrl: null,
               format: "webp",
             },
             tablet: {
@@ -394,7 +387,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
               height: 1024,
               storagePath: "products/p/swatch/tablet.webp",
               downloadUrl: "https://example.com/tablet.webp",
-              temporaryUrl: null,
               format: "webp",
             },
             desktop: {
@@ -402,7 +394,6 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
               height: 1600,
               storagePath: "products/p/swatch/desktop.webp",
               downloadUrl: "https://example.com/desktop.webp",
-              temporaryUrl: null,
               format: "webp",
             },
           },
@@ -418,7 +409,7 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     render(<SizeSelector product={productWithExplicitSwatch} {...cartProps} />);
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
-    expect(img!.getAttribute("src")).toBe("https://example.com/swatch.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/swatch.webp");
   });
 });
 

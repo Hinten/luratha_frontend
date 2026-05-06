@@ -20,12 +20,12 @@
     "functions:install": "npm --prefix functions ci"
   },
   "dependencies": {
-    "firebase": "^12.11.0",
+    "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
     "next": "16.2.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "sharp": "^0.34.4"
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -40,12 +40,12 @@
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.4",
-    "jsdom": "^29.0.2",
-    "prettier": "^3.8.1",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.8.3",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   }
 }
