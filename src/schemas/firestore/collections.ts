@@ -8,5 +8,7 @@ export const firestoreCollections = {
   orders: "orders",
   coupons: "coupons",
   userProfiles: "userProfiles",
+  /** Subcoleção sob `userProfiles/{uid}/addresses/{addressId}`. */
+  addresses: "addresses",
   reviews: "reviews",
 } as const;

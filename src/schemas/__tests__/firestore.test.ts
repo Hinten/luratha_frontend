@@ -124,7 +124,8 @@ const validOrder = {
     {
       id: "item_1",
       productId: "prod_vestido_linho_cru",
-      variantSku: "LURATHA-001",
+      variantId: "var_vestido_linho_cru_p",
+      itemSku: "LURATHA-001",
       name: "Vestido Linho Cru",
       photoId: "photo_cream_linen_front",
       quantity: 2,
@@ -140,15 +141,7 @@ const validOrder = {
   grandTotal: 648,
   currency: "BRL" as const,
   couponCode: "LINHO10",
-  shippingAddress: {
-    recipientName: "Ana Souza",
-    line1: "Rua das Flores, 123",
-    neighborhood: "Centro",
-    city: "São Paulo",
-    state: "SP",
-    postalCode: "01000-000",
-    country: "BR" as const,
-  },
+  shippingAddressPath: "userProfiles/uid_customer_1001/addresses/addr_home_001",
   createdAt: now,
   updatedAt: now,
 };

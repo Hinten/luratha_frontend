@@ -1,0 +1,126 @@
+.container {
+  font-family: var(--font-body);
+  color: var(--color-neutral-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.backLink {
+  display: inline-block;
+  font-size: 0.875rem;
+  color: var(--color-neutral-dark);
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+  transition: color 200ms ease;
+}
+
+.backLink:hover {
+  color: var(--color-primary-hover);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.heading {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.muted {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.section {
+  background-color: #fff;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.sectionHeading {
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin: 0 0 0.875rem;
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.itemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-neutral-mid);
+}
+
+.itemRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.itemName {
+  margin: 0;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.itemMeta {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.itemTotal {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.addressBlock {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.totals {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+
+.totalRow dt,
+.totalRow dd {
+  margin: 0;
+}
+
+.totalRowGrand {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-neutral-mid);
+}

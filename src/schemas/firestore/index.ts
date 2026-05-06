@@ -29,18 +29,33 @@ export {
   type Cart,
   validateCartItem,
 } from "@/src/schemas/firestore/carts";
-export { couponSchema, type Coupon } from "@/src/schemas/firestore/coupons";
+export {
+  couponSchema,
+  type Coupon,
+  validateCoupon,
+} from "@/src/schemas/firestore/coupons";
 export {
   orderItemSchema,
-  shippingAddressSchema,
   orderSchema,
   type OrderItem,
-  type ShippingAddress,
   type Order,
   validateOrder,
 } from "@/src/schemas/firestore/orders";
+export {
+  addressSchema,
+  type Address,
+  validateAddress,
+  buildAddressPath,
+  ADDRESS_PATH_REGEX,
+} from "@/src/schemas/firestore/addresses";
 export { reviewSchema, type Review } from "@/src/schemas/firestore/reviews";
-export { userProfileSchema, type UserProfile } from "@/src/schemas/firestore/users";
+export {
+  userProfileSchema,
+  taxIdentitySchema,
+  type UserProfile,
+  type TaxIdentity,
+  validateUserProfile,
+} from "@/src/schemas/firestore/users";
 export {
   pipelineSearchRequestSchema,
   vectorSearchRequestSchema,

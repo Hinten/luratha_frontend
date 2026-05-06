@@ -59,7 +59,9 @@ export default function Header() {
           {/* User: "Entrar" link or first name → account */}
           {isAuthenticated ? (
             <span className={`${styles.userGreeting} ${styles.desktopOnly}`}>
-              Olá, {firstName}
+              <Link href="/conta" className={styles.navLink} aria-label="Ir para minha conta">
+                Olá, {firstName}
+              </Link>
               <button
                 type="button"
                 className={styles.sairBtn}
@@ -143,6 +145,13 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <span className={styles.mobileUserName}>Olá, {firstName}</span>
+              <Link
+                href="/conta"
+                onClick={handleMobileLinkClick}
+                className={styles.mobileNavLink}
+              >
+                Minha conta
+              </Link>
               <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
               <button
                 type="button"

@@ -9,28 +9,24 @@ import {
   toCents,
   uidSchema,
 } from "@/src/schemas/firestore/utils";
+import { ADDRESS_PATH_REGEX } from "@/src/schemas/firestore/addresses";
 
 export const orderItemSchema = z.object({
   id: nonEmptyStringSchema,
   productId: nonEmptyStringSchema,
-  variantSku: skuSchema,
+  /** Id da variação dentro do produto. Ausente quando o produto não tem variantes. */
+  variantId: nonEmptyStringSchema.optional(),
+  /**
+   * SKU efetivamente vendido — sku da variação se houver, caso contrário sku do produto.
+   * É um snapshot do que foi cobrado, então não precisa bater com a versão atual do catálogo.
+   */
+  itemSku: skuSchema,
   name: nonEmptyStringSchema,
   photoId: nonEmptyStringSchema,
   quantity: quantitySchema,
   unitPrice: moneySchema,
   lineTotal: moneySchema,
   currency: z.literal("BRL"),
-});
-
-export const shippingAddressSchema = z.object({
-  recipientName: nonEmptyStringSchema,
-  line1: nonEmptyStringSchema,
-  line2: z.string().trim().optional(),
-  neighborhood: nonEmptyStringSchema,
-  city: nonEmptyStringSchema,
-  state: z.string().trim().length(2),
-  postalCode: z.string().regex(/^\d{5}-\d{3}$/),
-  country: z.literal("BR"),
 });
 
 export const orderSchema = z
@@ -57,7 +53,16 @@ export const orderSchema = z
     grandTotal: moneySchema,
     currency: z.literal("BRL"),
     couponCode: nonEmptyStringSchema.optional(),
-    shippingAddress: shippingAddressSchema,
+    /**
+     * Caminho Firestore do endereço escolhido, no formato
+     * `userProfiles/{uid}/addresses/{addressId}`.
+     *
+     * Salvamos apenas a referência (não o snapshot) — quem precisar dos
+     * campos do endereço para emitir NF-e ou exibir na conta deve
+     * carregá-los pelo path. Isso evita drift de dados entre o cadastro
+     * do usuário e o pedido.
+     */
+    shippingAddressPath: z.string().regex(ADDRESS_PATH_REGEX),
     notes: z.string().trim().max(500).optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
@@ -95,7 +100,6 @@ export const orderSchema = z
   });
 
 export type OrderItem = z.infer<typeof orderItemSchema>;
-export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 export type Order = z.infer<typeof orderSchema>;
 
 export function validateOrder(input: unknown): Order {
