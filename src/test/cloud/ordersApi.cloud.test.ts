@@ -46,7 +46,8 @@ function buildOrderPayload(userId: string, overrides: Record<string, unknown> = 
       {
         id: "item-1",
         productId: "prod-cloud-001",
-        variantSku: "SKU-CLOUD-AB",
+        variantId: "var-cloud-001-p",
+        itemSku: "SKU-CLOUD-AB",
         name: "Vestido Linho",
         photoId: "img-cloud-001",
         quantity: 2,
@@ -61,15 +62,7 @@ function buildOrderPayload(userId: string, overrides: Record<string, unknown> = 
     shippingTotal: 20,
     grandTotal: 220,
     currency: "BRL" as const,
-    shippingAddress: {
-      recipientName: "João Silva",
-      line1: "Rua A, 123",
-      neighborhood: "Centro",
-      city: "São Paulo",
-      state: "SP",
-      postalCode: "01000-000",
-      country: "BR" as const,
-    },
+    shippingAddressPath: `userProfiles/${userId}/addresses/addr-cloud-001`,
     ...overrides,
   };
 }

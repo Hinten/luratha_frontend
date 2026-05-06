@@ -33,7 +33,8 @@ function buildOrder(): Order {
       {
         id: "item-1",
         productId: "prod-001",
-        variantSku: "SKU-001-AB",
+        variantId: "var-001-p",
+        itemSku: "SKU-001-AB",
         name: "Vestido Linho",
         photoId: "img-001",
         quantity: 2,
@@ -48,15 +49,7 @@ function buildOrder(): Order {
     shippingTotal: 20,
     grandTotal: 220,
     currency: "BRL",
-    shippingAddress: {
-      recipientName: "João Silva",
-      line1: "Rua A, 123",
-      neighborhood: "Centro",
-      city: "São Paulo",
-      state: "SP",
-      postalCode: "01000-000",
-      country: "BR",
-    },
+    shippingAddressPath: "userProfiles/user-abc-123456/addresses/addr-001",
     createdAt: ISO_NOW,
     updatedAt: ISO_NOW,
   });
@@ -69,6 +62,10 @@ function buildUser(): UserProfile {
     firstName: "João",
     lastName: "Silva",
     role: "customer",
+    taxIdentity: {
+      type: "PF",
+      cpf: "123.456.789-09",
+    },
     createdAt: ISO_NOW,
     updatedAt: ISO_NOW,
   });
