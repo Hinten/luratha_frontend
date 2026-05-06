@@ -150,7 +150,10 @@ export function createProductsSearchRepository(
 
     const term = (filters.term ?? "").trim();
     if (term) {
-      const regex = escapeRegex(term.toLowerCase());
+      // Firestore pipeline regexMatch is anchored — the full lowercased field
+      // value must match the pattern. Surround the user's escaped term with
+      // `.*` so we get substring matching (the behavior real users expect).
+      const regex = `.*${escapeRegex(term.toLowerCase())}.*`;
       pipeline = pipeline.where(
         or(
           field("title").toLower().regexMatch(regex),
