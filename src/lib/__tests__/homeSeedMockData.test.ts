@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@/src/lib/repositories/homeSeedMockData";
+import { validateProduct } from "@/src/schemas/firestore";
 
 describe("home seed mock data", () => {
   it("creates ten mock categories", () => {
@@ -91,6 +92,48 @@ describe("home seed mock data", () => {
     const simpleStock = stocks.find((s) => s.productId === "prod_home_01");
     expect(simpleStock?.hasVariants).toBe(false);
     expect(simpleStock?.variants).toBeNull();
+  });
+
+  it("populates denormalized variantIds and variantSkus on products with variants", () => {
+    const products = buildHomeSeedProducts();
+    const variantProducts = products.filter((p) => p.variants && p.variants.length > 0);
+    expect(variantProducts.length).toBeGreaterThan(0);
+    for (const product of variantProducts) {
+      expect(product.variantIds).toEqual(product.variants?.map((v) => v.id));
+      expect(product.variantSkus).toEqual(product.variants?.map((v) => v.sku));
+    }
+  });
+
+  it("re-validates after re-namespacing id/sku/variants (the cloud-test flow)", () => {
+    // Mirrors what `seedMockDataSearch.cloud.test.ts` does in beforeAll.
+    // Catches schema regressions (skuSchema casing, slug superRefine, etc.)
+    // without needing live Firestore.
+    const prefix = "__test_1234567890_abcdef12"; // worst-case lowercase hex
+    const skuPrefix = prefix.replace(/[^A-Za-z0-9_-]/g, "_").toUpperCase();
+    const products = buildHomeSeedProducts();
+    const variantProduct = products.find((p) => p.id === "prod_home_11");
+    expect(variantProduct).toBeDefined();
+
+    const namespaced = {
+      ...variantProduct!,
+      id: `${variantProduct!.id}__${prefix}`,
+      slug: null, // force schema to regenerate from new title+sku
+      sku: `${variantProduct!.sku}_${skuPrefix}`,
+      categoryId: `${variantProduct!.categoryId}__${prefix}`,
+      variants: variantProduct!.variants?.map((v) => ({
+        ...v,
+        id: `${v.id}__${prefix}`,
+        sku: `${v.sku}_${skuPrefix}`,
+      })) ?? null,
+    };
+
+    const revalidated = validateProduct(namespaced);
+    expect(revalidated.id).toBe(`prod_home_11__${prefix}`);
+    expect(revalidated.sku).toBe(`LURATHA_1011_${skuPrefix}`);
+    // Schema should have regenerated slug + denormalized arrays for the new ids/skus.
+    expect(revalidated.slug).toContain("vestido-festa-tecido-nobre");
+    expect(revalidated.variantIds).toEqual(revalidated.variants?.map((v) => v.id));
+    expect(revalidated.variantSkus).toEqual(revalidated.variants?.map((v) => v.sku));
   });
 
   it("creates zero-quantity stock for out-of-stock products", () => {

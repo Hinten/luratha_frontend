@@ -12,6 +12,8 @@ import {
 } from "firebase/firestore";
 import {
   and,
+  arrayContains,
+  equal,
   execute,
   field,
   or,
@@ -39,6 +41,18 @@ export interface SearchOptions {
 
 export interface ProductsSearchRepository {
   search(filters: ProductSearchFilters, options?: SearchOptions): Promise<FirestoreProduct[]>;
+  findByIdOrSku(term: string): Promise<FirestoreProduct | null>;
+}
+
+/**
+ * The exact-match short-circuit only fires for single-token queries — once the
+ * trimmed input contains internal whitespace, it is treated as a regular text
+ * query and goes through the pipeline/core search instead.
+ */
+export function isExactMatchCandidate(term: string): boolean {
+  const trimmed = term.trim();
+  if (trimmed.length === 0) return false;
+  return !/\s/.test(trimmed);
 }
 
 type CreateProductsSearchRepositoryOptions = {
@@ -136,7 +150,10 @@ export function createProductsSearchRepository(
 
     const term = (filters.term ?? "").trim();
     if (term) {
-      const regex = escapeRegex(term.toLowerCase());
+      // Firestore pipeline regexMatch is anchored — the full lowercased field
+      // value must match the pattern. Surround the user's escaped term with
+      // `.*` so we get substring matching (the behavior real users expect).
+      const regex = `.*${escapeRegex(term.toLowerCase())}.*`;
       pipeline = pipeline.where(
         or(
           field("title").toLower().regexMatch(regex),
@@ -197,6 +214,30 @@ export function createProductsSearchRepository(
     return mapPipelineSnapshotToProducts(snapshot);
   }
 
+  async function findByIdOrSku(term: string): Promise<FirestoreProduct | null> {
+    const trimmed = term.trim();
+    if (!isExactMatchCandidate(trimmed)) {
+      return null;
+    }
+
+    const pipeline = dbInstance
+      .pipeline()
+      .collection("products")
+      .where(
+        or(
+          equal(field("id"), trimmed),
+          equal(field("sku"), trimmed),
+          arrayContains(field("variantIds"), trimmed),
+          arrayContains(field("variantSkus"), trimmed),
+        ),
+      )
+      .limit(1);
+
+    const snapshot = await execute(pipeline);
+    const [first] = mapPipelineSnapshotToProducts(snapshot);
+    return first ?? null;
+  }
+
   async function search(
     filters: ProductSearchFilters,
     searchOptions: SearchOptions = {},
@@ -204,6 +245,22 @@ export function createProductsSearchRepository(
     let vectorError: unknown;
     let pipelineError: unknown;
     const useVectors = searchOptions.useVectors ?? false;
+
+    // Single-token query → try ID/SKU/variant exact match before the full search.
+    // Multi-token queries skip this short-circuit (handled by isExactMatchCandidate).
+    const rawTerm = filters.term ?? "";
+    if (isExactMatchCandidate(rawTerm)) {
+      try {
+        const exactMatch = await findByIdOrSku(rawTerm);
+        if (exactMatch) {
+          console.info("[productsSearchRepository] path=exact-match");
+          return [exactMatch];
+        }
+      } catch (error) {
+        // Don't fail the whole search if the exact-match lookup errors.
+        console.warn("[productsSearchRepository] exact-match lookup failed; falling back", error);
+      }
+    }
 
     if (useVectors && filters.term) {
       try {
@@ -237,7 +294,7 @@ export function createProductsSearchRepository(
     }
   }
 
-  return { search };
+  return { search, findByIdOrSku };
 }
 
 function mapSortToPipelineOrdering(sort?: ProductSort) {

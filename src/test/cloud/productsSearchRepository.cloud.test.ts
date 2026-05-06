@@ -174,6 +174,11 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         priceMin: 200,
         priceMax: 200,
         price: { price: 200, salePrice: null, priceMin: 200, priceMax: 200, currency: "BRL", startDate: null, endDate: null },
+        // Denormalized fields used by the exact-match short-circuit; even
+        // products without variants must persist these arrays so the
+        // arrayContains queries don't fail on missing fields.
+        variantIds: [],
+        variantSkus: [],
       },
       seededDocs,
     );
@@ -191,6 +196,13 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         priceMin: 120,
         priceMax: 120,
         price: { price: 120, salePrice: null, priceMin: 120, priceMax: 120, currency: "BRL", startDate: null, endDate: null },
+        // Variant product — denormalized arrays power the variant exact-match path.
+        variants: [
+          { id: `var-${prefix}-b-p`, sku: `SKU_${skuToken}_B_P`, photoIds: [], active: true, color: null, size: ["P"], gtin: null, mpn: null, item_group_id: null },
+          { id: `var-${prefix}-b-m`, sku: `SKU_${skuToken}_B_M`, photoIds: [], active: true, color: null, size: ["M"], gtin: null, mpn: null, item_group_id: null },
+        ],
+        variantIds: [`var-${prefix}-b-p`, `var-${prefix}-b-m`],
+        variantSkus: [`SKU_${skuToken}_B_P`, `SKU_${skuToken}_B_M`],
       },
       seededDocs,
     );
@@ -209,6 +221,8 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         priceMin: 300,
         priceMax: 300,
         price: { price: 300, salePrice: null, priceMin: 300, priceMax: 300, currency: "BRL", startDate: null, endDate: null },
+        variantIds: [],
+        variantSkus: [],
       },
       seededDocs,
     );
@@ -437,7 +451,91 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
   });
 
   /**
-   * 12. Result shape validation
+   * 12a. Exact match: by product id
+   * The repository must resolve a product by its document id without scanning the collection.
+   */
+  it("findByIdOrSku: returns product when term equals product id", async () => {
+    const repo = createProductsSearchRepository(db);
+    const found = await repo.findByIdOrSku(`${prefix}-prod-a`);
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe(`${prefix}-prod-a`);
+  });
+
+  /**
+   * 12b. Exact match: by product sku
+   */
+  it("findByIdOrSku: returns product when term equals product sku", async () => {
+    const repo = createProductsSearchRepository(db);
+    const found = await repo.findByIdOrSku(`SKU_${skuToken}_A`);
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe(`${prefix}-prod-a`);
+  });
+
+  /**
+   * 12c. Exact match: by variant id (denormalized array-contains)
+   */
+  it("findByIdOrSku: returns parent product when term equals a variant id", async () => {
+    const repo = createProductsSearchRepository(db);
+    const found = await repo.findByIdOrSku(`var-${prefix}-b-p`);
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe(`${prefix}-prod-b`);
+  });
+
+  /**
+   * 12d. Exact match: by variant sku (denormalized array-contains)
+   */
+  it("findByIdOrSku: returns parent product when term equals a variant sku", async () => {
+    const repo = createProductsSearchRepository(db);
+    const found = await repo.findByIdOrSku(`SKU_${skuToken}_B_M`);
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe(`${prefix}-prod-b`);
+  });
+
+  /**
+   * 12e. Exact match: search() short-circuits to the matched product when the term
+   * equals an id/sku, and skips the regular pipeline scan entirely.
+   */
+  it("search: returns single result when term equals an id/sku", async () => {
+    const repo = createProductsSearchRepository(db);
+    const results = await repo.search({ term: `SKU_${skuToken}_A`, limit: 24 });
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe(`${prefix}-prod-a`);
+  });
+
+  /**
+   * 12f. Multi-token term skips the exact-match short-circuit
+   * Even if one of the tokens looks like an id, the trim-then-check rule means
+   * any internal whitespace falls through to the regular regex pipeline search.
+   */
+  it("search: multi-token term skips exact-match and uses pipeline search", async () => {
+    const repo = createProductsSearchRepository(db);
+    // Use the unique term followed by a space + the id; should NOT short-circuit.
+    const results = await repo.search({
+      term: `${uniqueTerm} ${prefix}-prod-a`,
+      limit: 24,
+    });
+    // Regular pipeline searches title/description for the regex match. The id
+    // by itself doesn't appear in the title, so result count should reflect a
+    // regex-driven search rather than the deterministic single-doc lookup.
+    // We assert that we did not collapse to a single, id-only response.
+    if (results.length === 1) {
+      expect(results[0].id).not.toBe(`${prefix}-prod-a`);
+    }
+  });
+
+  /**
+   * 12g. Unknown id/sku falls through to regular search
+   */
+  it("search: unknown id/sku token falls through to regular search", async () => {
+    const repo = createProductsSearchRepository(db);
+    const results = await repo.search({ term: `nonexistent-${randomUUID()}`, limit: 24 });
+    expect(Array.isArray(results)).toBe(true);
+    // No seeded product matches this random token in title/description either.
+    expect(results).toHaveLength(0);
+  });
+
+  /**
+   * 13. Result shape validation
    * Each returned product must conform to the expected FirestoreProduct shape
    * (validated by validateProduct inside the repository).
    */
