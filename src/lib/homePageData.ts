@@ -8,8 +8,6 @@ import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
 import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 
-const HOME_DATA_TIMEOUT_MS = 1_500;
-
 type HomePageData = {
   categories: FirestoreCategory[];
   newArrivals: FirestoreProduct[];
@@ -22,13 +20,12 @@ export async function getHomePageData(): Promise<HomePageData> {
   const authApp = await getAuthenticatedAppForUser();
 
   const productsRepository = createProductsRepository(authApp.firestore);
-  const [products, categories] = await withTimeout(
-    Promise.all([
+
+  // Removed timout, using page cache later to ensure data is fresh while avoiding timeouts on slow connections or large datasets.
+  const [products, categories] = await Promise.all([
       productsRepository.list({ status: "active", limit: 30 }),
       getCachedCategories(),
-    ]),
-    HOME_DATA_TIMEOUT_MS,
-  );
+    ]).then((results) => results);
 
   let stockMap = new Map<string, Stock>();
   if (products.length > 0) {
