@@ -89,7 +89,7 @@ vi.mock("firebase/auth", () => {
 });
 
 vi.mock("@/src/lib/firestore/firebaseClient", () => ({
-  auth: {},
+  getClientAuth: () => ({}),
 }));
 
 import { AuthProvider, useAuth } from "@/src/contexts/AuthContext";

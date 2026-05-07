@@ -16,7 +16,7 @@ import {
   updateProfile,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { auth } from "@/src/lib/firestore/firebaseClient";
+import { getClientAuth } from "@/src/lib/firestore/firebaseClient";
 
 export interface AuthUser {
   uid: string;
@@ -99,19 +99,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-      try {
-        setUser(await buildAuthUser(fbUser));
-      } finally {
-        setIsLoading(false);
-      }
-    });
-    return () => unsubscribe();
+    let unsubscribe: (() => void) | undefined;
+    try {
+      const auth = getClientAuth();
+      unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+        if (!fbUser) {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        try {
+          setUser(await buildAuthUser(fbUser));
+        } finally {
+          setIsLoading(false);
+        }
+      });
+    } catch (err) {
+      console.warn("Firebase Auth indisponível — verifique a configuração.", err);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+    }
+    return () => unsubscribe?.();
   }, []);
 
   const register = useCallback(
@@ -125,12 +133,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       let credential;
       try {
+        const auth = getClientAuth();
         credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(credential.user, { displayName: trimmedName });
         const idToken = await credential.user.getIdToken(true);
         await postSession(idToken);
       } catch (err) {
-        if (auth.currentUser) {
+        const auth = (() => {
+          try {
+            return getClientAuth();
+          } catch {
+            return null;
+          }
+        })();
+        if (auth?.currentUser) {
           try {
             await signOut(auth);
           } catch {
@@ -168,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!password) throw new Error("A senha é obrigatória.");
 
     try {
+      const auth = getClientAuth();
       const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
       const idToken = await credential.user.getIdToken(true);
       await postSession(idToken);
@@ -183,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* ignore — vamos limpar no client de qualquer jeito */
     }
     try {
+      const auth = getClientAuth();
       await signOut(auth);
     } catch {
       /* ignore */
@@ -193,6 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendPasswordReset = useCallback(async (email: string) => {
     if (!email.trim()) throw new Error("O e-mail é obrigatório.");
     try {
+      const auth = getClientAuth();
       await sendPasswordResetEmail(auth, email.trim());
     } catch (err) {
       throw mapFirebaseError(err);
