@@ -9,22 +9,12 @@ import type { NextConfig } from "next";
  */
 function backfillFirebaseClientEnv(): void {
   const base64 = process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
-  if (!base64) {
-    console.log("[next.config] FIREBASE_WEB_APP_CONFIG_BASE64 not set");
-    return;
-  }
-  console.log(
-    "[next.config] Backfilling. Before:",
-    JSON.stringify({
-      apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
-    }),
-  );
+  if (!base64) return;
 
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-  } catch (err) {
-    console.warn("[next.config] base64 decode failed:", err);
+  } catch {
     return;
   }
 
@@ -44,13 +34,6 @@ function backfillFirebaseClientEnv(): void {
       process.env[envName] = value;
     }
   }
-  console.log(
-    "[next.config] Backfill done. After:",
-    JSON.stringify({
-      apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
-      authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "(undef)").length,
-    }),
-  );
 }
 
 backfillFirebaseClientEnv();

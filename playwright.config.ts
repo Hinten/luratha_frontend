@@ -36,18 +36,8 @@ if (existsSync(envFile)) {
 
 // Backfill NEXT_PUBLIC_FIREBASE_* from FIREBASE_WEB_APP_CONFIG_BASE64 BEFORE
 // the dev server is spawned, so Next.js sees populated values when it inlines
-// `process.env.NEXT_PUBLIC_*` into the client bundle. CI sets the NEXT_PUBLIC_*
-// vars to empty strings when their secrets are missing, and Next.js treats
-// empty strings as authoritative — overriding them later from next.config.ts
-// is unreliable, so we do it here at the playwright entry point.
+// `process.env.NEXT_PUBLIC_*` into the client bundle.
 if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
-  console.log(
-    "[E2E] Backfilling NEXT_PUBLIC_FIREBASE_* from base64. Before:",
-    JSON.stringify({
-      apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
-      authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "(undef)").length,
-    }),
-  );
   try {
     const cfg = JSON.parse(
       Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8"),
@@ -67,19 +57,9 @@ if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
         process.env[envName] = value;
       }
     }
-    console.log(
-      "[E2E] Backfill done. After:",
-      JSON.stringify({
-        apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
-        authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "(undef)").length,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      }),
-    );
-  } catch (err) {
-    console.warn("[E2E] FIREBASE_WEB_APP_CONFIG_BASE64 decode failed:", err);
+  } catch {
+    /* ignore — leave env as-is */
   }
-} else {
-  console.log("[E2E] FIREBASE_WEB_APP_CONFIG_BASE64 not set — no backfill.");
 }
 
 const hasCredentials = !!(

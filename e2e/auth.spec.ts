@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-const hasFirebaseConfig = !!process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
+// Live-Firebase tests require an opt-in flag because they hit identitytoolkit
+// and create real users in the cloud project. Default off in CI to avoid
+// flake from rate limits, residual users, and provider config drift.
+const hasLiveAuth = process.env.E2E_LIVE_AUTH === "1";
 
 test.describe("Authentication (Auth)", () => {
   test.beforeEach(async ({ page, context }) => {
@@ -29,7 +32,7 @@ test.describe("Authentication (Auth)", () => {
   });
 
   test("login page shows error for wrong credentials", async ({ page }) => {
-    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
+    test.skip(!hasLiveAuth, "Set E2E_LIVE_AUTH=1 to run live-Firebase auth tests");
     await page.goto("/login");
     await page.getByLabel("E-mail").fill("naoexiste@test.com");
     await page.getByLabel("Senha").fill("wrongpassword");
@@ -65,7 +68,7 @@ test.describe("Authentication (Auth)", () => {
   });
 
   test("successful registration redirects home and updates header", async ({ page }) => {
-    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
+    test.skip(!hasLiveAuth, "Set E2E_LIVE_AUTH=1 to run live-Firebase auth tests");
     await page.goto("/register");
     const uniqueEmail = `__test_${Date.now()}@luratha.com`;
     await page.getByLabel("Nome completo").fill("Ana Lima");
@@ -81,7 +84,7 @@ test.describe("Authentication (Auth)", () => {
   });
 
   test("register → logout → login round-trip", async ({ page }) => {
-    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
+    test.skip(!hasLiveAuth, "Set E2E_LIVE_AUTH=1 to run live-Firebase auth tests");
     await page.goto("/register");
     const uniqueEmail = `__test_login_${Date.now()}@luratha.com`;
     await page.getByLabel("Nome completo").fill("Beatriz");

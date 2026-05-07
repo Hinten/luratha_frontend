@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const hasFirebaseConfig = !!process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
+// Live-Firebase tests require an opt-in flag — see e2e/auth.spec.ts.
+const hasLiveAuth = process.env.E2E_LIVE_AUTH === "1";
 
 test.describe("Auth middleware", () => {
   test.beforeEach(async ({ context }) => {
@@ -23,7 +24,7 @@ test.describe("Auth middleware", () => {
   });
 
   test("login page reads ?redirect and lands user there after sign-in", async ({ page }) => {
-    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
+    test.skip(!hasLiveAuth, "Set E2E_LIVE_AUTH=1 to run live-Firebase auth tests");
     // primeiro registra um usuário
     await page.goto("/register");
     const uniqueEmail = `__test_redirect_${Date.now()}@luratha.com`;
@@ -50,7 +51,7 @@ test.describe("Auth middleware", () => {
   });
 
   test("__session cookie is HttpOnly (not visible to document.cookie)", async ({ page }) => {
-    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
+    test.skip(!hasLiveAuth, "Set E2E_LIVE_AUTH=1 to run live-Firebase auth tests");
     await page.goto("/register");
     const uniqueEmail = `__test_httponly_${Date.now()}@luratha.com`;
     await page.getByLabel("Nome completo").fill("HttpOnly Tester");
