@@ -1,21 +1,21 @@
 import type { NextConfig } from "next";
 
 /**
- * Derive `NEXT_PUBLIC_FIREBASE_*` from `FIREBASE_WEB_APP_CONFIG_BASE64` at build
- * time so the client bundle has the apiKey/authDomain/etc. without each value
- * needing to be a separate secret. Existing `NEXT_PUBLIC_FIREBASE_*` variables
- * take precedence — this only fills in what's missing.
+ * Backfill NEXT_PUBLIC_FIREBASE_* into process.env from FIREBASE_WEB_APP_CONFIG_BASE64
+ * BEFORE Next.js inlines them into the client bundle. Next.js prioritizes a
+ * non-undefined process.env value over the `env` config field — including the
+ * empty string. So we mutate process.env directly here, treating empty values
+ * as "missing" and overwriting them from the base64 payload.
  */
-function deriveFirebaseClientEnv(): Record<string, string> {
-  const env: Record<string, string> = {};
+function backfillFirebaseClientEnv(): void {
   const base64 = process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
-  if (!base64) return env;
+  if (!base64) return;
 
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
   } catch {
-    return env;
+    return;
   }
 
   const map: Array<[string, string]> = [
@@ -28,19 +28,19 @@ function deriveFirebaseClientEnv(): Record<string, string> {
   ];
 
   for (const [envName, cfgKey] of map) {
-    if (process.env[envName]) continue;
+    if (process.env[envName]) continue; // truthy = real value already set
     const value = cfg[cfgKey];
     if (typeof value === "string" && value.length > 0) {
-      env[envName] = value;
+      process.env[envName] = value;
     }
   }
-  return env;
 }
+
+backfillFirebaseClientEnv();
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
   serverExternalPackages: ["firebase", "firebase-admin"],
-  env: deriveFirebaseClientEnv(),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
