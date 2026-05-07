@@ -34,6 +34,37 @@ if (existsSync(envFile)) {
   }
 }
 
+// Backfill NEXT_PUBLIC_FIREBASE_* from FIREBASE_WEB_APP_CONFIG_BASE64 BEFORE
+// the dev server is spawned, so Next.js sees populated values when it inlines
+// `process.env.NEXT_PUBLIC_*` into the client bundle. CI sets the NEXT_PUBLIC_*
+// vars to empty strings when their secrets are missing, and Next.js treats
+// empty strings as authoritative — overriding them later from next.config.ts
+// is unreliable, so we do it here at the playwright entry point.
+if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
+  try {
+    const cfg = JSON.parse(
+      Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8"),
+    ) as Record<string, unknown>;
+    const map: Array<[string, string]> = [
+      ["NEXT_PUBLIC_FIREBASE_API_KEY", "apiKey"],
+      ["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", "authDomain"],
+      ["NEXT_PUBLIC_FIREBASE_PROJECT_ID", "projectId"],
+      ["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET", "storageBucket"],
+      ["NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", "messagingSenderId"],
+      ["NEXT_PUBLIC_FIREBASE_APP_ID", "appId"],
+    ];
+    for (const [envName, cfgKey] of map) {
+      if (process.env[envName]) continue; // truthy = real value already set
+      const value = cfg[cfgKey];
+      if (typeof value === "string" && value.length > 0) {
+        process.env[envName] = value;
+      }
+    }
+  } catch {
+    /* ignore — leave env as-is */
+  }
+}
+
 const hasCredentials = !!(
   process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ||
   process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
