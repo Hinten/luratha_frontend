@@ -46,7 +46,7 @@ export default function EnderecosPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const uid = user ? encodeURIComponent(user.email) : null;
+  const uid = user?.uid ?? null;
 
   async function refresh() {
     if (!uid) return;

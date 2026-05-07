@@ -37,7 +37,7 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 - `src/lib/repositories/couponsRepository.ts` — getByCode/validateForCart
 - `src/lib/firestore/adminOrderConverter.ts` + `clientOrderConverter.ts` (Order tem `Timestamp` em `createdAt`/`paidAt`/`shippedAt`)
 - `src/lib/firestore/adminUserProfileConverter.ts` + `clientUserProfileConverter.ts`
-- `src/middleware.ts` — proteger `/conta/*` e `/checkout` exigindo auth (verificar token Firebase Auth via cookie SSR)
+- ~~`src/middleware.ts` — proteger `/conta/*` e `/checkout` exigindo auth~~ ✅ entregue em PR #81 (presence-check no edge + `requireUser()` nos handlers)
 
 **Padrões a seguir** (do `CLAUDE.md` + skill `luratha-crud-api`):
 - Cada handler HTTP em arquivo próprio + `route.ts` re-exporta
@@ -102,6 +102,15 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 2. **Cálculo de frete**: Melhor Envio (recomendado), Correios direto, ou frete fixo por região?
 3. **Cart server-side**: hoje é localStorage. Migrar para Firestore (`/api/cart`) para persistir entre dispositivos? Recomendação: manter localStorage agora, criar Firestore Cart só na conversão para Order.
 4. **Rastreamento**: integrar tracking dos Correios na página de detalhe do pedido ou só armazenar `trackingCode` como string?
+
+#### Resolvido (PR #81 — issue #81)
+
+- **AuthContext mock substituído** por Firebase Auth real (createUserWithEmailAndPassword/signInWithEmailAndPassword/signOut/sendPasswordResetEmail).
+- **Cookie de sessão `__session`** (HttpOnly, Secure, SameSite=Lax, 14 dias) — nome obrigatório no Firebase App Hosting.
+- **Middleware `src/middleware.ts`** faz presence-check do cookie nas rotas `/conta/*` e `/checkout/*`. Verificação autoritativa (assinatura, expiração, claim `admin`) acontece em `requireUser()` dentro dos handlers/server components.
+- **Admin role** via custom claim `admin: true` lido do session cookie (`requireOwnerOrAdmin` deixa admin acessar qualquer userId).
+- **Reset de senha** entregue junto: página `/esqueci-senha` chamando `sendPasswordResetEmail` do Firebase SDK (sem endpoint server-side).
+- **APIs endurecidas**: `/api/orders`, `/api/users/*`, `/api/users/[id]/addresses/*` agora retornam 401 sem cookie e 403 quando uid do token não bate. POST `/api/orders` também valida `body.userId === token.uid`.
 
 ---
 

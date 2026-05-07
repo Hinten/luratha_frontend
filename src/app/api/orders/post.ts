@@ -4,6 +4,7 @@ import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
 import { firestoreCollections, validateOrder } from "@/src/schemas/firestore";
+import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,15 @@ export const runtime = "nodejs";
  * success.
  */
 export async function POST(request: Request) {
+  let authedUser;
+  try {
+    authedUser = await requireUser();
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -41,6 +51,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { message: "Corpo da requisição deve ser um objeto JSON." },
       { status: 400 },
+    );
+  }
+
+  const bodyUserId = (body as { userId?: unknown }).userId;
+  if (typeof bodyUserId !== "string" || bodyUserId !== authedUser.uid) {
+    return NextResponse.json(
+      { message: "userId do corpo não confere com a sessão." },
+      { status: 403 },
     );
   }
 

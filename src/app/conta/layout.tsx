@@ -1,31 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import AccountSidebar from "@/src/components/conta/AccountSidebar";
 import styles from "./layout.module.css";
 
-/**
- * Layout protegido das páginas de conta.
- *
- * O middleware real entra em PR 6 (Firebase Auth + cookie SSR). Por enquanto,
- * usamos o mock de AuthContext: se o usuário não estiver autenticado, redireciona
- * para /login com `?redirect=` para voltar depois.
- */
 export default function ContaLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { isAuthenticated, user } = useAuth();
+  const { isLoading } = useAuth();
 
-  useEffect(() => {
-    if (user === null && !isAuthenticated) {
-      const redirect = encodeURIComponent(pathname || "/conta");
-      router.replace(`/login?redirect=${redirect}`);
-    }
-  }, [isAuthenticated, user, pathname, router]);
-
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
       <main className={styles.page}>
         <div className={`container-luratha ${styles.inner}`}>

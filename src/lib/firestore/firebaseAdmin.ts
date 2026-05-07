@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { applicationDefault, cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { DATABASE_NAME, getFirebaseProjectId, getFirebaseStorageBucket } from "./environment";
@@ -24,6 +25,7 @@ const adminApp =
 export const adminDb = getFirestore(adminApp, DATABASE_NAME);
 export const adminStorage = getStorage(adminApp);
 export const adminBucket = adminStorage.bucket(storageBucket);
+export const adminAuth = getAuth(adminApp);
 export { adminApp };
 
 function getServiceAccountFromEnvironment(): ServiceAccount | undefined {

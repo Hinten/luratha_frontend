@@ -4,6 +4,7 @@ import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@/src/lib/firestore/adminAddressConverter";
 import { firestoreCollections, validateAddress } from "@/src/schemas/firestore";
 import { unsetOtherDefaults } from "@/src/app/api/users/[id]/addresses/post";
+import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; addressId: string }> },
 ) {
   const { id: userId, addressId } = await params;
+
+  try {
+    await requireOwnerOrAdmin(userId);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
 
   let body: unknown;
   try {

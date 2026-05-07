@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +31,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push("/");
+      const target = redirectParam && redirectParam.startsWith("/") ? redirectParam : "/";
+      router.push(target);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao entrar.");
     } finally {
@@ -89,6 +100,11 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <p className={styles.footer}>
+            <Link href="/esqueci-senha" className={styles.footerLink}>
+              Esqueci minha senha
+            </Link>
+          </p>
           <p className={styles.footer}>
             Não tem conta?{" "}
             <Link href="/register" className={styles.footerLink}>

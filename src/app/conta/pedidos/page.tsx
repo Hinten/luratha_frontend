@@ -15,7 +15,7 @@ export default function PedidosListPage() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const uid = encodeURIComponent(user.email);
+      const uid = user.uid;
       const res = await fetch(`/api/orders?userId=${uid}&limit=100`);
       if (cancelled) return;
       if (res.ok) {

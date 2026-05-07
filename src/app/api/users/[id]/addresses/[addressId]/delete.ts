@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { firestoreCollections } from "@/src/schemas/firestore";
+import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; addressId: string }> },
 ) {
   const { id: userId, addressId } = await params;
+
+  try {
+    await requireOwnerOrAdmin(userId);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
 
   const ref = adminDb
     .collection(firestoreCollections.userProfiles)

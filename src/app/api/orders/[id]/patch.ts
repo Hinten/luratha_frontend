@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
 import { firestoreCollections, validateOrder } from "@/src/schemas/firestore";
+import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -59,7 +60,28 @@ export async function PATCH(
   }
 
   const existingData = existing.data()!;
+
+  let authedUser;
+  try {
+    authedUser = await requireOwnerOrAdmin(existingData.userId);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
+
   const payload = body as Record<string, unknown>;
+
+  if (
+    !authedUser.isAdmin &&
+    payload.status !== undefined &&
+    payload.status !== "cancelled"
+  ) {
+    return NextResponse.json(
+      { message: "Usuário só pode alterar status para 'cancelled'." },
+      { status: 403 },
+    );
+  }
   const now = new Date().toISOString();
 
   const merged: Record<string, unknown> = {

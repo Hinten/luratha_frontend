@@ -7,21 +7,58 @@
  * Execute: npm run test:firestore
  *
  * The suite is automatically skipped when credentials are not available.
- *
- * What is covered:
- *   1. GET   /api/users/:id   — returns 404 when no profile exists
- *   2. GET   /api/users/:id   — returns the profile after seeding
- *   3. PATCH /api/users/:id   — updates fields, preserves id/createdAt
- *   4. PATCH /api/users/:id   — returns 404 on missing profile
- *   5. PATCH /api/users/:id   — returns 400 on invalid payload (bad email)
  */
 
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { Timestamp } from "firebase-admin/firestore";
+import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminUserProfileConverter } from "@/src/lib/firestore/adminUserProfileConverter";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
+
+const auth = vi.hoisted(() => ({
+  state: { current: null as { uid: string; email: string | null; isAdmin: boolean } | null },
+}));
+function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string | null } | null) {
+  auth.state.current = opts
+    ? {
+        uid: opts.uid,
+        email: opts.email ?? `${opts.uid}@test.luratha`,
+        isAdmin: opts.isAdmin ?? false,
+      }
+    : null;
+}
+
+vi.mock("@/src/lib/auth/requireUser", () => {
+  class AuthError extends Error {
+    constructor(public readonly status: 401 | 403, message: string) {
+      super(message);
+      this.name = "AuthError";
+    }
+  }
+  return {
+    SESSION_COOKIE_NAME: "__session",
+    AuthError,
+    requireUser: async () => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      return auth.state.current;
+    },
+    requireOwnerOrAdmin: async (target: string) => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      const u = auth.state.current;
+      if (u.isAdmin || u.uid === target) return u;
+      throw new AuthError(403, "Acesso negado.");
+    },
+    authErrorResponse: (err: unknown) => {
+      if (err instanceof AuthError) {
+        return NextResponse.json({ message: err.message }, { status: err.status });
+      }
+      return null;
+    },
+  };
+});
+
 import { GET as userGET, PATCH as userPATCH } from "@/src/app/api/users/[id]/route";
 
 type SeedDocument = { collection: string; id: string };
@@ -39,6 +76,7 @@ describeCloud("/api/users/[id] (Cloud Firebase)", () => {
 
   beforeAll(async () => {
     userId = `${prefix}-uid`;
+    mockAuthedUser({ uid: userId });
     const now = new Date().toISOString();
 
     const profileRef = adminDb
@@ -61,6 +99,7 @@ describeCloud("/api/users/[id] (Cloud Firebase)", () => {
 
   afterAll(async () => {
     await cleanupDocuments(seededDocs);
+    mockAuthedUser(null);
   });
 
   // ── GET ─────────────────────────────────────────────────────────────────
@@ -82,17 +121,45 @@ describeCloud("/api/users/[id] (Cloud Firebase)", () => {
     expect(profile.role).toBe("customer");
   });
 
+  it("GET /api/users/:id returns 401 when no session", async () => {
+    mockAuthedUser(null);
+    const response = await userGET(new Request(`http://localhost/api/users/${userId}`), {
+      params: Promise.resolve({ id: userId }),
+    });
+    expect(response.status).toBe(401);
+    mockAuthedUser({ uid: userId });
+  });
+
+  it("GET /api/users/:id returns 403 when accessing other user's profile", async () => {
+    mockAuthedUser({ uid: "other-uid" });
+    const response = await userGET(new Request(`http://localhost/api/users/${userId}`), {
+      params: Promise.resolve({ id: userId }),
+    });
+    expect(response.status).toBe(403);
+    mockAuthedUser({ uid: userId });
+  });
+
+  it("GET /api/users/:id allows admin to access another user's profile", async () => {
+    mockAuthedUser({ uid: "admin-uid", isAdmin: true });
+    const response = await userGET(new Request(`http://localhost/api/users/${userId}`), {
+      params: Promise.resolve({ id: userId }),
+    });
+    expect(response.status).toBe(200);
+    mockAuthedUser({ uid: userId });
+  });
+
   it("GET /api/users/:id returns 404 when profile does not exist", async () => {
+    mockAuthedUser({ uid: "never-seeded-uid" });
     const response = await userGET(new Request("http://localhost/api/users/never-seeded-uid"), {
       params: Promise.resolve({ id: "never-seeded-uid" }),
     });
     expect(response.status).toBe(404);
+    mockAuthedUser({ uid: userId });
   });
 
   // ── PATCH ───────────────────────────────────────────────────────────────
 
   it("PATCH /api/users/:id updates firstName and preserves id/createdAt", async () => {
-    // Capture stored createdAt before the patch (Timestamp -> ISO string)
     const beforeSnap = await adminDb
       .collection(firestoreCollections.userProfiles)
       .doc(userId)
@@ -125,6 +192,7 @@ describeCloud("/api/users/[id] (Cloud Firebase)", () => {
   });
 
   it("PATCH /api/users/:id returns 404 when profile does not exist", async () => {
+    mockAuthedUser({ uid: "missing-uid" });
     const response = await userPATCH(
       new Request("http://localhost/api/users/missing-uid", {
         method: "PATCH",
@@ -134,6 +202,7 @@ describeCloud("/api/users/[id] (Cloud Firebase)", () => {
       { params: Promise.resolve({ id: "missing-uid" }) },
     );
     expect(response.status).toBe(404);
+    mockAuthedUser({ uid: userId });
   });
 
   it("PATCH /api/users/:id returns 400 when email is invalid", async () => {

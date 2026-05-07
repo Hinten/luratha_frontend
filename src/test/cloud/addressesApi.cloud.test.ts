@@ -5,21 +5,56 @@
  *   FIREBASE_SERVICE_ACCOUNT_BASE64
  *
  * Execute: npm run test:firestore
- *
- * Cobre:
- *   1. POST  cria endereço; servidor gera id/createdAt/updatedAt
- *   2. GET   lista todos os endereços do usuário
- *   3. GET   /:addressId retorna o endereço
- *   4. PATCH atualiza um campo, preserva id/createdAt
- *   5. PATCH promovendo a default desmarca o anterior (invariante "1 default")
- *   6. DELETE remove e responde 204
- *   7. 400 quando o endereço é inválido (falta `number`)
  */
 
-import { afterAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
+
+const auth = vi.hoisted(() => ({
+  state: { current: null as { uid: string; email: string | null; isAdmin: boolean } | null },
+}));
+function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string | null } | null) {
+  auth.state.current = opts
+    ? {
+        uid: opts.uid,
+        email: opts.email ?? `${opts.uid}@test.luratha`,
+        isAdmin: opts.isAdmin ?? false,
+      }
+    : null;
+}
+
+vi.mock("@/src/lib/auth/requireUser", () => {
+  class AuthError extends Error {
+    constructor(public readonly status: 401 | 403, message: string) {
+      super(message);
+      this.name = "AuthError";
+    }
+  }
+  return {
+    SESSION_COOKIE_NAME: "__session",
+    AuthError,
+    requireUser: async () => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      return auth.state.current;
+    },
+    requireOwnerOrAdmin: async (target: string) => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      const u = auth.state.current;
+      if (u.isAdmin || u.uid === target) return u;
+      throw new AuthError(403, "Acesso negado.");
+    },
+    authErrorResponse: (err: unknown) => {
+      if (err instanceof AuthError) {
+        return NextResponse.json({ message: err.message }, { status: err.status });
+      }
+      return null;
+    },
+  };
+});
+
 import {
   GET as listAddresses,
   POST as createAddress,
@@ -71,9 +106,14 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
     { collection: firestoreCollections.userProfiles, id: userId },
   ];
 
+  beforeAll(() => {
+    mockAuthedUser({ uid: userId });
+  });
+
   afterAll(async () => {
     await deleteAllAddresses(userId);
     await cleanupDocuments(seededDocs);
+    mockAuthedUser(null);
   });
 
   // ── POST ────────────────────────────────────────────────────────────────
@@ -117,10 +157,37 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
     expect(response.status).toBe(400);
   });
 
+  it("POST retorna 401 quando não autenticado", async () => {
+    mockAuthedUser(null);
+    const response = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    expect(response.status).toBe(401);
+    mockAuthedUser({ uid: userId });
+  });
+
+  it("POST retorna 403 quando user tenta escrever no userId de outro", async () => {
+    mockAuthedUser({ uid: "other-uid" });
+    const response = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    expect(response.status).toBe(403);
+    mockAuthedUser({ uid: userId });
+  });
+
   // ── GET (list) ──────────────────────────────────────────────────────────
 
   it("GET lista todos os endereços do usuário", async () => {
-    // garante ao menos 2 endereços
     await createAddress(
       new Request(`http://localhost/api/users/${userId}/addresses`, {
         method: "POST",
@@ -138,6 +205,16 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
     expect(response.status).toBe(200);
     const addresses = (await response.json()) as Array<{ id: string }>;
     expect(addresses.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("GET admin lista endereços de qualquer user", async () => {
+    mockAuthedUser({ uid: "admin-uid", isAdmin: true });
+    const response = await listAddresses(
+      new Request(`http://localhost/api/users/${userId}/addresses`),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    expect(response.status).toBe(200);
+    mockAuthedUser({ uid: userId });
   });
 
   // ── GET /:addressId ────────────────────────────────────────────────────
@@ -198,7 +275,6 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
   // ── PATCH default mutua-exclusivo ──────────────────────────────────────
 
   it("PATCH isDefault=true desmarca os outros defaults do mesmo usuário", async () => {
-    // Limpa tudo antes para deixar o estado controlado
     await deleteAllAddresses(userId);
 
     const a = (await (
@@ -223,7 +299,6 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
       )
     ).json()) as { id: string };
 
-    // Promove B a default
     const response = await patchAddress(
       new Request(`http://localhost/api/users/${userId}/addresses/${b.id}`, {
         method: "PATCH",
@@ -272,5 +347,27 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
       { params: Promise.resolve({ id: userId, addressId: created.id }) },
     );
     expect(after.status).toBe(404);
+  });
+
+  it("DELETE retorna 403 quando user tenta deletar do userId de outro", async () => {
+    const create = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    const created = (await create.json()) as { id: string };
+
+    mockAuthedUser({ uid: "other-uid" });
+    const response = await deleteAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses/${created.id}`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: userId, addressId: created.id }) },
+    );
+    expect(response.status).toBe(403);
+    mockAuthedUser({ uid: userId });
   });
 });

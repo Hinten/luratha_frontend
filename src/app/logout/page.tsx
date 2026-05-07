@@ -13,8 +13,17 @@ export default function LogoutPage() {
   const router = useRouter();
 
   useEffect(() => {
-    logout();
-    router.push("/");
+    let cancelled = false;
+    (async () => {
+      try {
+        await logout();
+      } finally {
+        if (!cancelled) router.push("/");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [logout, router]);
 
   return (

@@ -1,12 +1,18 @@
 import { test, expect } from "@playwright/test";
 
+const hasFirebaseConfig = !!process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
+
 test.describe("Authentication (Auth)", () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear auth state before each test
+  test.beforeEach(async ({ page, context }) => {
+    await context.clearCookies();
     await page.goto("/");
     await page.evaluate(() => {
-      localStorage.removeItem("luratha_auth");
-      localStorage.removeItem("luratha_users");
+      try {
+        localStorage.removeItem("luratha_auth");
+        localStorage.removeItem("luratha_users");
+      } catch {
+        /* ignore */
+      }
     });
   });
 
@@ -19,9 +25,11 @@ test.describe("Authentication (Auth)", () => {
     await expect(page.getByLabel("Senha")).toBeVisible();
     await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Cadastre-se" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Esqueci minha senha" })).toBeVisible();
   });
 
   test("login page shows error for wrong credentials", async ({ page }) => {
+    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
     await page.goto("/login");
     await page.getByLabel("E-mail").fill("naoexiste@test.com");
     await page.getByLabel("Senha").fill("wrongpassword");
@@ -57,8 +65,9 @@ test.describe("Authentication (Auth)", () => {
   });
 
   test("successful registration redirects home and updates header", async ({ page }) => {
+    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
     await page.goto("/register");
-    const uniqueEmail = `test_${Date.now()}@luratha.com`;
+    const uniqueEmail = `__test_${Date.now()}@luratha.com`;
     await page.getByLabel("Nome completo").fill("Ana Lima");
     await page.getByLabel("E-mail").fill(uniqueEmail);
     await page.getByLabel("Senha", { exact: true }).fill("senha123");
@@ -72,9 +81,9 @@ test.describe("Authentication (Auth)", () => {
   });
 
   test("register → logout → login round-trip", async ({ page }) => {
-    // Register
+    test.skip(!hasFirebaseConfig, "Firebase web config required for live auth");
     await page.goto("/register");
-    const uniqueEmail = `login_${Date.now()}@luratha.com`;
+    const uniqueEmail = `__test_login_${Date.now()}@luratha.com`;
     await page.getByLabel("Nome completo").fill("Beatriz");
     await page.getByLabel("E-mail").fill(uniqueEmail);
     await page.getByLabel("Senha", { exact: true }).fill("senha123");
@@ -82,12 +91,10 @@ test.describe("Authentication (Auth)", () => {
     await page.getByRole("button", { name: "Criar conta" }).click();
     await page.waitForURL("/");
 
-    // Logout via /logout — should redirect home and clear session
     await page.goto("/logout");
     await page.waitForURL("/");
     await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
 
-    // Login again with the same credentials
     await page.goto("/login");
     await page.getByLabel("E-mail").fill(uniqueEmail);
     await page.getByLabel("Senha").fill("senha123");

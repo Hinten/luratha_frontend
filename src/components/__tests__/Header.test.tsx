@@ -43,9 +43,11 @@ vi.mock("@/src/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: null,
     isAuthenticated: false,
+    isLoading: false,
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
+    sendPasswordReset: vi.fn(),
   }),
 }));
 

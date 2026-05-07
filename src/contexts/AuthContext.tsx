@@ -2,96 +2,162 @@
 
 import React, {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
+import {
+  createUserWithEmailAndPassword,
+  onIdTokenChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { auth } from "@/src/lib/firestore/firebaseClient";
 
 export interface AuthUser {
+  uid: string;
   name: string;
   email: string;
-}
-
-interface StoredUser {
-  name: string;
-  email: string;
-  password: string;
+  isAdmin: boolean;
 }
 
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const AUTH_KEY = "luratha_auth";
-const USERS_KEY = "luratha_users";
+const LEGACY_AUTH_KEY = "luratha_auth";
+const LEGACY_USERS_KEY = "luratha_users";
 
-function getStoredUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? (JSON.parse(raw) as StoredUser[]) : [];
-  } catch {
-    return [];
+function mapFirebaseError(err: unknown): Error {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = (err as { code: string }).code;
+    switch (code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+        return new Error("E-mail ou senha incorretos.");
+      case "auth/invalid-email":
+        return new Error("E-mail inválido.");
+      case "auth/email-already-in-use":
+        return new Error("Este e-mail já está em uso.");
+      case "auth/weak-password":
+        return new Error("A senha deve ter pelo menos 6 caracteres.");
+      case "auth/too-many-requests":
+        return new Error("Muitas tentativas. Tente novamente em alguns minutos.");
+      case "auth/network-request-failed":
+        return new Error("Falha de rede. Verifique sua conexão.");
+    }
   }
+  return err instanceof Error ? err : new Error("Erro de autenticação.");
 }
 
-function saveStoredUsers(users: StoredUser[]): void {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+async function buildAuthUser(fbUser: FirebaseUser): Promise<AuthUser> {
+  const tokenResult = await fbUser.getIdTokenResult();
+  const isAdmin = tokenResult.claims.admin === true;
+  return {
+    uid: fbUser.uid,
+    name: fbUser.displayName ?? (fbUser.email ?? "").split("@")[0] ?? "",
+    email: fbUser.email ?? "",
+    isAdmin,
+  };
+}
+
+async function postSession(idToken: string): Promise<void> {
+  const res = await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!res.ok) {
+    throw new Error("Falha ao iniciar sessão.");
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  /* Restore session from localStorage on mount (SSR-safe) */
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem(AUTH_KEY);
-        if (raw) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setUser(JSON.parse(raw) as AuthUser);
-        }
+        localStorage.removeItem(LEGACY_AUTH_KEY);
+        localStorage.removeItem(LEGACY_USERS_KEY);
       } catch {
         /* ignore */
       }
     }
+
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+      if (!fbUser) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setUser(await buildAuthUser(fbUser));
+      } finally {
+        setIsLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const register = useCallback(
     async (name: string, email: string, password: string) => {
-      if (!name.trim()) throw new Error("O nome é obrigatório.");
+      const trimmedName = name.trim();
+      if (!trimmedName) throw new Error("O nome é obrigatório.");
       if (!email.trim()) throw new Error("O e-mail é obrigatório.");
       if (!password) throw new Error("A senha é obrigatória.");
       if (password.length < 6)
         throw new Error("A senha deve ter pelo menos 6 caracteres.");
 
-      const users = getStoredUsers();
-      const exists = users.some(
-        (u) => u.email.toLowerCase() === email.toLowerCase(),
-      );
-      if (exists) throw new Error("Este e-mail já está em uso.");
+      let credential;
+      try {
+        credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await updateProfile(credential.user, { displayName: trimmedName });
+        const idToken = await credential.user.getIdToken(true);
+        await postSession(idToken);
+      } catch (err) {
+        if (auth.currentUser) {
+          try {
+            await signOut(auth);
+          } catch {
+            /* ignore */
+          }
+        }
+        throw mapFirebaseError(err);
+      }
 
-      const newUser: StoredUser = {
-        name: name.trim(),
-        email: email.toLowerCase(),
-        password,
-      };
-      users.push(newUser);
-      saveStoredUsers(users);
-
-      const session: AuthUser = { name: newUser.name, email: newUser.email };
-      setUser(session);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+      try {
+        const res = await fetch(`/api/users/${credential.user.uid}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: credential.user.uid,
+            email: email.trim().toLowerCase(),
+            firstName: trimmedName.split(" ")[0],
+            lastName: trimmedName.split(" ").slice(1).join(" ") || trimmedName.split(" ")[0],
+            role: "customer",
+          }),
+        });
+        if (!res.ok) {
+          // Não é fatal: o usuário pode completar o perfil em /conta/dados depois.
+          console.warn("Falha ao criar perfil no signup; complete em /conta/dados.");
+        }
+      } catch {
+        console.warn("Falha de rede ao criar perfil no signup; complete em /conta/dados.");
       }
     },
     [],
@@ -101,31 +167,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email.trim()) throw new Error("O e-mail é obrigatório.");
     if (!password) throw new Error("A senha é obrigatória.");
 
-    const users = getStoredUsers();
-    const found = users.find(
-      (u) =>
-        u.email.toLowerCase() === email.toLowerCase() &&
-        u.password === password,
-    );
-    if (!found) throw new Error("E-mail ou senha incorretos.");
-
-    const session: AuthUser = { name: found.name, email: found.email };
-    setUser(session);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const idToken = await credential.user.getIdToken(true);
+      await postSession(idToken);
+    } catch (err) {
+      throw mapFirebaseError(err);
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/session", { method: "DELETE" });
+    } catch {
+      /* ignore — vamos limpar no client de qualquer jeito */
+    }
+    try {
+      await signOut(auth);
+    } catch {
+      /* ignore */
+    }
     setUser(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(AUTH_KEY);
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    if (!email.trim()) throw new Error("O e-mail é obrigatório.");
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (err) {
+      throw mapFirebaseError(err);
     }
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, login, register, logout }}
+      value={{
+        user,
+        isAuthenticated: user !== null,
+        isLoading,
+        login,
+        register,
+        logout,
+        sendPasswordReset,
+      }}
     >
       {children}
     </AuthContext.Provider>

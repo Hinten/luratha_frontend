@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminUserProfileConverter } from "@/src/lib/firestore/adminUserProfileConverter";
 import { firestoreCollections, validateUserProfile } from "@/src/schemas/firestore";
+import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  try {
+    await requireOwnerOrAdmin(id);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
 
   let body: unknown;
   try {

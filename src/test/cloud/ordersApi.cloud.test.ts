@@ -7,20 +7,60 @@
  * Execute: npm run test:firestore
  *
  * The suite is automatically skipped when credentials are not available.
- *
- * What is covered:
- *   1. POST /api/orders             — creates an order, persists to Firestore
- *   2. POST /api/orders             — returns 400 on invalid payload
- *   3. GET  /api/orders?userId=     — lists orders for that user, newest-first
- *   4. GET  /api/orders/:id         — fetches a specific order
- *   5. GET  /api/orders/:id         — returns 404 when missing
- *   6. PATCH /api/orders/:id        — updates status, preserves immutable fields
  */
 
-import { afterAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { firestoreCollections } from "@/src/schemas/firestore";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
+
+// Mock auth: cada test configura mockAuthedUser({ uid, isAdmin? }) ou null para deslogado.
+const auth = vi.hoisted(() => {
+  return {
+    state: { current: null as { uid: string; email: string | null; isAdmin: boolean } | null },
+  };
+});
+function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string | null } | null) {
+  auth.state.current = opts
+    ? {
+        uid: opts.uid,
+        email: opts.email ?? `${opts.uid}@test.luratha`,
+        isAdmin: opts.isAdmin ?? false,
+      }
+    : null;
+}
+
+vi.mock("@/src/lib/auth/requireUser", () => {
+  class AuthError extends Error {
+    constructor(public readonly status: 401 | 403, message: string) {
+      super(message);
+      this.name = "AuthError";
+    }
+  }
+  return {
+    SESSION_COOKIE_NAME: "__session",
+    AuthError,
+    requireUser: async () => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      return auth.state.current;
+    },
+    requireOwnerOrAdmin: async (target: string) => {
+      if (!auth.state.current) throw new AuthError(401, "Não autenticado.");
+      const u = auth.state.current;
+      if (u.isAdmin || u.uid === target) return u;
+      throw new AuthError(403, "Acesso negado.");
+    },
+    authErrorResponse: (err: unknown) => {
+      if (err instanceof AuthError) {
+        return NextResponse.json({ message: err.message }, { status: err.status });
+      }
+      return null;
+    },
+  };
+});
+
+// Imports dos handlers acontecem após o vi.mock (hoisted)
 import { POST as ordersPOST } from "@/src/app/api/orders/route";
 import { GET as ordersGET } from "@/src/app/api/orders/route";
 import { GET as orderGET } from "@/src/app/api/orders/[id]/route";
@@ -34,7 +74,6 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   );
 }
 
-/** Builds a valid Order payload (server fields will be set by POST handler) */
 function buildOrderPayload(userId: string, overrides: Record<string, unknown> = {}) {
   return {
     userId,
@@ -69,12 +108,16 @@ function buildOrderPayload(userId: string, overrides: Record<string, unknown> = 
 
 describeCloud("/api/orders (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
-  // uidSchema requires 6-128 chars; the prefix is already long enough.
   const userId = `${prefix}-user`;
   const seededDocs: SeedDocument[] = [];
 
+  beforeAll(() => {
+    mockAuthedUser({ uid: userId });
+  });
+
   afterAll(async () => {
     await cleanupDocuments(seededDocs);
+    mockAuthedUser(null);
   });
 
   // ── POST /api/orders ─────────────────────────────────────────────────────
@@ -98,7 +141,6 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     expect(created.status).toBe("pending_payment");
     seededDocs.push({ collection: firestoreCollections.orders, id: created.id });
 
-    // Confirm it persisted in Firestore
     const persisted = await adminDb.collection(firestoreCollections.orders).doc(created.id).get();
     expect(persisted.exists).toBe(true);
   });
@@ -115,10 +157,33 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     expect(response.status).toBe(400);
   });
 
+  it("POST /api/orders returns 401 when no session", async () => {
+    mockAuthedUser(null);
+    const response = await ordersPOST(
+      new Request("http://localhost/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildOrderPayload(userId)),
+      }),
+    );
+    expect(response.status).toBe(401);
+    mockAuthedUser({ uid: userId });
+  });
+
+  it("POST /api/orders returns 403 when body.userId differs from session uid", async () => {
+    const response = await ordersPOST(
+      new Request("http://localhost/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildOrderPayload("someone-else-uid")),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
   // ── GET /api/orders?userId= ──────────────────────────────────────────────
 
   it("GET /api/orders?userId= lists orders for the user, newest-first", async () => {
-    // Create a second order so the list returns multiple
     const second = buildOrderPayload(userId, { orderNumber: `ORD-2-${Date.now().toString().slice(-8)}` });
     const createRes = await ordersPOST(
       new Request("http://localhost/api/orders", {
@@ -140,9 +205,23 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     expect(orders.every((o) => o.userId === userId)).toBe(true);
   });
 
-  it("GET /api/orders without userId returns 400", async () => {
+  it("GET /api/orders without userId defaults to session uid", async () => {
     const response = await ordersGET(new Request("http://localhost/api/orders"));
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
+    const orders = (await response.json()) as Array<{ userId: string }>;
+    expect(orders.every((o) => o.userId === userId)).toBe(true);
+  });
+
+  it("GET /api/orders rejects userId of another user when not admin", async () => {
+    const response = await ordersGET(new Request("http://localhost/api/orders?userId=someone-else"));
+    expect(response.status).toBe(403);
+  });
+
+  it("GET /api/orders allows admin to query other userId", async () => {
+    mockAuthedUser({ uid: "admin-uid", isAdmin: true });
+    const response = await ordersGET(new Request(`http://localhost/api/orders?userId=${userId}`));
+    expect(response.status).toBe(200);
+    mockAuthedUser({ uid: userId });
   });
 
   // ── GET /api/orders/:id ──────────────────────────────────────────────────
@@ -175,6 +254,28 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     expect(response.status).toBe(404);
   });
 
+  it("GET /api/orders/:id returns 403 when order belongs to another user", async () => {
+    // criar pedido para o user "alvo"
+    const payload = buildOrderPayload(userId);
+    const createRes = await ordersPOST(
+      new Request("http://localhost/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+    const created = (await createRes.json()) as { id: string };
+    seededDocs.push({ collection: firestoreCollections.orders, id: created.id });
+
+    // trocar para outro user (não admin)
+    mockAuthedUser({ uid: "outro-uid" });
+    const response = await orderGET(new Request(`http://localhost/api/orders/${created.id}`), {
+      params: Promise.resolve({ id: created.id }),
+    });
+    expect(response.status).toBe(403);
+    mockAuthedUser({ uid: userId });
+  });
+
   // ── PATCH /api/orders/:id ────────────────────────────────────────────────
 
   it("PATCH /api/orders/:id updates status and preserves immutable fields", async () => {
@@ -193,7 +294,8 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     };
     seededDocs.push({ collection: firestoreCollections.orders, id: created.id });
 
-    // Try to also overwrite userId (should be preserved by the handler)
+    // como non-admin, não pode mudar status para "paid" — só admin pode.
+    mockAuthedUser({ uid: "admin-uid", isAdmin: true });
     const response = await orderPATCH(
       new Request(`http://localhost/api/orders/${created.id}`, {
         method: "PATCH",
@@ -217,9 +319,34 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
     expect(updated.userId).toBe(created.userId);
     expect(updated.createdAt).toBe(created.createdAt);
     expect(updated.updatedAt).not.toBe(created.createdAt);
+    mockAuthedUser({ uid: userId });
+  });
+
+  it("PATCH /api/orders/:id returns 403 when non-admin tries to set non-cancelled status", async () => {
+    const payload = buildOrderPayload(userId);
+    const createRes = await ordersPOST(
+      new Request("http://localhost/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+    const created = (await createRes.json()) as { id: string };
+    seededDocs.push({ collection: firestoreCollections.orders, id: created.id });
+
+    const response = await orderPATCH(
+      new Request(`http://localhost/api/orders/${created.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "shipped" }),
+      }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    expect(response.status).toBe(403);
   });
 
   it("PATCH /api/orders/:id returns 404 when missing", async () => {
+    mockAuthedUser({ uid: "admin-uid", isAdmin: true });
     const response = await orderPATCH(
       new Request("http://localhost/api/orders/missing-id", {
         method: "PATCH",
@@ -229,5 +356,6 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
       { params: Promise.resolve({ id: "missing-id" }) },
     );
     expect(response.status).toBe(404);
+    mockAuthedUser({ uid: userId });
   });
 });

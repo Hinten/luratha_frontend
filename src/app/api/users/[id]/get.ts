@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminUserProfileConverter } from "@/src/lib/firestore/adminUserProfileConverter";
 import { firestoreCollections } from "@/src/schemas/firestore";
+import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -9,17 +10,22 @@ export const runtime = "nodejs";
  * GET /api/users/:id
  *
  * Fetches the user profile identified by :id. Returns 404 when no profile
- * exists for that uid, 200 with the profile on success.
- *
- * Authorization (own-profile or admin) is enforced by the route middleware
- * once it lands in PR 6. Until then, this endpoint is intentionally permissive
- * so the cloud test suite can exercise it directly.
+ * exists for that uid, 200 with the profile on success. Requer que o uid da
+ * sessão bata com :id, ou que o usuário tenha claim admin.
  */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  try {
+    await requireOwnerOrAdmin(id);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
 
   const profileRef = adminDb
     .collection(firestoreCollections.userProfiles)
