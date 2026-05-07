@@ -41,6 +41,13 @@ if (existsSync(envFile)) {
 // empty strings as authoritative — overriding them later from next.config.ts
 // is unreliable, so we do it here at the playwright entry point.
 if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
+  console.log(
+    "[E2E] Backfilling NEXT_PUBLIC_FIREBASE_* from base64. Before:",
+    JSON.stringify({
+      apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
+      authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "(undef)").length,
+    }),
+  );
   try {
     const cfg = JSON.parse(
       Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8"),
@@ -60,9 +67,19 @@ if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
         process.env[envName] = value;
       }
     }
-  } catch {
-    /* ignore — leave env as-is */
+    console.log(
+      "[E2E] Backfill done. After:",
+      JSON.stringify({
+        apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "(undef)").length,
+        authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "(undef)").length,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      }),
+    );
+  } catch (err) {
+    console.warn("[E2E] FIREBASE_WEB_APP_CONFIG_BASE64 decode failed:", err);
   }
+} else {
+  console.log("[E2E] FIREBASE_WEB_APP_CONFIG_BASE64 not set — no backfill.");
 }
 
 const hasCredentials = !!(
