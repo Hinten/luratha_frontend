@@ -21,9 +21,9 @@ vi.mock("next/link", () => ({
 vi.mock("@/src/lib/constants", () => ({
   appData: { name: "Luratha", logo: "/luratha.svg" },
   contactData: {
-    phone: "(12) 98278-9225",
-    phoneTel: "+5512982789225",
-    whatsapp: "5512982789225",
+    phone: "(11) 99999-9999",
+    phoneTel: "+5511999999999",
+    whatsapp: "5511999999999",
     facebook: "https://facebook.com/Lurathaa",
     instagram: "https://instagram.com/_luratha",
     youtube: "https://youtube.com/channel/UC2RLNR2ZAzUxB97XYNFUnBg",
@@ -88,7 +88,7 @@ describe("Footer", () => {
 
   it("renders phone number", async () => {
     render(await Footer());
-    expect(screen.getByText(/98278-9225/)).toBeInTheDocument();
+    expect(screen.getByText(/99999-9999/)).toBeInTheDocument();
   });
 
   it("renders WhatsApp link", async () => {

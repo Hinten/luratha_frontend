@@ -18,15 +18,15 @@ describe("appData constants", () => {
 
 describe("contactData constants", () => {
   it("has a phone number", () => {
-    expect(contactData.phone).toBe("(12) 98278-9225");
+    expect(contactData.phone).toBe("(11) 99999-9999");
   });
 
   it("has a phoneTel for tel: links", () => {
-    expect(contactData.phoneTel).toBe("+5512982789225");
+    expect(contactData.phoneTel).toBe("+5511999999999");
   });
 
   it("has whatsapp number", () => {
-    expect(contactData.whatsapp).toBe("5512982789225");
+    expect(contactData.whatsapp).toBe("5511999999999");
   });
 
   it("has social media URLs", () => {
