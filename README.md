@@ -13,10 +13,6 @@
 
 Frontend da **Luratha**, marca brasileira de slow fashion feminina (vestidos, blusas, calças, saias, conjuntos, moletons e acessórios artesanais).
 
-Este repositório existe com dois objetivos:
-
-1. **Substituir o frontend atual** de [`luratha.com.br`](https://www.luratha.com.br) por uma stack moderna (Next.js App Router + Firebase) com cobertura de testes ponta-a-ponta.
-2. **Servir de portfólio técnico** mostrando a estrutura real de um e-commerce: catálogo, busca vetorial, carrinho, checkout, área do cliente e fluxos administrativos.
 
 ### O que já existe (catálogo + storefront)
 
