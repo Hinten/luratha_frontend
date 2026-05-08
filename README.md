@@ -5,8 +5,7 @@
 > Este repositório é um **frontend em desenvolvimento** e **não é a versão em produção** da Luratha. A loja oficial em [`luratha.com.br`](https://www.luratha.com.br) hoje roda em outra plataforma; este projeto é o substituto que está sendo construído.
 >
 > **Não use em produção.** As rotas de API (`src/app/api/**`) ainda **não têm autenticação/autorização** — várias delas usam o Firebase Admin SDK e ignoram as Security Rules. As guards de auth estão planejadas para uma das próximas iterações ([ver issue de checkout-flow](./plan/checkout-flow-roadmap.md)).
->
-> O projeto Firebase usado (`luratha-96386`) é dedicado a testes e CI; nenhum dado real de cliente trafega por ele. Telefone e e-mail no código são placeholders.
+
 
 ---
 
@@ -153,4 +152,4 @@ Já contemplados:
 
 ## Licença e uso
 
-Repositório pessoal exposto publicamente como portfólio técnico e por necessidade operacional (CI ilimitado em repos públicos do GitHub Free). O conteúdo de marca (logo, manifesto, nomes de produto) pertence à Luratha; o código pode ser estudado livremente. Não use a marca "Luratha" em derivados.
+Repositório pessoal exposto publicamente como portfólio técnico. O conteúdo de marca (logo, manifesto, nomes de produto) pertence à Luratha; o código pode ser estudado livremente. Não use a marca "Luratha" em derivados.
