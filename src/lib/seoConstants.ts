@@ -4,7 +4,7 @@ export const LURATHA_SCHEMA = {
   name: "Luratha",
   url: SITE_URL,
   logo: `${SITE_URL}/luratha.svg`,
-  telephone: "+55-12-98278-9225",
+  telephone: "+55-11-99999-9999",
   sameAs: [
     "https://instagram.com/_luratha",
     "https://facebook.com/Lurathaa",
