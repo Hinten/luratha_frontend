@@ -2,9 +2,9 @@
 
 > ## ⚠️ Work in Progress
 >
-> Este repositório é um **frontend em desenvolvimento** e **não é a versão em produção** da Luratha. A loja oficial em [`luratha.com.br`](https://www.luratha.com.br) hoje roda em outra plataforma; este projeto é o substituto que está sendo construído.
+> Este repositório é um **frontend em desenvolvimento** e **não é a versão em produção** da Luratha. A loja oficial em [`luratha.com.br`](https://www.luratha.com.br) hoje roda em outra plataforma;
 >
-> **Não use em produção.** As rotas de API (`src/app/api/**`) ainda **não têm autenticação/autorização** — várias delas usam o Firebase Admin SDK e ignoram as Security Rules. As guards de auth estão planejadas para uma das próximas iterações ([ver issue de checkout-flow](./plan/checkout-flow-roadmap.md)).
+> **Não use em produção.**
 
 
 ---
