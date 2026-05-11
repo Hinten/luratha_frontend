@@ -99,9 +99,20 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 ### 1.6 Decisões Pendentes (perguntar antes de implementar)
 
 1. **Provider de pagamento**: Stripe BR, MercadoPago, PagSeguro, ou apenas stub? (Brasileira → MercadoPago é o mais comum em slow fashion)
-2. **Cálculo de frete**: Melhor Envio (recomendado), Correios direto, ou frete fixo por região?
+2. ~~**Cálculo de frete**: Melhor Envio (recomendado), Correios direto, ou frete fixo por região?~~ ✅ resolvido — issue #78. **Melhor Envio** como provider padrão atrás da interface `ShippingProvider` (`src/lib/shipping/`), com `fixed-rate` como fallback automático e plugável via `siteSettings.shipping.providerId`.
 3. **Cart server-side**: hoje é localStorage. Migrar para Firestore (`/api/cart`) para persistir entre dispositivos? Recomendação: manter localStorage agora, criar Firestore Cart só na conversão para Order.
-4. **Rastreamento**: integrar tracking dos Correios na página de detalhe do pedido ou só armazenar `trackingCode` como string?
+4. **Rastreamento**: ✅ resolvido (parcial — issue #80 Opção A entregue junto). Schema `Order` agora aceita `trackingCode`/`trackingUrl`/`shippedAt`/`deliveredAt` (manual MVP). A interface `ShippingProvider` já define `track()` — Melhor Envio devolve `not_supported` até PR 2 (issue #80 Opção B: polling ativo + timeline).
+
+#### Resolvido (PR Frete — issue #78 + parte de #80)
+
+- **Provider plugável** em `src/lib/shipping/`: interface `ShippingProvider` (`calculate` + `track` opcional), adapter `melhorEnvio/`, fallback `fixed-rate/` por tabela de UF (resolvida do prefixo do CEP) e factory `getShippingProvider()`.
+- **Configuração centralizada** em `settings/global` (`siteSettingsSchema`): `providerId`, `originPostalCode`, `enabledServices[]`, `fallbackProductWeightKg`, `cacheTtlSeconds`, `freeShipping.{divisor, minThreshold, maxThreshold, enabled}`, `fixedRate.{entries, defaultEntry}`. Repositório lê com cache em memória de 60s + `forceFresh`.
+- **Frete grátis baseado em CEP**: `quoteFreeShippingThreshold(cep)` simula 1kg pelo provider, aplica `threshold = shippingCost1kg / divisor` (default 0,14) com clamp por min/max. Loja absorve a diferença no checkout quando aplicável (`OrderShippingMethod.freeShippingApplied`).
+- **API** `POST /api/checkout/shipping` em dois modos: `mode: "quote"` (carrinho completo) e `mode: "free-shipping-only"` (PDP/cart).
+- **UI**: `ShippingEstimator` na PDP (CEP → frete grátis em tempo real, persistido em `localStorage["luratha_shipping_estimate"]`), barra de progresso "Faltam R$X para frete grátis" no carrinho.
+- **Order schema** estendido com `shippingMethod` snapshot, `trackingCode`, `trackingUrl`, `shippedAt`, `deliveredAt` (todos opcionais — retro-compat).
+- **Env vars necessárias** (prod/sandbox): `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_ENV` (`sandbox`|`production`), `MELHOR_ENVIO_USER_AGENT` (opcional).
+- **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável; fallback automático para `fixed-rate` se Melhor Envio responder `provider_unavailable`/`config_missing`.
 
 #### Resolvido (PR #81 — issue #81)
 

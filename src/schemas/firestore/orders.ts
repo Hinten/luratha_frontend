@@ -10,6 +10,28 @@ import {
   uidSchema,
 } from "@/src/schemas/firestore/utils";
 import { ADDRESS_PATH_REGEX } from "@/src/schemas/firestore/addresses";
+import { shippingProviderIdSchema } from "@/src/schemas/firestore/siteSettings";
+
+/**
+ * Snapshot da opção de frete escolhida no checkout.
+ *
+ * É um snapshot intencional — o documento não referencia configuração mutável
+ * de `siteSettings`. Mudar tarifas/transportadoras no futuro não rescreve
+ * pedidos antigos.
+ */
+export const orderShippingMethodSchema = z.object({
+  providerId: shippingProviderIdSchema,
+  carrier: nonEmptyStringSchema.max(60),
+  service: nonEmptyStringSchema.max(60),
+  serviceCode: nonEmptyStringSchema.max(40),
+  /** Preço cobrado do cliente (pode ser 0 quando aplicou frete grátis). */
+  price: nonNegativeMoneySchema,
+  /** Preço cheio retornado pelo provider antes de qualquer desconto. */
+  basePrice: nonNegativeMoneySchema,
+  /** true quando a regra de frete grátis foi aplicada (loja absorve `basePrice - price`). */
+  freeShippingApplied: z.boolean().default(false),
+  estimatedDays: z.number().int().min(0).max(60),
+});
 
 export const orderItemSchema = z.object({
   id: nonEmptyStringSchema,
@@ -63,6 +85,15 @@ export const orderSchema = z
      * do usuário e o pedido.
      */
     shippingAddressPath: z.string().regex(ADDRESS_PATH_REGEX),
+    /** Snapshot da opção de frete contratada. Opcional para retro-compatibilidade
+     *  com pedidos antigos que não tinham essa informação estruturada. */
+    shippingMethod: orderShippingMethodSchema.optional(),
+    /** Código de rastreio fornecido pela transportadora (MVP — preenchimento manual). */
+    trackingCode: nonEmptyStringSchema.max(80).optional(),
+    /** URL pública de rastreio. Quando ausente, a UI monta uma URL padrão pelo carrier. */
+    trackingUrl: z.url().optional(),
+    shippedAt: timestampSchema.optional(),
+    deliveredAt: timestampSchema.optional(),
     notes: z.string().trim().max(500).optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
@@ -100,6 +131,7 @@ export const orderSchema = z
   });
 
 export type OrderItem = z.infer<typeof orderItemSchema>;
+export type OrderShippingMethod = z.infer<typeof orderShippingMethodSchema>;
 export type Order = z.infer<typeof orderSchema>;
 
 export function validateOrder(input: unknown): Order {

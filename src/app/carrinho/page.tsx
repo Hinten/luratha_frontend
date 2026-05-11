@@ -2,7 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useCart } from "@/src/contexts/CartContext";
+import {
+  getStoredShippingEstimate,
+  type StoredShippingEstimate,
+} from "@/src/lib/shipping/clientStorage";
 import styles from "./page.module.css";
 
 const formatBRL = (value: number) =>
@@ -12,7 +17,31 @@ export default function CarrinhoPage() {
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } =
     useCart();
 
+  const [estimate, setEstimate] = useState<StoredShippingEstimate | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEstimate(getStoredShippingEstimate());
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<StoredShippingEstimate | null>).detail;
+      setEstimate(detail ?? null);
+    };
+    window.addEventListener("luratha:shipping-estimate", handler);
+    return () => window.removeEventListener("luratha:shipping-estimate", handler);
+  }, []);
+
   const isEmpty = items.length === 0;
+  const freeShippingThreshold =
+    estimate?.freeShippingEnabled && estimate.freeShippingThreshold !== null
+      ? estimate.freeShippingThreshold
+      : null;
+  const remainingForFreeShipping =
+    freeShippingThreshold !== null ? Math.max(0, freeShippingThreshold - totalPrice) : null;
+  const eligibleForFreeShipping =
+    freeShippingThreshold !== null && totalPrice >= freeShippingThreshold;
+  const progressPercent =
+    freeShippingThreshold !== null && freeShippingThreshold > 0
+      ? Math.min(100, Math.round((totalPrice / freeShippingThreshold) * 100))
+      : 0;
 
   return (
     <main className={styles.page}>
@@ -128,12 +157,45 @@ export default function CarrinhoPage() {
 
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Frete</span>
-                <span>Calcule o frete</span>
+                <span>
+                  {eligibleForFreeShipping
+                    ? "Grátis"
+                    : freeShippingThreshold !== null
+                      ? "A calcular"
+                      : "Calcule o frete"}
+                </span>
               </div>
 
-              <p className={styles.shippingNote}>
-                Informe o CEP na próxima etapa.
-              </p>
+              {freeShippingThreshold !== null ? (
+                eligibleForFreeShipping ? (
+                  <p className={styles.shippingNote} aria-live="polite">
+                    Você ganhou frete grátis para o CEP {estimate?.postalCode}.
+                  </p>
+                ) : (
+                  <div aria-live="polite">
+                    <p className={styles.shippingNote}>
+                      Faltam {formatBRL(remainingForFreeShipping ?? 0)} para frete grátis no
+                      CEP {estimate?.postalCode}.
+                    </p>
+                    <div
+                      className={styles.freeShippingBar}
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={progressPercent}
+                    >
+                      <div
+                        className={styles.freeShippingFill}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              ) : (
+                <p className={styles.shippingNote}>
+                  Informe o CEP em um produto para calcular o frete grátis.
+                </p>
+              )}
 
               <hr className={styles.summaryDivider} />
 

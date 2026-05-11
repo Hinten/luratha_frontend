@@ -5,6 +5,7 @@ import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore
 import ProductGallery from "@/src/components/produto/ProductGallery";
 import PriceBlock from "@/src/components/produto/PriceBlock";
 import SizeSelector from "@/src/components/produto/SizeSelector";
+import ShippingEstimator from "@/src/components/produto/ShippingEstimator";
 import ProductHighlights from "@/src/components/produto/ProductHighlights";
 import { getVariantGalleryImages } from "@/src/lib/productImages";
 import styles from "./ProductDetailPage.module.css";
@@ -73,6 +74,8 @@ export default function ProductVariantView({
           onColorChange={setSelectedColor}
           onSizeChange={setSelectedSize}
         />
+
+        <ShippingEstimator productPrice={currentPrice} />
 
         {highlights.length > 0 && <ProductHighlights highlights={highlights} />}
       </div>
