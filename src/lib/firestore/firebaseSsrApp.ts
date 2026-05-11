@@ -2,7 +2,7 @@ import "server-only";
 import { initializeServerApp, type FirebaseServerApp } from "firebase/app";
 import { getAuth, type User } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { DATABASE_NAME, getFirebaseWebConfig } from "./environment";
 
 const firebaseServerConfig = getFirebaseWebConfig();
@@ -14,13 +14,21 @@ type AuthenticatedAppForUser = {
   firestore: Firestore;
 };
 
+/**
+ * Initializes a FirebaseServerApp for SSR Firestore reads.
+ *
+ * Auth: only honors a Bearer `Authorization` header (a real Firebase ID token).
+ * The `__session` cookie used by our app is a *session cookie* — a different
+ * format from ID tokens — so passing it to `initializeServerApp({ authIdToken })`
+ * would fail with `auth/invalid-user-token`. For per-user server logic, use
+ * `requireUser()` from `@/src/lib/auth/requireUser` to read the session cookie
+ * and then use the admin SDK (`adminDb`) to fetch data on behalf of that user.
+ */
 export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForUser> {
-  const requestCookies = await cookies();
   const requestHeaders = await headers();
-  const authIdToken = getAuthIdTokenFromRequest({
-    authHeader: requestHeaders.get("authorization") ?? requestHeaders.get("Authorization"),
-    sessionCookie: requestCookies.get("__session")?.value,
-  });
+  const authIdToken = getBearerToken(
+    requestHeaders.get("authorization") ?? requestHeaders.get("Authorization"),
+  );
 
   const authenticatedServerApp = initializeServerApp(firebaseServerConfig, {
     authIdToken,
@@ -43,6 +51,15 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
     };
   }
 
+  if (!authIdToken) {
+    // No Bearer header — skip Auth init entirely; the page just needs Firestore.
+    return {
+      firebaseServerApp: authenticatedServerApp,
+      currentUser: null,
+      firestore,
+    };
+  }
+
   const auth = getAuth(authenticatedServerApp);
   await auth.authStateReady();
 
@@ -53,19 +70,8 @@ export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForU
   };
 }
 
-function getAuthIdTokenFromRequest({
-  authHeader,
-  sessionCookie,
-}: {
-  authHeader: string | null;
-  sessionCookie: string | undefined;
-}): string | undefined {
-  if (authHeader?.startsWith(BEARER_PREFIX)) {
-    const token = authHeader.slice(BEARER_PREFIX.length).trim();
-    if (token) {
-      return token;
-    }
-  }
-
-  return sessionCookie;
+function getBearerToken(authHeader: string | null): string | undefined {
+  if (!authHeader?.startsWith(BEARER_PREFIX)) return undefined;
+  const token = authHeader.slice(BEARER_PREFIX.length).trim();
+  return token.length > 0 ? token : undefined;
 }
