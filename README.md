@@ -1,60 +1,96 @@
 # Luratha Frontend
 
-Frontend da **Luratha**, marca brasileira de slow fashion feminino.  
-Este repositório foi preparado para portfólio técnico: mostra estrutura real de e-commerce com Next.js App Router, Firebase e cobertura de testes.
+> ## ⚠️ Work in Progress
+>
+> Este repositório é um **frontend em desenvolvimento** e **não é a versão em produção** da Luratha. A loja oficial em [`luratha.com.br`](https://www.luratha.com.br) hoje roda em outra plataforma;
+>
+> **Não use em produção.**
+
+
+---
+
+## Sobre o projeto
+
+Frontend da **Luratha**, marca brasileira de slow fashion feminina (vestidos, blusas, calças, saias, conjuntos, moletons e acessórios artesanais).
+
+
+### O que já existe (catálogo + storefront)
+
+- Páginas públicas: home, categorias, produto, busca, sobre, contato, política de trocas, referência de medidas
+- Autenticação (e-mail/senha + Google) via Firebase Auth
+- Carrinho persistido em Firestore por usuário
+- Busca por similaridade vetorial (Vertex AI embeddings + `findNearest`)
+- API CRUD de produtos, categorias, estoque, imagens, pedidos e endereços
+- Área do cliente (`/conta`): dashboard, dados pessoais, endereços, pedidos
+- Cobertura de testes em três níveis (Vitest unit, Vitest cloud-integration, Playwright E2E contra projeto real)
+
+### O que ainda falta (resumo)
+
+- **Auth/AuthZ middleware** nas rotas de API — atualmente abertas
+- Fluxo de checkout (intent de pagamento, cálculo de frete, confirmação)
+- Webhooks de pagamento e baixa de estoque transacional
+- Painel administrativo do catálogo
+- Integração com gateway de pagamento e meios logísticos
+- Rate limiting e proteções contra abuso
+
+Roadmap detalhado em [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-roadmap.md).
 
 ## Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Framework | Next.js 16.2.2 (App Router) |
+| Framework | Next.js 16.2.2 (App Router, Turbopack) |
 | UI | React 19 + TypeScript strict |
 | Estilo | Tailwind CSS v4 + CSS Modules |
-| Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting) |
+| Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting, Functions) |
+| Embeddings/IA | Vertex AI (`text-embedding-005`) |
 | Testes | Vitest + React Testing Library + Playwright |
+| CI | GitHub Actions (lint/typecheck, unit, cloud-integration, E2E, deploy de Functions) |
 
 ## Pré-requisitos
 
-- Node.js 22
-- npm 10
+- Node.js 22, npm 10
 - Firebase CLI (`npm install -g firebase-tools@latest`)
 - Playwright Chromium (`npx playwright install --with-deps chromium`)
+- Para rodar suites cloud (`test:firestore`, `test:e2e`, etc.) — credenciais do projeto de teste em variáveis de ambiente:
+  - `FIREBASE_SERVICE_ACCOUNT_BASE64`
+  - `FIREBASE_WEB_APP_CONFIG_BASE64`
+  - `NEXT_PUBLIC_FIREBASE_*`
+
+  Sem essas variáveis, as suites cloud são puladas automaticamente.
 
 ## Como rodar localmente
 
-1. Instale dependências:
-   ```bash
-   npm ci
-   ```
-2. Inicie o projeto:
-   ```bash
-   npm run dev
-   ```
-3. Acesse: `http://localhost:3000`
+```bash
+npm ci
+npm run dev      # http://localhost:3000
+```
 
 ## Scripts principais
 
 | Comando | Uso |
 |---|---|
-| `npm run dev` | Desenvolvimento local |
+| `npm run dev` | Dev server (Turbopack) |
 | `npm run build` | Build de produção |
 | `npm run start` | Servir build |
 | `npm run lint` | ESLint |
-| `npm test` | Testes unitários/integrados (Vitest) |
-| `npm run test:firestore` | Integração com Firebase Emulator |
-| `npm run test:e2e` | E2E com Playwright |
-| `npm run setup:routes` | Geração de rotas de catálogo |
+| `npm test` | Testes unitários/componentes (Vitest, jsdom — sem rede) |
+| `npm run test:coverage` | Mesma suite com relatório de cobertura |
+| `npm run test:firestore` | Integração contra Firestore real do projeto de teste |
+| `npm run test:functions:cloud` | Triggers de Cloud Functions deployados |
+| `npm run test:e2e` | Playwright contra o projeto de teste |
+| `npm run test:e2e:ui` | Playwright em modo UI |
 
-## Ordem de validação (qualidade)
+## Ordem de validação
 
 ```bash
-npm ci
+npx tsc --noEmit
 npm run lint
 npm test
 npm run test:e2e
 ```
 
-Quando houver mudanças em schemas ou fluxos Firebase, rode também:
+Para mudanças em schemas, queries ou fluxos Firebase, rodar também:
 
 ```bash
 npm run test:firestore
@@ -64,43 +100,52 @@ npm run test:firestore
 
 ```mermaid
 flowchart LR
-  A[src/app<br/>rotas e páginas] --> B[src/components<br/>UI]
-  A --> C[src/services<br/>camada de dados]
-  C --> D[src/lib/firebase.ts]
+  A[src/app<br/>rotas + API handlers] --> B[src/components<br/>UI]
+  A --> C[src/lib/repositories<br/>acesso a dados]
+  C --> D[src/lib/firestore<br/>SDK clients + converters]
   D --> E[(Firebase<br/>Auth/Firestore/Storage)]
-  A --> F[src/lib + src/schemas<br/>constantes e validações]
+  A --> F[src/schemas/firestore<br/>Zod + contratos]
+  C --> G[src/lib/embeddingService<br/>Vertex AI]
 ```
 
-Pastas mais importantes:
+Pastas relevantes:
 
-- `src/app/`: rotas, layouts, metadata, sitemap e robots
-- `src/components/`: componentes reutilizáveis e componentes por domínio
-- `src/services/`: regras de acesso a dados
-- `src/schemas/`: contratos/validações de domínio
-- `e2e/`: testes end-to-end
-- `docs/`: guias operacionais (ex.: testes e emulator)
+- `src/app/` — rotas, layouts, metadata, sitemap, robots, API handlers
+- `src/app/api/` — CRUD por entidade (cada método em arquivo próprio)
+- `src/components/` — UI compartilhada e componentes por domínio (`categoria/`, `produto/`, `conta/`)
+- `src/lib/firestore/` — wrappers do SDK (client/SSR/admin) e DataConverters
+- `src/lib/repositories/` — camada de acesso a Firestore
+- `src/schemas/firestore/` — schemas Zod (contrato único de dados)
+- `e2e/` — specs Playwright (rodam contra projeto real)
+- `src/test/cloud/`, `src/test/cloud-functions/` — suites de integração contra `luratha-96386`
+- `functions/` — Cloud Functions (gatilhos Firestore e Storage)
+- `docs/` — guias operacionais
 
-## Qualidade de engenharia (padrões do projeto)
+## Padrões de engenharia
 
-- **Arquitetura:** separação clara entre rota, UI, serviço e schema
-- **Código:** TypeScript strict e imports por alias `@/src/...`
-- **Acessibilidade:** estrutura semântica, foco visível e interações por teclado
-- **Performance:** preferência por Server Components; usar `"use client"` apenas quando necessário
-- **Segurança:** sem segredos no código; uso de `NEXT_PUBLIC_FIREBASE_*` e regras Firebase
-- **Manutenibilidade:** documentação curta, sem duplicação e alinhada aos arquivos-fonte
+- **TypeScript strict** com imports por alias `@/src/...`
+- Preferência por **Server Components**; `"use client"` apenas quando necessário
+- **CSS Modules** + design tokens em `src/app/globals.css` (`var(--color-*)`, `var(--font-*)`) — nada de hex hard-coded
+- **Acessibilidade**: landmarks semânticos, um `<h1>` por página, foco visível, `alt` descritivo
+- **SEO**: cada rota com metadata, JSON-LD, canonical e atualização de `sitemap.ts`/`robots.ts`/`llms.txt`
+- **Segurança de credenciais**: nenhum secret no código; tudo via env (`FIREBASE_SERVICE_ACCOUNT_BASE64`, etc.) ou GitHub Actions secrets
 
-## SEO, AEO e GEO
+## SEO / AEO / GEO
 
-O projeto já contempla:
+Já contemplados:
 
-- Metadata por rota
-- JSON-LD (schema.org)
-- `src/app/sitemap.ts`
-- `src/app/robots.ts`
-- `public/llms.txt`
+- Metadata por rota (`generateMetadata`)
+- JSON-LD via componente `<JsonLd>` (Product, BreadcrumbList, ContactPage, LocalBusiness, etc.)
+- `src/app/sitemap.ts` e `src/app/robots.ts` dinâmicos
+- `public/llms.txt` para descobribilidade por LLMs
 
-## Referências de documentação
+## Documentação adicional
 
-- Guia de testes: `docs/testing.md`
-- Firebase Emulator + CRUD: `docs/firestore-crud-emulator.md`
-- Instruções de contribuição técnica: `.github/copilot-instructions.md`
+- Guia de testes — [`docs/testing.md`](./docs/testing.md)
+- Guia de CRUD/Firestore — [`docs/firestore-crud-emulator.md`](./docs/firestore-crud-emulator.md)
+- Roadmap de checkout — [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-roadmap.md)
+- Convenções para agentes (Claude Code, Copilot) — [`CLAUDE.md`](./CLAUDE.md)
+
+## Licença e uso
+
+Repositório pessoal exposto publicamente como portfólio técnico. O conteúdo de marca (logo, manifesto, nomes de produto) pertence à Luratha; o código pode ser estudado livremente. Não use a marca "Luratha" em derivados.
