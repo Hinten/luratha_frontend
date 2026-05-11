@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./SizeSelector.module.css";
 import AddToCartButton from "./AddToCartButton";
-import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
+import type { CartItemInput } from "@/src/contexts/CartContext";
+import type {
+  Product as FirestoreProduct,
+  ProductVariant,
+  Stock,
+} from "@/src/schemas/firestore";
 
 interface SizeSelectorProps {
   product: FirestoreProduct;
@@ -15,6 +20,33 @@ interface SizeSelectorProps {
   price?: number;
   onColorChange?: (color: string | null) => void;
   onSizeChange?: (size: string | null) => void;
+}
+
+function buildVariantLabel(
+  selectedColor: string | null,
+  selectedSize: string | null,
+  variant: ProductVariant | null,
+): string | undefined {
+  const parts: string[] = [];
+  if (selectedColor) parts.push(selectedColor);
+  if (selectedSize) parts.push(selectedSize);
+  if (parts.length > 0) return parts.join(" / ");
+  if (variant) {
+    const fallback = [
+      variant.color?.[0] ?? null,
+      variant.size?.[0] ?? null,
+    ].filter((entry): entry is string => Boolean(entry));
+    if (fallback.length > 0) return fallback.join(" / ");
+  }
+  return undefined;
+}
+
+function resolvePhotoId(
+  product: FirestoreProduct,
+  variant: ProductVariant | null,
+): string | null {
+  if (variant && variant.photoIds.length > 0) return variant.photoIds[0];
+  return product.photoAssets[0]?.id ?? null;
 }
 
 function extractUniqueColors(product: FirestoreProduct): string[] {
@@ -162,11 +194,50 @@ export default function SizeSelector({
       ? urgencyMessage(stockQtyForDisplay)
       : null;
 
-  const canAddToCart =
-    productId !== undefined &&
-    slug !== undefined &&
-    imageUrl !== undefined &&
-    price !== undefined;
+  const matchedVariant = useMemo(
+    () => findMatchingVariant(product, selectedColor, selectedSize),
+    [product, selectedColor, selectedSize],
+  );
+
+  const cartItemInput: CartItemInput | null = useMemo(() => {
+    if (
+      productId === undefined ||
+      slug === undefined ||
+      imageUrl === undefined ||
+      price === undefined
+    ) {
+      return null;
+    }
+    const variantInfo = matchedVariant;
+    const photoId = resolvePhotoId(product, variantInfo);
+    if (!photoId) return null;
+
+    const sku = variantInfo?.sku ?? product.sku;
+    return {
+      productId,
+      variantId: variantInfo?.id,
+      variantSku: sku,
+      productSlug: slug,
+      name: product.title,
+      photoId,
+      imageUrl,
+      variantLabel: buildVariantLabel(selectedColor, selectedSize, variantInfo),
+      unitPrice: price,
+      currency: "BRL",
+      quantity: 1,
+    };
+  }, [
+    imageUrl,
+    matchedVariant,
+    price,
+    product,
+    productId,
+    selectedColor,
+    selectedSize,
+    slug,
+  ]);
+
+  const canAddToCart = cartItemInput !== null;
 
   function handleColorClick(color: string) {
     setSelectedColor(color);
@@ -295,14 +366,9 @@ export default function SizeSelector({
         >
           PRODUTO ESGOTADO
         </button>
-      ) : canAddToCart ? (
+      ) : canAddToCart && cartItemInput ? (
         <AddToCartButton
-          productId={productId}
-          name={product.title}
-          slug={slug}
-          imageUrl={imageUrl}
-          price={price}
-          size={selectedSize ?? ""}
+          item={cartItemInput}
           className={styles.addToCart}
           onBeforeAdd={handleBeforeAdd}
         />

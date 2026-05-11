@@ -9,8 +9,17 @@ const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CarrinhoPage() {
-  const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } =
-    useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalItems,
+    totalPrice,
+    isReady,
+    isSyncing,
+    error,
+  } = useCart();
 
   const isEmpty = items.length === 0;
 
@@ -19,7 +28,17 @@ export default function CarrinhoPage() {
       <div className={`container-luratha ${styles.inner}`}>
         <h1 className={styles.heading}>Meu Carrinho</h1>
 
-        {isEmpty ? (
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+
+        {!isReady ? (
+          <p className={styles.emptyText} aria-live="polite">
+            Carregando carrinho…
+          </p>
+        ) : isEmpty ? (
           /* ── Empty state ── */
           <div className={styles.empty}>
             <span className={styles.emptyIcon} aria-hidden="true">
@@ -40,7 +59,7 @@ export default function CarrinhoPage() {
             <section aria-label="Itens do carrinho">
               <ul className={styles.itemsList} role="list">
                 {items.map((item) => (
-                  <li key={`${item.productId}-${item.size}`} className={styles.item}>
+                  <li key={item.id} className={styles.item}>
                     {/* Thumbnail */}
                     <Image
                       src={item.imageUrl}
@@ -55,8 +74,10 @@ export default function CarrinhoPage() {
                     {/* Body */}
                     <div className={styles.itemBody}>
                       <p className={styles.itemName}>{item.name}</p>
-                      <p className={styles.itemMeta}>Tamanho: {item.size}</p>
-                      <p className={styles.itemPrice}>{formatBRL(item.price)}</p>
+                      {item.variantLabel ? (
+                        <p className={styles.itemMeta}>{item.variantLabel}</p>
+                      ) : null}
+                      <p className={styles.itemPrice}>{formatBRL(item.unitPrice)}</p>
 
                       <div className={styles.itemFooter}>
                         {/* Quantity stepper */}
@@ -68,13 +89,8 @@ export default function CarrinhoPage() {
                           <button
                             type="button"
                             className={styles.stepperBtn}
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.size,
-                                item.quantity - 1,
-                              )
-                            }
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={isSyncing}
                             aria-label="Diminuir quantidade"
                           >
                             −
@@ -85,13 +101,8 @@ export default function CarrinhoPage() {
                           <button
                             type="button"
                             className={styles.stepperBtn}
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.size,
-                                item.quantity + 1,
-                              )
-                            }
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={isSyncing}
                             aria-label="Aumentar quantidade"
                           >
                             +
@@ -102,7 +113,8 @@ export default function CarrinhoPage() {
                         <button
                           type="button"
                           className={styles.removeBtn}
-                          onClick={() => removeItem(item.productId, item.size)}
+                          onClick={() => removeItem(item.id)}
+                          disabled={isSyncing}
                           aria-label={`Remover ${item.name} do carrinho`}
                         >
                           ✕ Remover
@@ -146,6 +158,7 @@ export default function CarrinhoPage() {
                 type="button"
                 className={styles.checkoutBtn}
                 onClick={() => alert("Em breve: integração com checkout!")}
+                disabled={isSyncing}
               >
                 Finalizar Compra
               </button>
@@ -153,7 +166,8 @@ export default function CarrinhoPage() {
               <button
                 type="button"
                 className={styles.clearBtn}
-                onClick={clearCart}
+                onClick={() => clearCart()}
+                disabled={isSyncing}
               >
                 Limpar carrinho
               </button>

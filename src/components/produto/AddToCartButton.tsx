@@ -1,56 +1,52 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useCart } from "@/src/contexts/CartContext";
+import { useCallback, useState } from "react";
+import { useCart, type CartItemInput } from "@/src/contexts/CartContext";
 import styles from "./AddToCartButton.module.css";
 
 export interface AddToCartButtonProps {
-  productId: string;
-  name: string;
-  slug: string;
-  imageUrl: string;
-  price: number;
-  size: string;
-  quantity?: number;
+  /** Full payload required by the cart. Computed by the caller after variant
+   *  selection so the button itself stays product-agnostic. */
+  item: CartItemInput;
   disabled?: boolean;
   className?: string;
-  /** Called before adding to cart. Return false to prevent the addition. */
+  /**
+   * Called before adding to cart. Return `false` (e.g. when a required
+   * variant is not yet selected) to prevent the addition without showing
+   * the success state.
+   */
   onBeforeAdd?: () => boolean;
 }
 
 export default function AddToCartButton({
-  productId,
-  name,
-  slug,
-  imageUrl,
-  price,
-  size,
-  quantity = 1,
+  item,
   disabled,
   className,
   onBeforeAdd,
 }: AddToCartButtonProps) {
-  const { addItem } = useCart();
+  const { addItem, isSyncing } = useCart();
   const [added, setAdded] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback(async () => {
     if (onBeforeAdd && !onBeforeAdd()) return;
-
-    for (let i = 0; i < quantity; i++) {
-      addItem({ productId, name, slug, imageUrl, price, size });
+    setBusy(true);
+    try {
+      await addItem(item);
+      setAdded(true);
+      window.setTimeout(() => setAdded(false), 2500);
+    } finally {
+      setBusy(false);
     }
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2500);
-  }, [addItem, productId, name, slug, imageUrl, price, size, quantity, onBeforeAdd]);
+  }, [addItem, item, onBeforeAdd]);
 
   return (
     <button
       type="button"
       className={className ?? styles.addToCart}
       onClick={handleClick}
-      disabled={disabled}
-      aria-label={`Adicionar ${name} ao carrinho`}
+      disabled={disabled || busy || isSyncing}
+      aria-label={`Adicionar ${item.name} ao carrinho`}
     >
       {added ? "✓ ADICIONADO!" : "ADICIONAR AO CARRINHO"}
     </button>
