@@ -42,7 +42,7 @@ export default function ContaDadosPage() {
     let cancelled = false;
 
     async function load() {
-      const uid = encodeURIComponent(user!.email);
+      const uid = user!.uid;
       const res = await fetch(`/api/users/${uid}`);
       if (cancelled) return;
 
@@ -120,7 +120,7 @@ export default function ContaDadosPage() {
     setSaving(true);
 
     try {
-      const uid = encodeURIComponent(user.email);
+      const uid = user.uid;
       const taxIdentity = buildTaxIdentity();
       const body: Record<string, unknown> = {
         email,

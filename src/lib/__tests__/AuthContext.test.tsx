@@ -1,19 +1,133 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+
+type FirebaseAuthListener = (user: FakeFirebaseUser | null) => void | Promise<void>;
+
+interface FakeFirebaseUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  getIdToken: (force?: boolean) => Promise<string>;
+  getIdTokenResult: () => Promise<{ claims: Record<string, unknown> }>;
+}
+
+const fakeUsers = new Map<string, { uid: string; password: string; displayName: string | null }>();
+let currentUser: FakeFirebaseUser | null = null;
+let listeners: FirebaseAuthListener[] = [];
+let uidCounter = 0;
+
+function emit() {
+  for (const l of listeners) {
+    void l(currentUser);
+  }
+}
+
+function buildFakeUser(uid: string, email: string, displayName: string | null): FakeFirebaseUser {
+  return {
+    uid,
+    email,
+    displayName,
+    getIdToken: async () => `id-token-${uid}`,
+    getIdTokenResult: async () => ({ claims: {} }),
+  };
+}
+
+vi.mock("firebase/auth", () => {
+  return {
+    onIdTokenChanged: (_auth: unknown, listener: FirebaseAuthListener) => {
+      listeners.push(listener);
+      // dispatch async para imitar Firebase
+      Promise.resolve().then(() => listener(currentUser));
+      return () => {
+        listeners = listeners.filter((l) => l !== listener);
+      };
+    },
+    createUserWithEmailAndPassword: vi.fn(async (_auth: unknown, email: string, password: string) => {
+      const normalized = email.toLowerCase();
+      if (fakeUsers.has(normalized)) {
+        const err = new Error("email already") as Error & { code: string };
+        err.code = "auth/email-already-in-use";
+        throw err;
+      }
+      uidCounter += 1;
+      const uid = `uid-${uidCounter}`;
+      fakeUsers.set(normalized, { uid, password, displayName: null });
+      currentUser = buildFakeUser(uid, normalized, null);
+      emit();
+      return { user: currentUser };
+    }),
+    signInWithEmailAndPassword: vi.fn(async (_auth: unknown, email: string, password: string) => {
+      const normalized = email.toLowerCase();
+      const found = fakeUsers.get(normalized);
+      if (!found || found.password !== password) {
+        const err = new Error("invalid") as Error & { code: string };
+        err.code = "auth/invalid-credential";
+        throw err;
+      }
+      currentUser = buildFakeUser(found.uid, normalized, found.displayName);
+      emit();
+      return { user: currentUser };
+    }),
+    signOut: vi.fn(async () => {
+      currentUser = null;
+      emit();
+    }),
+    updateProfile: vi.fn(async (user: FakeFirebaseUser, { displayName }: { displayName: string }) => {
+      user.displayName = displayName;
+      const stored = user.email ? fakeUsers.get(user.email) : undefined;
+      if (stored) stored.displayName = displayName;
+      if (currentUser?.uid === user.uid) {
+        currentUser = { ...user };
+        emit();
+      }
+    }),
+    sendPasswordResetEmail: vi.fn(async () => {
+      // sucesso silencioso
+    }),
+  };
+});
+
+vi.mock("@/src/lib/firestore/firebaseClient", () => ({
+  getClientAuth: () => ({}),
+}));
+
 import { AuthProvider, useAuth } from "@/src/contexts/AuthContext";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
 );
 
-describe("AuthContext", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
+beforeEach(() => {
+  fakeUsers.clear();
+  currentUser = null;
+  listeners = [];
+  uidCounter = 0;
+  localStorage.clear();
+  vi.clearAllMocks();
+  // Mock global fetch para /api/auth/session e /api/users/:uid
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/auth/session") || url.includes("/api/users/")) {
+        return new Response(null, { status: 200 });
+      }
+      return new Response(null, { status: 404 });
+    }),
+  );
+});
 
-  it("starts unauthenticated with no user", () => {
+describe("AuthContext", () => {
+  it("starts unauthenticated and not loading after first auth state callback", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
   });
@@ -24,48 +138,51 @@ describe("AuthContext", () => {
     );
   });
 
-  it("register creates a user and sets isAuthenticated", async () => {
+  it("register cria conta no Firebase e sincroniza sessão e perfil", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
       await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
     });
 
-    expect(result.current.isAuthenticated).toBe(true);
+    expect(createUserWithEmailAndPassword).toHaveBeenCalled();
+
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
     expect(result.current.user).toMatchObject({
       name: "Ana Lima",
       email: "ana@luratha.com",
+      isAdmin: false,
     });
+    expect(result.current.user?.uid).toBeTruthy();
+
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const calls = fetchMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("/api/auth/session");
+    expect(calls.some((c) => typeof c === "string" && c.startsWith("/api/users/"))).toBe(true);
   });
 
-  it("register stores user session in localStorage", async () => {
+  it("register mapeia auth/email-already-in-use para mensagem amigável", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
+      await result.current.register("Ana", "ana@luratha.com", "senha123");
     });
-
-    const session = JSON.parse(localStorage.getItem("luratha_auth") ?? "null");
-    expect(session).not.toBeNull();
-    expect(session.email).toBe("ana@luratha.com");
-  });
-
-  it("register throws when email is already in use", async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
     await act(async () => {
-      await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
+      await result.current.logout();
     });
 
     await expect(
       act(async () => {
-        await result.current.register("Ana Outra", "ana@luratha.com", "outrasenha");
+        await result.current.register("Outra", "ana@luratha.com", "senha456");
       }),
     ).rejects.toThrow("Este e-mail já está em uso.");
   });
 
-  it("register throws when password is too short", async () => {
+  it("register exige senha com pelo menos 6 caracteres", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await expect(
       act(async () => {
@@ -74,8 +191,9 @@ describe("AuthContext", () => {
     ).rejects.toThrow("A senha deve ter pelo menos 6 caracteres.");
   });
 
-  it("register throws when name is missing", async () => {
+  it("register exige nome", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await expect(
       act(async () => {
@@ -84,89 +202,77 @@ describe("AuthContext", () => {
     ).rejects.toThrow("O nome é obrigatório.");
   });
 
-  it("login succeeds with correct credentials", async () => {
+  it("login chama signInWithEmailAndPassword e cria sessão", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // Register first
     await act(async () => {
       await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
     });
-
-    // Logout
-    act(() => {
-      result.current.logout();
+    await act(async () => {
+      await result.current.logout();
     });
 
-    expect(result.current.isAuthenticated).toBe(false);
-
-    // Login
     await act(async () => {
       await result.current.login("ana@luratha.com", "senha123");
     });
 
-    expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.user?.name).toBe("Ana Lima");
+    expect(signInWithEmailAndPassword).toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    expect(result.current.user?.email).toBe("ana@luratha.com");
   });
 
-  it("login throws with wrong password", async () => {
+  it("login mapeia credencial inválida para mensagem amigável", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await act(async () => {
-      await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
-    });
-
-    act(() => {
-      result.current.logout();
-    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await expect(
       act(async () => {
-        await result.current.login("ana@luratha.com", "wrongpassword");
+        await result.current.login("naoexiste@luratha.com", "qualquer");
       }),
     ).rejects.toThrow("E-mail ou senha incorretos.");
   });
 
-  it("login throws with non-existent email", async () => {
+  it("logout chama signOut e DELETE /api/auth/session, e zera o user", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await expect(
-      act(async () => {
-        await result.current.login("naoexiste@luratha.com", "senha123");
-      }),
-    ).rejects.toThrow("E-mail ou senha incorretos.");
-  });
-
-  it("logout clears user and removes session from localStorage", async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
       await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
     });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
 
-    act(() => {
-      result.current.logout();
+    await act(async () => {
+      await result.current.logout();
     });
 
+    expect(signOut).toHaveBeenCalled();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(
+      fetchMock.mock.calls.some(
+        (c) => c[0] === "/api/auth/session" && (c[1] as RequestInit | undefined)?.method === "DELETE",
+      ),
+    ).toBe(true);
     expect(result.current.user).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
-    expect(localStorage.getItem("luratha_auth")).toBeNull();
   });
 
-  it("login is case-insensitive for email", async () => {
+  it("sendPasswordReset chama sendPasswordResetEmail", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      await result.current.register("Ana Lima", "ana@luratha.com", "senha123");
+      await result.current.sendPasswordReset("ana@luratha.com");
     });
 
-    act(() => {
-      result.current.logout();
-    });
+    expect(sendPasswordResetEmail).toHaveBeenCalled();
+  });
 
-    await act(async () => {
-      await result.current.login("ANA@LURATHA.COM", "senha123");
-    });
-
-    expect(result.current.isAuthenticated).toBe(true);
+  it("limpa chaves legadas de localStorage no mount", () => {
+    localStorage.setItem("luratha_auth", "stale");
+    localStorage.setItem("luratha_users", "stale");
+    renderHook(() => useAuth(), { wrapper });
+    expect(localStorage.getItem("luratha_auth")).toBeNull();
+    expect(localStorage.getItem("luratha_users")).toBeNull();
   });
 });

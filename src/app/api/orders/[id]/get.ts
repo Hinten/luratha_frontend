@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
 import { firestoreCollections } from "@/src/schemas/firestore";
+import { authErrorResponse, requireOwnerOrAdmin, requireUser } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,14 @@ export async function GET(
 ) {
   const { id } = await params;
 
+  try {
+    await requireUser();
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
+
   const orderRef = adminDb
     .collection(firestoreCollections.orders)
     .doc(id)
@@ -31,5 +40,14 @@ export async function GET(
     );
   }
 
-  return NextResponse.json(snapshot.data(), { status: 200 });
+  const order = snapshot.data()!;
+  try {
+    await requireOwnerOrAdmin(order.userId);
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
+
+  return NextResponse.json(order, { status: 200 });
 }

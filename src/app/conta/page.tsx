@@ -17,8 +17,7 @@ export default function ContaDashboardPage() {
     let cancelled = false;
 
     async function load() {
-      // Email serve como uid surrogate enquanto não há Firebase Auth real (PR 6)
-      const uid = encodeURIComponent(user!.email);
+      const uid = user!.uid;
       try {
         const [profileRes, ordersRes] = await Promise.all([
           fetch(`/api/users/${uid}`),

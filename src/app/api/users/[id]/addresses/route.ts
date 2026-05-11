@@ -1,2 +1,4 @@
-export { runtime, GET } from "./list";
+export const runtime = "nodejs";
+
+export { GET } from "./list";
 export { POST } from "./post";

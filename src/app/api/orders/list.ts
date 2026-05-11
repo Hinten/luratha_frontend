@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
 import { firestoreCollections } from "@/src/schemas/firestore";
+import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";
 
@@ -21,28 +22,30 @@ const ALLOWED_STATUSES = new Set([
 /**
  * GET /api/orders
  *
- * Lists orders. The `userId` query parameter is required while route-level
- * authentication is not in place (added by the middleware in PR 6). Once
- * authenticated requests are available, `userId` will be derived from the
- * session and the query param will become an admin-only override.
+ * Lista pedidos. Sem `userId`, retorna os pedidos do usuário autenticado.
+ * Com `userId` diferente do uid da sessão, exige claim admin.
  *
  * Query parameters:
- *   - `userId` — required for now; filters orders by owner
- *   - `status` — optional Order["status"] filter
+ *   - `userId` — opcional; default = uid da sessão
+ *   - `status` — opcional Order["status"] filter
  *   - `limit`  — max results (default 24, max 100)
- *
- * Returns 400 if `userId` is missing, 200 with the orders array otherwise.
- * Orders are returned newest-first (`createdAt` desc).
  */
 export async function GET(request: Request) {
-  const url = new URL(request.url);
+  let authedUser;
+  try {
+    authedUser = await requireUser();
+  } catch (e) {
+    const r = authErrorResponse(e);
+    if (r) return r;
+    throw e;
+  }
 
-  const userId = url.searchParams.get("userId")?.trim();
-  if (!userId) {
-    return NextResponse.json(
-      { message: "Parâmetro 'userId' é obrigatório." },
-      { status: 400 },
-    );
+  const url = new URL(request.url);
+  const requestedUserId = url.searchParams.get("userId")?.trim();
+  const userId = requestedUserId || authedUser.uid;
+
+  if (userId !== authedUser.uid && !authedUser.isAdmin) {
+    return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 
   const status = url.searchParams.get("status")?.trim() || undefined;
