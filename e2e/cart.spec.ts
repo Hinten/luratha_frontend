@@ -51,7 +51,7 @@ function buildItem(
     productSlug: partial.productSlug,
     name: partial.name,
     photoId: `${partial.productId}-photo-1`,
-    imageUrl: `https://example.com/${partial.productSlug}.jpg`,
+    imageUrl: `https://firebasestorage.googleapis.com/v0/b/luratha-test/o/${partial.productSlug}.jpg?alt=media`,
     variantLabel: partial.variantLabel,
     unitPrice: partial.unitPrice,
     quantity: partial.quantity ?? 1,
