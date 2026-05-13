@@ -8,8 +8,14 @@ function getViewedMap(): ViewedMap {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as ViewedMap) : {};
-  } catch {
-    return {};
+  } catch (err) {
+    // Tolerate the two storage failure modes:
+    //   - SyntaxError: stored payload isn't valid JSON (legacy / manual edit)
+    //   - DOMException: localStorage blocked (private mode, disabled cookies)
+    if (err instanceof SyntaxError || err instanceof DOMException) {
+      return {};
+    }
+    throw err;
   }
 }
 
@@ -18,8 +24,12 @@ export function markProductViewed(slug: string): void {
   map[slug] = Date.now();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // localStorage unavailable or quota exceeded
+  } catch (err) {
+    if (err instanceof DOMException) {
+      // QuotaExceededError / SecurityError — best-effort write; skip silently.
+      return;
+    }
+    throw err;
   }
 }
 

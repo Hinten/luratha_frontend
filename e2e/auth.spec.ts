@@ -13,8 +13,11 @@ test.describe("Authentication (Auth)", () => {
       try {
         localStorage.removeItem("luratha_auth");
         localStorage.removeItem("luratha_users");
-      } catch {
-        /* ignore */
+      } catch (err) {
+        if (!(err instanceof DOMException)) {
+          throw err;
+        }
+        // localStorage may be blocked in some browser test contexts.
       }
     });
   });

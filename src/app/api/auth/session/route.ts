@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { FirebaseAuthError } from "firebase-admin/auth";
 import { adminAuth } from "@/src/lib/firestore/firebaseAdmin";
 import { SESSION_COOKIE_NAME } from "@/src/lib/auth/requireUser";
 
@@ -19,11 +20,14 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   if (
@@ -42,11 +46,14 @@ export async function POST(request: Request) {
   let decoded;
   try {
     decoded = await adminAuth.verifyIdToken(idToken, true);
-  } catch {
-    return NextResponse.json(
-      { message: "Token inválido ou expirado." },
-      { status: 401 },
-    );
+  } catch (err) {
+    if (err instanceof FirebaseAuthError) {
+      return NextResponse.json(
+        { message: "Token inválido ou expirado." },
+        { status: 401 },
+      );
+    }
+    throw err;
   }
 
   let sessionCookie: string;
@@ -54,11 +61,14 @@ export async function POST(request: Request) {
     sessionCookie = await adminAuth.createSessionCookie(idToken, {
       expiresIn: SESSION_DURATION_MS,
     });
-  } catch {
-    return NextResponse.json(
-      { message: "Falha ao criar a sessão." },
-      { status: 500 },
-    );
+  } catch (err) {
+    if (err instanceof FirebaseAuthError) {
+      return NextResponse.json(
+        { message: "Falha ao criar a sessão." },
+        { status: 500 },
+      );
+    }
+    throw err;
   }
 
   const cookieStore = await cookies();
@@ -95,8 +105,11 @@ export async function DELETE() {
     try {
       const decoded = await adminAuth.verifySessionCookie(cookie, false);
       await adminAuth.revokeRefreshTokens(decoded.uid);
-    } catch {
-      // cookie já inválido — apenas limpamos
+    } catch (err) {
+      if (!(err instanceof FirebaseAuthError)) {
+        throw err;
+      }
+      // Cookie expired/revoked/invalid — proceed to clear it from the browser.
     }
   }
 

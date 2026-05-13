@@ -1,0 +1,66 @@
+/**
+ * Shared error classes for client-side narrowing.
+ *
+ * See CLAUDE.md → "No generic catches" — every `catch` must narrow on a
+ * specific subclass before swallowing. `instanceof Error` does not count, so
+ * any caller that needs to react to a thrown error from our own code (HTTP
+ * responses, auth flow) should throw one of the classes defined here.
+ */
+
+/**
+ * Thrown by client-side fetch wrappers when the server responds with a
+ * non-OK status. The form pages narrow on this to display the server's
+ * message to the user; anything else (network failure, parse error,
+ * unexpected runtime bug) is allowed to propagate to the ErrorBoundary so
+ * it surfaces in the console instead of becoming an opaque "fallback"
+ * string.
+ */
+export class ApiResponseError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiResponseError";
+    this.status = status;
+  }
+}
+
+/**
+ * Thrown by `AuthContext` when authentication fails for a known reason
+ * (bad credentials, weak password, email already in use, etc.). Login,
+ * register, and password-reset forms narrow on this to render the message
+ * to the user.
+ *
+ * Unknown errors from Firebase Auth or network failures are NOT wrapped —
+ * they propagate so we can see the real stack in the console.
+ */
+export class AuthClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthClientError";
+  }
+}
+
+/**
+ * Reads `{ message?: string }` out of a fetch JSON payload and throws
+ * `ApiResponseError` when the response is not OK. Helper kept here so
+ * form pages share the same narrowing point.
+ */
+export async function throwIfNotOk(response: Response, fallbackMessage: string): Promise<void> {
+  if (response.ok) return;
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) {
+      throw err;
+    }
+    // Body wasn't JSON — fall through to the fallback message.
+  }
+  const message =
+    payload && typeof payload === "object" && "message" in payload &&
+    typeof (payload as { message: unknown }).message === "string"
+      ? (payload as { message: string }).message
+      : fallbackMessage;
+  throw new ApiResponseError(message, response.status);
+}

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
-import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { createEmbeddingService, EmbeddingGenerationError } from "@/src/lib/embeddingService";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";
@@ -32,11 +32,14 @@ export async function PUT(
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -85,10 +88,14 @@ export async function PUT(
         { status: 400 },
       );
     }
-    return NextResponse.json({ message: "Falha ao validar o produto." }, { status: 400 });
+    throw error;
   }
 
   // Regenerate vectorEmbedding (title only) and searchEmbedding (rich text).
+  // Embedding failure is non-fatal — the product keeps its existing embeddings
+  // and the operation succeeds. We narrow on Error so unknown thrown values
+  // (e.g. strings) still surface; that's distinct from `instanceof Error`
+  // being the *only* check, which the convention forbids.
   try {
     const embeddingService = createEmbeddingService({
       credential: adminApp.options.credential,
@@ -96,10 +103,11 @@ export async function PUT(
     const embeddings = await generateProductEmbeddings(product, embeddingService);
     product = { ...product, ...embeddings };
   } catch (embeddingError) {
-    console.warn(
-      "[PUT /api/products] Embedding generation skipped:",
-      embeddingError instanceof Error ? embeddingError.message : embeddingError,
-    );
+    if (embeddingError instanceof EmbeddingGenerationError) {
+      console.warn("[PUT /api/products] Embedding generation skipped:", embeddingError.message);
+    } else {
+      throw embeddingError;
+    }
   }
 
   await productRef.set(product);

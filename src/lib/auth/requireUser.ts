@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { FirebaseAuthError } from "firebase-admin/auth";
 import { adminAuth } from "@/src/lib/firestore/firebaseAdmin";
 
 export const SESSION_COOKIE_NAME = "__session";
@@ -34,8 +35,11 @@ export async function requireUser(): Promise<AuthedUser> {
       email: decoded.email ?? null,
       isAdmin: decoded.admin === true,
     };
-  } catch {
-    throw new AuthError(401, "Sessão inválida ou expirada.");
+  } catch (err) {
+    if (err instanceof FirebaseAuthError) {
+      throw new AuthError(401, "Sessão inválida ou expirada.");
+    }
+    throw err;
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { FirebaseError } from "firebase/app";
 
 type FirebaseAuthListener = (user: FakeFirebaseUser | null) => void | Promise<void>;
 
@@ -46,9 +47,7 @@ vi.mock("firebase/auth", () => {
     createUserWithEmailAndPassword: vi.fn(async (_auth: unknown, email: string, password: string) => {
       const normalized = email.toLowerCase();
       if (fakeUsers.has(normalized)) {
-        const err = new Error("email already") as Error & { code: string };
-        err.code = "auth/email-already-in-use";
-        throw err;
+        throw new FirebaseError("auth/email-already-in-use", "email already");
       }
       uidCounter += 1;
       const uid = `uid-${uidCounter}`;
@@ -61,9 +60,7 @@ vi.mock("firebase/auth", () => {
       const normalized = email.toLowerCase();
       const found = fakeUsers.get(normalized);
       if (!found || found.password !== password) {
-        const err = new Error("invalid") as Error & { code: string };
-        err.code = "auth/invalid-credential";
-        throw err;
+        throw new FirebaseError("auth/invalid-credential", "invalid");
       }
       currentUser = buildFakeUser(found.uid, normalized, found.displayName);
       emit();

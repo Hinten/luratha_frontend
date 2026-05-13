@@ -8,6 +8,20 @@ export interface EmbeddingService {
   embed(text: string): Promise<number[]>;
 }
 
+/**
+ * Thrown by the embedding service when an embedding cannot be produced —
+ * missing Vertex AI configuration, upstream HTTP error, empty input, or
+ * a degenerate vector response. API routes narrow on this to keep
+ * embedding generation non-fatal while still letting *unknown* errors
+ * surface in logs.
+ */
+export class EmbeddingGenerationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmbeddingGenerationError";
+  }
+}
+
 type CreateEmbeddingServiceOptions = {
   projectId?: string;
   location?: string;
@@ -26,7 +40,7 @@ type CreateEmbeddingServiceOptions = {
 export function normalizeEmbeddingDimensions(values: number[]): number[] {
   const normalized = values.filter((value) => Number.isFinite(value));
   if (normalized.length < MIN_EMBEDDING_DIMENSIONS) {
-    throw new Error("Embedding returned less than the minimum required dimensions.");
+    throw new EmbeddingGenerationError("Embedding returned less than the minimum required dimensions.");
   }
   return normalized.slice(0, MAX_EMBEDDING_DIMENSIONS);
 }
@@ -45,10 +59,10 @@ export function createEmbeddingService(
     async embed(text: string): Promise<number[]> {
       const term = text.trim();
       if (!term) {
-        throw new Error("Embedding input cannot be empty.");
+        throw new EmbeddingGenerationError("Embedding input cannot be empty.");
       }
       if (!projectId) {
-        throw new Error("Vertex AI configuration is missing.");
+        throw new EmbeddingGenerationError("Vertex AI configuration is missing.");
       }
 
       // Resolve access token: static value takes precedence; otherwise use credential
@@ -59,7 +73,7 @@ export function createEmbeddingService(
         const tokenResult = await credential.getAccessToken();
         accessToken = tokenResult.access_token;
       } else {
-        throw new Error("Vertex AI configuration is missing.");
+        throw new EmbeddingGenerationError("Vertex AI configuration is missing.");
       }
 
       const controller = new AbortController();
@@ -81,7 +95,7 @@ export function createEmbeddingService(
 
         if (!response.ok) {
           const errorBody = await response.text();
-          throw new Error(`Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`);
+          throw new EmbeddingGenerationError(`Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`);
         }
 
         const json = (await response.json()) as {
