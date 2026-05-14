@@ -368,10 +368,11 @@ describe("productsSearchRepository.search exact-match short-circuit", () => {
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("falls through gracefully when the exact-match lookup throws", async () => {
+  it("falls through gracefully when the exact-match lookup throws a Firestore error", async () => {
     const fallbackDoc = buildProductDocResult({ id: "prod_home_03" });
+    // FirebaseError → tolerated fallback to the regular search path.
     executeMock
-      .mockRejectedValueOnce(new Error("transient pipeline error"))
+      .mockRejectedValueOnce(new FirebaseError("unavailable", "transient pipeline error"))
       .mockResolvedValueOnce({
         results: [{ id: "prod_home_03", data: () => fallbackDoc }],
       });
@@ -381,6 +382,15 @@ describe("productsSearchRepository.search exact-match short-circuit", () => {
 
     expect(results).toHaveLength(1);
     expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("propagates non-Firebase errors from the exact-match lookup", async () => {
+    executeMock.mockRejectedValueOnce(new Error("unexpected bug"));
+
+    const repo = createProductsSearchRepository(buildFirestoreStub());
+    await expect(repo.search({ term: "blusa", limit: 24 })).rejects.toThrow(
+      "unexpected bug",
+    );
   });
 });
 

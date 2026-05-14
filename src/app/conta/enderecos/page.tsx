@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import type { Address } from "@/src/schemas/firestore";
 import AddressCard from "@/src/components/conta/AddressCard";
+import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 interface FormState {
@@ -134,13 +135,20 @@ export default function EnderecosPage() {
 
       if (!res.ok) {
         const payload = (await res.json()) as { message?: string };
-        throw new Error(payload.message ?? "Falha ao salvar endereço.");
+        throw new ApiResponseError(
+          payload.message ?? "Falha ao salvar endereço.",
+          res.status,
+        );
       }
 
       await refresh();
       cancelForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido.");
+      if (err instanceof ApiResponseError) {
+        setError(err.message);
+      } else {
+        throw err;
+      }
     } finally {
       setSaving(false);
     }

@@ -41,8 +41,12 @@ function readBucketFromBase64Config(): string | undefined {
     return typeof parsed?.storageBucket === "string" && parsed.storageBucket.length > 0
       ? parsed.storageBucket
       : undefined;
-  } catch {
-    return undefined;
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Malformed base64 JSON — fall back to the conventional bucket name.
+      return undefined;
+    }
+    throw err;
   }
 }
 
@@ -60,6 +64,9 @@ export function getFirebaseWebConfig() {
         appId: parsedConfig.appId || "",
       };
     } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
       console.warn(
         "Failed to parse FIREBASE_WEB_APP_CONFIG_BASE64. Ensure it's a valid base64-encoded JSON string.",
         error,

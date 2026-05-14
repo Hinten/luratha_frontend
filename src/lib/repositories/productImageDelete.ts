@@ -2,6 +2,7 @@ import {
   execute,
   field,
 } from "firebase/firestore/pipelines";
+import { z } from "zod";
 import { firestoreCollections, validateProduct, type Product } from "@/src/schemas/firestore";
 import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
@@ -100,8 +101,13 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
     .map((snap) => {
       try {
         return validateProduct(snap.data());
-      } catch {
-        return null;
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          // Stored product doesn't match the schema (older write, manual edit).
+          // Skip it for this image-cleanup pass; any other error propagates.
+          return null;
+        }
+        throw err;
       }
     })
     .filter((p): p is Product => p !== null);
@@ -121,7 +127,9 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
     }
   }
 
-  // 5. Delete storage files (best-effort – we continue even when a file is missing).
+  // 5. Delete storage files (best-effort: when a file is already gone we skip
+  // it, but any other failure — auth, network, etc. — is propagated so it
+  // surfaces in logs instead of being silently swallowed).
   const deletedStorageFiles: string[] = [];
   await Promise.all(
     Array.from(storagePathsToDelete).map(async (storagePath) => {
@@ -129,8 +137,11 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
         await adminBucket.file(storagePath).delete();
         deletedStorageFiles.push(storagePath);
       } catch (error) {
-        console.warn(`Failed to delete storage file "${storagePath}":`, error);
-        // The file may have been removed manually; do not fail the whole operation.
+        if (isStorageNotFoundError(error)) {
+          console.warn(`Storage file "${storagePath}" already gone — skipping.`);
+          return;
+        }
+        throw error;
       }
     }),
   );
@@ -168,4 +179,18 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
     deletedStorageFiles,
     updatedProducts: updatedProductIds,
   };
+}
+
+/**
+ * @google-cloud/storage surfaces its `ApiError` class via a transitive export
+ * only; rather than couple the repository to its internal path, narrow on the
+ * documented shape (numeric `.code === 404`). Any other error must propagate.
+ */
+function isStorageNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === 404
+  );
 }

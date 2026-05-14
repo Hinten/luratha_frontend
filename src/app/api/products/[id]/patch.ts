@@ -4,7 +4,7 @@ import { z } from "zod";
 import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
-import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { createEmbeddingService, EmbeddingGenerationError } from "@/src/lib/embeddingService";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";
@@ -39,11 +39,14 @@ export async function PATCH(
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -99,7 +102,7 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    return NextResponse.json({ message: "Falha ao validar o produto." }, { status: 400 });
+    throw error;
   }
 
   // Re-generate embeddings only when the text content may have changed.
@@ -114,10 +117,11 @@ export async function PATCH(
       const embeddings = await generateProductEmbeddings(product, embeddingService);
       product = { ...product, ...embeddings };
     } catch (embeddingError) {
-      console.warn(
-        "[PATCH /api/products] Embedding generation skipped:",
-        embeddingError instanceof Error ? embeddingError.message : embeddingError,
-      );
+      if (embeddingError instanceof EmbeddingGenerationError) {
+        console.warn("[PATCH /api/products] Embedding generation skipped:", embeddingError.message);
+      } else {
+        throw embeddingError;
+      }
     }
   }
 

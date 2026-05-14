@@ -43,10 +43,17 @@ describe("useRecentlyViewed", () => {
     expect(second).toBeGreaterThanOrEqual(first);
   });
 
-  it("does not throw when localStorage is unavailable", () => {
+  it("does not throw when localStorage rejects writes (QuotaExceededError)", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("QuotaExceededError");
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
     });
     expect(() => markProductViewed("vestido-floral")).not.toThrow();
+  });
+
+  it("rethrows unexpected errors from localStorage (not DOMException)", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("totally unrelated bug");
+    });
+    expect(() => markProductViewed("vestido-floral")).toThrow("totally unrelated bug");
   });
 });
