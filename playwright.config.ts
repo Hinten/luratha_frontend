@@ -57,8 +57,11 @@ if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
         process.env[envName] = value;
       }
     }
-  } catch {
-    /* ignore — leave env as-is */
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) {
+      throw err;
+    }
+    // Malformed base64 JSON — leave env vars untouched.
   }
 }
 

@@ -42,11 +42,14 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   let parsed;
@@ -136,24 +139,24 @@ export async function POST(request: Request) {
     const snapshot = await repository.addItem(authedUser.uid, parsed);
     return NextResponse.json(snapshot, { status: 200 });
   } catch (error) {
-    return mapRepositoryError(error);
+    if (error instanceof CartRepositoryError) {
+      return mapRepositoryError(error);
+    }
+    throw error;
   }
 }
 
-function mapRepositoryError(error: unknown): NextResponse {
-  if (error instanceof CartRepositoryError) {
-    switch (error.code) {
-      case "validation":
-        return NextResponse.json({ message: error.message }, { status: 400 });
-      case "quantity_exceeded":
-        return NextResponse.json({ message: error.message }, { status: 409 });
-      case "too_many_items":
-        return NextResponse.json({ message: error.message }, { status: 409 });
-      case "not_found":
-        return NextResponse.json({ message: error.message }, { status: 404 });
-      default:
-        return NextResponse.json({ message: error.message }, { status: 500 });
-    }
+function mapRepositoryError(error: CartRepositoryError): NextResponse {
+  switch (error.code) {
+    case "validation":
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    case "quantity_exceeded":
+      return NextResponse.json({ message: error.message }, { status: 409 });
+    case "too_many_items":
+      return NextResponse.json({ message: error.message }, { status: 409 });
+    case "not_found":
+      return NextResponse.json({ message: error.message }, { status: 404 });
+    default:
+      return NextResponse.json({ message: error.message }, { status: 500 });
   }
-  throw error;
 }

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { AuthClientError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 export default function EsqueciSenhaPage() {
@@ -20,11 +21,17 @@ export default function EsqueciSenhaPage() {
       await sendPasswordReset(email);
       setSubmitted(true);
     } catch (err) {
-      // Mensagem genérica para não vazar existência do e-mail.
-      setSubmitted(true);
-      if (err instanceof Error && err.message === "O e-mail é obrigatório.") {
-        setSubmitted(false);
-        setError(err.message);
+      if (err instanceof AuthClientError) {
+        // Validation message ("O e-mail é obrigatório.") goes back to the
+        // user. Any other AuthClientError (network, too-many-requests) still
+        // shows the generic success state to avoid leaking account existence.
+        if (err.message === "O e-mail é obrigatório.") {
+          setError(err.message);
+        } else {
+          setSubmitted(true);
+        }
+      } else {
+        throw err;
       }
     } finally {
       setLoading(false);

@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import { collection, doc, onSnapshot } from "firebase/firestore";
+import { ZodError } from "zod";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { db } from "@/src/lib/firestore/firebaseClient";
 import {
@@ -24,6 +25,7 @@ import {
   validateCartItem,
 } from "@/src/schemas/firestore";
 import { toCents } from "@/src/schemas/firestore/utils";
+import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */
 export interface CartItemInput {
@@ -126,32 +128,52 @@ function buildGuestItem(input: CartItemInput, previous?: CartItem): CartItem {
 /** Hydrate items from localStorage, discarding entries that don't pass the v2 schema. */
 function hydrateGuestItems(): CartItem[] {
   if (typeof window === "undefined") return [];
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const items: CartItem[] = [];
-    for (const candidate of parsed) {
-      try {
-        items.push(validateCartItem(candidate));
-      } catch {
-        // Drop entries that don't match the current schema. Avoids
-        // crashing the whole context on a partially-migrated cart.
-      }
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch (err) {
+    if (err instanceof DOMException) {
+      // Storage blocked (private mode, quota policy) — treat as empty cart.
+      return [];
     }
-    return items;
-  } catch {
-    return [];
+    throw err;
   }
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Corrupt payload — drop it; a fresh cart is recoverable from server on login.
+      return [];
+    }
+    throw err;
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  const items: CartItem[] = [];
+  for (const candidate of parsed) {
+    try {
+      items.push(validateCartItem(candidate));
+    } catch (err) {
+      if (!(err instanceof ZodError)) throw err;
+      // Schema-mismatch — drop just this entry. The rest of the cart survives.
+    }
+  }
+  return items;
 }
 
 function persistGuestItems(items: CartItem[]) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    /* ignore quota errors — cart is recoverable from server on next login */
+  } catch (err) {
+    if (err instanceof DOMException) {
+      // Storage full or blocked — server cart will own this on next login.
+      return;
+    }
+    throw err;
   }
 }
 
@@ -159,8 +181,9 @@ function clearLegacyStorage() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-    /* ignore */
+  } catch (err) {
+    if (err instanceof DOMException) return;
+    throw err;
   }
 }
 
@@ -287,13 +310,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ items: pending.map(itemToInput) }),
         });
-        if (!response.ok) {
-          throw new Error("Falha ao mesclar carrinho.");
-        }
+        await throwIfNotOk(response, "Falha ao mesclar carrinho.");
         // Snapshot listener will update state. Clear localStorage either way.
         persistGuestItems([]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao mesclar carrinho.");
+        if (!(err instanceof ApiResponseError)) throw err;
+        setError(err.message);
       } finally {
         setIsSyncing(false);
       }
@@ -350,12 +372,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ...input,
           }),
         });
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.message ?? "Falha ao adicionar ao carrinho.");
-        }
+        await throwIfNotOk(response, "Falha ao adicionar ao carrinho.");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao adicionar item.");
+        if (!(err instanceof ApiResponseError)) throw err;
+        setError(err.message);
       } finally {
         setIsSyncing(false);
       }
@@ -392,12 +412,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ quantity }),
           },
         );
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.message ?? "Falha ao atualizar item.");
-        }
+        await throwIfNotOk(response, "Falha ao atualizar item.");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao atualizar item.");
+        if (!(err instanceof ApiResponseError)) throw err;
+        setError(err.message);
       } finally {
         setIsSyncing(false);
       }
@@ -418,12 +436,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           `/api/cart/items/${encodeURIComponent(itemId)}`,
           { method: "DELETE" },
         );
-        if (!response.ok && response.status !== 404) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.message ?? "Falha ao remover item.");
-        }
+        // 404 means the item was already gone — treat as success.
+        if (response.status === 404) return;
+        await throwIfNotOk(response, "Falha ao remover item.");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao remover item.");
+        if (!(err instanceof ApiResponseError)) throw err;
+        setError(err.message);
       } finally {
         setIsSyncing(false);
       }
@@ -440,11 +458,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsSyncing(true);
       const response = await fetch("/api/cart", { method: "DELETE" });
-      if (!response.ok && response.status !== 404) {
-        throw new Error("Falha ao limpar o carrinho.");
-      }
+      // 204 (idempotent wipe) and 404 (already empty) both mean success.
+      if (response.status === 204 || response.status === 404) return;
+      await throwIfNotOk(response, "Falha ao limpar o carrinho.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao limpar carrinho.");
+      if (!(err instanceof ApiResponseError)) throw err;
+      setError(err.message);
     } finally {
       setIsSyncing(false);
     }

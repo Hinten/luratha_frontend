@@ -14,8 +14,12 @@ function backfillFirebaseClientEnv(): void {
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-  } catch {
-    return;
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Malformed base64 JSON — leave env vars untouched.
+      return;
+    }
+    throw err;
   }
 
   const map: Array<[string, string]> = [

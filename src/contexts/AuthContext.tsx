@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
@@ -17,6 +18,7 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { getClientAuth } from "@/src/lib/firestore/firebaseClient";
+import { AuthClientError } from "@/src/lib/errors";
 
 export interface AuthUser {
   uid: string;
@@ -40,27 +42,35 @@ const AuthContext = createContext<AuthState | null>(null);
 const LEGACY_AUTH_KEY = "luratha_auth";
 const LEGACY_USERS_KEY = "luratha_users";
 
-function mapFirebaseError(err: unknown): Error {
-  if (err && typeof err === "object" && "code" in err) {
-    const code = (err as { code: string }).code;
-    switch (code) {
-      case "auth/invalid-credential":
-      case "auth/wrong-password":
-      case "auth/user-not-found":
-        return new Error("E-mail ou senha incorretos.");
-      case "auth/invalid-email":
-        return new Error("E-mail inválido.");
-      case "auth/email-already-in-use":
-        return new Error("Este e-mail já está em uso.");
-      case "auth/weak-password":
-        return new Error("A senha deve ter pelo menos 6 caracteres.");
-      case "auth/too-many-requests":
-        return new Error("Muitas tentativas. Tente novamente em alguns minutos.");
-      case "auth/network-request-failed":
-        return new Error("Falha de rede. Verifique sua conexão.");
-    }
+/**
+ * Maps a Firebase Auth error to a human-readable `AuthClientError`. Returns
+ * `null` when the error is not a `FirebaseError` with a known code — callers
+ * should rethrow the original in that case so unknown failures (network bugs,
+ * SDK regressions) surface in the console and ErrorBoundary instead of being
+ * flattened into "Erro de autenticação".
+ */
+function mapFirebaseError(err: unknown): AuthClientError | null {
+  if (!(err instanceof FirebaseError)) {
+    return null;
   }
-  return err instanceof Error ? err : new Error("Erro de autenticação.");
+  switch (err.code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return new AuthClientError("E-mail ou senha incorretos.");
+    case "auth/invalid-email":
+      return new AuthClientError("E-mail inválido.");
+    case "auth/email-already-in-use":
+      return new AuthClientError("Este e-mail já está em uso.");
+    case "auth/weak-password":
+      return new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
+    case "auth/too-many-requests":
+      return new AuthClientError("Muitas tentativas. Tente novamente em alguns minutos.");
+    case "auth/network-request-failed":
+      return new AuthClientError("Falha de rede. Verifique sua conexão.");
+    default:
+      return null;
+  }
 }
 
 async function buildAuthUser(fbUser: FirebaseUser): Promise<AuthUser> {
@@ -81,7 +91,7 @@ async function postSession(idToken: string): Promise<void> {
     body: JSON.stringify({ idToken }),
   });
   if (!res.ok) {
-    throw new Error("Falha ao iniciar sessão.");
+    throw new AuthClientError("Falha ao iniciar sessão.");
   }
 }
 
@@ -94,8 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.removeItem(LEGACY_AUTH_KEY);
         localStorage.removeItem(LEGACY_USERS_KEY);
-      } catch {
-        /* ignore */
+      } catch (err) {
+        if (!(err instanceof DOMException)) {
+          throw err;
+        }
+        // localStorage disabled (private mode, no cookies) — legacy cleanup
+        // is best-effort, so skip silently.
       }
     }
 
@@ -115,6 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
     } catch (err) {
+      if (!(err instanceof FirebaseError)) {
+        throw err;
+      }
       console.warn("Firebase Auth indisponível — verifique a configuração.", err);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
@@ -125,11 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const trimmedName = name.trim();
-      if (!trimmedName) throw new Error("O nome é obrigatório.");
-      if (!email.trim()) throw new Error("O e-mail é obrigatório.");
-      if (!password) throw new Error("A senha é obrigatória.");
+      if (!trimmedName) throw new AuthClientError("O nome é obrigatório.");
+      if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
+      if (!password) throw new AuthClientError("A senha é obrigatória.");
       if (password.length < 6)
-        throw new Error("A senha deve ter pelo menos 6 caracteres.");
+        throw new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
 
       let credential;
       try {
@@ -142,18 +159,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const auth = (() => {
           try {
             return getClientAuth();
-          } catch {
+          } catch (innerErr) {
+            if (!(innerErr instanceof FirebaseError)) {
+              throw innerErr;
+            }
             return null;
           }
         })();
         if (auth?.currentUser) {
           try {
             await signOut(auth);
-          } catch {
-            /* ignore */
+          } catch (signOutErr) {
+            if (!(signOutErr instanceof FirebaseError)) {
+              throw signOutErr;
+            }
+            // Best-effort rollback of partial Firebase sign-up state.
           }
         }
-        throw mapFirebaseError(err);
+        const mapped = mapFirebaseError(err);
+        throw mapped ?? err;
       }
 
       try {
@@ -172,7 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Não é fatal: o usuário pode completar o perfil em /conta/dados depois.
           console.warn("Falha ao criar perfil no signup; complete em /conta/dados.");
         }
-      } catch {
+      } catch (err) {
+        if (!(err instanceof TypeError)) {
+          throw err;
+        }
+        // fetch() throws TypeError on network failure — non-fatal here.
         console.warn("Falha de rede ao criar perfil no signup; complete em /conta/dados.");
       }
     },
@@ -180,8 +208,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const login = useCallback(async (email: string, password: string) => {
-    if (!email.trim()) throw new Error("O e-mail é obrigatório.");
-    if (!password) throw new Error("A senha é obrigatória.");
+    if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
+    if (!password) throw new AuthClientError("A senha é obrigatória.");
 
     try {
       const auth = getClientAuth();
@@ -189,32 +217,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const idToken = await credential.user.getIdToken(true);
       await postSession(idToken);
     } catch (err) {
-      throw mapFirebaseError(err);
+      const mapped = mapFirebaseError(err);
+      throw mapped ?? err;
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await fetch("/api/auth/session", { method: "DELETE" });
-    } catch {
-      /* ignore — vamos limpar no client de qualquer jeito */
+    } catch (err) {
+      if (!(err instanceof TypeError)) {
+        throw err;
+      }
+      // fetch() throws TypeError on network failure — proceed to clear local
+      // Firebase state anyway so the user lands in a signed-out UI.
     }
     try {
       const auth = getClientAuth();
       await signOut(auth);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      if (!(err instanceof FirebaseError)) {
+        throw err;
+      }
+      // Already signed out, or Firebase Auth unavailable — non-fatal here.
     }
     setUser(null);
   }, []);
 
   const sendPasswordReset = useCallback(async (email: string) => {
-    if (!email.trim()) throw new Error("O e-mail é obrigatório.");
+    if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
     try {
       const auth = getClientAuth();
       await sendPasswordResetEmail(auth, email.trim());
     } catch (err) {
-      throw mapFirebaseError(err);
+      const mapped = mapFirebaseError(err);
+      throw mapped ?? err;
     }
   }, []);
 

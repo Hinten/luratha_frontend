@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./DevSeedButton.module.css";
 
 type DevSeedButtonProps = {
@@ -69,7 +70,10 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
       const payload = parseSeedResponse(await response.json());
 
       if (!response.ok) {
-        throw new Error(payload.message ?? "Falha ao cadastrar dados mock.");
+        throw new ApiResponseError(
+          payload.message ?? "Falha ao cadastrar dados mock.",
+          response.status,
+        );
       }
 
       setStatus("success");
@@ -77,8 +81,12 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
         `Seed concluído: ${payload.categoriesCreated ?? 0} categorias e ${payload.productsCreated ?? 0} produtos criados.`,
       );
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Falha ao cadastrar dados mock.");
+      if (error instanceof ApiResponseError) {
+        setStatus("error");
+        setMessage(error.message);
+      } else {
+        throw error;
+      }
     } finally {
       setOperation(null);
     }
@@ -94,7 +102,10 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
       const payload = parseDeleteResponse(await response.json());
 
       if (!response.ok) {
-        throw new Error(payload.message ?? "Falha ao deletar dados mock.");
+        throw new ApiResponseError(
+          payload.message ?? "Falha ao deletar dados mock.",
+          response.status,
+        );
       }
 
       setStatus("success");
@@ -102,8 +113,12 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
         `Deletado: ${payload.categoriesDeleted ?? 0} categorias, ${payload.productsDeleted ?? 0} produtos, ${payload.storageFilesDeleted ?? 0} arquivos.`,
       );
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Falha ao deletar dados mock.");
+      if (error instanceof ApiResponseError) {
+        setStatus("error");
+        setMessage(error.message);
+      } else {
+        throw error;
+      }
     } finally {
       setOperation(null);
     }
