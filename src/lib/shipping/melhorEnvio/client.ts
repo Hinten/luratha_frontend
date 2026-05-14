@@ -85,8 +85,12 @@ export async function melhorEnvioFetch<T>(
     let bodyText = "";
     try {
       bodyText = await response.text();
-    } catch {
-      /* ignore */
+    } catch (err) {
+      // response.text() falha com TypeError quando o body já foi consumido ou
+      // está bloqueado, e DOMException em AbortError. Outros erros propagam.
+      if (!(err instanceof TypeError) && !(err instanceof DOMException)) {
+        throw err;
+      }
     }
     throw new ShippingProviderError(
       `Melhor Envio retornou HTTP ${response.status}: ${bodyText.slice(0, 200)}`,

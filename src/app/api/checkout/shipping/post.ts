@@ -57,11 +57,14 @@ export async function POST(request: Request) {
   let raw: unknown;
   try {
     raw = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   // Default `mode: "quote"` quando ausente para preservar UX comum.

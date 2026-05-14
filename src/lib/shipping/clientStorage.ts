@@ -19,14 +19,28 @@ export interface StoredShippingEstimate {
 
 export function getStoredShippingEstimate(): StoredShippingEstimate | null {
   if (typeof window === "undefined") return null;
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch (err) {
+    if (err instanceof DOMException) {
+      // localStorage bloqueado (modo privado, política do navegador).
+      return null;
+    }
+    throw err;
+  }
+
+  if (!raw) return null;
+  try {
     const parsed = JSON.parse(raw) as StoredShippingEstimate;
     if (typeof parsed?.postalCode !== "string") return null;
     return parsed;
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Conteúdo corrompido — trata como ausente.
+      return null;
+    }
+    throw err;
   }
 }
 
@@ -35,8 +49,12 @@ export function saveShippingEstimate(estimate: StoredShippingEstimate): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estimate));
     window.dispatchEvent(new CustomEvent("luratha:shipping-estimate", { detail: estimate }));
-  } catch {
-    /* ignore quota errors */
+  } catch (err) {
+    if (err instanceof DOMException) {
+      // QuotaExceededError ou localStorage indisponível.
+      return;
+    }
+    throw err;
   }
 }
 
@@ -45,7 +63,10 @@ export function clearShippingEstimate(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new CustomEvent("luratha:shipping-estimate", { detail: null }));
-  } catch {
-    /* ignore */
+  } catch (err) {
+    if (err instanceof DOMException) {
+      return;
+    }
+    throw err;
   }
 }

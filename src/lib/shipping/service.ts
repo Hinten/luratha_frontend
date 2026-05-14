@@ -191,8 +191,13 @@ async function computeFreeShippingThreshold(params: {
       );
       referenceQuotes = result.quotes;
       setCachedQuotes(cacheKey, referenceQuotes, settings.cacheTtlSeconds);
-    } catch {
-      return { threshold: null, referenceShippingCost: null };
+    } catch (err) {
+      if (err instanceof ShippingProviderError) {
+        // Simulação de 1kg é best-effort — falha do provider faz o threshold
+        // ficar null e o caller esconde a oferta de frete grátis para esse CEP.
+        return { threshold: null, referenceShippingCost: null };
+      }
+      throw err;
     }
   }
 
