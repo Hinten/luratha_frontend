@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { AuthClientError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 export default function RegisterPage() {
@@ -31,7 +32,11 @@ export default function RegisterPage() {
       await register(name, email, password);
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao cadastrar.");
+      if (err instanceof AuthClientError) {
+        setError(err.message);
+      } else {
+        throw err;
+      }
     } finally {
       setLoading(false);
     }

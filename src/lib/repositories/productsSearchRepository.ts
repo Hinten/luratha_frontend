@@ -10,6 +10,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { z } from "zod";
 import {
   and,
   arrayContains,
@@ -33,7 +34,11 @@ import {
   ProductRepositoryError,
 } from "@/src/lib/repositories/productsRepository";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
-import { createEmbeddingService, type EmbeddingService } from "@/src/lib/embeddingService";
+import {
+  EmbeddingGenerationError,
+  createEmbeddingService,
+  type EmbeddingService,
+} from "@/src/lib/embeddingService";
 
 export interface SearchOptions {
   useVectors?: boolean;
@@ -257,7 +262,11 @@ export function createProductsSearchRepository(
           return [exactMatch];
         }
       } catch (error) {
-        // Don't fail the whole search if the exact-match lookup errors.
+        // Fall back to the regular search on Firestore failures (missing index,
+        // permission denied, network). Anything else propagates so we see it.
+        if (!(error instanceof FirebaseError)) {
+          throw error;
+        }
         console.warn("[productsSearchRepository] exact-match lookup failed; falling back", error);
       }
     }
@@ -269,6 +278,12 @@ export function createProductsSearchRepository(
         console.info("[productsSearchRepository] path=vector");
         return vectorResults;
       } catch (error) {
+        // Vector search relies on `findNearest` + the searchEmbedding field.
+        // Fall back to text search for Firestore errors (no embeddings, no
+        // index) or embedding-service errors. Unknown errors propagate.
+        if (!(error instanceof FirebaseError || error instanceof EmbeddingGenerationError)) {
+          throw error;
+        }
         vectorError = error;
         console.warn("[productsSearchRepository] vector fallback triggered", error);
       }
@@ -280,6 +295,12 @@ export function createProductsSearchRepository(
         console.info("[productsSearchRepository] path=pipeline");
         return pipelineResults;
       } catch (error) {
+        // Pipeline queries require the Enterprise tier. Fall back to a Core
+        // query when the pipeline is unavailable, but only for Firestore
+        // errors — unknown errors propagate.
+        if (!(error instanceof FirebaseError)) {
+          throw error;
+        }
         pipelineError = error;
         console.warn("[productsSearchRepository] pipeline fallback triggered", error);
       }
@@ -364,7 +385,10 @@ function normalizeSearchProduct(
         ? record.searchEmbedding.toArray()
         : record.searchEmbedding,
     });
-  } catch {
+  } catch (err) {
+    if (!(err instanceof z.ZodError)) {
+      throw err;
+    }
     if (process.env.NODE_ENV !== "production") {
       console.warn("[productsSearchRepository] invalid search record, applying fallback mapping");
     }

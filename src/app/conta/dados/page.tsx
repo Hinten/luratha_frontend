@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import type { TaxIdentity, UserProfile } from "@/src/schemas/firestore";
+import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 type TaxType = TaxIdentity["type"] | "NONE";
@@ -139,11 +140,15 @@ export default function ContaDadosPage() {
 
       if (!res.ok) {
         const payload = (await res.json()) as { message?: string };
-        throw new Error(payload.message ?? "Falha ao salvar.");
+        throw new ApiResponseError(payload.message ?? "Falha ao salvar.", res.status);
       }
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido.");
+      if (err instanceof ApiResponseError) {
+        setError(err.message);
+      } else {
+        throw err;
+      }
     } finally {
       setSaving(false);
     }

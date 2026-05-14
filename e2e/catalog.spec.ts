@@ -97,13 +97,18 @@ test.describe("Sort functionality", () => {
     await page.goto("/categoria/vestidos");
     const select = page.getByRole("combobox");
     await select.selectOption("menor-preco");
-    await expect(page).toHaveURL(/sort=menor-preco/);
+    // SortDropdown calls router.push, which triggers a server transition
+    // (re-fetch of the categoria server component + Firestore query). On cold
+    // CI runners that round-trip routinely takes more than the 5s default,
+    // making the assertion flaky on first run but passing on retry. Bump the
+    // timeout to absorb the cold-start cost without retries.
+    await expect(page).toHaveURL(/sort=menor-preco/, { timeout: 15000 });
   });
 
   test("removes sort param when selecting Mais recentes", async ({ page }) => {
     await page.goto("/categoria/vestidos?sort=maior-preco");
     const select = page.getByRole("combobox");
     await select.selectOption("recentes");
-    await expect(page).not.toHaveURL(/sort=/);
+    await expect(page).not.toHaveURL(/sort=/, { timeout: 15000 });
   });
 });

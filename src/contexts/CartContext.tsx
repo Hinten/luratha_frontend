@@ -46,8 +46,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // eslint-disable-next-line react-hooks/set-state-in-effect
           setItems(JSON.parse(stored) as CartItem[]);
         }
-      } catch {
-        /* ignore parse errors */
+      } catch (err) {
+        // Bad JSON or storage blocked — start with an empty cart.
+        if (!(err instanceof SyntaxError || err instanceof DOMException)) {
+          throw err;
+        }
       }
       setHydrated(true);
     }

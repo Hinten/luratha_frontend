@@ -130,6 +130,10 @@ describe("deleteProductImage", () => {
 
     // Default: adminDb get resolves with not-found
     mockAdminGet.mockResolvedValue({ exists: false });
+
+    // Reset storage mock (some tests override with a rejection — without
+    // resetting, the rejection persists across tests).
+    mockStorageDelete.mockResolvedValue(undefined);
   });
 
   it("throws validation error when imageId is empty", async () => {
@@ -224,7 +228,28 @@ describe("deleteProductImage", () => {
     expect(mockBucketFile).toHaveBeenCalledWith(`products/${PRODUCT_ID}/${IMAGE_ID}/desktop.webp`);
   });
 
-  it("continues even when storage file deletion fails", async () => {
+  it("continues when storage file deletion returns 404 (file already gone)", async () => {
+    mockExecute
+      .mockResolvedValueOnce({ results: [{ id: PRODUCT_ID, data: () => ({ id: PRODUCT_ID }) }] })
+      .mockResolvedValueOnce({ results: [] });
+
+    mockAdminGet.mockResolvedValue({
+      exists: true,
+      data: () => buildStoredProduct(),
+    });
+
+    // @google-cloud/storage surfaces "object not found" as an ApiError with
+    // numeric `code: 404`. Mirror that shape; the repository must treat it as
+    // a best-effort no-op.
+    const notFoundError = Object.assign(new Error("Not Found"), { code: 404 });
+    mockStorageDelete.mockRejectedValue(notFoundError);
+
+    const result = await deleteProductImage(IMAGE_ID);
+    expect(result.deletedStorageFiles).toEqual([]);
+    expect(result.updatedProducts).toContain(PRODUCT_ID);
+  });
+
+  it("propagates unexpected storage errors instead of silently swallowing them", async () => {
     mockExecute
       .mockResolvedValueOnce({ results: [{ id: PRODUCT_ID, data: () => ({ id: PRODUCT_ID }) }] })
       .mockResolvedValueOnce({ results: [] });
@@ -236,10 +261,7 @@ describe("deleteProductImage", () => {
 
     mockStorageDelete.mockRejectedValue(new Error("Storage unavailable"));
 
-    // Should NOT throw even though storage deletion failed
-    const result = await deleteProductImage(IMAGE_ID);
-    expect(result.deletedStorageFiles).toEqual([]);
-    expect(result.updatedProducts).toContain(PRODUCT_ID);
+    await expect(deleteProductImage(IMAGE_ID)).rejects.toThrow("Storage unavailable");
   });
 
   it("removes imageId from lifeStylePhotos when found there", async () => {

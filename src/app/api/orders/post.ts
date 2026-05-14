@@ -40,11 +40,14 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { message: "Corpo da requisição inválido. Esperado JSON." },
-      { status: 400 },
-    );
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Corpo da requisição inválido. Esperado JSON." },
+        { status: 400 },
+      );
+    }
+    throw err;
   }
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ message: "Falha ao validar o pedido." }, { status: 400 });
+    throw error;
   }
 
   const orderRef = adminDb
