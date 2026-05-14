@@ -38,6 +38,7 @@ import {
   createProductsSearchRepository,
   type SearchOptions,
 } from "@/src/lib/repositories/productsSearchRepository";
+import { EmbeddingGenerationError } from "@/src/lib/embeddingService";
 import type { ProductSearchFilters } from "@/src/lib/firestoreQueryStrategies";
 import { shouldUsePipeline } from "@/src/lib/firestoreQueryStrategies";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
@@ -410,10 +411,12 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
    * We verify that the search still returns valid results (not an error).
    */
   it("vector fallback chain: falls back to pipeline/core when vector service unavailable", async () => {
-    // Inject a stub embedding service that always throws (simulating no Vertex AI)
+    // Inject a stub embedding service that always throws (simulating no Vertex AI).
+    // The repository only swallows EmbeddingGenerationError (matching what the
+    // real service throws); plain Error would propagate.
     const failingEmbeddingService = {
       async embed(): Promise<number[]> {
-        throw new Error("Vertex AI not configured – expected test failure");
+        throw new EmbeddingGenerationError("Vertex AI not configured – expected test failure");
       },
     };
 
