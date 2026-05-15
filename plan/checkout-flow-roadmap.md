@@ -111,7 +111,7 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 - **API** `POST /api/checkout/shipping` em dois modos: `mode: "quote"` (carrinho completo) e `mode: "free-shipping-only"` (PDP/cart).
 - **UI**: `ShippingEstimator` na PDP (CEP → frete grátis em tempo real, persistido em `localStorage["luratha_shipping_estimate"]`), barra de progresso "Faltam R$X para frete grátis" no carrinho.
 - **Order schema** estendido com `shippingMethod` snapshot, `trackingCode`, `trackingUrl`, `shippedAt`, `deliveredAt` (todos opcionais — retro-compat).
-- **Env vars necessárias** (prod/sandbox): `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_ENV` (`sandbox`|`production`), `MELHOR_ENVIO_USER_AGENT` (opcional).
+- **Env vars necessárias** (prod/sandbox): `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_ENV` (`sandbox`|`production`), `MELHOR_ENVIO_USER_AGENT` (opcional). Template em `.env.example`; passo-a-passo para obter o token em `docs/melhor-envio-setup.md`.
 - **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável; fallback automático para `fixed-rate` se Melhor Envio responder `provider_unavailable`/`config_missing`.
 
 #### Resolvido (PR #81 — issue #81)

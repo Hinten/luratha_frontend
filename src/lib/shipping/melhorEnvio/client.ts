@@ -4,7 +4,7 @@ import { ShippingProviderError } from "@/src/lib/shipping/types";
  * Cliente HTTP isolado do Melhor Envio. Mantém auth, base URL e tratamento de
  * erro genérico em um lugar só — adapters chamam `melhorEnvioFetch(path, init)`.
  *
- * Configuração via env:
+ * Configuração via env (ver docs/melhor-envio-setup.md):
  *   MELHOR_ENVIO_TOKEN          — obrigatório. Token Bearer (sandbox ou prod).
  *   MELHOR_ENVIO_ENV            — "sandbox" (default) ou "production".
  *   MELHOR_ENVIO_USER_AGENT     — opcional. Header User-Agent exigido pela API.
