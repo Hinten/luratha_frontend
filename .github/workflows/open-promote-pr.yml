@@ -84,3 +84,63 @@ jobs:
               --body-file pr-body.md \
               --draft
           fi
+
+  report-failure:
+    name: Report failure logs
+    # Workflow agendado não tem PR onde comentar — em caso de falha, puxa o
+    # tail dos logs do job que falhou e abre (ou comenta numa) issue de
+    # rastreamento, para a falha não passar despercebida.
+    needs: open-pr
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Fetch failed job logs and open tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "O workflow \`${{ github.workflow }}\` falhou em $(date -u +'%Y-%m-%d %H:%M UTC')."
+            echo
+            echo "[Ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            # tail -c 12000 mantém os últimos ~12KB (onde costuma estar o erro real).
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          title="Falha no workflow agendado: open-promote-pr.yml"
+          existing=$(gh issue list --repo "$REPO" --state open --search "$title in:title" \
+            --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body-file /tmp/body.md
+            echo "Comentado na issue de rastreamento #$existing"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body-file /tmp/body.md
+          fi
