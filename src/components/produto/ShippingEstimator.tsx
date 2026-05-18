@@ -47,7 +47,6 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
   useEffect(() => {
     const stored = getStoredShippingEstimate();
     if (stored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPostalCode(stored.postalCode);
       setResult({
         destinationPostalCode: stored.postalCode,
@@ -141,9 +140,12 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
                 : "Frete grátis temporariamente desativado."}
             </p>
           )}
-          {result.referenceShippingCost !== null && (
+
+          
+
+          {process.env.NODE_ENV === 'development' && result.referenceShippingCost !== null && (
             <p className={styles.muted}>
-              Referência: frete de 1kg para esse CEP custa{" "}
+              [DEV] Referência: frete de 1kg para esse CEP custa{" "}
               {formatBRL(result.referenceShippingCost)}. Itens deste produto a partir de{" "}
               {formatBRL(productPrice)}.
             </p>
