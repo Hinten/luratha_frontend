@@ -8,7 +8,7 @@ import {
   CartRepositoryError,
   cartItemInputSchema,
   createCartsRepository,
-  type CartItemInput,
+  type CartItemWrite,
 } from "@/src/lib/repositories/cartsRepository";
 
 export const runtime = "nodejs";
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const accepted: CartItemInput[] = [];
+  const accepted: CartItemWrite[] = [];
   const dropped: Array<{ productId: string; variantId?: string; reason: string }> = [];
 
   for (const item of parsed.items) {
@@ -139,12 +139,14 @@ export async function POST(request: Request) {
 
     const catalogPrice =
       product.price.salePrice !== null ? product.price.salePrice : product.price.price;
-    // Refresh price/slug from catalog instead of trusting the localStorage snapshot.
+    // Refresh price/slug/dimensions from catalog instead of trusting the
+    // localStorage snapshot. `dimensions` is server-derived (anti-spoof).
     accepted.push({
       ...item,
       unitPrice: catalogPrice,
       productSlug: product.slug ?? item.productSlug,
       variantSku: expectedSku,
+      dimensions: product.dimensions,
     });
   }
 

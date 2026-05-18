@@ -86,7 +86,13 @@ describe("quoteShipping", () => {
     expect(calculate).toHaveBeenCalledTimes(2);
   });
 
-  it("falls back to fixed-rate provider when primary throws provider_unavailable", async () => {
+  it("falls back to fixed-rate provider when primary fails and fallback is enabled", async () => {
+    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const settings = getDefaultSiteSettings();
+    settings.shipping.fixedRate.enabledAsFallback = true;
+    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
+
     __setShippingProviderForTests("melhor-envio", {
       id: "melhor-envio",
       calculate: vi.fn(async () => {
@@ -104,13 +110,8 @@ describe("quoteShipping", () => {
     expect(result.quotes[0].providerId).toBe("fixed-rate");
   });
 
-  it("does NOT fall back when fixedRate.enabledAsFallback is false — propagates error", async () => {
-    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
-    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
-    const settings = getDefaultSiteSettings();
-    settings.shipping.fixedRate.enabledAsFallback = false;
-    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
-
+  it("does NOT fall back when fixedRate.enabledAsFallback is false (default) — propagates error", async () => {
+    // getDefaultSiteSettings() já tem enabledAsFallback: false por padrão.
     __setShippingProviderForTests("melhor-envio", {
       id: "melhor-envio",
       calculate: vi.fn(async () => {
@@ -124,6 +125,34 @@ describe("quoteShipping", () => {
         items: [{ productId: "p1", quantity: 1, unitPrice: 100, weightKg: 0.5 }],
       }),
     ).rejects.toBeInstanceOf(ShippingProviderError);
+  });
+
+  it("throws a combined error when primary fails AND the fallback is also unavailable", async () => {
+    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const settings = getDefaultSiteSettings();
+    settings.shipping.fixedRate.enabledAsFallback = true;
+    // Sem entries e sem defaultEntry → fixed-rate lança config_missing.
+    settings.shipping.fixedRate.entries = [];
+    settings.shipping.fixedRate.defaultEntry = null;
+    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
+
+    __setShippingProviderForTests("melhor-envio", {
+      id: "melhor-envio",
+      calculate: vi.fn(async () => {
+        throw new ShippingProviderError("primário caiu", "melhor-envio", "provider_unavailable");
+      }),
+    });
+
+    await expect(
+      quoteShipping({
+        destinationPostalCode: "01310-100",
+        items: [{ productId: "p1", quantity: 1, unitPrice: 100, weightKg: 0.5 }],
+      }),
+    ).rejects.toMatchObject({
+      name: "ShippingProviderError",
+      code: "provider_unavailable",
+    });
   });
 });
 
@@ -141,10 +170,10 @@ describe("quoteFreeShippingThreshold", () => {
     expect(result.enabled).toBe(false);
   });
 
-  it("uses 1kg simulation to derive the threshold", async () => {
+  it("uses 1kg simulation to derive the threshold and returns the quotes", async () => {
     __setShippingProviderForTests("melhor-envio", {
       id: "melhor-envio",
-      calculate: vi.fn(async () => [makeQuote(10)]),
+      calculate: vi.fn(async () => [makeQuote(10), makeQuote(18, "2")]),
     });
 
     const result = await quoteFreeShippingThreshold({ destinationPostalCode: "20040-001" });
@@ -152,5 +181,27 @@ describe("quoteFreeShippingThreshold", () => {
     expect(result.referenceShippingCost).toBe(10);
     expect(result.threshold).toBeCloseTo(71.43, 2);
     expect(result.divisor).toBe(0.14);
+    // As cotações de 1kg agora são expostas para a PDP exibir.
+    expect(result.quotes).toHaveLength(2);
+    expect(result.quotes.map((q) => q.price)).toEqual([10, 18]);
+  });
+
+  it("returns quotes even when free shipping is disabled", async () => {
+    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const settings = getDefaultSiteSettings();
+    settings.shipping.freeShipping.enabled = false;
+    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
+
+    __setShippingProviderForTests("melhor-envio", {
+      id: "melhor-envio",
+      calculate: vi.fn(async () => [makeQuote(12)]),
+    });
+
+    const result = await quoteFreeShippingThreshold({ destinationPostalCode: "20040-001" });
+
+    expect(result.threshold).toBeNull();
+    expect(result.enabled).toBe(false);
+    expect(result.quotes).toHaveLength(1);
   });
 });

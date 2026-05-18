@@ -44,17 +44,48 @@ async function callProvider(
     const quotes = await primary.calculate(providerInput, settings);
     return { quotes, usedFallback: false };
   } catch (error) {
+    // Só falhas recuperáveis do primário acionam o fallback; o resto propaga.
     if (
-      error instanceof ShippingProviderError &&
-      (error.code === "provider_unavailable" || error.code === "config_missing")
+      !(error instanceof ShippingProviderError) ||
+      (error.code !== "provider_unavailable" && error.code !== "config_missing")
     ) {
-      const fallback = getFallbackProvider();
-      if (fallback.id !== primary.id && settings.fixedRate.enabledAsFallback) {
-        const quotes = await fallback.calculate(providerInput, settings);
-        return { quotes, usedFallback: true };
-      }
+      throw error;
     }
-    throw error;
+
+    const fallback = getFallbackProvider();
+    if (!settings.fixedRate.enabledAsFallback || fallback.id === primary.id) {
+      throw error;
+    }
+
+    // O fallback também pode estar indisponível — checar e surfacer um erro
+    // coerente citando as duas falhas, em vez de deixar vazar o erro cru.
+    let fallbackQuotes: ShippingQuote[];
+    try {
+      fallbackQuotes = await fallback.calculate(providerInput, settings);
+    } catch (fallbackError) {
+      if (fallbackError instanceof ShippingProviderError) {
+        throw new ShippingProviderError(
+          `Provider primário (${primary.id}) e fallback (${fallback.id}) indisponíveis. ` +
+            `Primário: ${error.message} | Fallback: ${fallbackError.message}`,
+          fallback.id,
+          "provider_unavailable",
+          error,
+        );
+      }
+      throw fallbackError;
+    }
+
+    if (fallbackQuotes.length === 0) {
+      throw new ShippingProviderError(
+        `Provider primário (${primary.id}) falhou e o fallback (${fallback.id}) não ` +
+          `retornou nenhuma opção de frete. Primário: ${error.message}`,
+        fallback.id,
+        "provider_unavailable",
+        error,
+      );
+    }
+
+    return { quotes: fallbackQuotes, usedFallback: true };
   }
 }
 
@@ -130,13 +161,15 @@ export async function quoteShipping(input: QuoteShippingInput): Promise<QuoteShi
 }
 
 /**
- * Calcula apenas o threshold de frete grátis (usado em PDP/cart sem precisar
- * do carrinho completo). Sempre simula 1kg, cacheia separadamente do carrinho.
+ * Calcula o threshold de frete grátis + as opções de frete de 1kg (usado em
+ * PDP/cart sem o carrinho completo). Sempre simula 1kg; as `quotes` servem como
+ * estimativa "frete a partir de" para exibir ao cliente.
  */
 export async function quoteFreeShippingThreshold(input: {
   destinationPostalCode: string;
 }): Promise<{
   destinationPostalCode: string;
+  quotes: ShippingQuote[];
   threshold: number | null;
   referenceShippingCost: number | null;
   divisor: number;
@@ -147,19 +180,64 @@ export async function quoteFreeShippingThreshold(input: {
   const destinationPostalCode = normalizePostalCode(input.destinationPostalCode);
   const originPostalCode = normalizePostalCode(shippingSettings.originPostalCode);
 
-  const result = await computeFreeShippingThreshold({
+  const quotes = await getReferenceQuotes(
     destinationPostalCode,
-    settings: shippingSettings,
     originPostalCode,
-  });
+    shippingSettings,
+  );
+  const cheapest = pickReferenceShippingCost(quotes);
+  const referenceShippingCost = cheapest > 0 ? cheapest : null;
+  const threshold =
+    shippingSettings.freeShipping.enabled && referenceShippingCost !== null
+      ? calculateFreeShippingThreshold(referenceShippingCost, shippingSettings.freeShipping)
+      : null;
 
   return {
     destinationPostalCode,
-    threshold: result.threshold,
-    referenceShippingCost: result.referenceShippingCost,
+    quotes,
+    threshold,
+    referenceShippingCost,
     divisor: shippingSettings.freeShipping.divisor,
     enabled: shippingSettings.freeShipping.enabled,
   };
+}
+
+/**
+ * Simula o frete de 1kg para um CEP (com cache próprio). Best-effort: em falha
+ * do provider devolve `[]` — quem chama trata frete grátis/opções como
+ * indisponíveis para aquele CEP em vez de propagar erro.
+ */
+async function getReferenceQuotes(
+  destinationPostalCode: string,
+  originPostalCode: string,
+  settings: ShippingSettings,
+): Promise<ShippingQuote[]> {
+  const cacheKey = buildCacheKey({
+    type: "freeShipping",
+    providerId: settings.providerId,
+    destinationPostalCode,
+  });
+
+  const cached = getCachedQuotes(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const { quotes } = await callProvider(
+      {
+        destinationPostalCode,
+        originPostalCode,
+        items: [buildOneKgReferenceItem(settings)],
+      },
+      settings,
+    );
+    setCachedQuotes(cacheKey, quotes, settings.cacheTtlSeconds);
+    return quotes;
+  } catch (err) {
+    if (err instanceof ShippingProviderError) {
+      return [];
+    }
+    throw err;
+  }
 }
 
 async function computeFreeShippingThreshold(params: {
@@ -172,35 +250,11 @@ async function computeFreeShippingThreshold(params: {
     return { threshold: null, referenceShippingCost: null };
   }
 
-  const cacheKey = buildCacheKey({
-    type: "freeShipping",
-    providerId: settings.providerId,
+  const referenceQuotes = await getReferenceQuotes(
     destinationPostalCode,
-  });
-
-  let referenceQuotes = getCachedQuotes(cacheKey);
-  if (!referenceQuotes) {
-    try {
-      const result = await callProvider(
-        {
-          destinationPostalCode,
-          originPostalCode,
-          items: [buildOneKgReferenceItem(settings)],
-        },
-        settings,
-      );
-      referenceQuotes = result.quotes;
-      setCachedQuotes(cacheKey, referenceQuotes, settings.cacheTtlSeconds);
-    } catch (err) {
-      if (err instanceof ShippingProviderError) {
-        // Simulação de 1kg é best-effort — falha do provider faz o threshold
-        // ficar null e o caller esconde a oferta de frete grátis para esse CEP.
-        return { threshold: null, referenceShippingCost: null };
-      }
-      throw err;
-    }
-  }
-
+    originPostalCode,
+    settings,
+  );
   const referenceShippingCost = pickReferenceShippingCost(referenceQuotes);
   if (referenceShippingCost <= 0) {
     return { threshold: null, referenceShippingCost: null };

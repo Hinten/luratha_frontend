@@ -8,6 +8,7 @@ import {
   subscribeShippingEstimate,
   type StoredShippingEstimate,
 } from "@/src/lib/shipping/clientStorage";
+import type { ShippingQuote } from "@/src/lib/shipping/types";
 import styles from "./ShippingEstimator.module.css";
 
 const formatBRL = (value: number) =>
@@ -26,6 +27,7 @@ interface ShippingEstimatorProps {
 
 interface FreeShippingResponse {
   destinationPostalCode: string;
+  quotes: ShippingQuote[];
   threshold: number | null;
   referenceShippingCost: number | null;
   divisor: number;
@@ -78,6 +80,7 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
           referenceShippingCost: data.referenceShippingCost,
           divisor: data.divisor,
           freeShippingEnabled: data.enabled,
+          quotes: data.quotes,
           fetchedAt: new Date().toISOString(),
         };
         // Persiste — o evento disparado atualiza `stored` via useSyncExternalStore.
@@ -134,6 +137,32 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
               {stored.freeShippingEnabled
                 ? "Frete grátis indisponível para este CEP no momento."
                 : "Frete grátis temporariamente desativado."}
+            </p>
+          )}
+
+          {stored.quotes.length > 0 && (
+            <ul className={styles.options}>
+              {stored.quotes.map((quote) => (
+                <li key={`${quote.providerId}-${quote.serviceCode}`} className={styles.option}>
+                  <span className={styles.optionName}>
+                    {quote.carrier} · {quote.service}
+                  </span>
+                  <span className={styles.optionMeta}>
+                    a partir de {formatBRL(quote.price)}
+                    {quote.estimatedDays > 0 &&
+                      ` · ${quote.estimatedDays} ${
+                        quote.estimatedDays === 1 ? "dia útil" : "dias úteis"
+                      }`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {stored.quotes.length > 0 && (
+            <p className={styles.muted}>
+              Estimativa para 1kg. O valor final é calculado no carrinho com o
+              peso real das peças.
             </p>
           )}
 

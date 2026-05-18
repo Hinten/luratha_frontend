@@ -112,7 +112,9 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 - **UI**: `ShippingEstimator` na PDP (CEP → frete grátis em tempo real, persistido em `localStorage["luratha_shipping_estimate"]`), barra de progresso "Faltam R$X para frete grátis" no carrinho.
 - **Order schema** estendido com `shippingMethod` snapshot, `trackingCode`, `trackingUrl`, `shippedAt`, `deliveredAt` (todos opcionais — retro-compat).
 - **Env vars necessárias** (prod/sandbox): `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_ENV` (`sandbox`|`production`), `MELHOR_ENVIO_USER_AGENT` (opcional). Template em `.env.example`; passo-a-passo para obter o token em `docs/melhor-envio-setup.md`.
-- **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável; fallback automático para `fixed-rate` se Melhor Envio responder `provider_unavailable`/`config_missing`. O fallback pode ser desligado por `siteSettings.shipping.fixedRate.enabledAsFallback` — quando `false`, a falha do provider primário retorna 502 e bloqueia o checkout (evita vender frete por tabela fixa que pode dar prejuízo).
+- **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável. **Fallback `fixed-rate` é OFF por padrão** (`siteSettings.shipping.fixedRate.enabledAsFallback`, default `false`) — a falha do provider primário retorna 502 e bloqueia o checkout, evitando vender frete por tabela fixa que pode dar prejuízo. Ligando o flag, o `callProvider` cai para `fixed-rate` e ainda trata a indisponibilidade do próprio fallback (erro combinado citando primário + fallback).
+- **Snapshot de frete no item de carrinho**: `cartItemSchema.dimensions` guarda peso/medidas copiados do produto (server-side, anti-spoof) no add-to-cart e no merge; deixa o carrinho/checkout calcular frete real pelo modo `quote`.
+- **`free-shipping-only`** retorna também as `quotes` de 1kg ("frete a partir de"), exibidas na PDP pelo `ShippingEstimator`.
 
 #### Resolvido (PR #81 — issue #81)
 

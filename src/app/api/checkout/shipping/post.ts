@@ -15,9 +15,10 @@ export const runtime = "nodejs";
  *   Body: { postalCode, items: [{ productId, quantity, unitPrice, weightKg?, dimensionsCm? }] }
  *   Resp: { quotes, freeShippingThreshold, referenceShippingCost }
  *
- * Modo 2 — somente threshold de frete grátis (PDP/cart sem carrinho):
+ * Modo 2 — estimativa de frete grátis (PDP/cart sem carrinho):
  *   Body: { postalCode, mode: "free-shipping-only" }
- *   Resp: { threshold, referenceShippingCost, divisor, enabled }
+ *   Resp: { quotes, threshold, referenceShippingCost, divisor, enabled }
+ *   `quotes` é a cotação de 1kg ("frete a partir de") para exibir na PDP.
  *
  * Endpoint é deliberadamente público (não exige login) — clientes anônimos
  * consultam frete antes de logar. Não retorna nada sensível.

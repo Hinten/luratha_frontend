@@ -12,10 +12,10 @@ describe("siteSettings schema", () => {
     expect(settings.shipping.providerId).toBe("melhor-envio");
     expect(settings.shipping.freeShipping.divisor).toBe(0.14);
     expect(settings.shipping.fallbackProductWeightKg).toBeGreaterThan(0);
-    expect(settings.shipping.fixedRate.enabledAsFallback).toBe(true);
+    expect(settings.shipping.fixedRate.enabledAsFallback).toBe(false);
   });
 
-  it("fixedRate.enabledAsFallback defaults to true when omitted", () => {
+  it("fixedRate.enabledAsFallback defaults to false when omitted (safe by default)", () => {
     const parsed = validateSiteSettings({
       id: "global",
       shipping: {
@@ -24,7 +24,7 @@ describe("siteSettings schema", () => {
       },
       updatedAt: new Date().toISOString(),
     });
-    expect(parsed.shipping.fixedRate.enabledAsFallback).toBe(true);
+    expect(parsed.shipping.fixedRate.enabledAsFallback).toBe(false);
   });
 
   it("rejects divisor greater than 1", () => {

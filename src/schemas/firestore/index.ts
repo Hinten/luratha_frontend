@@ -13,10 +13,12 @@ export {
   productVariantSchema,
   productImageAssetSchema,
   productSchema,
+  dimensionsSchema,
   buildProductSlug,
   slugifyProductPart,
   type ProductVariant,
   type ProductImageAsset,
+  type Dimensions,
   type Product,
   validateProduct,
 } from "@/src/schemas/firestore/products";

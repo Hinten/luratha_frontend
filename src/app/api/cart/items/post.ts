@@ -136,7 +136,11 @@ export async function POST(request: Request) {
 
   const repository = createCartsRepository(adminDb);
   try {
-    const snapshot = await repository.addItem(authedUser.uid, parsed);
+    // `dimensions` é derivado do produto (server-side) — o cliente não envia.
+    const snapshot = await repository.addItem(authedUser.uid, {
+      ...parsed,
+      dimensions: product.dimensions,
+    });
     return NextResponse.json(snapshot, { status: 200 });
   } catch (error) {
     if (error instanceof CartRepositoryError) {

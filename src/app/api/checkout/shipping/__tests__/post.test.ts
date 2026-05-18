@@ -91,7 +91,7 @@ describe("POST /api/checkout/shipping", () => {
     expect(data.referenceShippingCost).toBe(14);
   });
 
-  it("free-shipping-only mode returns only threshold", async () => {
+  it("free-shipping-only mode returns threshold and the 1kg quotes", async () => {
     const res = await POST(
       jsonRequest({ mode: "free-shipping-only", postalCode: "20040-001" }),
     );
@@ -100,9 +100,13 @@ describe("POST /api/checkout/shipping", () => {
       threshold: number;
       referenceShippingCost: number;
       divisor: number;
+      quotes: Array<{ price: number; serviceCode: string }>;
     };
     expect(data.threshold).toBe(100);
     expect(data.divisor).toBe(0.14);
+    expect(Array.isArray(data.quotes)).toBe(true);
+    expect(data.quotes.length).toBeGreaterThan(0);
+    expect(data.quotes[0].price).toBe(14);
   });
 
   it("returns 400 on invalid CEP", async () => {

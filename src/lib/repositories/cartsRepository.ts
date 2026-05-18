@@ -38,7 +38,7 @@ export class CartRepositoryError extends Error {
   }
 }
 
-/** Payload aceito ao adicionar um item ao cart via API. */
+/** Payload aceito do cliente ao adicionar um item ao cart via API. */
 export const cartItemInputSchema = z.object({
   productId: cartItemSchema.shape.productId,
   variantId: cartItemSchema.shape.variantId,
@@ -54,6 +54,17 @@ export const cartItemInputSchema = z.object({
 });
 export type CartItemInput = z.infer<typeof cartItemInputSchema>;
 
+/**
+ * Payload de escrita do repositório: input do cliente + `dimensions` derivado
+ * server-side do produto. As rotas (`/api/cart/items`, `/api/cart/merge`)
+ * carregam o produto e preenchem `dimensions` — o cliente nunca fornece esse
+ * campo (anti-spoof do peso usado no cálculo de frete).
+ */
+export const cartItemWriteSchema = cartItemInputSchema.extend({
+  dimensions: cartItemSchema.shape.dimensions,
+});
+export type CartItemWrite = z.infer<typeof cartItemWriteSchema>;
+
 export interface CartSnapshot {
   cart: Cart;
   items: CartItem[];
@@ -61,7 +72,7 @@ export interface CartSnapshot {
 
 export interface CartsRepository {
   getCart(userId: string): Promise<CartSnapshot>;
-  addItem(userId: string, input: CartItemInput): Promise<CartSnapshot>;
+  addItem(userId: string, input: CartItemWrite): Promise<CartSnapshot>;
   setItemQuantity(
     userId: string,
     itemId: string,
@@ -69,7 +80,7 @@ export interface CartsRepository {
   ): Promise<CartSnapshot>;
   removeItem(userId: string, itemId: string): Promise<CartSnapshot>;
   clear(userId: string): Promise<void>;
-  mergeItems(userId: string, inputs: CartItemInput[]): Promise<CartSnapshot>;
+  mergeItems(userId: string, inputs: CartItemWrite[]): Promise<CartSnapshot>;
 }
 
 export function createCartsRepository(adminDb: AdminFirestore): CartsRepository {
@@ -142,9 +153,9 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
     }
   }
 
-  async function addItem(userId: string, input: CartItemInput): Promise<CartSnapshot> {
+  async function addItem(userId: string, input: CartItemWrite): Promise<CartSnapshot> {
     try {
-      const parsedInput = cartItemInputSchema.parse(input);
+      const parsedInput = cartItemWriteSchema.parse(input);
       if (parsedInput.quantity > MAX_QUANTITY_PER_ITEM) {
         throw new CartRepositoryError(
           `Quantity for a single item cannot exceed ${MAX_QUANTITY_PER_ITEM}.`,
@@ -313,14 +324,14 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
 
   async function mergeItems(
     userId: string,
-    inputs: CartItemInput[],
+    inputs: CartItemWrite[],
   ): Promise<CartSnapshot> {
     try {
       if (!Array.isArray(inputs) || inputs.length === 0) {
         return getCart(userId);
       }
 
-      const parsedInputs = inputs.map((entry) => cartItemInputSchema.parse(entry));
+      const parsedInputs = inputs.map((entry) => cartItemWriteSchema.parse(entry));
       const isoNow = new Date().toISOString();
 
       return await adminDb.runTransaction(async (tx) => {

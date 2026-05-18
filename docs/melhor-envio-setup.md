@@ -90,12 +90,14 @@ Resposta esperada: um objeto com `quotes` (lista de opções de frete),
 `{ "code": "config_missing" }`, o token não foi lido — confira o `.env.local`
 e reinicie o `npm run dev`.
 
-> **Fallback `fixed-rate`:** quando o Melhor Envio está indisponível ou sem
-> token, o sistema cai automaticamente na tabela de frete fixo
-> (`siteSettings.shipping.fixedRate`) e responde com `usedFallback: true`. Esse
-> comportamento pode ser desligado em `siteSettings.shipping.fixedRate.enabledAsFallback`
-> — com `false`, a falha do Melhor Envio retorna **HTTP 502** e bloqueia o
-> checkout em vez de cotar pela tabela fixa.
+> **Fallback `fixed-rate`:** por padrão (`siteSettings.shipping.fixedRate.enabledAsFallback`
+> = `false`), quando o Melhor Envio está indisponível ou sem token, o cálculo
+> de frete retorna **HTTP 502** e bloqueia o checkout — postura segura, evita
+> cotar por uma tabela fixa que pode dar prejuízo. Para ligar o fallback
+> automático, defina `enabledAsFallback: true`; aí uma falha do Melhor Envio
+> cai na tabela `siteSettings.shipping.fixedRate` e responde com
+> `usedFallback: true`. Se o próprio fallback também estiver indisponível
+> (sem `defaultEntry`/`entries` para a UF), o erro retornado cita as duas falhas.
 
 ## Caminho alternativo — OAuth2 (marketplace / multi-loja)
 

@@ -6,6 +6,8 @@
  * hidratação. `saveShippingEstimate` dispara um evento que invalida o snapshot.
  */
 
+import type { ShippingQuote } from "@/src/lib/shipping/types";
+
 const STORAGE_KEY = "luratha_shipping_estimate";
 const ESTIMATE_EVENT = "luratha:shipping-estimate";
 
@@ -15,6 +17,8 @@ export interface StoredShippingEstimate {
   referenceShippingCost: number | null;
   divisor: number;
   freeShippingEnabled: boolean;
+  /** Cotações de 1kg para aquele CEP — estimativa "frete a partir de". */
+  quotes: ShippingQuote[];
   fetchedAt: string;
 }
 
@@ -43,7 +47,8 @@ function parseEstimate(raw: string): StoredShippingEstimate | null {
   try {
     const parsed = JSON.parse(raw) as StoredShippingEstimate;
     if (typeof parsed?.postalCode !== "string") return null;
-    return parsed;
+    // `quotes` foi adicionado depois — entradas antigas no localStorage não têm.
+    return { ...parsed, quotes: Array.isArray(parsed.quotes) ? parsed.quotes : [] };
   } catch (err) {
     if (err instanceof SyntaxError) {
       // Conteúdo corrompido — trata como ausente.
