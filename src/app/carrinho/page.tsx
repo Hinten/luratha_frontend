@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useCart } from "@/src/contexts/CartContext";
 import {
-  getStoredShippingEstimate,
-  type StoredShippingEstimate,
+  getShippingEstimateServerSnapshot,
+  getShippingEstimateSnapshot,
+  subscribeShippingEstimate,
 } from "@/src/lib/shipping/clientStorage";
 import styles from "./page.module.css";
 
@@ -26,17 +27,11 @@ export default function CarrinhoPage() {
     error,
   } = useCart();
 
-  const [estimate, setEstimate] = useState<StoredShippingEstimate | null>(null);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEstimate(getStoredShippingEstimate());
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<StoredShippingEstimate | null>).detail;
-      setEstimate(detail ?? null);
-    };
-    window.addEventListener("luratha:shipping-estimate", handler);
-    return () => window.removeEventListener("luratha:shipping-estimate", handler);
-  }, []);
+  const estimate = useSyncExternalStore(
+    subscribeShippingEstimate,
+    getShippingEstimateSnapshot,
+    getShippingEstimateServerSnapshot,
+  );
 
   const isEmpty = items.length === 0;
   const freeShippingThreshold =

@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import {
-  getStoredShippingEstimate,
+  getShippingEstimateServerSnapshot,
+  getShippingEstimateSnapshot,
   saveShippingEstimate,
+  subscribeShippingEstimate,
   type StoredShippingEstimate,
 } from "@/src/lib/shipping/clientStorage";
 import styles from "./ShippingEstimator.module.css";
@@ -18,7 +20,7 @@ function formatCep(raw: string): string {
 }
 
 interface ShippingEstimatorProps {
-  /** Preço unitário do produto — vai como `unitPrice` na cotação. */
+  /** Preço unitário do produto — exibido no aviso de referência. */
   productPrice: number;
 }
 
@@ -32,34 +34,25 @@ interface FreeShippingResponse {
 
 /**
  * Widget de "Consulte o frete" exibido na PDP. Pede o CEP, chama
- * `POST /api/checkout/shipping` em modo `free-shipping-only` e mostra:
- *   - valor do frete grátis para aquele CEP
- *   - valor do frete de referência (1kg)
+ * `POST /api/checkout/shipping` em modo `free-shipping-only` e mostra o valor
+ * do frete grátis para aquele CEP.
  *
- * O estimate é salvo em localStorage para o carrinho reaproveitar.
+ * O estimate é persistido em localStorage e lido via `useSyncExternalStore`,
+ * então o carrinho compartilha o mesmo valor sem refetch — e sem `useEffect`.
  */
 export default function ShippingEstimator({ productPrice }: ShippingEstimatorProps) {
-  const [postalCode, setPostalCode] = useState("");
+  const stored = useSyncExternalStore(
+    subscribeShippingEstimate,
+    getShippingEstimateSnapshot,
+    getShippingEstimateServerSnapshot,
+  );
+
+  // `null` enquanto o usuário não digitou — aí o input mostra o CEP salvo.
+  const [typedCep, setTypedCep] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<FreeShippingResponse | null>(null);
 
-  useEffect(() => {
-    const stored = getStoredShippingEstimate();
-    if (stored) {
-      // Carrega o estimate salvo só após a hidratação (evita mismatch SSR).
-      // Mesmo padrão de CartContext.tsx ao reidratar o localStorage.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPostalCode(stored.postalCode);
-      setResult({
-        destinationPostalCode: stored.postalCode,
-        threshold: stored.freeShippingThreshold,
-        referenceShippingCost: stored.referenceShippingCost,
-        divisor: stored.divisor,
-        enabled: stored.freeShippingEnabled,
-      });
-    }
-  }, []);
+  const postalCode = typedCep ?? stored?.postalCode ?? "";
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -78,7 +71,6 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
           throw new Error(data.message ?? `HTTP ${response.status}`);
         }
         const data = (await response.json()) as FreeShippingResponse;
-        setResult(data);
 
         const toStore: StoredShippingEstimate = {
           postalCode: data.destinationPostalCode,
@@ -88,6 +80,7 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
           freeShippingEnabled: data.enabled,
           fetchedAt: new Date().toISOString(),
         };
+        // Persiste — o evento disparado atualiza `stored` via useSyncExternalStore.
         saveShippingEstimate(toStore);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Falha ao calcular o frete.");
@@ -112,7 +105,7 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
           autoComplete="postal-code"
           placeholder="CEP (99999-999)"
           value={postalCode}
-          onChange={(e) => setPostalCode(formatCep(e.target.value))}
+          onChange={(e) => setTypedCep(formatCep(e.target.value))}
           maxLength={9}
           aria-label="CEP de entrega"
           className={styles.input}
@@ -128,26 +121,26 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
         </p>
       )}
 
-      {result && !error && (
+      {stored && !error && (
         <div aria-live="polite">
-          {result.enabled && result.threshold !== null ? (
+          {stored.freeShippingEnabled && stored.freeShippingThreshold !== null ? (
             <p className={styles.result}>
               Frete <strong>grátis</strong> em compras acima de{" "}
-              <strong>{formatBRL(result.threshold)}</strong> para o CEP{" "}
-              {result.destinationPostalCode}.
+              <strong>{formatBRL(stored.freeShippingThreshold)}</strong> para o CEP{" "}
+              {stored.postalCode}.
             </p>
           ) : (
             <p className={styles.result}>
-              {result.enabled
+              {stored.freeShippingEnabled
                 ? "Frete grátis indisponível para este CEP no momento."
                 : "Frete grátis temporariamente desativado."}
             </p>
           )}
 
-          {process.env.NODE_ENV === "development" && result.referenceShippingCost !== null && (
+          {process.env.NODE_ENV === "development" && stored.referenceShippingCost !== null && (
             <p className={styles.muted}>
               [DEV] Referência: frete de 1kg para esse CEP custa{" "}
-              {formatBRL(result.referenceShippingCost)}. Itens deste produto a partir de{" "}
+              {formatBRL(stored.referenceShippingCost)}. Itens deste produto a partir de{" "}
               {formatBRL(productPrice)}.
             </p>
           )}
