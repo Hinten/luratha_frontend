@@ -9,7 +9,12 @@ import {
   getShippingEstimateSnapshot,
   subscribeShippingEstimate,
 } from "@/src/lib/shipping/clientStorage";
+import InfoTooltip from "@/src/components/InfoTooltip";
+import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
 import styles from "./page.module.css";
+
+const FREE_SHIPPING_TOOLTIP =
+  "O frete grátis depende da região de entrega — o valor varia conforme o CEP.";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -176,6 +181,8 @@ export default function CarrinhoPage() {
                 <span>{formatBRL(totalPrice)}</span>
               </div>
 
+              <ShippingCepForm title="Calcular frete" />
+
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Frete</span>
                 <span>
@@ -190,13 +197,16 @@ export default function CarrinhoPage() {
               {freeShippingThreshold !== null ? (
                 eligibleForFreeShipping ? (
                   <p className={styles.shippingNote} aria-live="polite">
-                    Você ganhou frete grátis para o CEP {estimate?.postalCode}.
+                    Você ganhou frete grátis
+                    <InfoTooltip text={FREE_SHIPPING_TOOLTIP} /> para o CEP{" "}
+                    {estimate?.postalCode}.
                   </p>
                 ) : (
                   <div aria-live="polite">
                     <p className={styles.shippingNote}>
-                      Faltam {formatBRL(remainingForFreeShipping ?? 0)} para frete grátis no
-                      CEP {estimate?.postalCode}.
+                      Faltam {formatBRL(remainingForFreeShipping ?? 0)} para frete grátis
+                      <InfoTooltip text={FREE_SHIPPING_TOOLTIP} /> no CEP{" "}
+                      {estimate?.postalCode}.
                     </p>
                     <div
                       className={styles.freeShippingBar}
@@ -214,7 +224,7 @@ export default function CarrinhoPage() {
                 )
               ) : (
                 <p className={styles.shippingNote}>
-                  Informe o CEP em um produto para calcular o frete grátis.
+                  Informe seu CEP acima para ver o frete e o valor do frete grátis.
                 </p>
               )}
 

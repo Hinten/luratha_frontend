@@ -8,60 +8,6 @@
   background-color: #fff;
 }
 
-.title {
-  font-family: var(--font-heading);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--color-neutral-dark);
-}
-
-.form {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.input {
-  flex: 1 1 140px;
-  min-width: 0;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--color-neutral-mid);
-  border-radius: 10px;
-  font-family: var(--font-body);
-  font-size: 0.9375rem;
-  color: var(--color-neutral-dark);
-  background-color: #fff;
-}
-
-.input:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  border-color: var(--color-primary);
-}
-
-.submit {
-  padding: 0.625rem 1.25rem;
-  border-radius: 10px;
-  border: none;
-  background-color: var(--color-neutral-dark);
-  color: var(--color-neutral-light);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: background-color 200ms ease;
-}
-
-.submit:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--color-neutral-dark) 85%, transparent);
-}
-
-.submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .result {
   font-family: var(--font-body);
   font-size: 0.875rem;
@@ -71,12 +17,6 @@
 
 .result strong {
   font-weight: 600;
-}
-
-.error {
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  color: var(--color-error);
 }
 
 .muted {
