@@ -89,7 +89,7 @@ export default function CarrinhoPage() {
             {/* Items list */}
             <section aria-label="Itens do carrinho">
               <ul className={styles.itemsList} role="list">
-                {items.map((item) => (
+                {items.map((item, index) => (
                   <li key={item.id} className={styles.item}>
                     {/* Thumbnail */}
                     <Link
@@ -105,7 +105,7 @@ export default function CarrinhoPage() {
                         height={100}
                         sizes="(max-width: 640px) 88px, 100px"
                         className={styles.itemThumb}
-                        loading="lazy"
+                        loading={index < 3 ? "eager" : "lazy"}
                       />
                     </Link>
 
