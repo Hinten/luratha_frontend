@@ -106,13 +106,13 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 #### Resolvido (PR Frete — issue #78 + parte de #80)
 
 - **Provider plugável** em `src/lib/shipping/`: interface `ShippingProvider` (`calculate` + `track` opcional), adapter `melhorEnvio/`, fallback `fixed-rate/` por tabela de UF (resolvida do prefixo do CEP) e factory `getShippingProvider()`.
-- **Configuração centralizada** em `settings/global` (`siteSettingsSchema`): `providerId`, `originPostalCode`, `enabledServices[]`, `fallbackProductWeightKg`, `cacheTtlSeconds`, `freeShipping.{divisor, minThreshold, maxThreshold, enabled}`, `fixedRate.{entries, defaultEntry}`. Repositório lê com cache em memória de 60s + `forceFresh`.
+- **Configuração centralizada** em `settings/global` (`siteSettingsSchema`): `providerId`, `originPostalCode`, `enabledServices[]`, `fallbackProductWeightKg`, `cacheTtlSeconds`, `freeShipping.{divisor, minThreshold, maxThreshold, enabled}`, `fixedRate.{entries, defaultEntry, enabledAsFallback}`. Repositório lê com cache em memória de 60s + `forceFresh`.
 - **Frete grátis baseado em CEP**: `quoteFreeShippingThreshold(cep)` simula 1kg pelo provider, aplica `threshold = shippingCost1kg / divisor` (default 0,14) com clamp por min/max. Loja absorve a diferença no checkout quando aplicável (`OrderShippingMethod.freeShippingApplied`).
 - **API** `POST /api/checkout/shipping` em dois modos: `mode: "quote"` (carrinho completo) e `mode: "free-shipping-only"` (PDP/cart).
 - **UI**: `ShippingEstimator` na PDP (CEP → frete grátis em tempo real, persistido em `localStorage["luratha_shipping_estimate"]`), barra de progresso "Faltam R$X para frete grátis" no carrinho.
 - **Order schema** estendido com `shippingMethod` snapshot, `trackingCode`, `trackingUrl`, `shippedAt`, `deliveredAt` (todos opcionais — retro-compat).
 - **Env vars necessárias** (prod/sandbox): `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_ENV` (`sandbox`|`production`), `MELHOR_ENVIO_USER_AGENT` (opcional). Template em `.env.example`; passo-a-passo para obter o token em `docs/melhor-envio-setup.md`.
-- **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável; fallback automático para `fixed-rate` se Melhor Envio responder `provider_unavailable`/`config_missing`.
+- **Cache**: in-memory por (CEP + assinatura do carrinho), TTL configurável; fallback automático para `fixed-rate` se Melhor Envio responder `provider_unavailable`/`config_missing`. O fallback pode ser desligado por `siteSettings.shipping.fixedRate.enabledAsFallback` — quando `false`, a falha do provider primário retorna 502 e bloqueia o checkout (evita vender frete por tabela fixa que pode dar prejuízo).
 
 #### Resolvido (PR #81 — issue #81)
 

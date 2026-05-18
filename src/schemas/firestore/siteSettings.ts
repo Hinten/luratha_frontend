@@ -63,6 +63,14 @@ export const fixedRateConfigSchema = z.object({
   /** Tabela por UF. Se faltar a UF, usa `defaultEntry`. */
   entries: z.array(fixedRateEntrySchema).default([]),
   defaultEntry: fixedRateEntrySchema.nullable().default(null),
+  /**
+   * Liga/desliga o uso do fixed-rate como fallback automático quando o
+   * provider primário falha (`provider_unavailable`/`config_missing`).
+   * Não afeta o uso do fixed-rate como provider primário — isso é controlado
+   * por `providerId`. Quando `false`, uma falha do provider primário bloqueia
+   * o cálculo de frete (rota retorna 502) em vez de cair na tabela fixa.
+   */
+  enabledAsFallback: z.boolean().default(true),
 });
 
 export const shippingSettingsSchema = z.object({
@@ -146,6 +154,7 @@ export function getDefaultSiteSettings(now: string = new Date().toISOString()): 
           weightLimitKg: 1,
           additionalKgPrice: 8,
         },
+        enabledAsFallback: true,
       },
     },
     updatedAt: now,

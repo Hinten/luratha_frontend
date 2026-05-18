@@ -12,6 +12,19 @@ describe("siteSettings schema", () => {
     expect(settings.shipping.providerId).toBe("melhor-envio");
     expect(settings.shipping.freeShipping.divisor).toBe(0.14);
     expect(settings.shipping.fallbackProductWeightKg).toBeGreaterThan(0);
+    expect(settings.shipping.fixedRate.enabledAsFallback).toBe(true);
+  });
+
+  it("fixedRate.enabledAsFallback defaults to true when omitted", () => {
+    const parsed = validateSiteSettings({
+      id: "global",
+      shipping: {
+        ...getDefaultSiteSettings().shipping,
+        fixedRate: { carrier: "Loja", service: "Padrão", entries: [], defaultEntry: null },
+      },
+      updatedAt: new Date().toISOString(),
+    });
+    expect(parsed.shipping.fixedRate.enabledAsFallback).toBe(true);
   });
 
   it("rejects divisor greater than 1", () => {

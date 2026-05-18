@@ -49,7 +49,7 @@ async function callProvider(
       (error.code === "provider_unavailable" || error.code === "config_missing")
     ) {
       const fallback = getFallbackProvider();
-      if (fallback.id !== primary.id) {
+      if (fallback.id !== primary.id && settings.fixedRate.enabledAsFallback) {
         const quotes = await fallback.calculate(providerInput, settings);
         return { quotes, usedFallback: true };
       }

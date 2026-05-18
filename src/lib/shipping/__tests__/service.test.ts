@@ -103,6 +103,28 @@ describe("quoteShipping", () => {
     expect(result.quotes.length).toBeGreaterThan(0);
     expect(result.quotes[0].providerId).toBe("fixed-rate");
   });
+
+  it("does NOT fall back when fixedRate.enabledAsFallback is false — propagates error", async () => {
+    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const settings = getDefaultSiteSettings();
+    settings.shipping.fixedRate.enabledAsFallback = false;
+    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
+
+    __setShippingProviderForTests("melhor-envio", {
+      id: "melhor-envio",
+      calculate: vi.fn(async () => {
+        throw new ShippingProviderError("down", "melhor-envio", "provider_unavailable");
+      }),
+    });
+
+    await expect(
+      quoteShipping({
+        destinationPostalCode: "01310-100",
+        items: [{ productId: "p1", quantity: 1, unitPrice: 100, weightKg: 0.5 }],
+      }),
+    ).rejects.toBeInstanceOf(ShippingProviderError);
+  });
 });
 
 describe("quoteFreeShippingThreshold", () => {

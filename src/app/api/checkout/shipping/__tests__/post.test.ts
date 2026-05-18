@@ -5,7 +5,7 @@ import {
 } from "@/src/lib/shipping/provider";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
-import type { ShippingProvider } from "@/src/lib/shipping/types";
+import { ShippingProviderError, type ShippingProvider } from "@/src/lib/shipping/types";
 
 vi.mock("@/src/lib/repositories/siteSettingsRepository", async () => {
   const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
@@ -129,5 +129,28 @@ describe("POST /api/checkout/shipping", () => {
       }),
     );
     expect(res.status).toBe(400);
+  });
+
+  it("returns 502 when primary fails and fixedRate fallback is disabled", async () => {
+    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const settings = getDefaultSiteSettings();
+    settings.shipping.fixedRate.enabledAsFallback = false;
+    (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
+
+    __setShippingProviderForTests("melhor-envio", {
+      id: "melhor-envio",
+      async calculate() {
+        throw new ShippingProviderError("down", "melhor-envio", "provider_unavailable");
+      },
+    });
+
+    const res = await POST(
+      jsonRequest({
+        postalCode: "20040-001",
+        items: [{ productId: "p1", quantity: 1, unitPrice: 100, weightKg: 0.5 }],
+      }),
+    );
+    expect(res.status).toBe(502);
   });
 });
