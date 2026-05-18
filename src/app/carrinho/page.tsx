@@ -61,19 +61,33 @@ export default function CarrinhoPage() {
                 {items.map((item) => (
                   <li key={item.id} className={styles.item}>
                     {/* Thumbnail */}
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      width={100}
-                      height={100}
-                      sizes="(max-width: 640px) 88px, 100px"
-                      className={styles.itemThumb}
-                      loading="lazy"
-                    />
+                    <Link
+                      href={`/produto/${item.productSlug}`}
+                      className={styles.itemThumbLink}
+                      aria-hidden="true"
+                      tabIndex={-1}
+                    >
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        width={100}
+                        height={100}
+                        sizes="(max-width: 640px) 88px, 100px"
+                        className={styles.itemThumb}
+                        loading="lazy"
+                      />
+                    </Link>
 
                     {/* Body */}
                     <div className={styles.itemBody}>
-                      <p className={styles.itemName}>{item.name}</p>
+                      <p className={styles.itemName}>
+                        <Link
+                          href={`/produto/${item.productSlug}`}
+                          className={styles.itemNameLink}
+                        >
+                          {item.name}
+                        </Link>
+                      </p>
                       {item.variantLabel ? (
                         <p className={styles.itemMeta}>{item.variantLabel}</p>
                       ) : null}

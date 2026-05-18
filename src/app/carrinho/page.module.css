@@ -113,6 +113,11 @@
   }
 }
 
+.itemThumbLink {
+  display: block;
+  border-radius: 10px;
+}
+
 .itemThumb {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -133,6 +138,16 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   line-height: 1.3;
+}
+
+.itemNameLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.itemNameLink:hover,
+.itemNameLink:focus-visible {
+  text-decoration: underline;
 }
 
 .itemMeta {
