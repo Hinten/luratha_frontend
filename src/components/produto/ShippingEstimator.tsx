@@ -47,6 +47,9 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
   useEffect(() => {
     const stored = getStoredShippingEstimate();
     if (stored) {
+      // Carrega o estimate salvo só após a hidratação (evita mismatch SSR).
+      // Mesmo padrão de CartContext.tsx ao reidratar o localStorage.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPostalCode(stored.postalCode);
       setResult({
         destinationPostalCode: stored.postalCode,
@@ -141,9 +144,7 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
             </p>
           )}
 
-          
-
-          {process.env.NODE_ENV === 'development' && result.referenceShippingCost !== null && (
+          {process.env.NODE_ENV === "development" && result.referenceShippingCost !== null && (
             <p className={styles.muted}>
               [DEV] Referência: frete de 1kg para esse CEP custa{" "}
               {formatBRL(result.referenceShippingCost)}. Itens deste produto a partir de{" "}
