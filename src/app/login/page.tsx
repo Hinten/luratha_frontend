@@ -4,7 +4,6 @@ import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { AuthClientError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -35,13 +34,7 @@ function LoginForm() {
       const target = redirectParam && redirectParam.startsWith("/") ? redirectParam : "/";
       router.push(target);
     } catch (err) {
-      if (err instanceof AuthClientError) {
-        setError(err.message);
-      } else {
-        // Unknown failure — surface in console/ErrorBoundary instead of
-        // hiding it behind a generic "Erro ao entrar." string.
-        throw err;
-      }
+      setError(err instanceof Error ? err.message : "Erro ao entrar.");
     } finally {
       setLoading(false);
     }

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import AddToCartButton from "@/src/components/produto/AddToCartButton";
+import type { CartItemInput } from "@/src/contexts/CartContext";
 
-const mockAddItem = vi.fn();
+const mockAddItem = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/src/contexts/CartContext", () => ({
   useCart: () => ({
@@ -11,18 +12,27 @@ vi.mock("@/src/contexts/CartContext", () => ({
     updateQuantity: vi.fn(),
     clearCart: vi.fn(),
     items: [],
+    cart: { itemCount: 0, subtotal: 0 },
     totalItems: 0,
     totalPrice: 0,
+    isReady: true,
+    isSyncing: false,
+    error: null,
   }),
 }));
 
-const defaultProps = {
+const sampleItem: CartItemInput = {
   productId: "prod-1",
+  variantId: "var-1",
+  variantSku: "SKU-001",
+  productSlug: "vestido-bordado-sku-001",
   name: "Vestido Bordado",
-  slug: "vestido-bordado",
-  imageUrl: "/img/vestido.jpg",
-  price: 389,
-  size: "M",
+  photoId: "photo-1",
+  imageUrl: "https://example.com/img/vestido.jpg",
+  variantLabel: "Azul / M",
+  unitPrice: 389,
+  currency: "BRL",
+  quantity: 1,
 };
 
 describe("AddToCartButton", () => {
@@ -36,46 +46,44 @@ describe("AddToCartButton", () => {
   });
 
   it("renders with the correct aria-label", () => {
-    render(<AddToCartButton {...defaultProps} />);
+    render(<AddToCartButton item={sampleItem} />);
     expect(
-      screen.getByRole("button", { name: "Adicionar Vestido Bordado ao carrinho" })
+      screen.getByRole("button", { name: "Adicionar Vestido Bordado ao carrinho" }),
     ).toBeInTheDocument();
   });
 
   it("shows 'ADICIONAR AO CARRINHO' initially", () => {
-    render(<AddToCartButton {...defaultProps} />);
+    render(<AddToCartButton item={sampleItem} />);
     expect(screen.getByRole("button")).toHaveTextContent("ADICIONAR AO CARRINHO");
   });
 
-  it("calls addItem with the correct arguments on click", () => {
-    render(<AddToCartButton {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
-    expect(mockAddItem).toHaveBeenCalledWith({
-      productId: "prod-1",
-      name: "Vestido Bordado",
-      slug: "vestido-bordado",
-      imageUrl: "/img/vestido.jpg",
-      price: 389,
-      size: "M",
+  it("calls addItem with the full item payload on click", async () => {
+    render(<AddToCartButton item={sampleItem} />);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+      );
     });
+    expect(mockAddItem).toHaveBeenCalledWith(sampleItem);
   });
 
-  it("calls addItem quantity times when quantity > 1", () => {
-    render(<AddToCartButton {...defaultProps} quantity={3} />);
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
-    expect(mockAddItem).toHaveBeenCalledTimes(3);
-  });
-
-  it("shows '✓ ADICIONADO!' feedback after click", () => {
-    render(<AddToCartButton {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
+  it("shows '✓ ADICIONADO!' feedback after click", async () => {
+    render(<AddToCartButton item={sampleItem} />);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+      );
+    });
     expect(screen.getByRole("button")).toHaveTextContent("✓ ADICIONADO!");
   });
 
-  it("reverts text back after 2500ms", () => {
-    render(<AddToCartButton {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
-    expect(screen.getByRole("button")).toHaveTextContent("✓ ADICIONADO!");
+  it("reverts text back after 2500ms", async () => {
+    render(<AddToCartButton item={sampleItem} />);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+      );
+    });
     act(() => {
       vi.advanceTimersByTime(2500);
     });
@@ -83,20 +91,24 @@ describe("AddToCartButton", () => {
   });
 
   it("does not call addItem when disabled", () => {
-    render(<AddToCartButton {...defaultProps} disabled />);
+    render(<AddToCartButton item={sampleItem} disabled />);
     fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     expect(mockAddItem).not.toHaveBeenCalled();
   });
 
   it("does not call addItem when onBeforeAdd returns false", () => {
-    render(<AddToCartButton {...defaultProps} onBeforeAdd={() => false} />);
+    render(<AddToCartButton item={sampleItem} onBeforeAdd={() => false} />);
     fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     expect(mockAddItem).not.toHaveBeenCalled();
   });
 
-  it("calls addItem when onBeforeAdd returns true", () => {
-    render(<AddToCartButton {...defaultProps} onBeforeAdd={() => true} />);
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
+  it("calls addItem when onBeforeAdd returns true", async () => {
+    render(<AddToCartButton item={sampleItem} onBeforeAdd={() => true} />);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+      );
+    });
     expect(mockAddItem).toHaveBeenCalledTimes(1);
   });
 });

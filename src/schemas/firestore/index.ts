@@ -31,6 +31,8 @@ export {
   type CartItem,
   type Cart,
   validateCartItem,
+  validateCart,
+  buildCartItemId,
 } from "@/src/schemas/firestore/carts";
 export {
   couponSchema,
