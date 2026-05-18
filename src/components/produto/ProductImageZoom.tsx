@@ -28,6 +28,15 @@ export default function ProductImageZoom({
 }: ProductImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mainImageErrored, setMainImageErrored] = useState(false);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
+  const [prevSrc, setPrevSrc] = useState(src);
+
+  // Reset load/error state when the gallery switches to another image.
+  if (src !== prevSrc) {
+    setPrevSrc(src);
+    setMainImageErrored(false);
+    setMainImageLoaded(false);
+  }
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
@@ -77,15 +86,27 @@ export default function ProductImageZoom({
           className={styles.mainImage}
         />
       ) : (
-        // Uses pre-rendered Firebase Storage variants via custom srcSet — next/image's optimizer would replace them with on-the-fly resizes of the desktop variant.
-        // eslint-disable-next-line @next/next/no-img-element
+        <>
+          {!mainImageLoaded && (
+            <div className={styles.skeleton} aria-hidden="true" />
+          )}
+        {/* Uses pre-rendered Firebase Storage variants via custom srcSet — next/image's optimizer would replace them with on-the-fly resizes of the desktop variant. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          ref={(node) => {
+            if (node?.complete) {
+              setMainImageLoaded(true);
+            }
+          }}
           src={src}
           srcSet={srcSet}
           sizes={sizes}
           alt={alt}
+          decoding="async"
+          fetchPriority="high"
+          onLoad={() => setMainImageLoaded(true)}
           onError={() => setMainImageErrored(true)}
-          className={`${styles.mainImage} ${canZoom ? styles.zoomableImage : ""}`}
+          className={`${styles.mainImage} ${mainImageLoaded ? "" : styles.imageLoading} ${canZoom ? styles.zoomableImage : ""}`}
           onPointerDown={(event) => {
             pointerStartRef.current = { x: event.clientX, y: event.clientY };
             draggedRef.current = false;
@@ -130,6 +151,7 @@ export default function ProductImageZoom({
             draggedRef.current = false;
           }}
         />
+        </>
       )}
       {canZoom && (
         <>
