@@ -18,15 +18,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: TypeScript check
-        run: npx tsc --noEmit
+        run: pnpm run typecheck
       - name: ESLint
-        run: npm run lint
+        run: pnpm run lint
 
   unit:
     name: Unit / component (Vitest jsdom)
@@ -34,13 +35,14 @@ jobs:
     needs: lint-typecheck
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Run unit tests
-        run: npm test
+        run: pnpm test
 
   integration-cloud:
     name: Integration (cloud Firestore)
@@ -73,16 +75,18 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
       - uses: actions/setup-node@v4
         if: steps.check_secrets.outputs.skip != 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
       - if: steps.check_secrets.outputs.skip != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Run cloud integration tests
         if: steps.check_secrets.outputs.skip != 'true'
-        run: npm run test:firestore
+        run: pnpm run test:firestore
 
   functions-cloud:
     name: Functions trigger (cloud deploy + tests)
@@ -117,15 +121,18 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
       - uses: actions/setup-node@v4
         if: steps.check_secrets.outputs.skip != 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
       - if: steps.check_secrets.outputs.skip != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Install and build Functions
         if: steps.check_secrets.outputs.skip != 'true'
+        # Functions keep their own npm-based toolchain — not part of the pnpm workspace.
         run: |
           npm --prefix functions ci
           npm --prefix functions run build
@@ -143,7 +150,7 @@ jobs:
         run: npx firebase-tools deploy --only functions --project luratha-96386 --force --non-interactive
       - name: Run Functions trigger tests
         if: steps.check_secrets.outputs.skip != 'true'
-        run: npm run test:functions:cloud
+        run: pnpm run test:functions:cloud
       - name: Cleanup credentials
         if: always() && steps.check_secrets.outputs.skip != 'true'
         run: rm -rf .ci-secrets
@@ -177,26 +184,29 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
       - uses: actions/setup-node@v4
         if: steps.check_secrets.outputs.skip != 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
       - if: steps.check_secrets.outputs.skip != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
         if: steps.check_secrets.outputs.skip != 'true'
-        run: npx playwright install --with-deps chromium
+        working-directory: apps/store
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run E2E tests
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 6
-        run: npm run test:e2e
+        run: pnpm run test:e2e
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report
+          path: apps/store/playwright-report
           retention-days: 7
 
   report-failure:

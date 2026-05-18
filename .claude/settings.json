@@ -2,6 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm install*)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm --filter *)",
+      "Bash(npx turbo *)",
       "Bash(java -version)",
       "Bash(firebase --version)",
       "Bash(npx playwright *)",
@@ -21,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && npm ci --prefer-offline"
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && corepack enable && pnpm install --frozen-lockfile"
           }
         ]
       }

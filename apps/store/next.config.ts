@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /**
@@ -43,6 +44,9 @@ function backfillFirebaseClientEnv(): void {
 backfillFirebaseClientEnv();
 
 const nextConfig: NextConfig = {
+  // Monorepo: trace files from the workspace root so the standalone output
+  // resolves dependencies hoisted by pnpm into the root node_modules.
+  outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   typedRoutes: true,
   serverExternalPackages: ["firebase", "firebase-admin"],
   images: {

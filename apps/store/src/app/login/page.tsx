@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -31,7 +32,11 @@ function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
-      const target = redirectParam && redirectParam.startsWith("/") ? redirectParam : "/";
+      // redirectParam is arbitrary runtime input, so it cannot be a statically
+      // typed route — cast to Route for the typedRoutes-checked router.push.
+      const target = (
+        redirectParam && redirectParam.startsWith("/") ? redirectParam : "/"
+      ) as Route;
       router.push(target);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao entrar.");

@@ -22,31 +22,34 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "apphosting": {
-    "backendId": "luratha-app-frontend",
-    "rootDir": "/",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions",
-      "test",
-      "__tests__",
-      "*/__tests__",
-      "e2e",
-      "docs",
-      "playwright.config.ts",
-      "vitest.config.mts",
-      "vitest.cloud.config.mts",
-      "vitest.cloud-functions.config.mts",
-      "README.md",
-      "storage.rules",
-      "firestore.rules",
-      "playwright-report",
-      ".playwright-mcp"
-    ]
-  },
+  "apphosting": [
+    {
+      "backendId": "luratha-app-frontend",
+      "rootDir": "apps/store",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions",
+        "**/__tests__",
+        "**/test",
+        "apps/store/e2e",
+        "apps/store/test-images",
+        "docs",
+        "plan",
+        "**/playwright.config.ts",
+        "**/vitest.config.mts",
+        "**/vitest.cloud.config.mts",
+        "**/vitest.cloud-functions.config.mts",
+        "README.md",
+        "storage.rules",
+        "firestore.rules",
+        "**/playwright-report",
+        ".playwright-mcp"
+      ]
+    }
+  ],
   "storage": {
     "rules": "storage.rules"
   },

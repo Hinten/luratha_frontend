@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,15 +11,18 @@
 !.yarn/versions
 
 # testing
-/coverage
-/playwright-report
-/test-results
-/blob-report
+coverage/
+playwright-report/
+test-results/
+blob-report/
 .playwright-mcp
 
+# turborepo
+.turbo
+
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
 /build
@@ -28,7 +31,7 @@
 .DS_Store
 *.pem
 *.txt.tmp
-src/app/sale/test.txt
+apps/store/src/app/sale/test.txt
 
 # debug
 npm-debug.log*
