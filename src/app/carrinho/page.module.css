@@ -276,27 +276,6 @@
   font-size: 1.0625rem;
 }
 
-.shippingNote {
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--color-neutral-dark) 55%, transparent);
-}
-
-.freeShippingBar {
-  margin-top: 0.5rem;
-  width: 100%;
-  height: 6px;
-  background-color: color-mix(in srgb, var(--color-neutral-mid) 60%, transparent);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.freeShippingFill {
-  height: 100%;
-  background-color: var(--color-primary);
-  transition: width 300ms ease;
-}
-
 .checkoutBtn {
   width: 100%;
   padding: 1rem 2rem;

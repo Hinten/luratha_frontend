@@ -2,19 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useCart } from "@/src/contexts/CartContext";
-import {
-  getShippingEstimateServerSnapshot,
-  getShippingEstimateSnapshot,
-  subscribeShippingEstimate,
-} from "@/src/lib/shipping/clientStorage";
-import InfoTooltip from "@/src/components/InfoTooltip";
+import { useCartShipping } from "@/src/hooks/useCartShipping";
 import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
+import CartShippingOptions, {
+  cartShippingQuoteKey,
+} from "@/src/components/shipping/CartShippingOptions";
 import styles from "./page.module.css";
-
-const FREE_SHIPPING_TOOLTIP =
-  "O frete grátis depende da região de entrega — o valor varia conforme o CEP.";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -32,25 +27,32 @@ export default function CarrinhoPage() {
     error,
   } = useCart();
 
-  const estimate = useSyncExternalStore(
-    subscribeShippingEstimate,
-    getShippingEstimateSnapshot,
-    getShippingEstimateServerSnapshot,
-  );
+  const shipping = useCartShipping(items);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const isEmpty = items.length === 0;
-  const freeShippingThreshold =
-    estimate?.freeShippingEnabled && estimate.freeShippingThreshold !== null
-      ? estimate.freeShippingThreshold
+
+  const cheapest =
+    shipping.quotes.length > 0
+      ? shipping.quotes.reduce((a, b) => (b.price < a.price ? b : a))
       : null;
-  const remainingForFreeShipping =
-    freeShippingThreshold !== null ? Math.max(0, freeShippingThreshold - totalPrice) : null;
+  const cheapestKey = cheapest ? cartShippingQuoteKey(cheapest) : null;
   const eligibleForFreeShipping =
-    freeShippingThreshold !== null && totalPrice >= freeShippingThreshold;
-  const progressPercent =
-    freeShippingThreshold !== null && freeShippingThreshold > 0
-      ? Math.min(100, Math.round((totalPrice / freeShippingThreshold) * 100))
-      : 0;
+    shipping.freeShippingThreshold !== null &&
+    totalPrice >= shipping.freeShippingThreshold;
+
+  const validKeys = new Set(shipping.quotes.map(cartShippingQuoteKey));
+  const effectiveKey =
+    selectedKey !== null && validKeys.has(selectedKey) ? selectedKey : cheapestKey;
+  const selectedQuote =
+    shipping.quotes.find((q) => cartShippingQuoteKey(q) === effectiveKey) ?? null;
+  const selectedShippingCost =
+    selectedQuote === null
+      ? null
+      : eligibleForFreeShipping && effectiveKey === cheapestKey
+        ? 0
+        : selectedQuote.price;
+  const grandTotal = totalPrice + (selectedShippingCost ?? 0);
 
   return (
     <main className={styles.page}>
@@ -183,56 +185,35 @@ export default function CarrinhoPage() {
 
               <ShippingCepForm title="Calcular frete" />
 
+              <CartShippingOptions
+                quotes={shipping.quotes}
+                freeShippingThreshold={shipping.freeShippingThreshold}
+                subtotal={totalPrice}
+                loading={shipping.loading}
+                error={shipping.error}
+                hasPostalCode={shipping.postalCode !== null}
+                selectedKey={effectiveKey ?? ""}
+                onSelect={setSelectedKey}
+              />
+
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Frete</span>
                 <span>
-                  {eligibleForFreeShipping
-                    ? "Grátis"
-                    : freeShippingThreshold !== null
-                      ? "A calcular"
-                      : "Calcule o frete"}
+                  {selectedShippingCost === null
+                    ? shipping.loading
+                      ? "Calculando…"
+                      : "A calcular"
+                    : selectedShippingCost === 0
+                      ? "Grátis"
+                      : formatBRL(selectedShippingCost)}
                 </span>
               </div>
-
-              {freeShippingThreshold !== null ? (
-                eligibleForFreeShipping ? (
-                  <p className={styles.shippingNote} aria-live="polite">
-                    Você ganhou frete grátis
-                    <InfoTooltip text={FREE_SHIPPING_TOOLTIP} /> para o CEP{" "}
-                    {estimate?.postalCode}.
-                  </p>
-                ) : (
-                  <div aria-live="polite">
-                    <p className={styles.shippingNote}>
-                      Faltam {formatBRL(remainingForFreeShipping ?? 0)} para frete grátis
-                      <InfoTooltip text={FREE_SHIPPING_TOOLTIP} /> no CEP{" "}
-                      {estimate?.postalCode}.
-                    </p>
-                    <div
-                      className={styles.freeShippingBar}
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={progressPercent}
-                    >
-                      <div
-                        className={styles.freeShippingFill}
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              ) : (
-                <p className={styles.shippingNote}>
-                  Informe seu CEP acima para ver o frete e o valor do frete grátis.
-                </p>
-              )}
 
               <hr className={styles.summaryDivider} />
 
               <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
                 <span>Total</span>
-                <span>{formatBRL(totalPrice)}</span>
+                <span>{formatBRL(grandTotal)}</span>
               </div>
 
               <button
