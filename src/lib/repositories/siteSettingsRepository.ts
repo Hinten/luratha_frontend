@@ -30,13 +30,16 @@ function settingsDocRef() {
 }
 
 export async function getSiteSettings(options: { forceFresh?: boolean } = {}): Promise<SiteSettings> {
+  console.debug("Buscando site settings...");
   if (!options.forceFresh && cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
+    console.debug("Usando site settings do cache.", cache.value);
     return cache.value;
   }
 
   const snapshot = await settingsDocRef().get();
   const value = snapshot.exists ? snapshot.data()! : getDefaultSiteSettings();
   cache = { value, fetchedAt: Date.now() };
+  console.debug("Site settings atualizados.", value);
   return value;
 }
 

@@ -85,6 +85,7 @@ export async function POST(request: Request) {
 
   try {
     if (body.mode === "free-shipping-only") {
+      console.debug("Calculando threshold de frete grátis para CEP", body.postalCode);
       const result = await quoteFreeShippingThreshold({
         destinationPostalCode: body.postalCode,
       });
