@@ -1,178 +1,172 @@
-# Plano: App de administração (multi-app monorepo)
+# Plano: App de administração (monorepo multi-app)
 
-Status: proposta — branch `claude/plan-admin-app-uYvil`.
+Status: **aprovado** — branch `claude/plan-admin-app-uYvil`.
 
-## 1. Motivação
+## Context
 
-PR #102 (`feat(shipping)`) introduziu o documento `settings/global` (`siteSettings`) —
-provider de frete, `originPostalCode`, divisor de frete grátis, tabela `fixedRate`.
-Hoje essa configuração só pode ser alterada **editando o Firestore na mão**. Falta
-uma interface operacional. A solução é um **app de administração separado** que:
+PR #102 (`feat(shipping)`) introduziu o documento Firestore `settings/global`
+(`siteSettings`): provider de frete, `originPostalCode`, divisor de frete grátis,
+tabela `fixedRate`. Hoje essa configuração **só pode ser alterada editando o Firestore
+na mão** — não há interface operacional. O mesmo vale, no futuro, para catálogo,
+pedidos e cupons.
 
-- compartilha schemas / repositories / SDK Firebase com a loja, sem duplicação;
-- roda num **backend de App Hosting próprio**, isolado da storefront (deploy, escala
-  e incidentes do admin não afetam a loja);
-- é a base para gerir catálogo, pedidos e cupons no futuro.
+A solução: um **app de administração separado** que (1) compartilha código com a loja
+sem duplicação, (2) roda num **backend de App Hosting próprio** isolado da storefront,
+e (3) serve de base para gestão operacional. Referência de arquitetura:
+`Hinten/next_erp` (Turborepo + workspaces, `apps/*` + `packages/*`).
 
-Referência de arquitetura: `Hinten/next_erp` (Turborepo + workspaces, `apps/*` +
-`packages/*`).
+Resultado pretendido: storefront e admin como apps independentes num monorepo, com
+deploy/escala/incidentes isolados, e um editor de Site Settings funcionando como v1.
 
-## 2. Decisões já tomadas
+## Decisões (confirmadas com o usuário)
 
 | Tema | Decisão |
 |---|---|
-| Tooling de monorepo | **pnpm + Turborepo** (ver §3) |
-| Deploy do admin | **Backend de App Hosting separado + subdomínio** `admin.luratha.com.br` |
-| Escopo v1 | **Editor de Site Settings** (`settings/global`) — sobre a base de auth/shell |
+| Tooling de monorepo | **pnpm + Turborepo** |
+| Deploy do admin | Backend de App Hosting separado + subdomínio `admin.luratha.com.br` |
+| Escopo v1 | Editor de Site Settings (`settings/global`), sobre a base de auth/shell |
+| Sessão loja/admin | **Separada** — cookie `__session` host-only, sem `domain` |
 
-## 3. pnpm vs npm — recomendação: pnpm
+**pnpm sobre npm**: num monorepo multi-app, pnpm impede "phantom dependencies" — o
+`apps/admin` só importa o que declarou, reforçando o isolamento pedido. Store
+endereçável por conteúdo (instala rápido no container efêmero e no CI), workspaces
+nativos (`workspace:*`), e é o que o `next_erp` usa. Firebase App Hosting suporta pnpm
+via `packageManager` + `pnpm-lock.yaml`.
 
-Para um monorepo multi-app, **pnpm é a melhor escolha**, e o projeto ainda é WIP:
+## Estado atual relevante
 
-- **Isolamento real de dependências.** pnpm não permite "phantom dependencies": o
-  `apps/admin` só consegue importar pacotes que declarou. Isso reforça diretamente o
-  objetivo "o admin não mexe com a loja".
-- **Workspaces nativos** com protocolo `workspace:*` para linkar `packages/*`.
-- **Store endereçável por conteúdo** → instalações muito mais rápidas e menos disco
-  (importa no container efêmero da nuvem e no CI).
-- **Consistência com `next_erp`**, a referência pedida.
-- **Firebase App Hosting suporta pnpm** (detecta via campo `packageManager` +
-  `pnpm-lock.yaml`).
+- App único Next.js 16.2.6 / React 19, raiz do repo é o app. `firebase.json` tem
+  `apphosting` como **objeto único** (`backendId: luratha-app-frontend`, `rootDir: /`).
+- `.firebaserc` → projeto `luratha-96386`. `apphosting.yaml` na raiz.
+- `src/lib/auth/requireUser.ts` já lê a custom claim `admin` (`decoded.admin === true`)
+  e expõe `requireUser()`, `requireOwnerOrAdmin()`, `AuthError`. **Reusar, não recriar.**
+- `firestore.rules` já usa `isAdmin()` (claim `admin`) para escrita de catálogo,
+  pedidos, cupons.
+- Sessão: `src/app/api/auth/session/route.ts` cria o cookie `__session`. Reusar.
+- Schemas Zod em `src/schemas/firestore/`; SDK/converters em `src/lib/firestore/`;
+  repositories em `src/lib/repositories/`. Alias atual `@/*`.
+- `siteSettings` **NÃO existe em `master`** — vive na branch da PR #102 (draft).
+- Hook `SessionStart` (`.claude/settings.json`) roda `npm ci`; CI (`test.yml`) usa
+  `cache: npm` + `npm ci`. Ambos precisam migrar para pnpm.
 
-Custo (único, contido): migrar `package-lock.json` → `pnpm-lock.yaml`, atualizar o
-hook `SessionStart` (`npm ci` → `pnpm install --frozen-lockfile`), o CI (`cache: npm`
-→ `pnpm/action-setup`) e o allowlist de permissões. Turborepo entra para orquestrar
-e cachear `lint`/`test`/`build` só nos apps afetados.
-
-## 4. Layout-alvo do monorepo
+## Layout-alvo
 
 ```
 luratha_frontend/
 ├── apps/
-│   ├── store/                 # storefront atual (todo o conteúdo público)
-│   │   ├── src/app/           # rotas públicas movidas de src/app/
-│   │   ├── next.config.ts
-│   │   ├── apphosting.yaml    # backend luratha-app-frontend
-│   │   └── package.json
+│   ├── store/                 # storefront atual (rotas públicas de src/app/)
+│   │   ├── src/app/  next.config.ts  apphosting.yaml  package.json
 │   └── admin/                 # NOVO app de administração
-│       ├── src/app/
-│       ├── next.config.ts
-│       ├── apphosting.yaml    # backend luratha-app-admin
-│       └── package.json
+│       ├── src/app/  middleware.ts  next.config.ts  apphosting.yaml  package.json
 ├── packages/
-│   ├── schemas/               # de src/schemas/firestore — Zod + collections
-│   ├── firestore/             # de src/lib/firestore — SDK clients + converters
+│   ├── schemas/               # de src/schemas/firestore
+│   ├── firestore/             # de src/lib/firestore (clients + converters)
 │   ├── repositories/          # de src/lib/repositories
 │   ├── core/                  # constants, errors, types, query strategies, embeddings
-│   ├── auth/                  # requireUser, sessão, gate de claim admin
-│   ├── ui/                    # componentes de design-system + tokens (globals.css)
+│   ├── auth/                  # requireUser, sessão, gate da claim admin
+│   ├── ui/                    # design-system + tokens (globals.css)
 │   └── config/                # eslint / tsconfig / tailwind compartilhados
 ├── functions/                 # inalterado
-├── firebase.json              # apphosting vira ARRAY de 2 backends
-├── turbo.json
-├── pnpm-workspace.yaml
-└── package.json               # raiz do workspace (sem deps de runtime)
+├── firebase.json  turbo.json  pnpm-workspace.yaml  package.json (raiz workspace)
 ```
 
-Pacotes importados por nome (`@luratha/schemas`, `@luratha/firestore`, …). Cada app
-mantém o alias `@/*` para o próprio `src`. Pacotes ficam como **TS source-only** e
-cada app os declara em `transpilePackages` no `next.config.ts`. `outputFileTracingRoot`
-aponta para a raiz do monorepo para o tracing do App Hosting funcionar.
+Pacotes importados por nome (`@luratha/schemas`, …), mantidos como TS source-only e
+declarados em `transpilePackages` no `next.config.ts` de cada app; cada app mantém
+`@/*` para o próprio `src`. `outputFileTracingRoot` aponta para a raiz (tracing do
+App Hosting). Os módulos `import "server-only"` de `firestore`/`auth` continuam
+válidos; adicionar ao alias `server-only` já presente nos `vitest.config`.
 
-`packages/firestore` e `packages/auth` contêm módulos `import "server-only"` —
-permanecem válidos dentro dos apps Next; os `vitest.config` ganham o alias de
-`server-only` já existente.
+## Fases de execução (cada fase = 1 PR)
 
-## 5. firebase.json — dois backends de App Hosting
+**Fase 0 — Prereqs.** Mergear PR #102 (traz `siteSettings`); confirmar como a claim
+`admin` é provisionada (script/Function) — se não existir, criar um script
+`set-admin-claim`. Fases 1–3 não dependem disto e podem começar já.
 
-`apphosting` passa de objeto para array:
+**Fase 1 — Esqueleto monorepo (alto risco, PR isolado).**
+- `pnpm-workspace.yaml`, `turbo.json`, `package.json` raiz; migrar
+  `package-lock.json` → `pnpm-lock.yaml`.
+- Mover storefront para `apps/store/` (rotas, components, lib, etc.), `next.config.ts`
+  e `apphosting.yaml` para dentro do app.
+- `firebase.json`: `apphosting` vira **array**, primeira entrada
+  `{backendId: luratha-app-frontend, rootDir: apps/store}`.
+- Atualizar hook `SessionStart` (`pnpm install --frozen-lockfile`), `test.yml`
+  (`pnpm/action-setup`), allowlist de permissões em `.claude/settings.json`.
+- **Atualizar `CLAUDE.md`**: secção `Commands` (`npm run *` → `pnpm` / `turbo run *`),
+  `Directory Map` (passa a descrever `apps/*` + `packages/*`), `Mandatory order`
+  (comandos turbo), e a nota de `vitest.config` server-only.
+- **Zero mudança de comportamento.** Tratar a quebra pré-existente de `typedRoutes`
+  em `src/app/login/page.tsx` ao reorganizar rotas.
 
-```jsonc
-"apphosting": [
-  {
-    "backendId": "luratha-app-frontend",
-    "rootDir": "apps/store",
-    "ignore": ["node_modules", ".git", "**/__tests__", "e2e", "..."]
-  },
-  {
-    "backendId": "luratha-app-admin",
-    "rootDir": "apps/admin",
-    "ignore": ["node_modules", ".git", "**/__tests__", "..."]
-  }
-]
-```
+**Fase 2 — Pacotes compartilhados.** Extrair `schemas`, `firestore`, `repositories`,
+`core`, `auth`, `ui` de forma incremental, ajustando imports para `@luratha/*`.
 
-Passos de infra (fora do código, exigem acesso ao console Firebase/GCP):
-1. `firebase apphosting:backends:create` para `luratha-app-admin`.
-2. Apontar o subdomínio `admin.luratha.com.br` (DNS + domínio custom no App Hosting).
-3. Configurar env/secrets do backend admin (`FIREBASE_SERVICE_ACCOUNT_BASE64`, etc.).
+**Fase 3 — Scaffold do admin.** `apps/admin`: app Next.js; `login/` reusando o fluxo
+de session-cookie de `packages/auth`; `middleware.ts` exigindo `__session` + claim
+`admin === true` (reusa `requireUser()`); shell com nav lateral + dashboard mínimo;
+layout com `noindex`. Tema reusando tokens de `packages/ui`. Acrescentar `apps/admin`
+e a convenção de CRUD API do admin ao `Directory Map` / secção CRUD do `CLAUDE.md`.
+- **Sessão separada (decisão confirmada).** O admin reusa o handler de
+  `src/app/api/auth/session/route.ts`, que já cria o cookie `__session` **sem
+  atributo `domain`** (host-only) — separação é o comportamento padrão. Regra a
+  manter: **nunca** definir `domain: ".luratha.com.br"`. Mesmo projeto Firebase →
+  pool de usuários e claim `admin` compartilhados; sessão e login independentes por
+  subdomínio (IndexedDB do client SDK também é por-origem).
 
-Isolamento de sessão: o cookie reservado `__session` é por-origem. Loja em
-`luratha.com.br` e admin em `admin.luratha.com.br` → cookies separados, logins
-independentes. O admin gere o próprio fluxo de sessão.
+**Fase 4 — Editor de Site Settings (bloqueada pela Fase 0).**
+- Tela `apps/admin/src/app/configuracoes` lê `settings/global` via repositório de
+  `siteSettings` (`packages/repositories`).
+- Formulário: `providerId`, `originPostalCode`, `enabledServices[]`,
+  `fallbackProductWeightKg`, `cacheTtlSeconds`; bloco `freeShipping`; tabela
+  `fixedRate` (`entries[]` + `defaultEntry`).
+- Route handler do admin `PATCH /api/settings` com `export const runtime = "nodejs"`,
+  protegido por `requireUser()` + `isAdmin`, validação Zod (`error.issues`), semântica
+  PATCH `{...existing, ...payload, ...serverFields}`, `forceFresh` no cache.
+  Seguir skill `luratha-crud-api` (`.withConverter()`, sem catch genérico, strip de
+  campos computados por `transform`).
 
-## 6. App de administração — v1
+**Fase 5 — Infra + CI.** Segunda entrada `apphosting` em `firebase.json`
+(`backendId: luratha-app-admin, rootDir: apps/admin`); criar o backend
+(`firebase apphosting:backends:create`), subdomínio `admin.luratha.com.br` (DNS +
+domínio custom), env/secrets do backend admin. Matriz de `test.yml` passa a rodar
+`turbo run lint test build` por app. Atualizar docs: `CLAUDE.md` (CI matrix, deploy
+dos dois backends), `README.md` e `docs/admin-app-plan.md`.
 
-### 6.1 Auth e shell (base obrigatória do v1)
+## Arquivos críticos a tocar
 
-- Página de login (`apps/admin/src/app/login`) reusando o fluxo de session-cookie já
-  existente (`src/app/api/auth/session/route.ts`), extraído para `packages/auth`.
-- `middleware.ts` no admin: valida `__session` e exige a custom claim `admin === true`
-  (já lida por `requireUser()` em `src/lib/auth/requireUser.ts`). Sem a claim →
-  redireciona para login / 403.
-- Shell: layout com navegação lateral e dashboard mínimo. Tema próprio, mais sóbrio,
-  reutilizando os tokens de `packages/ui` (skill `visual-identity`).
-- **Pré-requisito:** confirmar como a claim `admin` é provisionada (script/Function).
-  Se não existir, adicionar um script `set-admin-claim` em `functions/` ou `scripts/`.
+- `firebase.json` — `apphosting` objeto → array de 2 backends.
+- `package.json` (raiz), novo `pnpm-workspace.yaml`, `turbo.json`, `pnpm-lock.yaml`.
+- `.claude/settings.json` — hook `SessionStart` + allowlist (npm → pnpm).
+- `.github/workflows/test.yml` — setup pnpm + comandos turbo.
+- `CLAUDE.md` — `Commands`, `Directory Map`, `Mandatory order`, CRUD API layout,
+  CI matrix; `README.md` — instruções de setup/deploy multi-app.
+- `next.config.ts`, `apphosting.yaml`, `tsconfig.json` — movidos/divididos por app.
+- Tudo em `src/` — redistribuído entre `apps/store` e `packages/*`.
+- Reusar sem reescrever: `src/lib/auth/requireUser.ts`,
+  `src/app/api/auth/session/route.ts`.
 
-### 6.2 Editor de Site Settings (feature v1)
+## Riscos
 
-Depende de **PR #102 estar mergeado** (traz o schema `siteSettings`, o repositório com
-cache e `settings/global`). Enquanto #102 for draft, este passo fica bloqueado — ver §8.
+- **PR #102 (draft) bloqueia a Fase 4** — `siteSettings` não está em `master`.
+- **Provisão da claim `admin`** precisa existir antes da Fase 3.
+- **Fase 1 é a mais arriscada**: muda imports/build/CI sem mudar comportamento — PR
+  isolado, revisado com cuidado.
+- App Hosting monorepo é suportado via `rootDir`, mas cada app precisa do próprio
+  `apphosting.yaml` + `next.config.ts` com `outputFileTracingRoot`.
+- Sessões separadas loja/admin: viável e padrão — o cookie `__session` é criado
+  host-only (sem `domain`) em `src/app/api/auth/session/route.ts:75`. Mesmo projeto
+  Firebase compartilha só o pool de usuários e a claim `admin`, não a sessão. Risco a
+  evitar: introduzir `domain` no cookie, o que ligaria SSO sem querer.
 
-- Tela `apps/admin/src/app/configuracoes` lê `settings/global` via o repositório de
-  `siteSettings` (em `packages/repositories`).
-- Formulário para editar: `providerId`, `originPostalCode`, `enabledServices[]`,
-  `fallbackProductWeightKg`, `cacheTtlSeconds`; bloco `freeShipping`
-  (`divisor`/`minThreshold`/`maxThreshold`/`enabled`); tabela `fixedRate`
-  (`entries[]` + `defaultEntry`).
-- Route handler do **próprio app admin** `PATCH /api/settings` com
-  `export const runtime = "nodejs"`, protegido por `requireUser()` + `isAdmin`,
-  validação Zod (`error.issues`), semântica PATCH `{...existing, ...payload,
-  ...serverFields}` e invalidação de cache (`forceFresh`).
-- Convenções da skill `luratha-crud-api`: `.withConverter()`, sem catch genérico,
-  strip de campos computados por `transform` antes de revalidar.
+## Verificação
 
-## 7. Fases de execução (cada fase = 1 PR)
-
-| Fase | Entrega | Risco |
-|---|---|---|
-| **0. Prereqs** | Mergear PR #102; confirmar provisão da claim `admin` | — |
-| **1. Esqueleto monorepo** | pnpm workspace + Turborepo; mover storefront para `apps/store`; CI/hook migrados; **zero mudança de comportamento**; build/test/e2e verdes | **Alto** — PR isolado e revisado com cuidado |
-| **2. Pacotes compartilhados** | Extrair `schemas`, `firestore`, `repositories`, `core`, `auth`, `ui` de forma incremental | Médio |
-| **3. Scaffold do admin** | `apps/admin`: login + middleware (gate da claim) + shell/dashboard | Médio |
-| **4. Editor de Site Settings** | Feature §6.2 + `PATCH /api/settings` + testes | Baixo |
-| **5. Infra + CI** | 2º backend App Hosting, subdomínio, matriz de CI por app, docs | Médio |
-
-A Fase 1 é a mais arriscada: muda imports, build e CI sem mudar comportamento.
-Deve ir sozinha num PR, validada por `npx tsc` → `lint` → `test` → `test:e2e`.
-
-## 8. Dependências e riscos
-
-- **PR #102 (draft) bloqueia a Fase 4.** O schema `siteSettings` vive na branch
-  `claude/flexible-shipping-provider-BMUjr`, não em `master`. Fases 1–3 não dependem
-  dele e podem começar já.
-- **Provisão da claim `admin`** precisa existir antes da Fase 3 — verificar.
-- **App Hosting monorepo**: suportado via `rootDir`; cada app precisa do próprio
-  `apphosting.yaml` e `next.config.ts` com `outputFileTracingRoot` na raiz.
-- **CI**: a matriz de `test.yml` passa a rodar `turbo run lint test build` e os suites
-  cloud por app. O job `report-failure` continua válido.
-- **`typedRoutes`**: hoje o build quebra em `src/app/login/page.tsx` (Next 16) — issue
-  pré-existente; tratar durante a Fase 1 ao reorganizar as rotas.
-
-## 9. Verificação por fase
-
-Ordem obrigatória do CLAUDE.md, agora via Turborepo:
-`turbo run typecheck` → `turbo run lint` → `turbo run test` → `turbo run test:e2e`.
-Mudanças de schema/Firebase: `test:firestore` no app afetado. SEO: cada rota nova do
-admin é interna (`robots`/sitemap não expõem o admin; `noindex` no layout do admin).
+- Por fase, ordem do CLAUDE.md via Turborepo: `turbo run typecheck` →
+  `turbo run lint` → `turbo run test` → `turbo run test:e2e`.
+- Fase 1: build/test/e2e da storefront verdes **sem diff de comportamento**;
+  install pnpm limpo no container e no CI.
+- Fase 3: login no admin com usuário sem claim `admin` → bloqueado/redirecionado;
+  com claim → acessa o shell.
+- Fase 4: editar `settings/global` na UI → `PATCH /api/settings` → reler do Firestore
+  e confirmar persistência; `test:firestore` no app afetado. Cobrir o route handler e
+  o form com testes unitários/cloud.
+- Fase 5: deploy dos dois backends; `luratha.com.br` e `admin.luratha.com.br`
+  respondendo de forma independente.
