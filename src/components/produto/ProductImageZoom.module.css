@@ -7,6 +7,30 @@
   cursor: default;
 }
 
+.imageLoading {
+  opacity: 0;
+}
+
+/* Shimmer placeholder shown until the main image finishes downloading. */
+.skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-mid) 25%,
+    var(--color-accent) 50%,
+    var(--color-neutral-mid) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
 @media (min-width: 1024px) {
   .zoomableImage {
     cursor: zoom-in;
