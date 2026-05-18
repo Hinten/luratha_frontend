@@ -1,20 +1,64 @@
 import { test, expect, type Page } from "@playwright/test";
 
+/** Cart item snapshot in the schema accepted by `validateCartItem`. */
 type E2ECartItem = {
+  id: string;
+  userId: "guestcart";
   productId: string;
+  variantId?: string;
+  variantSku: string;
+  productSlug: string;
   name: string;
-  slug: string;
+  photoId: string;
   imageUrl: string;
-  price: number;
-  size: string;
+  variantLabel?: string;
+  unitPrice: number;
   quantity: number;
+  currency: "BRL";
+  addedAt: string;
+  updatedAt: string;
 };
 
 async function openCartWithItems(page: Page, items: E2ECartItem[]) {
   await page.addInitScript((cartItems) => {
-    localStorage.setItem("luratha_cart", JSON.stringify(cartItems));
+    localStorage.setItem("luratha_cart_v2", JSON.stringify(cartItems));
   }, items);
   await page.goto("/carrinho");
+}
+
+function buildItem(
+  partial: {
+    productId: string;
+    variantId?: string;
+    variantSku: string;
+    productSlug: string;
+    name: string;
+    unitPrice: number;
+    variantLabel?: string;
+    quantity?: number;
+  },
+): E2ECartItem {
+  const now = new Date().toISOString();
+  const id = partial.variantId
+    ? `${partial.productId}__${partial.variantId}`
+    : partial.productId;
+  return {
+    id,
+    userId: "guestcart",
+    productId: partial.productId,
+    variantId: partial.variantId,
+    variantSku: partial.variantSku,
+    productSlug: partial.productSlug,
+    name: partial.name,
+    photoId: `${partial.productId}-photo-1`,
+    imageUrl: `https://firebasestorage.googleapis.com/v0/b/luratha-test/o/${partial.productSlug}.jpg?alt=media`,
+    variantLabel: partial.variantLabel,
+    unitPrice: partial.unitPrice,
+    quantity: partial.quantity ?? 1,
+    currency: "BRL",
+    addedAt: now,
+    updatedAt: now,
+  };
 }
 
 test.describe("Cart (Carrinho)", () => {
@@ -23,6 +67,7 @@ test.describe("Cart (Carrinho)", () => {
     await page.goto("/");
     await page.evaluate(() => {
       localStorage.removeItem("luratha_cart");
+      localStorage.removeItem("luratha_cart_v2");
     });
   });
 
@@ -53,19 +98,22 @@ test.describe("Cart (Carrinho)", () => {
 
   test("cart with items shows item rows and order summary", async ({ page }) => {
     await openCartWithItems(page, [
-      {
+      buildItem({
         productId: "test-1",
+        variantId: "var-m",
+        variantSku: "TEST_VESTIDO_M",
+        productSlug: "vestido-bordado-floral",
         name: "Vestido Bordado Floral",
-        slug: "vestido-bordado-floral",
-        imageUrl: "/images/vestido.jpg",
-        price: 389,
-        size: "M",
-        quantity: 1,
-      },
+        unitPrice: 389,
+        variantLabel: "M",
+      }),
     ]);
 
     await expect(page.getByText("Vestido Bordado Floral")).toBeVisible();
-    await expect(page.getByText("Tamanho: M")).toBeVisible();
+    // The cart row renders the variant label snapshot (e.g. "M" or "Azul / G").
+    await expect(
+      page.getByRole("list").getByText("M", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("complementary", { name: "Resumo do pedido" }),
     ).toBeVisible();
@@ -74,15 +122,15 @@ test.describe("Cart (Carrinho)", () => {
 
   test("quantity stepper increases item count", async ({ page }) => {
     await openCartWithItems(page, [
-      {
+      buildItem({
         productId: "test-1",
+        variantId: "var-p",
+        variantSku: "TEST_BLUSA_P",
+        productSlug: "blusa-artesanal",
         name: "Blusa Artesanal",
-        slug: "blusa-artesanal",
-        imageUrl: "/images/blusa.jpg",
-        price: 150,
-        size: "P",
-        quantity: 1,
-      },
+        unitPrice: 150,
+        variantLabel: "P",
+      }),
     ]);
 
     const increaseBtn = page.getByRole("button", { name: "Aumentar quantidade" });
@@ -93,15 +141,15 @@ test.describe("Cart (Carrinho)", () => {
 
   test("remove button removes item from cart", async ({ page }) => {
     await openCartWithItems(page, [
-      {
+      buildItem({
         productId: "test-1",
+        variantId: "var-g",
+        variantSku: "TEST_SAIA_G",
+        productSlug: "saia-boho",
         name: "Saia Boho",
-        slug: "saia-boho",
-        imageUrl: "/images/saia.jpg",
-        price: 200,
-        size: "G",
-        quantity: 1,
-      },
+        unitPrice: 200,
+        variantLabel: "G",
+      }),
     ]);
 
     await page.getByRole("button", { name: /remover saia boho/i }).click();
