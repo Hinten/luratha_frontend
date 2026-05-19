@@ -70,6 +70,8 @@ Internal panel, deployed to a separate App Hosting backend. Auth model:
 - The `(dashboard)/layout.tsx` server component is the real gate: `requireUser()` verifies the cookie and the layout enforces `user.isAdmin`.
 - `POST /api/auth/session` issues the `__session` cookie only for users with the `admin` claim — it sets the cookie **host-only** (no `domain`), keeping the admin session isolated from the storefront. Never add `domain`.
 
+Grant the `admin` custom claim with `pnpm --filter @luratha/admin grant-admin <email>` (needs Firebase credentials in the repo-root `.env`; `--revoke` removes it). The user must re-login afterwards.
+
 ### Directory Map
 
 Paths below are under `apps/store/`.

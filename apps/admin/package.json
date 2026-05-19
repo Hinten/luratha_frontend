@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3001",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "grant-admin": "tsx scripts/set-admin-claim.ts"
   },
   "dependencies": {
     "@luratha/auth": "workspace:*",
@@ -27,6 +28,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.22.1",
     "typescript": "^5"
   }
 }
