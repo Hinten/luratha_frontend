@@ -12,7 +12,7 @@
  */
 
 import { type FirestoreDataConverter, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { type Product, validateProduct } from "@/src/schemas/firestore";
+import { type Product, validateProduct } from "@luratha/schemas";
 
 /**
  * Converts a Firestore vector field to a plain number[].

@@ -1,4 +1,4 @@
-import type { ShippingSettings } from "@/src/schemas/firestore";
+import type { ShippingSettings } from "@luratha/schemas";
 import type { ShippingItemInput } from "@/src/lib/shipping/types";
 
 export interface RawShippingItem {

@@ -27,7 +27,7 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
 import { createStockRepository, StockRepositoryError } from "@/src/lib/repositories/stockRepository";
-import { firestoreCollections, validateStock } from "@/src/schemas/firestore";
+import { firestoreCollections, validateStock } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ─────────────────────────────────────────────────────────────────────────────

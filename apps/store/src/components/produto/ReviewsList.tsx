@@ -1,4 +1,4 @@
-import type { Review } from "@/src/schemas/firestore/reviews";
+import type { Review } from "@luratha/schemas/reviews";
 import styles from "./ReviewsList.module.css";
 
 function StarRating({ rating }: { rating: number }) {

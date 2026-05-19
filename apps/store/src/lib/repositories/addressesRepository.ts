@@ -12,7 +12,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type Address, validateAddress } from "@/src/schemas/firestore";
+import { firestoreCollections, type Address, validateAddress } from "@luratha/schemas";
 import { clientAddressConverter } from "@/src/lib/firestore/clientAddressConverter";
 
 type AddressUpdateInput = Partial<Omit<Address, "id" | "createdAt">>;

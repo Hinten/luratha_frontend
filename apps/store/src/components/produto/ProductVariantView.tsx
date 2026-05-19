@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
+import type { Product as FirestoreProduct, Stock } from "@luratha/schemas";
 import ProductGallery from "@/src/components/produto/ProductGallery";
 import PriceBlock from "@/src/components/produto/PriceBlock";
 import SizeSelector from "@/src/components/produto/SizeSelector";

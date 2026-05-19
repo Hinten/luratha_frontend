@@ -4,7 +4,7 @@ import {
   nonEmptyStringSchema,
   skuSchema,
   timestampSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 const productSlugSchema = z
   .string()

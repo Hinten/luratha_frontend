@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ImageWithFallback from "@/src/components/ImageWithFallback";
-import type { Category } from "@/src/schemas/firestore/category";
+import type { Category } from "@luratha/schemas/category";
 import styles from "./CategoryBlock.module.css";
 
 interface CategoryBlockProps {

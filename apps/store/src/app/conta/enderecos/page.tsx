@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
-import type { Address } from "@/src/schemas/firestore";
+import type { Address } from "@luratha/schemas";
 import AddressCard from "@/src/components/conta/AddressCard";
 import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./page.module.css";

@@ -18,7 +18,7 @@ import {
   vector,
   Timestamp,
 } from "firebase/firestore";
-import { type Product, validateProduct } from "@/src/schemas/firestore";
+import { type Product, validateProduct } from "@luratha/schemas";
 
 /**
  * Converts a Firestore vector field to a plain number[].

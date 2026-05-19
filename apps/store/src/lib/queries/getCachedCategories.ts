@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
-import { firestoreCollections, type Category } from "@/src/schemas/firestore";
+import { firestoreCollections, type Category } from "@luratha/schemas";
 
 const MAX_CATEGORIES = 100;
 

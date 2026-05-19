@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type Stock, validateStock } from "@/src/schemas/firestore";
+import { firestoreCollections, type Stock, validateStock } from "@luratha/schemas";
 
 type StockRepositoryErrorCode = "validation" | "not_found" | "unknown";
 

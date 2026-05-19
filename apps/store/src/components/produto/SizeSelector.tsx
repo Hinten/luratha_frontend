@@ -9,7 +9,7 @@ import type {
   Product as FirestoreProduct,
   ProductVariant,
   Stock,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 interface SizeSelectorProps {
   product: FirestoreProduct;

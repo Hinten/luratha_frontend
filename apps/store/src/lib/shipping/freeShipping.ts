@@ -1,4 +1,4 @@
-import type { FreeShippingConfig } from "@/src/schemas/firestore";
+import type { FreeShippingConfig } from "@luratha/schemas";
 import type { ShippingQuote } from "@/src/lib/shipping/types";
 
 /**

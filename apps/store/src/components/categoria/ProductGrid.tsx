@@ -1,4 +1,4 @@
-import type { Product, Stock } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@luratha/schemas";
 import styles from "./ProductGrid.module.css";
 import ProductCard from "../produto/ProductCard";
 

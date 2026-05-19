@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import HomeCategoriesSection from "@/src/components/home/HomeCategoriesSection";
-import { type Category, validateCategory } from "@/src/schemas/firestore";
+import { type Category, validateCategory } from "@luratha/schemas";
 
 vi.mock("next/link", () => ({
   default: ({

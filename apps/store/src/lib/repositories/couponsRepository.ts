@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type Coupon, validateCoupon } from "@/src/schemas/firestore";
+import { firestoreCollections, type Coupon, validateCoupon } from "@luratha/schemas";
 import { clientCouponConverter } from "@/src/lib/firestore/clientCouponConverter";
 
 type CouponListFilters = {

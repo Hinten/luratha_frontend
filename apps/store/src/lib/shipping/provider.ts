@@ -1,4 +1,4 @@
-import type { ShippingProviderId } from "@/src/schemas/firestore";
+import type { ShippingProviderId } from "@luratha/schemas";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
 import type { ShippingProvider } from "@/src/lib/shipping/types";

@@ -3,7 +3,7 @@ import {
   nonEmptyStringSchema,
   timestampSchema,
   uidSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 /**
  * Identidade fiscal do usuário — necessária para emissão de NF-e.

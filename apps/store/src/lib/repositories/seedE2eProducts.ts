@@ -1,4 +1,4 @@
-import { type Product, type Stock, validateProduct, validateStock } from "@/src/schemas/firestore";
+import { type Product, type Stock, validateProduct, validateStock } from "@luratha/schemas";
 
 /**
  * E2E test product data.

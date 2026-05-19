@@ -1,1 +1,1 @@
-export { productSchema, type Product } from "@/src/schemas/firestore";
+export { productSchema, type Product } from "@luratha/schemas";

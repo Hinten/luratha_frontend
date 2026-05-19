@@ -16,7 +16,7 @@ import {
   type Order,
   type UserProfile,
   type Coupon,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 const ISO_NOW = "2024-06-01T12:00:00.000Z";
 const ISO_LATER = "2024-12-31T23:59:59.000Z";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
-import type { Order } from "@/src/schemas/firestore";
+import type { Order } from "@luratha/schemas";
 import OrderListItem from "@/src/components/conta/OrderListItem";
 import styles from "./page.module.css";
 

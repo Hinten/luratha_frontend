@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateOrder } from "@/src/schemas/firestore";
+import { validateOrder } from "@luratha/schemas";
 
 function basePayload() {
   const now = new Date().toISOString();

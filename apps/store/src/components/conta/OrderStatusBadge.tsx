@@ -1,4 +1,4 @@
-import type { Order } from "@/src/schemas/firestore";
+import type { Order } from "@luratha/schemas";
 import styles from "./OrderStatusBadge.module.css";
 
 const labels: Record<Order["status"], string> = {

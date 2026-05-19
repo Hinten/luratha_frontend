@@ -10,7 +10,7 @@
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 const auth = vi.hoisted(() => ({

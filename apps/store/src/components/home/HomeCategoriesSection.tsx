@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import CategoryBlock from "@/src/components/categoria/CategoryBlock";
-import type { Category } from "@/src/schemas/firestore/category";
+import type { Category } from "@luratha/schemas/category";
 import styles from "./HomeCategoriesSection.module.css";
 
 const SCROLL_THRESHOLD = 1;

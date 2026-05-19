@@ -7,7 +7,7 @@ import {
   SITE_SETTINGS_DOC_ID,
   type SiteSettings,
   validateSiteSettings,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 /**
  * Lê o documento global de configuração. Quando ainda não existe (instância

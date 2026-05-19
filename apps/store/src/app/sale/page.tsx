@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import type { Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
+import type { Product as FirestoreProduct, Stock } from "@luratha/schemas";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";

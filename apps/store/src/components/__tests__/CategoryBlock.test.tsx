@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CategoryBlock from "@/src/components/categoria/CategoryBlock";
-import { type Category, validateCategory } from "@/src/schemas/firestore";
+import { type Category, validateCategory } from "@luratha/schemas";
 
 vi.mock("next/link", () => ({
   default: ({

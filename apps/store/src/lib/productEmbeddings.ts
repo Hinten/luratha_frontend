@@ -1,4 +1,4 @@
-import type { Product } from "@/src/schemas/firestore";
+import type { Product } from "@luratha/schemas";
 import type { EmbeddingService } from "@/src/lib/embeddingService";
 
 /**

@@ -10,7 +10,7 @@ import {
   type QueryDocumentSnapshot,
   Timestamp,
 } from "firebase/firestore";
-import { type Coupon, validateCoupon } from "@/src/schemas/firestore";
+import { type Coupon, validateCoupon } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();

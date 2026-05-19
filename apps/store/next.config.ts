@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
   // resolves dependencies hoisted by pnpm into the root node_modules.
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   typedRoutes: true,
+  transpilePackages: ["@luratha/schemas"],
   serverExternalPackages: ["firebase", "firebase-admin"],
   images: {
     formats: ["image/avif", "image/webp"],

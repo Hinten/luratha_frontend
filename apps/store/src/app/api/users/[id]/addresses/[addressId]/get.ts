@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@/src/lib/firestore/adminAddressConverter";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";

@@ -5,7 +5,7 @@ import {
   clearShippingEstimate,
   saveShippingEstimate,
 } from "@/src/lib/shipping/clientStorage";
-import type { CartItem } from "@/src/schemas/firestore";
+import type { CartItem } from "@luratha/schemas";
 import type { ShippingQuote } from "@/src/lib/shipping/types";
 
 const ORIGINAL_FETCH = global.fetch;

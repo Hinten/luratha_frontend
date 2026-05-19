@@ -10,8 +10,8 @@ import {
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
-import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
-import type { Product } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@luratha/schemas";
+import type { Product } from "@luratha/schemas";
 import { VectorValue } from "firebase/firestore";
 
 export const runtime = "nodejs";

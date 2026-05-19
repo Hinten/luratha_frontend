@@ -17,7 +17,7 @@ import {
   type ShippingQuote,
 } from "@/src/lib/shipping/types";
 import { buildCacheKey, getCachedQuotes, setCachedQuotes } from "@/src/lib/shipping/cache";
-import { normalizePostalCode, type ShippingSettings } from "@/src/schemas/firestore";
+import { normalizePostalCode, type ShippingSettings } from "@luratha/schemas";
 
 export interface QuoteShippingInput {
   destinationPostalCode: string;

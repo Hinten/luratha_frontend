@@ -7,7 +7,7 @@ import {
   buildProductSlug,
   productSchema,
   vectorSearchRequestSchema,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 const now = "2026-04-13T16:00:00.000Z";
 

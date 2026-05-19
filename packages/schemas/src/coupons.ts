@@ -3,7 +3,7 @@ import {
   nonEmptyStringSchema,
   nonNegativeMoneySchema,
   timestampSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 export const couponSchema = z
   .object({

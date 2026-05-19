@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./ProductCard.module.css";
-import type { Product, Stock } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@luratha/schemas";
 import { getProductCardImage, productCardImageSizes } from "@/src/lib/productImages";
 import RecentlyViewedBadge from "./RecentlyViewedBadge";
 

@@ -10,8 +10,8 @@ import {
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
 import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
-import { firestoreCollections, validateCategory } from "@/src/schemas/firestore";
-import type { Category } from "@/src/schemas/firestore";
+import { firestoreCollections, validateCategory } from "@luratha/schemas";
+import type { Category } from "@luratha/schemas";
 
 export const runtime = "nodejs";
 

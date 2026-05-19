@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
-import { firestoreCollections, validateOrder } from "@/src/schemas/firestore";
+import { firestoreCollections, validateOrder } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateStock } from "@/src/schemas/firestore/stock";
+import { validateStock } from "@luratha/schemas/stock";
 
 const now = "2026-04-26T18:00:00.000Z";
 

@@ -15,7 +15,7 @@ import {
   getDefaultSiteSettings,
   SITE_SETTINGS_DOC_ID,
   type SiteSettings,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 import { clearSiteSettingsCache } from "@/src/lib/repositories/siteSettingsRepository";
 import { clearShippingCache } from "@/src/lib/shipping/cache";
 import {

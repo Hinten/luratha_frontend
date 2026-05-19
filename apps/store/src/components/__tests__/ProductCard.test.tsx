@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductCard from "@/src/components/produto/ProductCard";
-import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product, validateProduct } from "@luratha/schemas";
 
 vi.mock("@/src/components/produto/RecentlyViewedBadge", () => ({
   default: () => null,

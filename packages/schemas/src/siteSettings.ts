@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonNegativeMoneySchema, timestampSchema } from "@/src/schemas/firestore/utils";
+import { nonNegativeMoneySchema, timestampSchema } from "@luratha/schemas/utils";
 
 /**
  * Configuração global do e-commerce — documento único em `settings/global`.

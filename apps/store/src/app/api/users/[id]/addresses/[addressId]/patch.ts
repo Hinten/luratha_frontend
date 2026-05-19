@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@/src/lib/firestore/adminAddressConverter";
-import { firestoreCollections, validateAddress } from "@/src/schemas/firestore";
+import { firestoreCollections, validateAddress } from "@luratha/schemas";
 import { unsetOtherDefaults } from "@/src/app/api/users/[id]/addresses/post";
 import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 

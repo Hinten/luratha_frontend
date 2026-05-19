@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SizeSelector from "@/src/components/produto/SizeSelector";
-import { validateProduct, validateStock, type Product, type Stock } from "@/src/schemas/firestore";
+import { validateProduct, validateStock, type Product, type Stock } from "@luratha/schemas";
 
 // Mock AddToCartButton to isolate SizeSelector behaviour
 vi.mock("@/src/components/produto/AddToCartButton", () => ({

@@ -10,7 +10,7 @@ import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 
 vi.mock("@/src/lib/repositories/siteSettingsRepository", async () => {
-  const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+  const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
   return {
     getSiteSettings: vi.fn(async () => getDefaultSiteSettings()),
   };
@@ -88,7 +88,7 @@ describe("quoteShipping", () => {
 
   it("falls back to fixed-rate provider when primary fails and fallback is enabled", async () => {
     const mod = await import("@/src/lib/repositories/siteSettingsRepository");
-    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
     const settings = getDefaultSiteSettings();
     settings.shipping.fixedRate.enabledAsFallback = true;
     (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
@@ -129,7 +129,7 @@ describe("quoteShipping", () => {
 
   it("throws a combined error when primary fails AND the fallback is also unavailable", async () => {
     const mod = await import("@/src/lib/repositories/siteSettingsRepository");
-    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
     const settings = getDefaultSiteSettings();
     settings.shipping.fixedRate.enabledAsFallback = true;
     // Sem entries e sem defaultEntry → fixed-rate lança config_missing.
@@ -159,7 +159,7 @@ describe("quoteShipping", () => {
 describe("quoteFreeShippingThreshold", () => {
   it("returns null when free shipping is disabled", async () => {
     const mod = await import("@/src/lib/repositories/siteSettingsRepository");
-    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
     const settings = getDefaultSiteSettings();
     settings.shipping.freeShipping.enabled = false;
     (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);
@@ -188,7 +188,7 @@ describe("quoteFreeShippingThreshold", () => {
 
   it("returns quotes even when free shipping is disabled", async () => {
     const mod = await import("@/src/lib/repositories/siteSettingsRepository");
-    const { getDefaultSiteSettings } = await import("@/src/schemas/firestore/siteSettings");
+    const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
     const settings = getDefaultSiteSettings();
     settings.shipping.freeShipping.enabled = false;
     (mod.getSiteSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce(settings);

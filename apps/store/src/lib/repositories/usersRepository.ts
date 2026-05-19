@@ -7,7 +7,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type UserProfile, validateUserProfile } from "@/src/schemas/firestore";
+import { firestoreCollections, type UserProfile, validateUserProfile } from "@luratha/schemas";
 import { clientUserProfileConverter } from "@/src/lib/firestore/clientUserProfileConverter";
 
 type UserProfileUpdateInput = Partial<Omit<UserProfile, "id" | "createdAt">>;

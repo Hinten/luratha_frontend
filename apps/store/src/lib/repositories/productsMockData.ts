@@ -1,4 +1,4 @@
-import { type Product, type Stock, validateProduct, validateStock } from "@/src/schemas/firestore";
+import { type Product, type Stock, validateProduct, validateStock } from "@luratha/schemas";
 
 function createIsoDate(offsetMinutes: number): string {
   return new Date(Date.now() + offsetMinutes * 60_000).toISOString();

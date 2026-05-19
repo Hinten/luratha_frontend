@@ -1,5 +1,5 @@
 import ProductCard from "@/src/components/produto/ProductCard";
-import type { Product, Stock } from "@/src/schemas/firestore";
+import type { Product, Stock } from "@luratha/schemas";
 import styles from "./ProductSection.module.css";
 
 interface ProductSectionProps {

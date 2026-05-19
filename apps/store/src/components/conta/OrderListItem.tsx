@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Order } from "@/src/schemas/firestore";
+import type { Order } from "@luratha/schemas";
 import OrderStatusBadge from "./OrderStatusBadge";
 import styles from "./OrderListItem.module.css";
 

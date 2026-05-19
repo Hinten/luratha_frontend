@@ -1,4 +1,4 @@
-import { pipelineSearchRequestSchema, vectorSearchRequestSchema } from "@/src/schemas/firestore";
+import { pipelineSearchRequestSchema, vectorSearchRequestSchema } from "@luratha/schemas";
 import {
   normalizeLimit,
   normalizeOffset,

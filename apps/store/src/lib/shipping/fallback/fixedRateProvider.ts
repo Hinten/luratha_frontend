@@ -4,7 +4,7 @@ import {
   type ShippingProvider,
   type ShippingQuote,
 } from "@/src/lib/shipping/types";
-import type { FixedRateEntry, ShippingSettings } from "@/src/schemas/firestore";
+import type { FixedRateEntry, ShippingSettings } from "@luratha/schemas";
 
 /**
  * Tabela manual por UF. Resolução do UF é feita por prefixo de CEP — não é

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { firestoreCollections, type Product, validateProduct } from "@luratha/schemas";
 import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
 

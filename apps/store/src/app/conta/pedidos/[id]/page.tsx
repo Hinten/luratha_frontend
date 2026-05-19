@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import type { Address, Order } from "@/src/schemas/firestore";
+import type { Address, Order } from "@luratha/schemas";
 import OrderStatusBadge from "@/src/components/conta/OrderStatusBadge";
 import styles from "./page.module.css";
 

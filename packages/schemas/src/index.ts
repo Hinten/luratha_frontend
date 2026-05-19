@@ -1,14 +1,14 @@
 export {
   firestoreCollections,
   SITE_SETTINGS_DOC_ID,
-} from "@/src/schemas/firestore/collections";
+} from "@luratha/schemas/collections";
 export {
   CategorySchema,
   type Category,
   type Category as FirestoreCategory,
   validateCategory,
-} from "@/src/schemas/firestore/category";
-export { photoSchema, type Photo } from "@/src/schemas/firestore/photos";
+} from "@luratha/schemas/category";
+export { photoSchema, type Photo } from "@luratha/schemas/photos";
 export {
   productVariantSchema,
   productImageAssetSchema,
@@ -21,12 +21,12 @@ export {
   type Dimensions,
   type Product,
   validateProduct,
-} from "@/src/schemas/firestore/products";
+} from "@luratha/schemas/products";
 export {
   stockSchema,
   type Stock,
   validateStock,
-} from "@/src/schemas/firestore/stock";
+} from "@luratha/schemas/stock";
 export {
   cartItemSchema,
   cartSchema,
@@ -35,12 +35,12 @@ export {
   validateCartItem,
   validateCart,
   buildCartItemId,
-} from "@/src/schemas/firestore/carts";
+} from "@luratha/schemas/carts";
 export {
   couponSchema,
   type Coupon,
   validateCoupon,
-} from "@/src/schemas/firestore/coupons";
+} from "@luratha/schemas/coupons";
 export {
   orderItemSchema,
   orderSchema,
@@ -49,28 +49,28 @@ export {
   type Order,
   type OrderShippingMethod,
   validateOrder,
-} from "@/src/schemas/firestore/orders";
+} from "@luratha/schemas/orders";
 export {
   addressSchema,
   type Address,
   validateAddress,
   buildAddressPath,
   ADDRESS_PATH_REGEX,
-} from "@/src/schemas/firestore/addresses";
-export { reviewSchema, type Review } from "@/src/schemas/firestore/reviews";
+} from "@luratha/schemas/addresses";
+export { reviewSchema, type Review } from "@luratha/schemas/reviews";
 export {
   userProfileSchema,
   taxIdentitySchema,
   type UserProfile,
   type TaxIdentity,
   validateUserProfile,
-} from "@/src/schemas/firestore/users";
+} from "@luratha/schemas/users";
 export {
   pipelineSearchRequestSchema,
   vectorSearchRequestSchema,
   type PipelineSearchRequest,
   type VectorSearchRequest,
-} from "@/src/schemas/firestore/search";
+} from "@luratha/schemas/search";
 export {
   siteSettingsSchema,
   shippingSettingsSchema,
@@ -90,4 +90,4 @@ export {
   type FreeShippingConfig,
   type FixedRateConfig,
   type FixedRateEntry,
-} from "@/src/schemas/firestore/siteSettings";
+} from "@luratha/schemas/siteSettings";

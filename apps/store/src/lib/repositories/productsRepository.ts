@@ -15,7 +15,7 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type Product, validateProduct } from "@/src/schemas/firestore";
+import { firestoreCollections, type Product, validateProduct } from "@luratha/schemas";
 import { clientProductConverter } from "@/src/lib/firestore/clientProductConverter";
 
 type ProductListFilters = {

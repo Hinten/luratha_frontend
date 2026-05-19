@@ -4,7 +4,7 @@ import {
   buildVectorEmbeddingText,
   generateProductEmbeddings,
 } from "@/src/lib/productEmbeddings";
-import type { Product } from "@/src/schemas/firestore";
+import type { Product } from "@luratha/schemas";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

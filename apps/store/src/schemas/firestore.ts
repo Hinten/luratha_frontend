@@ -1,1 +1,1 @@
-export * from "@/src/schemas/firestore/index";
+export * from "@luratha/schemas/index";

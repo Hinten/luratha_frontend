@@ -7,7 +7,7 @@ import {
   type Product,
   validateCategory,
   validateProduct,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 const getHomePageDataMock = vi.fn();
 

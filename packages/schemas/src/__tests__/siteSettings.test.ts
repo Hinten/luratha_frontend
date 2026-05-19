@@ -3,7 +3,7 @@ import {
   getDefaultSiteSettings,
   normalizePostalCode,
   validateSiteSettings,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 describe("siteSettings schema", () => {
   it("getDefaultSiteSettings returns a parseable document", () => {

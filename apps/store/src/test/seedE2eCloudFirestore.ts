@@ -1,7 +1,7 @@
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { buildHomeSeedCategories } from "@/src/lib/repositories/homeSeedMockData";
 import { buildE2eTestProducts } from "@/src/lib/repositories/seedE2eProducts";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections } from "@luratha/schemas";
 
 /**
  * Seeds the cloud test Firestore project (`luratha-96386`) with deterministic

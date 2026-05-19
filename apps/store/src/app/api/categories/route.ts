@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
-import { firestoreCollections, validateCategory } from "@/src/schemas/firestore";
+import { firestoreCollections, validateCategory } from "@luratha/schemas";
 
 export const runtime = "nodejs";
 export { GET } from "./list";

@@ -3,7 +3,7 @@ import {
   colorHexSchema,
   nonEmptyStringSchema,
   timestampSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 export const photoSchema = z.object({
   id: nonEmptyStringSchema,

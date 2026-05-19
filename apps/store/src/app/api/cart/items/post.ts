@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
 import {
   CartRepositoryError,

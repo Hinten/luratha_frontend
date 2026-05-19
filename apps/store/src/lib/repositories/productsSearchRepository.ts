@@ -21,7 +21,7 @@ import {
   type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
-import { buildProductSlug, type Product as FirestoreProduct, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product as FirestoreProduct, validateProduct } from "@luratha/schemas";
 import {
   buildCoreProductQueryPlan,
   buildEnterprisePipelineSearchPlan,

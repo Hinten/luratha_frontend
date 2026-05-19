@@ -23,8 +23,8 @@ import {
   firestoreCollections,
   validateCart,
   validateCartItem,
-} from "@/src/schemas/firestore";
-import { toCents } from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas";
+import { toCents } from "@luratha/schemas/utils";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */

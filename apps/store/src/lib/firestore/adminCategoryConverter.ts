@@ -12,7 +12,7 @@
  */
 
 import { type FirestoreDataConverter } from "firebase-admin/firestore";
-import { type Category, validateCategory } from "@/src/schemas/firestore";
+import { type Category, validateCategory } from "@luratha/schemas";
 
 export const adminCategoryConverter: FirestoreDataConverter<Category> = {
   toFirestore(category: Category) {

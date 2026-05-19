@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonEmptyStringSchema } from "@/src/schemas/firestore/utils";
+import { nonEmptyStringSchema } from "@luratha/schemas/utils";
 
 
 export const CategorySchema = z.object({

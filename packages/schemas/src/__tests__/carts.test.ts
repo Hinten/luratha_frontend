@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateCartItem } from "@/src/schemas/firestore";
+import { validateCartItem } from "@luratha/schemas";
 
 function baseItem() {
   const now = new Date().toISOString();

@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   nonEmptyStringSchema,
   timestampSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 /**
  * Endereço salvo do usuário, persistido como subcoleção em

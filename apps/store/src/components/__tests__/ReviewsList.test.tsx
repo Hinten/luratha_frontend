@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ReviewsList from "@/src/components/produto/ReviewsList";
-import { reviewSchema, type Review } from "@/src/schemas/firestore";
+import { reviewSchema, type Review } from "@luratha/schemas";
 
 const mockReviews: Review[] = [
   reviewSchema.parse({

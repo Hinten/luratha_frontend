@@ -3,7 +3,7 @@
  */
 
 import { type FirestoreDataConverter, Timestamp } from "firebase-admin/firestore";
-import { type UserProfile, validateUserProfile } from "@/src/schemas/firestore";
+import { type UserProfile, validateUserProfile } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();

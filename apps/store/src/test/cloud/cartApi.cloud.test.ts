@@ -16,7 +16,7 @@ import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import {
   buildProductSlug,
   firestoreCollections,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ── Auth mock (single source of truth for the suite) ───────────────────────

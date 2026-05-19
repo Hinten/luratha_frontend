@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
-import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product, validateProduct } from "@luratha/schemas";
 
 vi.mock("next/link", () => ({
   default: ({

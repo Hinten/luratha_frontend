@@ -1,4 +1,4 @@
-import type { Product, ProductImageAsset } from "@/src/schemas/firestore";
+import type { Product, ProductImageAsset } from "@luratha/schemas";
 
 export type ProductGalleryImage = {
   id: string;

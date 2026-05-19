@@ -5,7 +5,7 @@ import {
   type Stock,
   validateProduct,
   validateStock,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 type VariantSeed = {
   id: string;

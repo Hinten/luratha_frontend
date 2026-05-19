@@ -8,9 +8,9 @@ import {
   timestampSchema,
   toCents,
   uidSchema,
-} from "@/src/schemas/firestore/utils";
-import { ADDRESS_PATH_REGEX } from "@/src/schemas/firestore/addresses";
-import { shippingProviderIdSchema } from "@/src/schemas/firestore/siteSettings";
+} from "@luratha/schemas/utils";
+import { ADDRESS_PATH_REGEX } from "@luratha/schemas/addresses";
+import { shippingProviderIdSchema } from "@luratha/schemas/siteSettings";
 
 /**
  * Snapshot da opção de frete escolhida no checkout.

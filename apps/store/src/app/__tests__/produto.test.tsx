@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProdutoPage from "@/src/app/produto/[slug]/page";
-import { buildProductSlug, type Product, validateProduct } from "@/src/schemas/firestore";
+import { buildProductSlug, type Product, validateProduct } from "@luratha/schemas";
 
 const { getBySlugMock, getCategoryByIdMock, getStockByProductIdMock } = vi.hoisted(() => ({
   getBySlugMock: vi.fn(),

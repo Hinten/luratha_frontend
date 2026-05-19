@@ -1,7 +1,7 @@
 import type {
   ShippingProviderId,
   ShippingSettings,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 /** Item enviado ao provider de cálculo. Pesos/dimensões já resolvidos com fallback. */
 export interface ShippingItemInput {

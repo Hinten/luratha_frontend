@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/contexts/AuthContext";
-import type { Order, UserProfile } from "@/src/schemas/firestore";
+import type { Order, UserProfile } from "@luratha/schemas";
 import styles from "./page.module.css";
 
 export default function ContaDashboardPage() {

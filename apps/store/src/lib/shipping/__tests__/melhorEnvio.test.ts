@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { ShippingProviderError } from "@/src/lib/shipping/types";
-import { getDefaultSiteSettings } from "@/src/schemas/firestore";
+import { getDefaultSiteSettings } from "@luratha/schemas";
 
 const ORIGINAL_FETCH = global.fetch;
 const ORIGINAL_ENV = { ...process.env };

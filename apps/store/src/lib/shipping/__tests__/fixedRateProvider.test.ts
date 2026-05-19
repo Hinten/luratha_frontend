@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
 import { ShippingProviderError } from "@/src/lib/shipping/types";
-import type { ShippingSettings } from "@/src/schemas/firestore";
-import { getDefaultSiteSettings } from "@/src/schemas/firestore";
+import type { ShippingSettings } from "@luratha/schemas";
+import { getDefaultSiteSettings } from "@luratha/schemas";
 
 function makeSettings(overrides: Partial<ShippingSettings["fixedRate"]> = {}): ShippingSettings {
   const defaults = getDefaultSiteSettings().shipping;

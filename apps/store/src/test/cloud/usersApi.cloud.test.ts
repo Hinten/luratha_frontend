@@ -14,7 +14,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminUserProfileConverter } from "@/src/lib/firestore/adminUserProfileConverter";
-import { firestoreCollections } from "@/src/schemas/firestore";
+import { firestoreCollections } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 const auth = vi.hoisted(() => ({

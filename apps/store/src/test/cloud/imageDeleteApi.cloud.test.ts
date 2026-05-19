@@ -19,7 +19,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { deleteProductImage } from "@/src/lib/repositories/productImageDelete";
-import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ─────────────────────────────────────────────────────────────────────────────

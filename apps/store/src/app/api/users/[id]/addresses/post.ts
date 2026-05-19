@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@/src/lib/firestore/adminAddressConverter";
-import { firestoreCollections, validateAddress } from "@/src/schemas/firestore";
+import { firestoreCollections, validateAddress } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 
 export const runtime = "nodejs";

@@ -8,8 +8,8 @@ import {
   timestampSchema,
   toCents,
   uidSchema,
-} from "@/src/schemas/firestore/utils";
-import { dimensionsSchema } from "@/src/schemas/firestore/products";
+} from "@luratha/schemas/utils";
+import { dimensionsSchema } from "@luratha/schemas/products";
 
 export const cartItemSchema = z.object({
   id: nonEmptyStringSchema,

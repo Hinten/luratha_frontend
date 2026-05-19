@@ -3,7 +3,7 @@ import {
   nonEmptyStringSchema,
   timestampSchema,
   uidSchema,
-} from "@/src/schemas/firestore/utils";
+} from "@luratha/schemas/utils";
 
 export const reviewSchema = z.object({
   id: nonEmptyStringSchema,

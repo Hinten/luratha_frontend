@@ -1,4 +1,4 @@
-import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@/src/schemas/firestore";
+import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@luratha/schemas";
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductDescription from "@/src/components/produto/ProductDescription";
 import ProductVariantView from "@/src/components/produto/ProductVariantView";

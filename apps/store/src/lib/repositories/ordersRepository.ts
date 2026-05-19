@@ -14,7 +14,7 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type Order, validateOrder } from "@/src/schemas/firestore";
+import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
 import { clientOrderConverter } from "@/src/lib/firestore/clientOrderConverter";
 
 type OrderListFilters = {

@@ -32,7 +32,7 @@ import {
   createProductsSearchRepository,
   type SearchOptions,
 } from "@/src/lib/repositories/productsSearchRepository";
-import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ─────────────────────────────────────────────────────────────────────────────

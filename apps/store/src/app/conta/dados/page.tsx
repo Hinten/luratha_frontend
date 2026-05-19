@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
-import type { TaxIdentity, UserProfile } from "@/src/schemas/firestore";
+import type { TaxIdentity, UserProfile } from "@luratha/schemas";
 import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./page.module.css";
 

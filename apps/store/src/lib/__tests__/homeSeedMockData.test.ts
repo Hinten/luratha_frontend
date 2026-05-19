@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@/src/lib/repositories/homeSeedMockData";
-import { validateProduct } from "@/src/schemas/firestore";
+import { validateProduct } from "@luratha/schemas";
 
 describe("home seed mock data", () => {
   it("creates ten mock categories", () => {

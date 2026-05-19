@@ -2,7 +2,7 @@ import {
   type Category as FirestoreCategory,
   type Product as FirestoreProduct,
   type Stock,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";

@@ -28,7 +28,7 @@ import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,
 } from "@/src/lib/repositories/homeSeedMockData";
-import { firestoreCollections, validateProduct } from "@/src/schemas/firestore";
+import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 const CLOUD_TEST_APP_NAME = "luratha-cloud-seed-search-client";

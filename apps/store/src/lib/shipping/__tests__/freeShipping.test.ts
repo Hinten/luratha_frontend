@@ -3,7 +3,7 @@ import {
   calculateFreeShippingThreshold,
   pickReferenceShippingCost,
 } from "@/src/lib/shipping/freeShipping";
-import type { FreeShippingConfig } from "@/src/schemas/firestore";
+import type { FreeShippingConfig } from "@luratha/schemas";
 import type { ShippingQuote } from "@/src/lib/shipping/types";
 
 function makeConfig(overrides: Partial<FreeShippingConfig> = {}): FreeShippingConfig {

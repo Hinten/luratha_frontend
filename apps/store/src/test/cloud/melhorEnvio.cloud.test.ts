@@ -12,7 +12,7 @@
 
 import { expect, it } from "vitest";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
-import { getDefaultSiteSettings } from "@/src/schemas/firestore";
+import { getDefaultSiteSettings } from "@luratha/schemas";
 import { describeMelhorEnvio } from "@/src/test/cloud/sharedSetup";
 
 describeMelhorEnvio("melhorEnvioProvider — sandbox real", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Address } from "@/src/schemas/firestore";
+import type { Address } from "@luratha/schemas";
 import styles from "./AddressCard.module.css";
 
 interface Props {

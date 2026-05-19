@@ -10,7 +10,7 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type FirestoreCategory, validateCategory } from "@/src/schemas/firestore";
+import { firestoreCollections, type FirestoreCategory, validateCategory } from "@luratha/schemas";
 
 type CategoryRepositoryErrorCode = "validation" | "unknown";
 

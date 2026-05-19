@@ -12,7 +12,7 @@ import {
   type CartItem,
   validateCart,
   validateCartItem,
-} from "@/src/schemas/firestore";
+} from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();

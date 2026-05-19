@@ -3,7 +3,7 @@ import {
   deleteProductImage,
   ProductImageDeleteError,
 } from "@/src/lib/repositories/productImageDelete";
-import { validateProduct } from "@/src/schemas/firestore";
+import { validateProduct } from "@luratha/schemas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hoisted mocks

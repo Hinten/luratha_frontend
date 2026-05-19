@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
 import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
-import { firestoreCollections, validateStock } from "@/src/schemas/firestore";
-import { skuSchema, nonEmptyStringSchema } from "@/src/schemas/firestore/utils";
+import { firestoreCollections, validateStock } from "@luratha/schemas";
+import { skuSchema, nonEmptyStringSchema } from "@luratha/schemas/utils";
 
 export const runtime = "nodejs";
 

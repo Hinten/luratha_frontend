@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonEmptyStringSchema, skuSchema, timestampSchema } from "@/src/schemas/firestore/utils";
+import { nonEmptyStringSchema, skuSchema, timestampSchema } from "@luratha/schemas/utils";
 
 /**
  * Firestore collection: "stock"

@@ -6,7 +6,7 @@ import {
   type ShippingQuote,
   type TrackingInfo,
 } from "@/src/lib/shipping/types";
-import type { ShippingSettings } from "@/src/schemas/firestore";
+import type { ShippingSettings } from "@luratha/schemas";
 
 /**
  * Adapter Melhor Envio.

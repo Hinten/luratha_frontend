@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateProduct } from "@/src/schemas/firestore";
+import { validateProduct } from "@luratha/schemas";
 import { getProductCardImage, getProductGalleryImages, getProductPrimaryImage } from "@/src/lib/productImages";
 
 const now = "2026-04-16T00:00:00.000Z";
