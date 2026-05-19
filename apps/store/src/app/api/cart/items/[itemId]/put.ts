@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
-import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
+import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   CartRepositoryError,
   createCartsRepository,

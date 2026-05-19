@@ -3,7 +3,7 @@ import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminUserProfileConverter } from "@luratha/firestore/adminUserProfileConverter";
 import { firestoreCollections, validateUserProfile } from "@luratha/schemas";
-import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
+import { authErrorResponse, requireOwnerOrAdmin } from "@luratha/auth/requireUser";
 
 export const runtime = "nodejs";
 

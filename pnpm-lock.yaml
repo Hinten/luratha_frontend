@@ -17,6 +17,9 @@ importers:
 
   apps/store:
     dependencies:
+      '@luratha/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@luratha/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -108,6 +111,28 @@ importers:
       vitest:
         specifier: ^4.1.6
         version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
+
+  packages/auth:
+    dependencies:
+      '@luratha/firestore':
+        specifier: workspace:*
+        version: link:../firestore
+      firebase-admin:
+        specifier: ^13.10.0
+        version: 13.10.0
+      next:
+        specifier: 16.2.6
+        version: 16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+    devDependencies:
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.7.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/core:
     dependencies:

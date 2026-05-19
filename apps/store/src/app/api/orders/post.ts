@@ -4,7 +4,7 @@ import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, validateOrder } from "@luratha/schemas";
-import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
+import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 
 export const runtime = "nodejs";
 

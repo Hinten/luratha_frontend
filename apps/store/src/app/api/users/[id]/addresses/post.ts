@@ -5,7 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@luratha/firestore/adminAddressConverter";
 import { firestoreCollections, validateAddress } from "@luratha/schemas";
-import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
+import { authErrorResponse, requireOwnerOrAdmin } from "@luratha/auth/requireUser";
 
 export const runtime = "nodejs";
 

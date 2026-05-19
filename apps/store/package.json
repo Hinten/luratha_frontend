@@ -18,6 +18,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@luratha/auth": "workspace:*",
     "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
     "@luratha/schemas": "workspace:*",

@@ -21,7 +21,7 @@ type AuthenticatedAppForUser = {
  * The `__session` cookie used by our app is a *session cookie* — a different
  * format from ID tokens — so passing it to `initializeServerApp({ authIdToken })`
  * would fail with `auth/invalid-user-token`. For per-user server logic, use
- * `requireUser()` from `@/src/lib/auth/requireUser` to read the session cookie
+ * `requireUser()` from `@luratha/auth/requireUser` to read the session cookie
  * and then use the admin SDK (`adminDb`) to fetch data on behalf of that user.
  */
 export async function getAuthenticatedAppForUser(): Promise<AuthenticatedAppForUser> {

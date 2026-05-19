@@ -3,7 +3,7 @@ import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { firestoreCollections, type Product } from "@luratha/schemas";
-import { authErrorResponse, requireUser } from "@/src/lib/auth/requireUser";
+import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   CartRepositoryError,
   cartItemInputSchema,

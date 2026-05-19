@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { FirebaseAuthError } from "firebase-admin/auth";
 import { adminAuth } from "@luratha/firestore/firebaseAdmin";
-import { SESSION_COOKIE_NAME } from "@/src/lib/auth/requireUser";
+import { SESSION_COOKIE_NAME } from "@luratha/auth/requireUser";
 
 export const runtime = "nodejs";
 
