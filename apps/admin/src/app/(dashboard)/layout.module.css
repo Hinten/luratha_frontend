@@ -1,0 +1,10 @@
+.shell {
+  display: flex;
+  min-height: 100dvh;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem clamp(1.5rem, 4vw, 3rem);
+  min-width: 0;
+}
