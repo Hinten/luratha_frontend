@@ -1,6 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { loadRootEnv } from "./loadRootEnv";
 
 /**
  * Playwright E2E config — runs against the dedicated test Firebase project
@@ -16,23 +15,9 @@ import { join } from "path";
  * remaining UI tests (auth, cart, institutional, navigation) still run.
  */
 
-// Explicitly load .env so credential vars are available before globalSetup.
-// Playwright v1.40+ loads .env automatically, but this guards against edge
-// cases (e.g. process already has some vars set, missing trailing newline).
-const envFile = join(__dirname, ".env");
-if (existsSync(envFile)) {
-  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
-    const m = line.match(/^([^#=\s][^=]*)=(.*)$/);
-    if (!m) continue;
-    const key = m[1].trim();
-    if (key in process.env) continue; // never override already-set vars
-    let val = m[2].trim();
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-    process.env[key] = val;
-  }
-}
+// Load the single repo-root `.env` so credential vars are available before
+// globalSetup runs and before the dev server is spawned.
+loadRootEnv();
 
 // Backfill NEXT_PUBLIC_FIREBASE_* from FIREBASE_WEB_APP_CONFIG_BASE64 BEFORE
 // the dev server is spawned, so Next.js sees populated values when it inlines

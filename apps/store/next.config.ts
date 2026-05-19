@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { loadRootEnv } from "./loadRootEnv";
 
 /**
  * Backfill NEXT_PUBLIC_FIREBASE_* into process.env from FIREBASE_WEB_APP_CONFIG_BASE64
@@ -41,6 +42,8 @@ function backfillFirebaseClientEnv(): void {
   }
 }
 
+// Load the single repo-root `.env` before reading any Firebase env var.
+loadRootEnv();
 backfillFirebaseClientEnv();
 
 const nextConfig: NextConfig = {

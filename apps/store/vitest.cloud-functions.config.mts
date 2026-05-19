@@ -1,16 +1,10 @@
 import { defineConfig } from "vitest/config";
-import { loadEnv } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
+import { loadRootEnv } from "./loadRootEnv";
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode || "test", process.cwd(), "");
-
-  Object.entries(env).forEach(([key, value]) => {
-    if (process.env[key] === undefined) {
-      process.env[key] = value;
-    }
-  });
+export default defineConfig(() => {
+  loadRootEnv();
 
   return {
     plugins: [tsconfigPaths()],
