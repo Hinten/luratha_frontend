@@ -61,6 +61,11 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Sandbox do Melhor Envio — habilita melhorEnvio.cloud.test.ts.
+      # Ausente o token, o teste pula sozinho (describeMelhorEnvio).
+      MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
+      MELHOR_ENVIO_ENV: ${{ secrets.MELHOR_ENVIO_ENV }}
+      MELHOR_ENVIO_USER_AGENT: ${{ secrets.MELHOR_ENVIO_USER_AGENT }}
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets

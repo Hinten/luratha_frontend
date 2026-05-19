@@ -162,7 +162,14 @@ function buildSimpleProduct(prefix: string) {
     sizeSystem: null,
     material: [],
     pattern: [],
-    dimensions: null,
+    dimensions: {
+      length: 30,
+      width: 22,
+      height: 4,
+      unit: "cm" as const,
+      weightKg: 0.35,
+      weightGrossKg: 0.4,
+    },
     productDetail: null,
     productHighlight: null,
     photoAssets: [photo],
@@ -398,6 +405,33 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     expect(body.cart.itemCount).toBe(2);
     expect(body.cart.subtotal).toBe(simple.price.price * 2);
     expect(body.cart.grandTotal).toBe(simple.price.price * 2);
+  });
+
+  it("POST /api/cart/items snapshots the product dimensions onto the cart item", async () => {
+    const response = await itemsPOST(
+      jsonRequest("http://localhost/api/cart/items", buildItemPayload()),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    // dimensions é derivado server-side do produto, não do payload do cliente.
+    expect(body.items[0].dimensions).toMatchObject({
+      length: 30,
+      width: 22,
+      height: 4,
+      weightKg: 0.35,
+    });
+  });
+
+  it("POST /api/cart/items stores dimensions as null when the product has none", async () => {
+    const response = await itemsPOST(
+      jsonRequest(
+        "http://localhost/api/cart/items",
+        buildVariantItemPayload("var-m", VARIANT_M_SKU),
+      ),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.items[0].dimensions).toBeNull();
   });
 
   it("POST /api/cart/items re-adding the same variant increments quantity", async () => {

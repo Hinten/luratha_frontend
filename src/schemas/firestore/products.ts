@@ -291,6 +291,7 @@ export const productSchema = productSchemaBase.transform((product) => {
 
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type ProductImageAsset = z.infer<typeof productImageAssetSchema>;
+export type Dimensions = z.infer<typeof dimensionsSchema>;
 export type Product = z.infer<typeof productSchema>;
 
 export function validateProduct(input: unknown): Product {
