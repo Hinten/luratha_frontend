@@ -130,6 +130,9 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
     devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -146,6 +149,9 @@ importers:
         specifier: ^13.10.0
         version: 13.10.0
     devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -168,6 +174,9 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
     devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -205,6 +214,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
