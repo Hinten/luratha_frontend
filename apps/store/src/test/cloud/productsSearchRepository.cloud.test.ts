@@ -32,8 +32,8 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 // It authenticates via service account credentials and bypasses all
 // Firestore security rules – required so seed/cleanup work regardless
 // of the rules currently deployed to the project.
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environment";
 import {
   createProductsSearchRepository,
   type SearchOptions,

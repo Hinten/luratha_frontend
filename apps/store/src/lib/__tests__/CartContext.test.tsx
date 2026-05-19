@@ -18,7 +18,7 @@ vi.mock("@/src/contexts/AuthContext", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseClient", () => ({
+vi.mock("@luratha/firestore/firebaseClient", () => ({
   db: {},
   storage: {},
   getClientAuth: () => ({}),
@@ -33,7 +33,7 @@ vi.mock("firebase/firestore", () => ({
   },
 }));
 
-vi.mock("@/src/lib/firestore/clientCartConverter", () => ({
+vi.mock("@luratha/firestore/clientCartConverter", () => ({
   clientCartConverter: {},
   clientCartItemConverter: {},
 }));

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { firestoreCollections } from "@luratha/schemas";
 
 export const runtime = "nodejs";

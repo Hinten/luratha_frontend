@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@luratha/schemas";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
+import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
 import {
   ProductRepositoryError,

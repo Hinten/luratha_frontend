@@ -17,7 +17,7 @@ const { mockSet, mockGet, mockCollection, mockEmbed } = vi.hoisted(() => {
   return { mockSet, mockGet, mockDoc, mockCollection, mockEmbed };
 });
 
-vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
+vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
   adminApp: { options: { credential: undefined } },
 }));
@@ -27,7 +27,7 @@ vi.mock("@/src/lib/embeddingService", () => ({
 }));
 
 // Prevent the list.ts → firebaseSearchDb import from initialising a real Firebase app.
-vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
+vi.mock("@luratha/firestore/firebaseSearchDb", () => ({
   searchDb: { pipeline: vi.fn(() => ({ collection: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis() })) },
 }));
 

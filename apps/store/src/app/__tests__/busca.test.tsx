@@ -8,7 +8,7 @@ const { searchMock, productGridSpy, getStockByProductIdsMock } = vi.hoisted(() =
   getStockByProductIdsMock: vi.fn(),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
+vi.mock("@luratha/firestore/firebaseSsrApp", () => ({
   getAuthenticatedAppForUser: vi.fn(async () => ({
     firestore: {},
     currentUser: null,

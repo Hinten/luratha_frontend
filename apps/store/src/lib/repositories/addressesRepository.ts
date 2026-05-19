@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Address, validateAddress } from "@luratha/schemas";
-import { clientAddressConverter } from "@/src/lib/firestore/clientAddressConverter";
+import { clientAddressConverter } from "@luratha/firestore/clientAddressConverter";
 
 type AddressUpdateInput = Partial<Omit<Address, "id" | "createdAt">>;
 

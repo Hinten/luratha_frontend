@@ -20,9 +20,9 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
-import { DATABASE_NAME, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
+import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environment";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import {
   buildHomeSeedCategories,

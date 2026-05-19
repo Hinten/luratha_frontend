@@ -8,8 +8,8 @@ import {
   buildHomeSeedProducts,
   buildHomeSeedStock,
 } from "@/src/lib/repositories/homeSeedMockData";
-import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
+import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");

@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Coupon, validateCoupon } from "@luratha/schemas";
-import { clientCouponConverter } from "@/src/lib/firestore/clientCouponConverter";
+import { clientCouponConverter } from "@luratha/firestore/clientCouponConverter";
 
 type CouponListFilters = {
   active?: boolean;

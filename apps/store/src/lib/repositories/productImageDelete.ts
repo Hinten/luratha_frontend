@@ -4,8 +4,8 @@ import {
 } from "firebase/firestore/pipelines";
 import { z } from "zod";
 import { firestoreCollections, validateProduct, type Product } from "@luratha/schemas";
-import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
+import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
+import { searchDb } from "@luratha/firestore/firebaseSearchDb";
 
 export type DeleteProductImageResult = {
   imageId: string;

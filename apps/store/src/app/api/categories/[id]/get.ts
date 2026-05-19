@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminCategoryConverter } from "@luratha/firestore/adminCategoryConverter";
 import { firestoreCollections } from "@luratha/schemas";
 
 export const runtime = "nodejs";

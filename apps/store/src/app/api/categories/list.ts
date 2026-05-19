@@ -7,9 +7,9 @@ import {
   type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
-import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminCategoryConverter } from "@luratha/firestore/adminCategoryConverter";
+import { searchDb } from "@luratha/firestore/firebaseSearchDb";
 import { firestoreCollections, validateCategory } from "@luratha/schemas";
 import type { Category } from "@luratha/schemas";
 

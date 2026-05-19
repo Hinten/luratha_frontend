@@ -23,9 +23,9 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { adminApp, adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
-import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { adminApp, adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
+import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@luratha/firestore/environment";
 import { createEmbeddingService } from "@/src/lib/embeddingService";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import {

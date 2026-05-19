@@ -17,7 +17,7 @@ import {
   updateProfile,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { getClientAuth } from "@/src/lib/firestore/firebaseClient";
+import { getClientAuth } from "@luratha/firestore/firebaseClient";
 import { AuthClientError } from "@/src/lib/errors";
 
 export interface AuthUser {

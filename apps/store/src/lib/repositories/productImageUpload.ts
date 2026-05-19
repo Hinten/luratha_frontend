@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { firestoreCollections, type Product, validateProduct } from "@luratha/schemas";
-import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
+import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 
 type ImageVariantName = "card" | "mobile" | "tablet" | "desktop";
 

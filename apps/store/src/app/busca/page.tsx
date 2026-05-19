@@ -6,7 +6,7 @@ import ProductGrid from "@/src/components/categoria/ProductGrid";
 import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
+import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
 import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";

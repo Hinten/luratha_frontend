@@ -14,10 +14,10 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { POST } from "@/src/app/api/images/upload/route";
-import { adminBucket, adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 describeCloud("POST /api/images/upload (Cloud Firebase)", () => {

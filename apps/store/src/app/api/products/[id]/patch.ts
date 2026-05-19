@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { adminDb, adminApp } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
+import { adminDb, adminApp } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { createEmbeddingService, EmbeddingGenerationError } from "@/src/lib/embeddingService";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";

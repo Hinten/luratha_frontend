@@ -5,7 +5,7 @@ import {
 } from "@luratha/schemas";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
-import { getAuthenticatedAppForUser } from "@/src/lib/firestore/firebaseSsrApp";
+import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 
 type HomePageData = {

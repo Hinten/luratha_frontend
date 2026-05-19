@@ -5,7 +5,7 @@ import {
   getFirebaseProjectId,
   getFirebaseStorageBucket,
   getFirebaseWebConfig,
-} from "@/src/lib/firestore/environment";
+} from "@luratha/firestore/environment";
 
 const ORIGINAL_ENV = { ...process.env };
 

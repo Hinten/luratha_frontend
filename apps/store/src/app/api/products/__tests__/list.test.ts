@@ -39,12 +39,12 @@ const {
   return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
 });
 
-vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
+vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
   adminApp: { options: { credential: undefined } },
 }));
 
-vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
+vi.mock("@luratha/firestore/firebaseSearchDb", () => ({
   searchDb: { pipeline: vi.fn(() => mockPipelineRef) },
 }));
 

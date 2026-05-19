@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { FirebaseAuthError } from "firebase-admin/auth";
-import { adminAuth } from "@/src/lib/firestore/firebaseAdmin";
+import { adminAuth } from "@luratha/firestore/firebaseAdmin";
 
 export const SESSION_COOKIE_NAME = "__session";
 

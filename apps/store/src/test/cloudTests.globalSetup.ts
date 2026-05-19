@@ -1,4 +1,4 @@
-import { getFirebaseWebConfig } from "@/src/lib/firestore/environment";
+import { getFirebaseWebConfig } from "@luratha/firestore/environment";
 
 export default async function cloudGlobalSetup(): Promise<void> {
   // Validate that a service account credential source is available.

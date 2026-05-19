@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin, requireUser } from "@/src/lib/auth/requireUser";
 

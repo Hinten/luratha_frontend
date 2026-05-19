@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminAddressConverter } from "@/src/lib/firestore/adminAddressConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminAddressConverter } from "@luratha/firestore/adminAddressConverter";
 import { firestoreCollections, validateAddress } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin } from "@/src/lib/auth/requireUser";
 

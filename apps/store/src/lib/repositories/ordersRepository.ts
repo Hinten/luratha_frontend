@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
-import { clientOrderConverter } from "@/src/lib/firestore/clientOrderConverter";
+import { clientOrderConverter } from "@luratha/firestore/clientOrderConverter";
 
 type OrderListFilters = {
   status?: Order["status"];

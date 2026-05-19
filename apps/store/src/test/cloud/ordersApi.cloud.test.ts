@@ -11,7 +11,7 @@
 
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { firestoreCollections } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 

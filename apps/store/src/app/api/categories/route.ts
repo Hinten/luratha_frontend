@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminCategoryConverter } from "@luratha/firestore/adminCategoryConverter";
 import { firestoreCollections, validateCategory } from "@luratha/schemas";
 
 export const runtime = "nodejs";

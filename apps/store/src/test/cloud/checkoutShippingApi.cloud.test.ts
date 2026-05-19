@@ -8,8 +8,8 @@
  */
 
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminSiteSettingsConverter } from "@/src/lib/firestore/adminSiteSettingsConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminSiteSettingsConverter } from "@luratha/firestore/adminSiteSettingsConverter";
 import {
   firestoreCollections,
   getDefaultSiteSettings,

@@ -14,7 +14,7 @@ import { toCents } from "@luratha/schemas/utils";
 import {
   adminCartConverter,
   adminCartItemConverter,
-} from "@/src/lib/firestore/adminCartConverter";
+} from "@luratha/firestore/adminCartConverter";
 
 const MAX_QUANTITY_PER_ITEM = 99;
 const MAX_DISTINCT_ITEMS = 50;

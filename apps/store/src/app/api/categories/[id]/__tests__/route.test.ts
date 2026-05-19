@@ -21,7 +21,7 @@ const { mockSet, mockGet, mockDelete, mockDoc, mockCollection } = vi.hoisted(() 
   return { mockSet, mockGet, mockDelete, mockDoc, mockCollection };
 });
 
-vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
+vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
   adminApp: { options: { credential: undefined } },
 }));

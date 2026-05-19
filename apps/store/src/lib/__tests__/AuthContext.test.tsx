@@ -85,7 +85,7 @@ vi.mock("firebase/auth", () => {
   };
 });
 
-vi.mock("@/src/lib/firestore/firebaseClient", () => ({
+vi.mock("@luratha/firestore/firebaseClient", () => ({
   getClientAuth: () => ({}),
 }));
 

@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/firestore/firebaseSsrApp", () => ({
+vi.mock("@luratha/firestore/firebaseSsrApp", () => ({
   getAuthenticatedAppForUser: vi.fn(async () => ({
     firestore: {},
     currentUser: null,

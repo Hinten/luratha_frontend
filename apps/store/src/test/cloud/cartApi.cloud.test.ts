@@ -12,7 +12,7 @@
 
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import {
   buildProductSlug,
   firestoreCollections,

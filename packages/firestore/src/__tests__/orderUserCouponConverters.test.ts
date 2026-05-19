@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { Timestamp as ClientTimestamp } from "firebase/firestore";
 import { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
 
-import { adminOrderConverter } from "@/src/lib/firestore/adminOrderConverter";
-import { clientOrderConverter } from "@/src/lib/firestore/clientOrderConverter";
-import { adminUserProfileConverter } from "@/src/lib/firestore/adminUserProfileConverter";
-import { clientUserProfileConverter } from "@/src/lib/firestore/clientUserProfileConverter";
-import { adminCouponConverter } from "@/src/lib/firestore/adminCouponConverter";
-import { clientCouponConverter } from "@/src/lib/firestore/clientCouponConverter";
+import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
+import { clientOrderConverter } from "@luratha/firestore/clientOrderConverter";
+import { adminUserProfileConverter } from "@luratha/firestore/adminUserProfileConverter";
+import { clientUserProfileConverter } from "@luratha/firestore/clientUserProfileConverter";
+import { adminCouponConverter } from "@luratha/firestore/adminCouponConverter";
+import { clientCouponConverter } from "@luratha/firestore/clientCouponConverter";
 
 import {
   validateOrder,

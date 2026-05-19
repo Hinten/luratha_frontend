@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminCategoryConverter } from "@/src/lib/firestore/adminCategoryConverter";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminCategoryConverter } from "@luratha/firestore/adminCategoryConverter";
 import { firestoreCollections, type Category } from "@luratha/schemas";
 
 const MAX_CATEGORIES = 100;

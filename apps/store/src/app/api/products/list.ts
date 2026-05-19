@@ -7,9 +7,9 @@ import {
   type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
-import { adminProductConverter } from "@/src/lib/firestore/adminProductConverter";
-import { searchDb } from "@/src/lib/firestore/firebaseSearchDb";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
+import { searchDb } from "@luratha/firestore/firebaseSearchDb";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import type { Product } from "@luratha/schemas";
 import { VectorValue } from "firebase/firestore";

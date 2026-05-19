@@ -11,11 +11,11 @@ import React, {
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import { ZodError } from "zod";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { db } from "@/src/lib/firestore/firebaseClient";
+import { db } from "@luratha/firestore/firebaseClient";
 import {
   clientCartConverter,
   clientCartItemConverter,
-} from "@/src/lib/firestore/clientCartConverter";
+} from "@luratha/firestore/clientCartConverter";
 import {
   buildCartItemId,
   type Cart,

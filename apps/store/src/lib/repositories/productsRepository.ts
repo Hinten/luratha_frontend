@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Product, validateProduct } from "@luratha/schemas";
-import { clientProductConverter } from "@/src/lib/firestore/clientProductConverter";
+import { clientProductConverter } from "@luratha/firestore/clientProductConverter";
 
 type ProductListFilters = {
   status?: Product["status"];

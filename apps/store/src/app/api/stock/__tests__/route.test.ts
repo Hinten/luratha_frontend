@@ -48,7 +48,7 @@ function buildFakeQueryChain(productData: Record<string, unknown> | null) {
   return { where, limit, get };
 }
 
-vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
+vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminDb: {
     collection: mockCollection,
   },

@@ -1,4 +1,4 @@
-import { adminDb } from "@/src/lib/firestore/firebaseAdmin";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { buildHomeSeedCategories } from "@/src/lib/repositories/homeSeedMockData";
 import { buildE2eTestProducts } from "@/src/lib/repositories/seedE2eProducts";
 import { firestoreCollections } from "@luratha/schemas";
