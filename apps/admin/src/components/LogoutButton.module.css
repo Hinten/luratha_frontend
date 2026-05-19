@@ -1,0 +1,19 @@
+.button {
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-neutral-light) 24%, transparent);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-neutral-light);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-neutral-light) 12%, transparent);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

@@ -45,6 +45,7 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 | Path | Purpose |
 |---|---|
 | `apps/store/` | Storefront Next.js app (`@luratha/store`) — all paths in the Directory Map are relative to here |
+| `apps/admin/` | Admin Next.js app (`@luratha/admin`) — internal panel, served on its own App Hosting backend; dev port 3001 |
 | `packages/*` | Shared workspace packages, imported by name (`@luratha/<pkg>`) |
 | `functions/` | Cloud Functions — separate npm project, outside the pnpm workspace |
 | `tsconfig.base.json`, `eslint.config.base.mjs` | Shared config the `packages/*` extend (the storefront keeps `eslint-config-next`) |
@@ -61,6 +62,13 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 | `@luratha/repositories` | Firestore access layer + seed helpers | `schemas`, `firestore`, `core` |
 
 Import shared code by package name (`@luratha/schemas`, `@luratha/firestore/firebaseAdmin`, …) — never reach across workspaces with relative or `@/` paths. Add a new shared package to the consuming app's `dependencies` (`workspace:*`) and to `transpilePackages` in its `next.config.ts`.
+
+### Admin app (`apps/admin/`)
+
+Internal panel, deployed to a separate App Hosting backend. Auth model:
+- `middleware.ts` (Edge) does a shallow check — redirects to `/login` when the `__session` cookie is absent. It must not import `@luratha/auth` (firebase-admin can't run on Edge).
+- The `(dashboard)/layout.tsx` server component is the real gate: `requireUser()` verifies the cookie and the layout enforces `user.isAdmin`.
+- `POST /api/auth/session` issues the `__session` cookie only for users with the `admin` claim — it sets the cookie **host-only** (no `domain`), keeping the admin session isolated from the storefront. Never add `domain`.
 
 ### Directory Map
 
