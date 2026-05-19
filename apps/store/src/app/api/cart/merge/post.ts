@@ -9,7 +9,7 @@ import {
   cartItemInputSchema,
   createCartsRepository,
   type CartItemWrite,
-} from "@/src/lib/repositories/cartsRepository";
+} from "@luratha/repositories/cartsRepository";
 
 export const runtime = "nodejs";
 

@@ -79,11 +79,11 @@ vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
 }));
 
-vi.mock("@/src/lib/repositories/productImageUpload", () => ({
+vi.mock("@luratha/repositories/productImageUpload", () => ({
   uploadProductImage: mockUploadProductImage,
 }));
 
-vi.mock("@/src/lib/repositories/homeSeedMockData", () => ({
+vi.mock("@luratha/repositories/homeSeedMockData", () => ({
   buildHomeSeedCategories: vi.fn().mockReturnValue([
     { id: "cat_seed_01", name: "Vestidos", slug: "vestidos" },
     { id: "cat_seed_02", name: "Blusas", slug: "blusas" },

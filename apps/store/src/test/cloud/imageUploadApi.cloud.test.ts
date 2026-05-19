@@ -15,7 +15,7 @@ import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { POST } from "@/src/app/api/images/upload/route";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
-import { buildMockProducts } from "@/src/lib/repositories/productsMockData";
+import { buildMockProducts } from "@luratha/repositories/productsMockData";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";

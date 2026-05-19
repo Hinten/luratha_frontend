@@ -7,8 +7,8 @@ import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import ProductGrid from "@/src/components/categoria/ProductGrid";
 import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
-import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { createStockRepository } from "@/src/lib/repositories/stockRepository";
+import { createProductsRepository } from "@luratha/repositories/productsRepository";
+import { createStockRepository } from "@luratha/repositories/stockRepository";
 
 export const metadata: Metadata = {
   title: "Promoções",

@@ -27,11 +27,11 @@ import { adminApp, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@luratha/firestore/environment";
 import { createEmbeddingService } from "@luratha/core/embeddingService";
-import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
+import { createProductsRepository } from "@luratha/repositories/productsRepository";
 import {
   createProductsSearchRepository,
   type SearchOptions,
-} from "@/src/lib/repositories/productsSearchRepository";
+} from "@luratha/repositories/productsSearchRepository";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 

@@ -8,7 +8,7 @@ import {
   CartRepositoryError,
   cartItemInputSchema,
   createCartsRepository,
-} from "@/src/lib/repositories/cartsRepository";
+} from "@luratha/repositories/cartsRepository";
 
 export const runtime = "nodejs";
 

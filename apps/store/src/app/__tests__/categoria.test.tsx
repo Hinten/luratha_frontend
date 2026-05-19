@@ -22,13 +22,13 @@ vi.mock("@luratha/firestore/firebaseSsrApp", () => ({
   })),
 }));
 
-vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
+vi.mock("@luratha/repositories/categoriesRepository", () => ({
   createCategoriesRepository: () => ({
     getBySlug: getBySlugMock,
   }),
 }));
 
-vi.mock("@/src/lib/repositories/productsSearchRepository", () => ({
+vi.mock("@luratha/repositories/productsSearchRepository", () => ({
   createProductsSearchRepository: () => ({
     search: searchMock,
   }),

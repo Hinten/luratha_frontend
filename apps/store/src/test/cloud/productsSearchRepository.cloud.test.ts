@@ -37,7 +37,7 @@ import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environm
 import {
   createProductsSearchRepository,
   type SearchOptions,
-} from "@/src/lib/repositories/productsSearchRepository";
+} from "@luratha/repositories/productsSearchRepository";
 import { EmbeddingGenerationError } from "@luratha/core/embeddingService";
 import type { ProductSearchFilters } from "@luratha/core/firestoreQueryStrategies";
 import { shouldUsePipeline } from "@luratha/core/firestoreQueryStrategies";

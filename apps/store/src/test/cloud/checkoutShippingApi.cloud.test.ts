@@ -16,7 +16,7 @@ import {
   SITE_SETTINGS_DOC_ID,
   type SiteSettings,
 } from "@luratha/schemas";
-import { clearSiteSettingsCache } from "@/src/lib/repositories/siteSettingsRepository";
+import { clearSiteSettingsCache } from "@luratha/repositories/siteSettingsRepository";
 import { clearShippingCache } from "@/src/lib/shipping/cache";
 import {
   __setShippingProviderForTests,

@@ -7,10 +7,10 @@ import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,
   buildHomeSeedStock,
-} from "@/src/lib/repositories/homeSeedMockData";
+} from "@luratha/repositories/homeSeedMockData";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
-import { uploadProductImage } from "@/src/lib/repositories/productImageUpload";
+import { uploadProductImage } from "@luratha/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);

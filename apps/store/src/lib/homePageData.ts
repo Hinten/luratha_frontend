@@ -3,8 +3,8 @@ import {
   type Product as FirestoreProduct,
   type Stock,
 } from "@luratha/schemas";
-import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
-import { createStockRepository } from "@/src/lib/repositories/stockRepository";
+import { createProductsRepository } from "@luratha/repositories/productsRepository";
+import { createStockRepository } from "@luratha/repositories/stockRepository";
 import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
 

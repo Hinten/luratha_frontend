@@ -3,9 +3,9 @@ import { DELETE } from "@/src/app/api/images/[imageId]/route";
 import {
   ProductImageDeleteError,
   deleteProductImage,
-} from "@/src/lib/repositories/productImageDelete";
+} from "@luratha/repositories/productImageDelete";
 
-vi.mock("@/src/lib/repositories/productImageDelete", () => ({
+vi.mock("@luratha/repositories/productImageDelete", () => ({
   ProductImageDeleteError: class extends Error {
     code: "not_found" | "validation" | "unknown";
 

@@ -23,11 +23,11 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environment";
-import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
+import { createProductsSearchRepository } from "@luratha/repositories/productsSearchRepository";
 import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,
-} from "@/src/lib/repositories/homeSeedMockData";
+} from "@luratha/repositories/homeSeedMockData";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 

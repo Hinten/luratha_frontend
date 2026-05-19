@@ -8,8 +8,8 @@ import SortDropdown from "@/src/components/categoria/SortDropdown";
 import JsonLd from "@/src/components/JsonLd";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
-import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
-import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
+import { createCategoriesRepository } from "@luratha/repositories/categoriesRepository";
+import { createProductsSearchRepository } from "@luratha/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@luratha/core/firestoreQueryStrategies";
 
 interface PageProps {

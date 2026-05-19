@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@/src/lib/repositories/homeSeedMockData";
+import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@luratha/repositories/homeSeedMockData";
 import { validateProduct } from "@luratha/schemas";
 
 describe("home seed mock data", () => {

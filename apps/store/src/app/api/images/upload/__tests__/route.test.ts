@@ -3,9 +3,9 @@ import { POST } from "@/src/app/api/images/upload/route";
 import {
   ProductImageUploadError,
   uploadProductImage,
-} from "@/src/lib/repositories/productImageUpload";
+} from "@luratha/repositories/productImageUpload";
 
-vi.mock("@/src/lib/repositories/productImageUpload", () => ({
+vi.mock("@luratha/repositories/productImageUpload", () => ({
   ProductImageUploadError: class extends Error {
     code: "not_found" | "validation" | "unknown";
 

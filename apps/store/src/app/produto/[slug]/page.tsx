@@ -5,12 +5,12 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@luratha/schemas";
 import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
-import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
+import { createCategoriesRepository } from "@luratha/repositories/categoriesRepository";
 import {
   ProductRepositoryError,
   createProductsRepository,
-} from "@/src/lib/repositories/productsRepository";
-import { createStockRepository } from "@/src/lib/repositories/stockRepository";
+} from "@luratha/repositories/productsRepository";
+import { createStockRepository } from "@luratha/repositories/stockRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 import ViewTracker from "@/src/components/produto/ViewTracker";
 import { getProductPrimaryImage } from "@/src/lib/productImages";

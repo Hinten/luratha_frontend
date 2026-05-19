@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   ProductImageUploadError,
   uploadProductImage,
-} from "@/src/lib/repositories/productImageUpload";
+} from "@luratha/repositories/productImageUpload";
 
 export const runtime = "nodejs";
 

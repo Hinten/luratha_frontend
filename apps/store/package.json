@@ -21,6 +21,7 @@
     "@luratha/auth": "workspace:*",
     "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
+    "@luratha/repositories": "workspace:*",
     "@luratha/schemas": "workspace:*",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",

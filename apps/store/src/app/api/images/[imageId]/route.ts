@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   ProductImageDeleteError,
   deleteProductImage,
-} from "@/src/lib/repositories/productImageDelete";
+} from "@luratha/repositories/productImageDelete";
 
 export const runtime = "nodejs";
 

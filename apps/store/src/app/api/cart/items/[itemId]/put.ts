@@ -4,7 +4,7 @@ import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   CartRepositoryError,
   createCartsRepository,
-} from "@/src/lib/repositories/cartsRepository";
+} from "@luratha/repositories/cartsRepository";
 
 export const runtime = "nodejs";
 

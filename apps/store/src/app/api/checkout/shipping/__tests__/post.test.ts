@@ -7,7 +7,7 @@ import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
 import { ShippingProviderError, type ShippingProvider } from "@/src/lib/shipping/types";
 
-vi.mock("@/src/lib/repositories/siteSettingsRepository", async () => {
+vi.mock("@luratha/repositories/siteSettingsRepository", async () => {
   const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
   return {
     getSiteSettings: vi.fn(async () => getDefaultSiteSettings()),
@@ -136,7 +136,7 @@ describe("POST /api/checkout/shipping", () => {
   });
 
   it("returns 502 when primary fails and fixedRate fallback is disabled", async () => {
-    const mod = await import("@/src/lib/repositories/siteSettingsRepository");
+    const mod = await import("@luratha/repositories/siteSettingsRepository");
     const { getDefaultSiteSettings } = await import("@luratha/schemas/siteSettings");
     const settings = getDefaultSiteSettings();
     settings.shipping.fixedRate.enabledAsFallback = false;

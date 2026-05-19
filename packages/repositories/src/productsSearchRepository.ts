@@ -32,8 +32,8 @@ import {
 } from "@luratha/core/firestoreQueryStrategies";
 import {
   ProductRepositoryError,
-} from "@/src/lib/repositories/productsRepository";
-import { createCategoriesRepository } from "@/src/lib/repositories/categoriesRepository";
+} from "@luratha/repositories/productsRepository";
+import { createCategoriesRepository } from "@luratha/repositories/categoriesRepository";
 import {
   EmbeddingGenerationError,
   createEmbeddingService,

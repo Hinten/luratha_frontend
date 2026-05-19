@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
-import { createCartsRepository } from "@/src/lib/repositories/cartsRepository";
+import { createCartsRepository } from "@luratha/repositories/cartsRepository";
 
 export const runtime = "nodejs";
 

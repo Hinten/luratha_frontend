@@ -130,7 +130,7 @@ vi.mock("firebase/firestore/pipelines", () => {
   };
 });
 
-vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
+vi.mock("@luratha/repositories/categoriesRepository", () => ({
   createCategoriesRepository: () => ({
     getBySlug: vi.fn(async (slug: string) =>
       slug === "vestidos" ? { id: "cat_vestidos", name: "Vestidos", slug: "vestidos" } : null,
@@ -147,7 +147,7 @@ vi.mock("@luratha/core/embeddingService", () => ({
 import {
   createProductsSearchRepository,
   isExactMatchCandidate,
-} from "@/src/lib/repositories/productsSearchRepository";
+} from "@luratha/repositories/productsSearchRepository";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSiteSettings } from "@/src/lib/repositories/siteSettingsRepository";
+import { getSiteSettings } from "@luratha/repositories/siteSettingsRepository";
 import {
   calculateFreeShippingThreshold,
   pickReferenceShippingCost,

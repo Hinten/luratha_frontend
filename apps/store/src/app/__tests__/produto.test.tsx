@@ -39,7 +39,7 @@ vi.mock("@luratha/firestore/firebaseSsrApp", () => ({
   })),
 }));
 
-vi.mock("@/src/lib/repositories/productsRepository", () => ({
+vi.mock("@luratha/repositories/productsRepository", () => ({
   ProductRepositoryError: class ProductRepositoryError extends Error {
     readonly code: "validation" | "not_found" | "conflict" | "unknown";
 
@@ -53,13 +53,13 @@ vi.mock("@/src/lib/repositories/productsRepository", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
+vi.mock("@luratha/repositories/categoriesRepository", () => ({
   createCategoriesRepository: () => ({
     getById: getCategoryByIdMock,
   }),
 }));
 
-vi.mock("@/src/lib/repositories/stockRepository", () => ({
+vi.mock("@luratha/repositories/stockRepository", () => ({
   createStockRepository: () => ({
     getByProductId: getStockByProductIdMock,
   }),

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   deleteProductImage,
   ProductImageDeleteError,
-} from "@/src/lib/repositories/productImageDelete";
+} from "@luratha/repositories/productImageDelete";
 import { validateProduct } from "@luratha/schemas";
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@
 
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
-import { buildMockProducts, buildMockStock } from "@/src/lib/repositories/productsMockData";
+import { buildMockProducts, buildMockStock } from "@luratha/repositories/productsMockData";
 import { firestoreCollections } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 

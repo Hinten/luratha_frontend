@@ -26,7 +26,7 @@ import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/ap
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environment";
-import { createStockRepository, StockRepositoryError } from "@/src/lib/repositories/stockRepository";
+import { createStockRepository, StockRepositoryError } from "@luratha/repositories/stockRepository";
 import { firestoreCollections, validateStock } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 

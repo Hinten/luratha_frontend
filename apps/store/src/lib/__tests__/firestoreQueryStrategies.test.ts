@@ -8,7 +8,7 @@ import {
 import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,
-} from "@/src/lib/repositories/homeSeedMockData";
+} from "@luratha/repositories/homeSeedMockData";
 
 describe("firestore query strategies", () => {
   it("builds core query plan with default active filter", () => {
