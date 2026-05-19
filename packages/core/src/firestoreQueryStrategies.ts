@@ -2,7 +2,7 @@ import { pipelineSearchRequestSchema, vectorSearchRequestSchema } from "@luratha
 import {
   normalizeLimit,
   normalizeOffset,
-} from "@/src/lib/firestoreQueryStrategies.utils";
+} from "@luratha/core/firestoreQueryStrategies.utils";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "rating_desc";
 

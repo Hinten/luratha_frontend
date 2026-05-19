@@ -1,5 +1,5 @@
 import type { Product } from "@luratha/schemas";
-import type { EmbeddingService } from "@/src/lib/embeddingService";
+import type { EmbeddingService } from "@luratha/core/embeddingService";
 
 /**
  * Builds the text used to generate the `vectorEmbedding` field.

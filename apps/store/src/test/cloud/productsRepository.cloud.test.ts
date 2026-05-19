@@ -26,7 +26,7 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 import { adminApp, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@luratha/firestore/environment";
-import { createEmbeddingService } from "@/src/lib/embeddingService";
+import { createEmbeddingService } from "@luratha/core/embeddingService";
 import { createProductsRepository } from "@/src/lib/repositories/productsRepository";
 import {
   createProductsSearchRepository,

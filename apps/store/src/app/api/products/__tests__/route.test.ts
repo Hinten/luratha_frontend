@@ -22,7 +22,7 @@ vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminApp: { options: { credential: undefined } },
 }));
 
-vi.mock("@/src/lib/embeddingService", () => ({
+vi.mock("@luratha/core/embeddingService", () => ({
   createEmbeddingService: vi.fn(() => ({ embed: mockEmbed })),
 }));
 

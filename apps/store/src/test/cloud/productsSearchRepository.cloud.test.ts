@@ -38,9 +38,9 @@ import {
   createProductsSearchRepository,
   type SearchOptions,
 } from "@/src/lib/repositories/productsSearchRepository";
-import { EmbeddingGenerationError } from "@/src/lib/embeddingService";
-import type { ProductSearchFilters } from "@/src/lib/firestoreQueryStrategies";
-import { shouldUsePipeline } from "@/src/lib/firestoreQueryStrategies";
+import { EmbeddingGenerationError } from "@luratha/core/embeddingService";
+import type { ProductSearchFilters } from "@luratha/core/firestoreQueryStrategies";
+import { shouldUsePipeline } from "@luratha/core/firestoreQueryStrategies";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ─────────────────────────────────────────────────────────────────────────────

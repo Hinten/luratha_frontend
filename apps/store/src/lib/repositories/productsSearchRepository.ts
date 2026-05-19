@@ -29,7 +29,7 @@ import {
   shouldUsePipeline,
   type ProductSearchFilters,
   type ProductSort,
-} from "@/src/lib/firestoreQueryStrategies";
+} from "@luratha/core/firestoreQueryStrategies";
 import {
   ProductRepositoryError,
 } from "@/src/lib/repositories/productsRepository";
@@ -38,7 +38,7 @@ import {
   EmbeddingGenerationError,
   createEmbeddingService,
   type EmbeddingService,
-} from "@/src/lib/embeddingService";
+} from "@luratha/core/embeddingService";
 
 export interface SearchOptions {
   useVectors?: boolean;

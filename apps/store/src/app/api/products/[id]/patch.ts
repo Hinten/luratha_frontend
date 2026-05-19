@@ -4,7 +4,7 @@ import { z } from "zod";
 import { adminDb, adminApp } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
-import { createEmbeddingService, EmbeddingGenerationError } from "@/src/lib/embeddingService";
+import { createEmbeddingService, EmbeddingGenerationError } from "@luratha/core/embeddingService";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";

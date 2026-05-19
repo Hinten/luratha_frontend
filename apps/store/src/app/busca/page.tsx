@@ -9,7 +9,7 @@ import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstan
 import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { createProductsSearchRepository } from "@/src/lib/repositories/productsSearchRepository";
 import { createStockRepository } from "@/src/lib/repositories/stockRepository";
-import type { ProductSearchFilters, ProductSort } from "@/src/lib/firestoreQueryStrategies";
+import type { ProductSearchFilters, ProductSort } from "@luratha/core/firestoreQueryStrategies";
 import type { Product, Stock } from "@luratha/schemas";
 
 interface PageProps {

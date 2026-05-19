@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import {
   buildEnterprisePipelineSearchPlan,
   shouldUsePipeline,
-} from "@/src/lib/firestoreQueryStrategies";
+} from "@luratha/core/firestoreQueryStrategies";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 
 describeCloud("Cloud pipeline search – plan validation", () => {

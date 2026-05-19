@@ -4,7 +4,7 @@ import {
   buildEnterprisePipelineSearchPlan,
   buildEnterpriseVectorSearchPlan,
   shouldUsePipeline,
-} from "@/src/lib/firestoreQueryStrategies";
+} from "@luratha/core/firestoreQueryStrategies";
 import {
   buildHomeSeedCategories,
   buildHomeSeedProducts,

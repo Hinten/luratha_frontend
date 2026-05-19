@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { buildEnterpriseVectorSearchPlan } from "@/src/lib/firestoreQueryStrategies";
+import { buildEnterpriseVectorSearchPlan } from "@luratha/core/firestoreQueryStrategies";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 
 describeCloud("Cloud vector search – plan validation", () => {

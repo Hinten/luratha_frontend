@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEmbeddingService,
   normalizeEmbeddingDimensions,
-} from "@/src/lib/embeddingService";
+} from "@luratha/core/embeddingService";
 
 describe("embeddingService", () => {
   afterEach(() => {

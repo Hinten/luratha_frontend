@@ -138,7 +138,7 @@ vi.mock("@/src/lib/repositories/categoriesRepository", () => ({
   }),
 }));
 
-vi.mock("@/src/lib/embeddingService", () => ({
+vi.mock("@luratha/core/embeddingService", () => ({
   createEmbeddingService: () => ({
     embed: vi.fn(async () => [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
   }),
