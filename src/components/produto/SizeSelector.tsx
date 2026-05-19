@@ -69,8 +69,11 @@ function findMatchingVariant(
   if (!product.variants) return null;
   return (
     product.variants.find((v) => {
-      const colorMatch = color ? (v.color?.includes(color) ?? false) : true;
-      const sizeMatch = size ? (v.size?.includes(size) ?? false) : true;
+      // A variant with a `null` axis is not differentiated on it (e.g. a
+      // size-only product whose single colour lives on `product.color`), so it
+      // matches any selected value for that axis.
+      const colorMatch = !color || v.color == null || v.color.includes(color);
+      const sizeMatch = !size || v.size == null || v.size.includes(size);
       return colorMatch && sizeMatch;
     }) ?? null
   );
@@ -173,6 +176,7 @@ export default function SizeSelector({
   const [sizeError, setSizeError] = useState(false);
   const [favorited, setFavorited] = useState(false);
 
+  const hasVariants = (product.variants?.length ?? 0) > 0;
   const currentQty = getCurrentQty(product, stock, selectedColor, selectedSize, hasColors, hasSizes);
   const totalStock = stock?.quantity ?? product.totalStock;
 
@@ -180,10 +184,23 @@ export default function SizeSelector({
     (hasColors ? selectedColor !== null : true) &&
     (hasSizes ? selectedSize !== null : true);
 
+  const matchedVariant = useMemo(
+    () => findMatchingVariant(product, selectedColor, selectedSize),
+    [product, selectedColor, selectedSize],
+  );
+
+  // A variant-based product can only be added once the selection resolves to a
+  // real variant. Combos that don't exist (no matching variant) must stay
+  // non-addable even when the stock doc is missing or has `hasVariants: false`
+  // — otherwise the cart item carries no variantId and the add is rejected.
+  const variantSelectionUnavailable =
+    hasVariants && selectionComplete && matchedVariant === null;
+
   const isOutOfStock =
-    hasColors || hasSizes
+    variantSelectionUnavailable ||
+    (hasColors || hasSizes
       ? selectionComplete && currentQty !== null && currentQty === 0
-      : totalStock === 0;
+      : totalStock === 0);
 
   // For simple products without variants, fall back to product.totalStock
   const stockQtyForDisplay =
@@ -193,11 +210,6 @@ export default function SizeSelector({
     stockQtyForDisplay !== null && stockQtyForDisplay > 0
       ? urgencyMessage(stockQtyForDisplay)
       : null;
-
-  const matchedVariant = useMemo(
-    () => findMatchingVariant(product, selectedColor, selectedSize),
-    [product, selectedColor, selectedSize],
-  );
 
   const cartItemInput: CartItemInput | null = useMemo(() => {
     if (
