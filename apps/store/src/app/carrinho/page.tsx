@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/src/contexts/CartContext";
+import { useCartShipping } from "@/src/hooks/useCartShipping";
+import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
+import CartShippingOptions, {
+  cartShippingQuoteKey,
+} from "@/src/components/shipping/CartShippingOptions";
 import styles from "./page.module.css";
 
 const formatBRL = (value: number) =>
@@ -21,7 +27,32 @@ export default function CarrinhoPage() {
     error,
   } = useCart();
 
+  const shipping = useCartShipping(items);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
   const isEmpty = items.length === 0;
+
+  const cheapest =
+    shipping.quotes.length > 0
+      ? shipping.quotes.reduce((a, b) => (b.price < a.price ? b : a))
+      : null;
+  const cheapestKey = cheapest ? cartShippingQuoteKey(cheapest) : null;
+  const eligibleForFreeShipping =
+    shipping.freeShippingThreshold !== null &&
+    totalPrice >= shipping.freeShippingThreshold;
+
+  const validKeys = new Set(shipping.quotes.map(cartShippingQuoteKey));
+  const effectiveKey =
+    selectedKey !== null && validKeys.has(selectedKey) ? selectedKey : cheapestKey;
+  const selectedQuote =
+    shipping.quotes.find((q) => cartShippingQuoteKey(q) === effectiveKey) ?? null;
+  const selectedShippingCost =
+    selectedQuote === null
+      ? null
+      : eligibleForFreeShipping && effectiveKey === cheapestKey
+        ? 0
+        : selectedQuote.price;
+  const grandTotal = totalPrice + (selectedShippingCost ?? 0);
 
   return (
     <main className={styles.page}>
@@ -152,20 +183,37 @@ export default function CarrinhoPage() {
                 <span>{formatBRL(totalPrice)}</span>
               </div>
 
+              <ShippingCepForm title="Calcular frete" />
+
+              <CartShippingOptions
+                quotes={shipping.quotes}
+                freeShippingThreshold={shipping.freeShippingThreshold}
+                subtotal={totalPrice}
+                loading={shipping.loading}
+                error={shipping.error}
+                hasPostalCode={shipping.postalCode !== null}
+                selectedKey={effectiveKey ?? ""}
+                onSelect={setSelectedKey}
+              />
+
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Frete</span>
-                <span>Calcule o frete</span>
+                <span>
+                  {selectedShippingCost === null
+                    ? shipping.loading
+                      ? "Calculando…"
+                      : "A calcular"
+                    : selectedShippingCost === 0
+                      ? "Grátis"
+                      : formatBRL(selectedShippingCost)}
+                </span>
               </div>
-
-              <p className={styles.shippingNote}>
-                Informe o CEP na próxima etapa.
-              </p>
 
               <hr className={styles.summaryDivider} />
 
               <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
                 <span>Total</span>
-                <span>{formatBRL(totalPrice)}</span>
+                <span>{formatBRL(grandTotal)}</span>
               </div>
 
               <button

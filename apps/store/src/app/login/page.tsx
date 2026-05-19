@@ -32,8 +32,8 @@ function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
-      // redirectParam is arbitrary runtime input, so it cannot be a statically
-      // typed route — cast to Route for the typedRoutes-checked router.push.
+      // `redirect` é um path arbitrário validado em runtime — typed routes não
+      // conseguem inferi-lo estaticamente, daí o cast para `Route`.
       const target = (
         redirectParam && redirectParam.startsWith("/") ? redirectParam : "/"
       ) as Route;

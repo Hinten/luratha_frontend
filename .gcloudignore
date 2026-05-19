@@ -23,7 +23,7 @@ blob-report/
 
 # Local environment files
 .env*
-!.env.example
+!**/.env.example
 
 # Next.js build cache (rebuilt during deployment)
 .next/

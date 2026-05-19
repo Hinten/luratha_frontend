@@ -1,4 +1,7 @@
-export { firestoreCollections } from "@/src/schemas/firestore/collections";
+export {
+  firestoreCollections,
+  SITE_SETTINGS_DOC_ID,
+} from "@/src/schemas/firestore/collections";
 export {
   CategorySchema,
   type Category,
@@ -10,10 +13,12 @@ export {
   productVariantSchema,
   productImageAssetSchema,
   productSchema,
+  dimensionsSchema,
   buildProductSlug,
   slugifyProductPart,
   type ProductVariant,
   type ProductImageAsset,
+  type Dimensions,
   type Product,
   validateProduct,
 } from "@/src/schemas/firestore/products";
@@ -39,8 +44,10 @@ export {
 export {
   orderItemSchema,
   orderSchema,
+  orderShippingMethodSchema,
   type OrderItem,
   type Order,
+  type OrderShippingMethod,
   validateOrder,
 } from "@/src/schemas/firestore/orders";
 export {
@@ -64,3 +71,23 @@ export {
   type PipelineSearchRequest,
   type VectorSearchRequest,
 } from "@/src/schemas/firestore/search";
+export {
+  siteSettingsSchema,
+  shippingSettingsSchema,
+  shippingServiceSchema,
+  shippingProviderIdSchema,
+  freeShippingConfigSchema,
+  fixedRateConfigSchema,
+  fixedRateEntrySchema,
+  SHIPPING_PROVIDER_IDS,
+  validateSiteSettings,
+  getDefaultSiteSettings,
+  normalizePostalCode,
+  type SiteSettings,
+  type ShippingSettings,
+  type ShippingServiceConfig,
+  type ShippingProviderId,
+  type FreeShippingConfig,
+  type FixedRateConfig,
+  type FixedRateEntry,
+} from "@/src/schemas/firestore/siteSettings";

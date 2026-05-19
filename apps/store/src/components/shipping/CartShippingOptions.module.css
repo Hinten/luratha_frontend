@@ -1,0 +1,114 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.status {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.note {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+}
+
+.progressBar {
+  margin-top: 0.5rem;
+  width: 100%;
+  height: 6px;
+  background-color: color-mix(in srgb, var(--color-neutral-mid) 60%, transparent);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  transition: width 300ms ease;
+}
+
+.group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.groupLegend {
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+  padding: 0;
+  margin-bottom: 0.25rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background-color: #fff;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.option:hover {
+  border-color: color-mix(in srgb, var(--color-neutral-dark) 35%, transparent);
+}
+
+.optionSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.radio {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.radio:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.optionName {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+}
+
+.optionDetail {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 55%, transparent);
+}
+
+.optionPrice {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  white-space: nowrap;
+}

@@ -290,12 +290,6 @@
   font-size: 1.0625rem;
 }
 
-.shippingNote {
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--color-neutral-dark) 55%, transparent);
-}
-
 .checkoutBtn {
   width: 100%;
   padding: 1rem 2rem;

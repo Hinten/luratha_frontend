@@ -283,6 +283,50 @@ describe("SizeSelector — color + size with stock-aware variants", () => {
   });
 });
 
+describe("SizeSelector — unresolvable variant combo (no stock doc)", () => {
+  it("shows 'PRODUTO ESGOTADO' for a color+size combo with no matching variant", () => {
+    // Vermelho+M has no variant (only Azul/P, Azul/M, Vermelho/P exist).
+    render(<SizeSelector product={productWithColorAndSize} {...cartProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Vermelho" }));
+    fireEvent.click(screen.getByRole("button", { name: "M" }));
+    expect(screen.getByRole("button", { name: /PRODUTO ESGOTADO/i })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /Adicionar .* ao carrinho/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the add-to-cart button for a valid combo even without a stock doc", () => {
+    render(<SizeSelector product={productWithColorAndSize} {...cartProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Azul" }));
+    fireEvent.click(screen.getByRole("button", { name: "P" }));
+    expect(
+      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("resolves a variant when the colour lives on product.color and variants carry only size", () => {
+    const productColourOnProduct = makeProduct({
+      color: ["Off-white"],
+      variants: [
+        { id: "v1", sku: "OW_001_P", color: null, size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+        { id: "v2", sku: "OW_001_M", color: null, size: ["M"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+      ],
+    });
+    render(<SizeSelector product={productColourOnProduct} {...cartProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Off-white" }));
+    fireEvent.click(screen.getByRole("button", { name: "P" }));
+    expect(
+      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 // ─── Color swatch (image variant) and selection callbacks ──────────────────
 
 describe("SizeSelector — color swatch image fallback", () => {

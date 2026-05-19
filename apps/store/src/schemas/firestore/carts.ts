@@ -9,6 +9,7 @@ import {
   toCents,
   uidSchema,
 } from "@/src/schemas/firestore/utils";
+import { dimensionsSchema } from "@/src/schemas/firestore/products";
 
 export const cartItemSchema = z.object({
   id: nonEmptyStringSchema,
@@ -31,6 +32,12 @@ export const cartItemSchema = z.object({
   unitPrice: moneySchema,
   quantity: quantitySchema,
   currency: z.literal("BRL"),
+  /**
+   * Snapshot de peso/dimensões do produto, copiado server-side no add-to-cart.
+   * Usado pelo cálculo de frete real do carrinho/checkout. `null` quando o
+   * produto não tem `dimensions` cadastrado — o cálculo cai no peso de fallback.
+   */
+  dimensions: dimensionsSchema.nullable().default(null),
   addedAt: timestampSchema,
   updatedAt: timestampSchema,
 });
