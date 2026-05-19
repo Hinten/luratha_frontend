@@ -44,10 +44,23 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 
 | Path | Purpose |
 |---|---|
-| `apps/store/` | Storefront Next.js app (`@luratha/store`) — all paths in the next table are relative to here |
-| `packages/` | Shared workspace packages (added incrementally — schemas, firestore, repositories, ui, …) |
+| `apps/store/` | Storefront Next.js app (`@luratha/store`) — all paths in the Directory Map are relative to here |
+| `packages/*` | Shared workspace packages, imported by name (`@luratha/<pkg>`) |
 | `functions/` | Cloud Functions — separate npm project, outside the pnpm workspace |
+| `tsconfig.base.json`, `eslint.config.base.mjs` | Shared config the `packages/*` extend (the storefront keeps `eslint-config-next`) |
 | `pnpm-workspace.yaml`, `turbo.json` | Workspace + task-orchestration config at the repo root |
+
+### Shared packages
+
+| Package | Source of truth for | Depends on |
+|---|---|---|
+| `@luratha/schemas` | Zod schemas / Firestore data contracts | — |
+| `@luratha/firestore` | Firebase SDK wrappers + DataConverters | `schemas` |
+| `@luratha/core` | `embeddingService`, `firestoreQueryStrategies` | `schemas` |
+| `@luratha/auth` | `requireUser` / session-cookie helpers | `firestore` |
+| `@luratha/repositories` | Firestore access layer + seed helpers | `schemas`, `firestore`, `core` |
+
+Import shared code by package name (`@luratha/schemas`, `@luratha/firestore/firebaseAdmin`, …) — never reach across workspaces with relative or `@/` paths. Add a new shared package to the consuming app's `dependencies` (`workspace:*`) and to `transpilePackages` in its `next.config.ts`.
 
 ### Directory Map
 
@@ -58,11 +71,8 @@ Paths below are under `apps/store/`.
 | `src/app/` | Routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests |
 | `src/components/` | Shared UI + domain folders (`categoria/`, `produto/`), each with `.module.css` |
 | `src/contexts/` | Client state providers (`AuthContext`, `CartContext`) |
-| `src/lib/` | Constants, SEO constants, Firebase clients, query helpers |
-| `src/lib/firestore/` | Firebase SDK wrappers — `firebaseClient.ts`, `firebaseSsrApp.ts`, `firebaseAdmin.ts`, DataConverters |
-| `src/lib/repositories/` | Firestore access layer and seed helpers |
+| `src/lib/` | App-local helpers — constants, SEO constants, shipping, query helpers |
 | `src/services/` | Lightweight service layer (minimal — avoid duplicating repository logic) |
-| `src/schemas/firestore/` | Zod validation schemas; keep Firestore data contracts here |
 | `src/test/` | Cloud test setup, Playwright cloud setup, seed helpers, Vitest setup |
 | `src/test/cloud/` | Vitest cloud integration suite (`*.cloud.test.ts`) |
 | `src/test/cloud-functions/` | Vitest Functions trigger suite (`*.functions.test.ts`) |
@@ -85,7 +95,9 @@ All API route handlers must include `export const runtime = "nodejs"` — fireba
 
 ### Firebase SDK split
 
-| File | Use when |
+The `@luratha/firestore` package owns these modules — import them as `@luratha/firestore/<file>`:
+
+| Module | Use when |
 |---|---|
 | `firebaseClient.ts` | Browser/client components (`"use client"` paths) |
 | `firebaseSsrApp.ts` | SSR/App Router rendering flows (server components, `generateMetadata`) |
@@ -96,10 +108,10 @@ Never import client Firebase modules into server-only flows. The Admin SDK bypas
 
 ### Schemas and DataConverters
 
-All Firestore data contracts live in `src/schemas/firestore/`. When adding a new entity:
-- Define the Zod schema in `src/schemas/firestore/{entity}.ts`
-- Export from `src/schemas/firestore/index.ts` alongside `firestoreCollections`
-- Create `adminXxxConverter.ts` and `clientXxxConverter.ts` for entities with `Timestamp` or vector fields
+All Firestore data contracts live in the `@luratha/schemas` package (`packages/schemas/src/`); DataConverters live in `@luratha/firestore` (`packages/firestore/src/`). When adding a new entity:
+- Define the Zod schema in `packages/schemas/src/{entity}.ts`
+- Export from `packages/schemas/src/index.ts` alongside `firestoreCollections`
+- Create `adminXxxConverter.ts` and `clientXxxConverter.ts` in `packages/firestore/src/` for entities with `Timestamp` or vector fields
 - Always use `.withConverter()` on Firestore refs — omitting it causes vector fields to be stored as plain arrays, silently breaking `findNearest`
 
 Zod v4 note: use `error.issues`, not `error.errors` (`.errors` was removed).
