@@ -4,31 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Luratha is a Next.js 16.2.2 App Router frontend (React 19 + TypeScript strict) for a Brazilian slow-fashion e-commerce. Stack: Firebase client SDK + Firebase App Hosting, Tailwind CSS v4, CSS Modules. Node.js 22 required.
+Luratha is a Next.js 16.2 App Router frontend (React 19 + TypeScript strict) for a Brazilian slow-fashion e-commerce. Stack: Firebase client SDK + Firebase App Hosting, Tailwind CSS v4, CSS Modules. Node.js 22 required.
+
+The repository is a **pnpm + Turborepo monorepo**. The storefront lives in `apps/store/`; future apps (e.g. `apps/admin/`) and shared `packages/*` join the same workspace. `functions/` keeps its own npm toolchain and is not part of the pnpm workspace.
 
 ## Commands
 
+Run from the repo root — Turborepo fans out to the affected workspaces. Node.js 22 + pnpm 10 required.
+
 ```bash
-npm ci                        # install dependencies
-npm run dev                   # start dev server (Turbopack)
-npm run lint                  # ESLint — must exit 0 before finishing any task
-npm test                      # Vitest unit/component suite (jsdom, no network)
-npm run test:watch            # Vitest watch mode
-npm run test:coverage         # Vitest with coverage report
-npm run test:firestore        # Vitest cloud integration suite (luratha-96386) — mandatory for schema/Firebase changes
-npm run test:functions:cloud  # Vitest Functions trigger suite — requires Functions deployed to luratha-96386
-npm run test:e2e              # Playwright E2E against luratha-96386 (headless Chromium, auto-starts dev server)
-npm run test:e2e:ui           # Playwright interactive UI mode
-npm run build                 # production build — run when the change affects production behavior
+pnpm install                  # install all workspace dependencies
+pnpm dev                      # start dev server (Turbopack)
+pnpm lint                     # ESLint — must exit 0 before finishing any task
+pnpm typecheck                # tsc --noEmit across workspaces
+pnpm test                     # Vitest unit/component suite (jsdom, no network)
+pnpm test:coverage            # Vitest with coverage report
+pnpm test:firestore           # Vitest cloud integration suite (luratha-96386) — mandatory for schema/Firebase changes
+pnpm test:functions:cloud     # Vitest Functions trigger suite — requires Functions deployed to luratha-96386
+pnpm test:e2e                 # Playwright E2E against luratha-96386 (headless Chromium, auto-starts dev server)
+pnpm build                    # production build — run when the change affects production behavior
 ```
 
-Run a single Playwright spec: `npx playwright test e2e/home.spec.ts`
+Scope a command to one app: `pnpm --filter @luratha/store <script>`.
+Run a single Playwright spec: `pnpm --filter @luratha/store exec playwright test e2e/home.spec.ts`
 
-**Mandatory order for any code change:** `npx tsc` → `npm run lint` → `npm test` → `npm run test:e2e`
+**Mandatory order for any code change:** `pnpm typecheck` → `pnpm lint` → `pnpm test` → `pnpm test:e2e`
 
-TypeScript check is mandatory: always run `npx tsc` to detect type errors. If errors are found, fix them.
+TypeScript check is mandatory: always run `pnpm typecheck` to detect type errors. If errors are found, fix them.
 
-For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `npm run test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
+For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `pnpm test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
 
 **CI matrix**: PRs to `master` run lint/typecheck, unit, integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite.
 
@@ -36,18 +40,39 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 
 ## Architecture
 
+### Monorepo layout
+
+| Path | Purpose |
+|---|---|
+| `apps/store/` | Storefront Next.js app (`@luratha/store`) — all paths in the Directory Map are relative to here |
+| `packages/*` | Shared workspace packages, imported by name (`@luratha/<pkg>`) |
+| `functions/` | Cloud Functions — separate npm project, outside the pnpm workspace |
+| `tsconfig.base.json`, `eslint.config.base.mjs` | Shared config the `packages/*` extend (the storefront keeps `eslint-config-next`) |
+| `pnpm-workspace.yaml`, `turbo.json` | Workspace + task-orchestration config at the repo root |
+
+### Shared packages
+
+| Package | Source of truth for | Depends on |
+|---|---|---|
+| `@luratha/schemas` | Zod schemas / Firestore data contracts | — |
+| `@luratha/firestore` | Firebase SDK wrappers + DataConverters | `schemas` |
+| `@luratha/core` | `embeddingService`, `firestoreQueryStrategies` | `schemas` |
+| `@luratha/auth` | `requireUser` / session-cookie helpers | `firestore` |
+| `@luratha/repositories` | Firestore access layer + seed helpers | `schemas`, `firestore`, `core` |
+
+Import shared code by package name (`@luratha/schemas`, `@luratha/firestore/firebaseAdmin`, …) — never reach across workspaces with relative or `@/` paths. Add a new shared package to the consuming app's `dependencies` (`workspace:*`) and to `transpilePackages` in its `next.config.ts`.
+
 ### Directory Map
+
+Paths below are under `apps/store/`.
 
 | Path | Purpose |
 |---|---|
 | `src/app/` | Routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests |
 | `src/components/` | Shared UI + domain folders (`categoria/`, `produto/`), each with `.module.css` |
 | `src/contexts/` | Client state providers (`AuthContext`, `CartContext`) |
-| `src/lib/` | Constants, SEO constants, Firebase clients, query helpers |
-| `src/lib/firestore/` | Firebase SDK wrappers — `firebaseClient.ts`, `firebaseSsrApp.ts`, `firebaseAdmin.ts`, DataConverters |
-| `src/lib/repositories/` | Firestore access layer and seed helpers |
+| `src/lib/` | App-local helpers — constants, SEO constants, shipping, query helpers |
 | `src/services/` | Lightweight service layer (minimal — avoid duplicating repository logic) |
-| `src/schemas/firestore/` | Zod validation schemas; keep Firestore data contracts here |
 | `src/test/` | Cloud test setup, Playwright cloud setup, seed helpers, Vitest setup |
 | `src/test/cloud/` | Vitest cloud integration suite (`*.cloud.test.ts`) |
 | `src/test/cloud-functions/` | Vitest Functions trigger suite (`*.functions.test.ts`) |
@@ -70,7 +95,9 @@ All API route handlers must include `export const runtime = "nodejs"` — fireba
 
 ### Firebase SDK split
 
-| File | Use when |
+The `@luratha/firestore` package owns these modules — import them as `@luratha/firestore/<file>`:
+
+| Module | Use when |
 |---|---|
 | `firebaseClient.ts` | Browser/client components (`"use client"` paths) |
 | `firebaseSsrApp.ts` | SSR/App Router rendering flows (server components, `generateMetadata`) |
@@ -81,10 +108,10 @@ Never import client Firebase modules into server-only flows. The Admin SDK bypas
 
 ### Schemas and DataConverters
 
-All Firestore data contracts live in `src/schemas/firestore/`. When adding a new entity:
-- Define the Zod schema in `src/schemas/firestore/{entity}.ts`
-- Export from `src/schemas/firestore/index.ts` alongside `firestoreCollections`
-- Create `adminXxxConverter.ts` and `clientXxxConverter.ts` for entities with `Timestamp` or vector fields
+All Firestore data contracts live in the `@luratha/schemas` package (`packages/schemas/src/`); DataConverters live in `@luratha/firestore` (`packages/firestore/src/`). When adding a new entity:
+- Define the Zod schema in `packages/schemas/src/{entity}.ts`
+- Export from `packages/schemas/src/index.ts` alongside `firestoreCollections`
+- Create `adminXxxConverter.ts` and `clientXxxConverter.ts` in `packages/firestore/src/` for entities with `Timestamp` or vector fields
 - Always use `.withConverter()` on Firestore refs — omitting it causes vector fields to be stored as plain arrays, silently breaking `findNearest`
 
 Zod v4 note: use `error.issues`, not `error.errors` (`.errors` was removed).

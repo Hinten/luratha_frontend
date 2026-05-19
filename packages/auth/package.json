@@ -1,0 +1,24 @@
+{
+  "name": "@luratha/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@luratha/firestore": "workspace:*",
+    "firebase-admin": "^13.10.0",
+    "next": "16.2.6",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "eslint": "^9.39.4",
+    "typescript": "^5"
+  }
+}
