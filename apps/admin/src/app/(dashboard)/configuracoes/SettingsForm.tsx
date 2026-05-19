@@ -8,6 +8,9 @@ import {
   type ShippingProviderId,
   type ShippingSettings,
 } from "@luratha/schemas";
+// Type-only import — the server-only module is erased at compile time.
+import type { MelhorEnvioServiceOption } from "@/src/lib/melhorEnvioServices";
+import { previewFreeShippingThreshold } from "@/src/lib/freeShippingPreview";
 import styles from "./SettingsForm.module.css";
 
 const PROVIDER_LABELS: Record<ShippingProviderId, string> = {
@@ -34,14 +37,22 @@ function num(value: number): number {
   return Number.isNaN(value) ? 0 : value;
 }
 
+/** Formats a number as Brazilian currency, e.g. 71.43 → "R$ 71,43". */
+function brl(value: number): string {
+  return `R$ ${value.toFixed(2).replace(".", ",")}`;
+}
+
 export function SettingsForm({
   initialShipping,
+  availableServices,
 }: {
   initialShipping: ShippingSettings;
+  availableServices: MelhorEnvioServiceOption[] | null;
 }) {
   const router = useRouter();
   const [shipping, setShipping] = useState<ShippingSettings>(initialShipping);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [simCost, setSimCost] = useState(12);
 
   function patch(partial: Partial<ShippingSettings>) {
     setShipping((s) => ({ ...s, ...partial }));
@@ -52,6 +63,27 @@ export function SettingsForm({
   }
   function patchFixedRate(partial: Partial<ShippingSettings["fixedRate"]>) {
     patch({ fixedRate: { ...shipping.fixedRate, ...partial } });
+  }
+
+  function toggleCatalogService(
+    option: MelhorEnvioServiceOption,
+    checked: boolean,
+  ) {
+    if (checked) {
+      if (shipping.enabledServices.some((s) => s.code === option.code)) return;
+      patch({
+        enabledServices: [
+          ...shipping.enabledServices,
+          { code: option.code, label: option.label, enabled: true },
+        ],
+      });
+    } else {
+      patch({
+        enabledServices: shipping.enabledServices.filter(
+          (s) => s.code !== option.code,
+        ),
+      });
+    }
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -84,6 +116,17 @@ export function SettingsForm({
 
   const { freeShipping, fixedRate } = shipping;
   const saving = status.kind === "saving";
+
+  // Catalog mode: pick services from the Melhor Envio API instead of typing
+  // codes. Falls back to the manual editor for fixed-rate or when the catalog
+  // could not be fetched (no token / scope / API down).
+  const useCatalog =
+    availableServices !== null && shipping.providerId === "melhor-envio";
+  const extraServices = availableServices
+    ? shipping.enabledServices.filter(
+        (s) => !availableServices.some((o) => o.code === s.code),
+      )
+    : [];
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
@@ -182,76 +225,152 @@ export function SettingsForm({
       <fieldset className={styles.section}>
         <legend className={styles.sectionTitle}>Serviços habilitados</legend>
         <p className={styles.hint}>
-          Filtro pós-resposta do provider. Vazio = todos os serviços passam.
+          Filtro pós-resposta do provider. Nenhum marcado = todos os serviços
+          passam.
         </p>
 
-        {shipping.enabledServices.map((service, index) => (
-          <div key={index} className={styles.row}>
-            <label className={styles.field}>
-              <span className={styles.subLabel}>Código</span>
-              <input
-                className={styles.input}
-                value={service.code}
-                onChange={(e) => {
-                  const next = [...shipping.enabledServices];
-                  next[index] = { ...service, code: e.target.value };
-                  patch({ enabledServices: next });
-                }}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.subLabel}>Nome</span>
-              <input
-                className={styles.input}
-                value={service.label}
-                onChange={(e) => {
-                  const next = [...shipping.enabledServices];
-                  next[index] = { ...service, label: e.target.value };
-                  patch({ enabledServices: next });
-                }}
-              />
-            </label>
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={service.enabled}
-                onChange={(e) => {
-                  const next = [...shipping.enabledServices];
-                  next[index] = { ...service, enabled: e.target.checked };
-                  patch({ enabledServices: next });
-                }}
-              />
-              <span>Ativo</span>
-            </label>
+        {useCatalog ? (
+          <>
+            <p className={styles.hint}>
+              Catálogo obtido do Melhor Envio — marque os serviços a oferecer.
+            </p>
+            <ul className={styles.catalogList}>
+              {availableServices.map((option) => {
+                const checked = shipping.enabledServices.some(
+                  (s) => s.code === option.code,
+                );
+                return (
+                  <li key={option.code}>
+                    <label className={styles.checkbox}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          toggleCatalogService(option, e.target.checked)
+                        }
+                      />
+                      <span>
+                        {option.label}
+                        {option.company && (
+                          <span className={styles.company}>
+                            {" "}
+                            · {option.company}
+                          </span>
+                        )}
+                        <span className={styles.code}> (#{option.code})</span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            {extraServices.length > 0 && (
+              <div className={styles.extras}>
+                <span className={styles.subLabel}>
+                  Serviços salvos fora do catálogo atual
+                </span>
+                <div className={styles.extraChips}>
+                  {extraServices.map((s) => (
+                    <span key={s.code} className={styles.extraChip}>
+                      {s.label} (#{s.code})
+                      <button
+                        type="button"
+                        className={styles.chipRemove}
+                        aria-label={`Remover ${s.label}`}
+                        onClick={() =>
+                          patch({
+                            enabledServices: shipping.enabledServices.filter(
+                              (e) => e.code !== s.code,
+                            ),
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {shipping.providerId === "melhor-envio" && (
+              <p className={styles.hint}>
+                Catálogo do Melhor Envio indisponível (token sem o escopo
+                <code> shipping-services</code> ou API fora do ar). Edite os
+                serviços manualmente.
+              </p>
+            )}
+            {shipping.enabledServices.map((service, index) => (
+              <div key={index} className={styles.row}>
+                <label className={styles.field}>
+                  <span className={styles.subLabel}>Código</span>
+                  <input
+                    className={styles.input}
+                    value={service.code}
+                    onChange={(e) => {
+                      const next = [...shipping.enabledServices];
+                      next[index] = { ...service, code: e.target.value };
+                      patch({ enabledServices: next });
+                    }}
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span className={styles.subLabel}>Nome</span>
+                  <input
+                    className={styles.input}
+                    value={service.label}
+                    onChange={(e) => {
+                      const next = [...shipping.enabledServices];
+                      next[index] = { ...service, label: e.target.value };
+                      patch({ enabledServices: next });
+                    }}
+                  />
+                </label>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={service.enabled}
+                    onChange={(e) => {
+                      const next = [...shipping.enabledServices];
+                      next[index] = { ...service, enabled: e.target.checked };
+                      patch({ enabledServices: next });
+                    }}
+                  />
+                  <span>Ativo</span>
+                </label>
+                <button
+                  type="button"
+                  className={styles.removeButton}
+                  onClick={() =>
+                    patch({
+                      enabledServices: shipping.enabledServices.filter(
+                        (_, i) => i !== index,
+                      ),
+                    })
+                  }
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
             <button
               type="button"
-              className={styles.removeButton}
+              className={styles.addButton}
               onClick={() =>
                 patch({
-                  enabledServices: shipping.enabledServices.filter(
-                    (_, i) => i !== index,
-                  ),
+                  enabledServices: [
+                    ...shipping.enabledServices,
+                    { code: "", label: "", enabled: true },
+                  ],
                 })
               }
             >
-              Remover
+              + Adicionar serviço
             </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className={styles.addButton}
-          onClick={() =>
-            patch({
-              enabledServices: [
-                ...shipping.enabledServices,
-                { code: "", label: "", enabled: true },
-              ],
-            })
-          }
-        >
-          + Adicionar serviço
-        </button>
+          </>
+        )}
       </fieldset>
 
       {/* ── Frete grátis ─────────────────────────────────────────────── */}
@@ -322,6 +441,44 @@ export function SettingsForm({
             />
           </label>
         )}
+
+        {/* Formula explainer + live simulator. */}
+        <div className={styles.formula}>
+          <p className={styles.formulaTitle}>Como o limite é calculado</p>
+          <p className={styles.formulaText}>
+            Para cada CEP, o sistema cota o frete de um pacote de 1&nbsp;kg e
+            aplica:
+          </p>
+          <p className={styles.formulaExpr}>
+            limite = custo do frete (1&nbsp;kg) ÷ divisor
+          </p>
+          <p className={styles.formulaText}>
+            O resultado nunca fica abaixo do <strong>threshold mínimo</strong>.
+            Se ultrapassar o <strong>threshold máximo</strong>, o frete grátis
+            não é oferecido naquela região (frete caro demais para a loja
+            absorver). Divisor maior ⇒ limite menor ⇒ mais clientes ganham
+            frete grátis.
+          </p>
+
+          <div className={styles.simulator}>
+            <label className={styles.field}>
+              <span className={styles.subLabel}>
+                Simular: custo de frete 1&nbsp;kg (R$)
+              </span>
+              <input
+                className={styles.input}
+                type="number"
+                step="0.01"
+                min="0"
+                value={simCost}
+                onChange={(e) => setSimCost(num(e.target.valueAsNumber))}
+              />
+            </label>
+            <p className={styles.simResult}>
+              <FreeShippingPreviewText cost={simCost} config={freeShipping} />
+            </p>
+          </div>
+        </div>
       </fieldset>
 
       {/* ── Tabela fixa ──────────────────────────────────────────────── */}
@@ -431,6 +588,37 @@ export function SettingsForm({
       </div>
     </form>
   );
+}
+
+function FreeShippingPreviewText({
+  cost,
+  config,
+}: {
+  cost: number;
+  config: ShippingSettings["freeShipping"];
+}) {
+  const preview = previewFreeShippingThreshold(cost, config);
+  switch (preview.kind) {
+    case "disabled":
+      return <>Regra de frete grátis desativada.</>;
+    case "invalid":
+      return <>Informe um custo de frete válido para simular.</>;
+    case "over-cap":
+      return (
+        <>
+          Acima do teto de {brl(config.maxThreshold ?? 0)} — frete grátis não
+          seria oferecido nesta região.
+        </>
+      );
+    case "threshold":
+      return (
+        <>
+          Frete grátis a partir de <strong>{brl(preview.value)}</strong> de
+          subtotal.
+          {preview.flooredByMin && " (piso mínimo aplicado)"}
+        </>
+      );
+  }
 }
 
 function EntryFields({

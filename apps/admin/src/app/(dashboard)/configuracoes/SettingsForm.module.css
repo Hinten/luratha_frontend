@@ -161,3 +161,103 @@
   font-size: 0.875rem;
   color: var(--color-error);
 }
+
+/* ── Catálogo de serviços do Melhor Envio ──────────────────────────── */
+.catalogList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.company {
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+}
+
+.code {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+}
+
+.extras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.extraChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.extraChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+}
+
+.chipRemove {
+  border: none;
+  background: transparent;
+  color: var(--color-error);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ── Painel da fórmula de frete grátis ─────────────────────────────── */
+.formula {
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 0.5rem;
+  background: var(--color-accent);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formulaTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.formulaText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+.formulaExpr {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.375rem 0.625rem;
+  background: var(--color-surface);
+  border-radius: 0.375rem;
+  align-self: flex-start;
+}
+
+.simulator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.simResult {
+  margin: 0;
+  flex: 1;
+  min-width: 14rem;
+  font-size: 0.875rem;
+}
