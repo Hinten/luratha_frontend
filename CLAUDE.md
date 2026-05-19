@@ -34,7 +34,7 @@ TypeScript check is mandatory: always run `pnpm typecheck` to detect type errors
 
 For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `pnpm test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
 
-**CI matrix**: PRs to `master` run lint/typecheck, unit, integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite.
+**CI matrix**: PRs to `master` run lint/typecheck, unit, `build` (Next.js — both apps), integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite. The `build` job skips when Firebase secrets are absent (the storefront prerenders Firestore-backed pages).
 
 **CI failure logs**: when the `Test` workflow fails on a PR, its own `report-failure` job posts the tail of each failed job's log (last ~12KB) as a PR comment. If you (Claude) pushed and the CI broke, **read the most recent PR comment** for the actual error — `pull_request_read` (`get_check_runs`) only returns metadata, not log output.
 

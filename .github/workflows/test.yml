@@ -44,6 +44,48 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+  build:
+    name: Build (Next.js — store + admin)
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    # The storefront `next build` prerenders pages that read Firestore, so it
+    # needs credentials + network. Skips (like the other cloud jobs) when the
+    # secrets are absent — the admin build alone never needs credentials.
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando build. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Build all apps
+        if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm run build
+
   integration-cloud:
     name: Integration (cloud Firestore)
     runs-on: ubuntu-latest
@@ -220,7 +262,7 @@ jobs:
     # que falharam (via API actions:read) e posta como comentário no PR.
     # Substitui o antigo workflow externo post-ci-logs.yml — agora o próprio
     # workflow Test reporta a falha, sem depender de um workflow_run separado.
-    needs: [lint-typecheck, unit, integration-cloud, functions-cloud, e2e-cloud]
+    needs: [lint-typecheck, unit, build, integration-cloud, functions-cloud, e2e-cloud]
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     permissions:

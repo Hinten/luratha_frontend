@@ -48,6 +48,27 @@
         "**/playwright-report",
         ".playwright-mcp"
       ]
+    },
+    {
+      "backendId": "luratha-app-admin",
+      "rootDir": "apps/admin",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions",
+        "apps/store",
+        "docs",
+        "plan",
+        "**/__tests__",
+        "**/test",
+        "**/vitest.config.mts",
+        "**/playwright.config.ts",
+        "README.md",
+        "storage.rules",
+        "firestore.rules"
+      ]
     }
   ],
   "storage": {
