@@ -1,0 +1,163 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 52rem;
+}
+
+.section {
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0 0.375rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  flex: 1;
+  min-width: 8rem;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.subLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.input {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 0.5rem;
+  font: inherit;
+  background: var(--color-neutral-light);
+  width: 100%;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  align-items: flex-end;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.entryGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.entryRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  padding: 0.75rem;
+  border: 1px dashed var(--color-neutral-mid);
+  border-radius: 0.5rem;
+}
+
+.addButton {
+  align-self: flex-start;
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-neutral-dark);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+}
+
+.removeButton {
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid var(--color-error);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-error);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.removeButton:hover {
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 0;
+  background: var(--background);
+}
+
+.submit {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ok {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-secondary) 70%, var(--foreground));
+}
+
+.error {
+  font-size: 0.875rem;
+  color: var(--color-error);
+}
