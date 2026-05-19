@@ -45,7 +45,7 @@ Roadmap detalhado em [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-road
 | Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting, Functions) |
 | Embeddings/IA | Vertex AI (`text-embedding-005`) |
 | Testes | Vitest + React Testing Library + Playwright |
-| CI | GitHub Actions (lint/typecheck, unit, cloud-integration, E2E, deploy de Functions) |
+| CI | GitHub Actions (lint/typecheck, unit, build, cloud-integration, E2E, deploy de Functions) |
 
 ## Pré-requisitos
 
@@ -61,9 +61,11 @@ Roadmap detalhado em [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-road
 
 ## Como rodar localmente
 
+Monorepo **pnpm + Turborepo** (Node 22, pnpm 10):
+
 ```bash
-npm ci
-npm run dev      # http://localhost:3000
+pnpm install
+pnpm dev         # storefront em :3000, admin em :3001
 ```
 
 ## Scripts principais
@@ -138,6 +140,31 @@ Já contemplados:
 - JSON-LD via componente `<JsonLd>` (Product, BreadcrumbList, ContactPage, LocalBusiness, etc.)
 - `src/app/sitemap.ts` e `src/app/robots.ts` dinâmicos
 - `public/llms.txt` para descobribilidade por LLMs
+
+## Deploy
+
+Monorepo com dois apps Next.js, cada um no seu backend do **Firebase App Hosting**
+(declarados em `firebase.json` → `apphosting`):
+
+| App | Backend | `rootDir` | Domínio |
+|---|---|---|---|
+| Storefront (`@luratha/store`) | `luratha-app-frontend` | `apps/store` | `luratha.com.br` |
+| Admin (`@luratha/admin`) | `luratha-app-admin` | `apps/admin` | `admin.luratha.com.br` |
+
+Cada backend é reconstruído de forma independente a partir do seu `rootDir` quando
+há push na branch ligada — uma falha/deploy do admin não afeta a loja.
+
+Provisionar o backend do admin (passos manuais, uma única vez, no console/CLI Firebase):
+
+1. **Criar o backend** — `firebase apphosting:backends:create`, com backendId
+   `luratha-app-admin`, ligado ao repositório e à branch de deploy.
+2. **Domínio** — adicionar `admin.luratha.com.br` ao backend (App Hosting → Domains)
+   e criar o registro DNS apontado para o App Hosting.
+3. **Env/secrets** — configurar as variáveis do backend (`FIREBASE_WEB_APP_CONFIG_BASE64`,
+   `MELHOR_ENVIO_TOKEN`, etc.) via `apps/admin/apphosting.yaml` + Cloud Secret Manager.
+
+A sessão do admin é isolada da loja: o cookie `__session` é gravado **host-only**
+(sem atributo `domain`), então logar no admin não cria sessão na loja e vice-versa.
 
 ## Documentação adicional
 
