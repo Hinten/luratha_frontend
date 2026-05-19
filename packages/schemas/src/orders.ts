@@ -67,6 +67,12 @@ export const orderSchema = z
     ]),
     paymentMethod: z.enum(["pix", "credit_card", "boleto"]),
     paymentStatus: z.enum(["pending", "authorized", "paid", "failed", "refunded"]),
+    /**
+     * Id do pagamento no provider (MercadoPago). Preenchido por
+     * `POST /api/checkout/payment-intent` e usado para correlacionar o webhook.
+     * Opcional para retro-compatibilidade com pedidos anteriores à integração.
+     */
+    paymentIntentId: nonEmptyStringSchema.max(64).optional(),
     items: z.array(orderItemSchema).min(1),
     itemCount: quantitySchema,
     subtotal: moneySchema,
@@ -92,6 +98,8 @@ export const orderSchema = z
     trackingCode: nonEmptyStringSchema.max(80).optional(),
     /** URL pública de rastreio. Quando ausente, a UI monta uma URL padrão pelo carrier. */
     trackingUrl: z.url().optional(),
+    /** Quando o pagamento foi confirmado pelo provider (webhook do MercadoPago). */
+    paidAt: timestampSchema.optional(),
     shippedAt: timestampSchema.optional(),
     deliveredAt: timestampSchema.optional(),
     notes: z.string().trim().max(500).optional(),
