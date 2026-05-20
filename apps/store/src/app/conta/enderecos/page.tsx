@@ -1,39 +1,15 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import type { Address } from "@luratha/schemas";
 import AddressCard from "@/src/components/conta/AddressCard";
+import AddressForm, {
+  type AddressFormInitialValues,
+  type AddressFormPayload,
+} from "@/src/components/checkout/AddressForm";
 import { ApiResponseError } from "@/src/lib/errors";
 import styles from "./page.module.css";
-
-interface FormState {
-  label: string;
-  recipientName: string;
-  postalCode: string;
-  line1: string;
-  number: string;
-  complement: string;
-  reference: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  isDefault: boolean;
-}
-
-const emptyForm: FormState = {
-  label: "",
-  recipientName: "",
-  postalCode: "",
-  line1: "",
-  number: "",
-  complement: "",
-  reference: "",
-  neighborhood: "",
-  city: "",
-  state: "",
-  isDefault: false,
-};
 
 export default function EnderecosPage() {
   const { user } = useAuth();
@@ -41,10 +17,10 @@ export default function EnderecosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state — quando `editingId` é null, é criação; senão, é edição
+  // Quando `editingId` é null e `showForm` true, é criação; com `editingId` é edição
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [initial, setInitial] = useState<AddressFormInitialValues | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
   const uid = user?.uid ?? null;
@@ -72,14 +48,14 @@ export default function EnderecosPage() {
 
   function startCreate() {
     setEditingId(null);
-    setForm(emptyForm);
+    setInitial(undefined);
     setShowForm(true);
     setError(null);
   }
 
   function startEdit(a: Address) {
     setEditingId(a.id);
-    setForm({
+    setInitial({
       label: a.label ?? "",
       recipientName: a.recipientName,
       postalCode: a.postalCode,
@@ -102,27 +78,10 @@ export default function EnderecosPage() {
     setError(null);
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSave(payload: AddressFormPayload) {
     if (!uid) return;
     setError(null);
     setSaving(true);
-
-    const body: Record<string, unknown> = {
-      recipientName: form.recipientName,
-      postalCode: form.postalCode,
-      line1: form.line1,
-      number: form.number,
-      neighborhood: form.neighborhood,
-      city: form.city,
-      state: form.state.toUpperCase(),
-      country: "BR",
-      isDefault: form.isDefault,
-      ...(form.label ? { label: form.label } : {}),
-      ...(form.complement ? { complement: form.complement } : {}),
-      ...(form.reference ? { reference: form.reference } : {}),
-    };
-
     try {
       const url = editingId
         ? `/api/users/${uid}/addresses/${editingId}`
@@ -130,13 +89,13 @@ export default function EnderecosPage() {
       const res = await fetch(url, {
         method: editingId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        const payload = (await res.json()) as { message?: string };
+        const responseBody = (await res.json()) as { message?: string };
         throw new ApiResponseError(
-          payload.message ?? "Falha ao salvar endereço.",
+          responseBody.message ?? "Falha ao salvar endereço.",
           res.status,
         );
       }
@@ -185,82 +144,18 @@ export default function EnderecosPage() {
       </header>
 
       {showForm && (
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <h3 className={styles.formTitle}>
-            {editingId ? "Editar endereço" : "Novo endereço"}
-          </h3>
-          {error && <p role="alert" className={styles.error}>{error}</p>}
-
-          <div className={styles.field}>
-            <label htmlFor="label" className={styles.label}>Apelido (ex: Casa, Trabalho)</label>
-            <input id="label" className={styles.input} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="recipient" className={styles.label}>Nome do destinatário</label>
-            <input id="recipient" className={styles.input} value={form.recipientName} onChange={(e) => setForm({ ...form, recipientName: e.target.value })} required />
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="postal" className={styles.label}>CEP</label>
-              <input id="postal" className={styles.input} value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder="00000-000" required />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="state" className={styles.label}>UF</label>
-              <input id="state" className={styles.input} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} maxLength={2} required />
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="line1" className={styles.label}>Logradouro</label>
-            <input id="line1" className={styles.input} value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} required />
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="number" className={styles.label}>Número</label>
-              <input id="number" className={styles.input} value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} placeholder="ou S/N" required />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="complement" className={styles.label}>Complemento</label>
-              <input id="complement" className={styles.input} value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} placeholder="apto, bloco…" />
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="neighborhood" className={styles.label}>Bairro</label>
-            <input id="neighborhood" className={styles.input} value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} required />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="city" className={styles.label}>Cidade</label>
-            <input id="city" className={styles.input} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="reference" className={styles.label}>Ponto de referência (opcional)</label>
-            <input id="reference" className={styles.input} value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
-          </div>
-
-          <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={form.isDefault}
-              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-            />
-            Tornar este o endereço padrão
-          </label>
-
-          <div className={styles.formActions}>
-            <button type="button" className={styles.cancelBtn} onClick={cancelForm} disabled={saving}>
-              Cancelar
-            </button>
-            <button type="submit" className={styles.submitBtn} disabled={saving}>
-              {saving ? "Salvando…" : editingId ? "Atualizar" : "Salvar"}
-            </button>
-          </div>
-        </form>
+        <div className={styles.formWrapper}>
+          <AddressForm
+            initialValues={initial}
+            title={editingId ? "Editar endereço" : "Novo endereço"}
+            submitLabel={editingId ? "Atualizar" : "Salvar"}
+            cancelLabel="Cancelar"
+            saving={saving}
+            error={error}
+            onSubmit={handleSave}
+            onCancel={cancelForm}
+          />
+        </div>
       )}
 
       {loading ? (
