@@ -66,7 +66,17 @@ export const orderSchema = z
       "refunded",
     ]),
     paymentMethod: z.enum(["pix", "credit_card", "boleto"]),
-    paymentStatus: z.enum(["pending", "authorized", "paid", "failed", "refunded"]),
+    paymentStatus: z.enum([
+      "pending",
+      "authorized",
+      "paid",
+      // Pagamento aprovado e depois contestado pelo comprador — MP `in_mediation`.
+      "in_dispute",
+      "failed",
+      "refunded",
+      // Estorno involuntário emitido pelo banco/emissor após disputa — MP `charged_back`.
+      "charged_back",
+    ]),
     /**
      * Id do pagamento no provider (MercadoPago). Preenchido por
      * `POST /api/checkout/payment-intent` e usado para correlacionar o webhook.

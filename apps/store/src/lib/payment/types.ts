@@ -11,7 +11,14 @@
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 /** Status de pagamento normalizado — espelha `Order.paymentStatus`. */
-export type PaymentStatus = "pending" | "authorized" | "paid" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "authorized"
+  | "paid"
+  | "in_dispute"
+  | "failed"
+  | "refunded"
+  | "charged_back";
 
 /** Dados do pagador exigidos pelo MercadoPago. */
 export interface PaymentPayer {

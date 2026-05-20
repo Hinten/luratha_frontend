@@ -16,9 +16,16 @@ describe("mapMpStatus", () => {
     expect(mapMpStatus("cancelled")).toBe("failed");
   });
 
-  it("maps refunded and charged_back to refunded", () => {
+  it("maps refunded to refunded (voluntary)", () => {
     expect(mapMpStatus("refunded")).toBe("refunded");
-    expect(mapMpStatus("charged_back")).toBe("refunded");
+  });
+
+  it("maps charged_back to charged_back (involuntary, post-dispute)", () => {
+    expect(mapMpStatus("charged_back")).toBe("charged_back");
+  });
+
+  it("maps in_mediation to in_dispute (paid then contested)", () => {
+    expect(mapMpStatus("in_mediation")).toBe("in_dispute");
   });
 
   it("maps pending, in_process and unknown values to pending", () => {

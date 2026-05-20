@@ -83,9 +83,26 @@ MercadoPago redeliver the notification later.
 |---|---|---|
 | `approved` | `paid` | → `paid`, sets `paidAt` |
 | `authorized` | `authorized` | (stays `pending_payment`) |
-| `pending`, `in_process`, `in_mediation` | `pending` | (stays `pending_payment`) |
+| `pending`, `in_process` | `pending` | (stays `pending_payment`) |
+| `in_mediation` | `in_dispute` | **untouched** — payment already happened; the order stays where it was (typically `paid`) while MP arbitrates |
 | `rejected`, `cancelled` | `failed` | (stays `pending_payment` — customer can retry) |
-| `refunded`, `charged_back` | `refunded` | → `refunded` |
+| `refunded` | `refunded` | → `refunded` (voluntary refund issued by the store) |
+| `charged_back` | `charged_back` | → `refunded` (involuntary — bank chargeback after dispute) |
+
+### Why `in_dispute` and `charged_back` are distinct from `refunded`
+
+`in_mediation` only fires **after** the payment has been approved — the buyer
+opened a dispute and the money is held while MercadoPago arbitrates. Mapping
+it to `pending` (the original behaviour) hid that fact: the customer's account
+page would show "aguardando pagamento" even though they had already paid.
+`in_dispute` is a paid order that is in active mediation; the storefront keeps
+serving it (no rollback) and the backoffice can act on the contestation.
+
+`charged_back` is the bank-issued involuntary reversal that may follow a lost
+dispute. It is operationally equivalent to a refund (money out) — the
+`Order.status` does go to `refunded` — but the `paymentStatus` keeps the
+distinction so the backoffice can tell a planned refund (`refunded`) from a
+bank chargeback (`charged_back`).
 
 ## Webhook signature validation
 

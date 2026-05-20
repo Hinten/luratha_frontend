@@ -32,11 +32,19 @@ export function mapMpStatus(mpStatus: string | undefined): PaymentStatus {
     case "cancelled":
       return "failed";
     case "refunded":
-    case "charged_back":
       return "refunded";
+    case "charged_back":
+      // Estorno involuntário — banco devolveu o dinheiro depois de aprovação.
+      // Mantido separado de `refunded` (reembolso voluntário pela loja) para
+      // o backoffice conseguir distinguir reembolso planejado de chargeback.
+      return "charged_back";
+    case "in_mediation":
+      // Disputa aberta pelo comprador APÓS o pagamento ter sido aprovado.
+      // O dinheiro está retido enquanto o MercadoPago arbitra — o pedido
+      // continua "pago" do ponto de vista operacional.
+      return "in_dispute";
     case "pending":
     case "in_process":
-    case "in_mediation":
     default:
       return "pending";
   }
