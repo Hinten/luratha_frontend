@@ -96,10 +96,21 @@ Para confirmar o webhook sem pagar de verdade, use o **simulador de webhooks**
 do painel do MercadoPago (na seção Webhooks) — ele envia uma notificação
 assinada para a URL cadastrada, e o pedido deve passar a `paymentStatus: paid`.
 
+## Teste manual da UI (sandbox)
+
+Quando precisar validar o fluxo de checkout transparente ponta-a-ponta (PIX,
+cartão APRO/OTHE/CONT, boleto, webhook flippando o pedido para `paid`), siga
+**[docs/mercadopago-sandbox-checklist.md](./mercadopago-sandbox-checklist.md)**.
+A suíte automatizada (`pnpm test`, `pnpm test:firestore`, `pnpm test:e2e`)
+mocka o adapter da MP — é só esse checklist que exercita a sandbox de verdade.
+
 ## Referências
 
 - Documentação oficial — Checkout API: <https://www.mercadopago.com.br/developers/pt/docs/checkout-api/landing>
 - Validação de webhooks: <https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks>
 - SDK Node.js: <https://github.com/mercadopago/sdk-nodejs>
+- SDK Browser (`@mercadopago/sdk-js`): <https://github.com/mercadopago/sdk-js>
 - Plano de checkout: `plan/checkout-flow-roadmap.md`
-- Implementação: `apps/store/src/lib/payment/`
+- Implementação server: `apps/store/src/lib/payment/`
+- Implementação browser (cardForm): `apps/store/src/lib/mercadopago/`
+- Checklist sandbox: `docs/mercadopago-sandbox-checklist.md`

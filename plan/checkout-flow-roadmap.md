@@ -54,20 +54,20 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 | `/api/orders/[id]` | GET, PATCH | PATCH para atualizar status (admin) ou cancelar (user dono) |
 | `/api/users/[id]` | GET, PATCH | Perfil — só o próprio user ou admin |
 | `/api/users/[id]/addresses` | GET, POST, DELETE | CRUD de endereços salvos |
-| `/api/coupons/validate` | POST | Recebe `{ code, cartTotal }`, retorna desconto calculado |
+| `/api/coupons/validate` | POST | ✅ entregue (issue #82 final, junto da #83) — autenticado, valida cupom contra `cartTotal` e devolve `{valid, code, type, discount}` ou `{valid:false, reason}` |
 | `/api/checkout/shipping` | POST | Stub inicial: aceita CEP+itens, retorna opções (PAC/SEDEX). Plugar Melhor Envio depois |
 | `/api/checkout/payment-intent` | POST | ✅ entregue (issue #77) — cria o pagamento no MercadoPago (PIX/cartão/boleto). Webhook em `/api/webhooks/mercadopago` |
 
-### 1.3 Páginas (`src/app/`)
+### 1.3 Páginas (`src/app/`) ✅ entregue (issue #83)
 
-**Checkout (1 fluxo, 3-4 steps numa só rota com state):**
-- `src/app/checkout/page.tsx` — server component que carrega cart + perfil; client child gerencia steps
-  - Step 1: Endereço (form com CEP autocomplete + endereços salvos se logado)
-  - Step 2: Frete (chama `/api/checkout/shipping`)
-  - Step 3: Pagamento (chama `/api/checkout/payment-intent`)
-  - Step 4: Revisão e confirmar → `POST /api/orders`
-- `src/app/checkout/sucesso/[orderId]/page.tsx` — confirmação pós-compra
-- `src/app/checkout/error.tsx` + `loading.tsx`
+**Checkout (1 fluxo, 4 steps numa só rota com state):** ✅
+- `src/app/checkout/page.tsx` — client component que monta `CheckoutFlow.tsx` (server-side gate via `src/proxy.ts`)
+  - Step 1: Endereço — `AddressStep` lista salvos via `/api/users/[uid]/addresses` + inline `AddressForm`
+  - Step 2: Frete — `ShippingStep` chama `/api/checkout/shipping`
+  - Step 3: Pagamento — `PaymentStep` com tabs PIX/Cartão/Boleto; cardForm da MP é lazy-mounted
+  - Step 4: Revisão — `OrderSummary` + `CouponField`; ao confirmar: `POST /api/orders` → `POST /api/checkout/payment-intent` → `PaymentResult` (PIX/boleto) ou redirect (cartão aprovado)
+- `src/app/checkout/sucesso/[orderId]/page.tsx` — server component, carrega Order via `adminDb` + JsonLd + `SuccessClient` limpa cart
+- `src/app/checkout/{layout.tsx,error.tsx,loading.tsx}` ✅
 
 **Conta (layout protegido):**
 - `src/app/conta/layout.tsx` — sidebar com links (Pedidos, Dados, Endereços, Sair) + checagem auth (redirect `/login?redirect=/conta`)
@@ -80,8 +80,10 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 ### 1.4 Componentes
 
 Criar em `src/components/checkout/` e `src/components/conta/`:
-- `checkout/StepIndicator.tsx`, `AddressForm.tsx`, `ShippingOptions.tsx`, `PaymentMethodForm.tsx`, `OrderSummary.tsx`
-- `conta/AccountSidebar.tsx`, `OrderListItem.tsx`, `OrderStatusBadge.tsx`, `AddressCard.tsx`
+- ✅ `checkout/`: `StepIndicator.tsx`, `AddressForm.tsx` (extraído de `/conta/enderecos`), `AddressStep.tsx`, `ShippingStep.tsx`, `PaymentStep.tsx`, `PaymentResult.tsx`, `OrderSummary.tsx`, `CouponField.tsx` — todos com `.module.css` e testes unitários
+- ✅ `conta/`: `AccountSidebar.tsx`, `OrderListItem.tsx`, `OrderStatusBadge.tsx`, `AddressCard.tsx` (já entregues em PRs anteriores)
+
+Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` — wrapper lazy do `@mercadopago/sdk-js` que devolve `{token, paymentMethodId, installments, cardholderEmail}` no shape esperado pelo `payment-intent`. ✅
 
 **Reutilizar** (já existe):
 - `src/contexts/CartContext.tsx` — ler itens no checkout, limpar após sucesso (`clearCart()`)

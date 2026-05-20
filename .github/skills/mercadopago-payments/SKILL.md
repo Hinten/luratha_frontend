@@ -174,10 +174,45 @@ is determined by the access token prefix — there is no separate flag.
 - Treating a `rejected` payment as terminal — keep `Order.status` at
   `pending_payment` so the customer can try another method.
 
+## Client-side: tokenização de cartão com `cardForm`
+
+A UI do checkout (`apps/store/src/app/checkout/`) usa o `@mercadopago/sdk-js`
+para tokenizar o cartão no browser. Há dois helpers em `apps/store/src/lib/mercadopago/`:
+
+- **`loadSdk.ts`** — carrega o SDK uma única vez (cache + in-flight),
+  instancia `new MercadoPago(NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY, { locale: "pt-BR" })`
+  e expõe `getMercadoPagoSdk()`. Falha cedo se a public key não estiver no env.
+- **`cardForm.ts`** — `mountCardForm({ amount, ids })` envolve `mp.cardForm({
+  iframe: true, form: { id, ... }, callbacks })` e devolve um handle com
+  `.submit()` que resolve `{ token, paymentMethodId, installments, cardholderEmail }`
+  — shape exato do body `credit_card` do `/api/checkout/payment-intent`.
+  Erros do SDK chegam via `onError` e viram rejection na Promise (sem try/catch).
+
+**PCI scope**: o `cardForm` monta iframes oficiais da MP só nos campos
+sensíveis (PAN, expiry, CVV); o resto do form é nosso HTML controlado por
+CSS Modules. A loja nunca toca o PAN/CVV.
+
+**Por que não Bricks**: o Payment Brick devolve um `formData` no shape de
+`POST /v1/payments` direto, que não casa com nosso body discriminado por
+`paymentMethod` no `/api/checkout/payment-intent`; e o visual do Brick está
+preso a 4 temas fixos (`default|dark|bootstrap|flat`). cardForm dá controle
+de design + payload correto para nosso backend.
+
+## Sandbox / teste manual
+
+Após qualquer mudança no fluxo, rode o checklist manual em
+`docs/mercadopago-sandbox-checklist.md` — cartões de teste (`5031 7557 3453 0604` =
+APRO, `5031 4332 1540 6351` = OTHE), forçar status via nome no cartão (`APRO`,
+`OTHE`, `CONT`, ...) e simulador de webhook. A suíte automatizada nunca chama
+a MP real.
+
 ## References
 
 - Setup / credentials: `docs/mercadopago-setup.md`
-- Implementation: `apps/store/src/lib/payment/`
+- Implementação backend: `apps/store/src/lib/payment/`
+- Implementação browser (cardForm): `apps/store/src/lib/mercadopago/`
+- UI checkout: `apps/store/src/app/checkout/` e `apps/store/src/components/checkout/`
+- Checklist sandbox: `docs/mercadopago-sandbox-checklist.md`
 - Roadmap: `plan/checkout-flow-roadmap.md`
 - MercadoPago Checkout API: <https://www.mercadopago.com.br/developers/pt/docs/checkout-api/landing>
 - Related skill: `luratha-crud-api` (API route conventions), `luratha-shipping-provider`
