@@ -67,7 +67,9 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
     user = await requireUser();
   } catch (err) {
     if (err instanceof AuthError) {
-      redirect(`/login?next=/checkout/sucesso/${orderId}`);
+      redirect(
+        `/login?redirect=${encodeURIComponent(`/checkout/sucesso/${orderId}`)}`,
+      );
     }
     throw err;
   }

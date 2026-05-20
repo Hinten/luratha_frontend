@@ -11,8 +11,11 @@ import styles from "./page.module.css";
  * Página do checkout — orquestrada pelo CheckoutFlow.
  *
  * Guards client-side:
- *   - usuário não logado → /login?next=/checkout
+ *   - usuário não logado → /login?redirect=%2Fcheckout (alinha com src/proxy.ts)
  *   - carrinho vazio (depois de hidratado) → /carrinho
+ *
+ * A gating principal de auth acontece no src/proxy.ts via `__session` cookie.
+ * Este guard cobre a janela rara em que o cookie sumiu no client.
  *
  * Página em si fica "noindex" via robots.ts (checkout não deve ser indexado).
  */
@@ -24,7 +27,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace("/login?next=/checkout");
+      router.replace(`/login?redirect=${encodeURIComponent("/checkout")}`);
       return;
     }
     if (cartReady && items.length === 0) {
