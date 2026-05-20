@@ -1,0 +1,105 @@
+.nav {
+  width: 100%;
+  font-family: var(--font-body);
+  color: var(--color-neutral-dark);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  position: relative;
+  text-align: center;
+}
+
+.bubble {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border: 1.5px solid var(--color-neutral-mid);
+  background-color: var(--color-neutral-light);
+  color: var(--color-neutral-dark);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+  cursor: default;
+}
+
+button.bubble {
+  cursor: pointer;
+}
+
+button.bubble:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.item[data-state="completed"] .bubble {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+}
+
+.item[data-state="current"] .bubble {
+  background-color: #fff;
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.labelText {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-neutral-dark) 75%, transparent);
+  line-height: 1.2;
+}
+
+.item[data-state="current"] .labelText {
+  color: var(--color-neutral-dark);
+  font-weight: 600;
+}
+
+.connector {
+  position: absolute;
+  top: 1rem;
+  left: calc(50% + 1rem);
+  right: calc(-50% + 1rem);
+  height: 1.5px;
+  background-color: var(--color-neutral-mid);
+}
+
+.item[data-state="completed"] .connector {
+  background-color: var(--color-primary);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 480px) {
+  .labelText {
+    display: none;
+  }
+}
