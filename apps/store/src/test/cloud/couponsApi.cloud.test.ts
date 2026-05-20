@@ -176,7 +176,7 @@ describeCloud("/api/coupons/validate (Cloud Firebase)", () => {
 
   it("returns valid:false 'não encontrado' for an unknown code", async () => {
     const res = await validatePOST(
-      jsonRequest({ code: `${prefix}-NEVER`, cartTotal: 200 }),
+      jsonRequest({ code: `T${codeNonce}NOPE`, cartTotal: 200 }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ valid: false, reason: "Cupom não encontrado." });
