@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/src/contexts/CartContext";
 import { useCartShipping } from "@/src/hooks/useCartShipping";
@@ -15,6 +16,7 @@ const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CarrinhoPage() {
+  const router = useRouter();
   const {
     items,
     removeItem,
@@ -219,8 +221,8 @@ export default function CarrinhoPage() {
               <button
                 type="button"
                 className={styles.checkoutBtn}
-                onClick={() => alert("Em breve: integração com checkout!")}
-                disabled={isSyncing}
+                onClick={() => router.push("/checkout")}
+                disabled={isSyncing || items.length === 0}
               >
                 Finalizar Compra
               </button>
