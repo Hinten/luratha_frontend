@@ -4,10 +4,9 @@ import type { CartItem } from "@luratha/schemas";
 import OrderSummary from "@/src/components/checkout/OrderSummary";
 
 vi.mock("next/image", () => ({
-  default: (props: Record<string, unknown>) => {
+  default: (props: Record<string, unknown>) =>
     // eslint-disable-next-line @next/next/no-img-element
-    return <img alt="" {...props} />;
-  },
+    <img alt="" {...props} />,
 }));
 
 function makeItem(over: Partial<CartItem> = {}): CartItem {
