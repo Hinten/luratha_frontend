@@ -204,3 +204,4 @@ For deeper implementation detail, consult these skills:
 - CRUD API (DataConverters, pipeline search, embeddings, test patterns): `.github/skills/luratha-crud-api/SKILL.md`
 - Firestore query strategies: `.github/skills/firestore-queries-pipelines/SKILL.md`
 - Adding/swapping a shipping provider (pluggable freight architecture): `.github/skills/luratha-shipping-provider/SKILL.md`
+- MercadoPago payments (payment-intent API, webhook, PIX/card/boleto): `.github/skills/mercadopago-payments/SKILL.md`

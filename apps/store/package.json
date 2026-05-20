@@ -25,6 +25,7 @@
     "@luratha/schemas": "workspace:*",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
+    "mercadopago": "^2.12.1",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",

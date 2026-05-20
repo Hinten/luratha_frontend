@@ -56,7 +56,7 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 | `/api/users/[id]/addresses` | GET, POST, DELETE | CRUD de endereços salvos |
 | `/api/coupons/validate` | POST | Recebe `{ code, cartTotal }`, retorna desconto calculado |
 | `/api/checkout/shipping` | POST | Stub inicial: aceita CEP+itens, retorna opções (PAC/SEDEX). Plugar Melhor Envio depois |
-| `/api/checkout/payment-intent` | POST | Stub: cria intenção de pagamento. Definir provider (ver "Decisões pendentes") |
+| `/api/checkout/payment-intent` | POST | ✅ entregue (issue #77) — cria o pagamento no MercadoPago (PIX/cartão/boleto). Webhook em `/api/webhooks/mercadopago` |
 
 ### 1.3 Páginas (`src/app/`)
 
@@ -98,10 +98,20 @@ Criar em `src/components/checkout/` e `src/components/conta/`:
 
 ### 1.6 Decisões Pendentes (perguntar antes de implementar)
 
-1. **Provider de pagamento**: Stripe BR, MercadoPago, PagSeguro, ou apenas stub? (Brasileira → MercadoPago é o mais comum em slow fashion)
+1. ~~**Provider de pagamento**: Stripe BR, MercadoPago, PagSeguro, ou apenas stub?~~ ✅ resolvido — issue #77. **MercadoPago** via **Checkout Transparente** (API `/v1/payments`), suportando PIX, cartão de crédito e boleto. Integração em `apps/store/src/lib/payment/`.
 2. ~~**Cálculo de frete**: Melhor Envio (recomendado), Correios direto, ou frete fixo por região?~~ ✅ resolvido — issue #78. **Melhor Envio** como provider padrão atrás da interface `ShippingProvider` (`src/lib/shipping/`), com `fixed-rate` como fallback automático e plugável via `siteSettings.shipping.providerId`.
 3. **Cart server-side**: hoje é localStorage. Migrar para Firestore (`/api/cart`) para persistir entre dispositivos? Recomendação: manter localStorage agora, criar Firestore Cart só na conversão para Order.
 4. **Rastreamento**: ✅ resolvido (parcial — issue #80 Opção A entregue junto). Schema `Order` agora aceita `trackingCode`/`trackingUrl`/`shippedAt`/`deliveredAt` (manual MVP). A interface `ShippingProvider` já define `track()` — Melhor Envio devolve `not_supported` até PR 2 (issue #80 Opção B: polling ativo + timeline).
+
+#### Resolvido (PR Pagamento — issue #77)
+
+- **Provider** em `apps/store/src/lib/payment/`: `types.ts` (contratos + `PaymentProviderError`), adapter `mercadoPago/` (`createPayment`, `getPayment`, `verifyWebhookSignature`, `mapMpStatus`) e `service.ts` (orquestração com a `Order` via Admin SDK).
+- **MercadoPago Checkout Transparente** (API `/v1/payments`, SDK `mercadopago` v2) cobrindo **PIX** (QR code), **cartão de crédito** (token gerado no browser) e **boleto**.
+- **API** `POST /api/checkout/payment-intent`: autenticada, recebe `orderId` + dados do método, cria o pagamento no MP (`external_reference = orderId`, idempotency key = `orderId`) e devolve `PaymentIntentResult` (QR PIX / URL do boleto / status do cartão).
+- **Webhook** `POST /api/webhooks/mercadopago`: público, validado por assinatura `x-signature` (HMAC-SHA256). Consulta o pagamento, mapeia o status MP→`Order` e atualiza `paymentStatus`/`status`/`paidAt`. Idempotente — reenvios não reescrevem.
+- **Order schema** estendido com `paymentIntentId` e `paidAt` (ambos opcionais, retro-compat).
+- **Env vars**: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `MERCADOPAGO_WEBHOOK_URL` (opcional), `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`. Template em `.env.example`; passo-a-passo em `docs/mercadopago-setup.md`. Skill: `.github/skills/mercadopago-payments/`.
+- **Fora de escopo desta entrega**: UI do Step 3 / tokenização de cartão no browser (issue #83), decremento de estoque e incremento de uso de cupom no `paid`.
 
 #### Resolvido (PR Frete — issue #78 + parte de #80)
 
