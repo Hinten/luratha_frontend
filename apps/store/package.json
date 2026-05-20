@@ -23,6 +23,7 @@
     "@luratha/firestore": "workspace:*",
     "@luratha/repositories": "workspace:*",
     "@luratha/schemas": "workspace:*",
+    "@mercadopago/sdk-js": "^0.0.3",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
     "mercadopago": "^2.12.1",
