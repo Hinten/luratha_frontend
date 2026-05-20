@@ -8,6 +8,7 @@
  * The suite is automatically skipped when RUN_CLOUD_TESTS is not set.
  */
 
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
@@ -77,9 +78,13 @@ describeCloud("/api/coupons/validate (Cloud Firebase)", () => {
   const userId = `${prefix}-user`;
   const seededDocs: SeedDocument[] = [];
 
-  const validCode = `${prefix}-WELCOME10`.toUpperCase();
-  const expiredCode = `${prefix}-EXPIRED`.toUpperCase();
-  const inactiveCode = `${prefix}-OFF`.toUpperCase();
+  // Coupon.code tem limite de 32 chars no schema. O prefix de teste é mais
+  // longo que isso (timestamp + uuid), então usamos um nonce curto para os
+  // códigos — o prefix continua nos `id`s para isolar entre runs.
+  const codeNonce = randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
+  const validCode = `T${codeNonce}VLD`;
+  const expiredCode = `T${codeNonce}EXP`;
+  const inactiveCode = `T${codeNonce}OFF`;
 
   beforeAll(async () => {
     mockAuthedUser(userId);
