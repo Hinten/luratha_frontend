@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Image from "next/image";
 import type { CartItem } from "@luratha/schemas";
 import styles from "./OrderSummary.module.css";
@@ -25,6 +26,12 @@ export interface OrderSummaryProps {
   showItems?: boolean;
   /** Título do bloco; default "Resumo do pedido". */
   title?: string;
+  /**
+   * Slot opcional renderizado após os totais. Usado pelo CheckoutFlow no
+   * step "review" pra colocar o botão "Confirmar pedido" próximo do total,
+   * em vez de no main column.
+   */
+  children?: ReactNode;
 }
 
 const brl = new Intl.NumberFormat("pt-BR", {
@@ -44,6 +51,7 @@ export default function OrderSummary({
   appliedCoupon = null,
   showItems = true,
   title = "Resumo do pedido",
+  children,
 }: OrderSummaryProps) {
   const total = Math.max(0, subtotal - discountTotal + shippingTotal);
 
@@ -112,6 +120,8 @@ export default function OrderSummary({
           <dd>{formatMoney(total)}</dd>
         </div>
       </dl>
+
+      {children && <div className={styles.footer}>{children}</div>}
     </aside>
   );
 }

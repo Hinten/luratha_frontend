@@ -132,3 +132,12 @@
   font-size: 1.0625rem;
   font-weight: 600;
 }
+
+/* Slot opcional (children) — renderiza após os totais. Usado no Step 4
+   pra colocar o botão "Confirmar pedido" próximo do total. */
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}

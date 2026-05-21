@@ -1,6 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, type ChangeEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  addressFormSchema,
+  UFS,
+  UF_LABELS,
+} from "@luratha/schemas";
+import { formatCep } from "@/src/lib/format/cep";
 import styles from "./AddressForm.module.css";
 
 /**
@@ -9,9 +18,11 @@ import styles from "./AddressForm.module.css";
  * já pronto para um `POST /api/users/[uid]/addresses` ou
  * `PATCH /api/users/[uid]/addresses/[id]`.
  *
- * O state dos inputs vive aqui (componente controlado). O pai controla apenas
- * `saving` (para desabilitar o submit) e `error` (mensagem de erro vinda do
- * backend para exibir no banner do form).
+ * Validação:
+ *   - inline por campo via react-hook-form + zodResolver(addressFormSchema)
+ *   - `mode: "onBlur"` — campo só mostra erro depois que o usuário sai dele
+ *   - `serverIssues` (opcional) → cada `ZodIssue.path[0]` vira erro daquele
+ *     campo; issues sem path mapeado caem no banner geral via `error`.
  */
 
 export interface AddressFormInitialValues {
@@ -48,29 +59,38 @@ export interface AddressFormProps {
   onSubmit: (payload: AddressFormPayload) => Promise<void> | void;
   onCancel?: () => void;
   saving?: boolean;
+  /** Mensagem geral renderizada acima do botão de submit (erro do servidor). */
   error?: string | null;
+  /** Issues do Zod devolvidos pelo backend em 400. Mapeados por campo. */
+  serverIssues?: z.core.$ZodIssue[];
   title?: string;
   submitLabel?: string;
   cancelLabel?: string;
   /** Esconde o checkbox "tornar padrão" — útil no checkout, onde isso é decidido depois. */
   hideIsDefault?: boolean;
+  /** Esconde o campo "Apelido" — útil no checkout (compra rápida) onde rótulo não importa. */
+  hideLabel?: boolean;
 }
 
-interface FormState {
-  label: string;
-  recipientName: string;
-  postalCode: string;
-  line1: string;
-  number: string;
-  complement: string;
-  reference: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  isDefault: boolean;
-}
+type FormValues = z.infer<typeof addressFormSchema>;
 
-function toFormState(initial?: AddressFormInitialValues): FormState {
+/** Subconjunto dos campos do form que aceitam `setError` por nome. */
+type FieldName = keyof FormValues;
+const FIELD_NAMES: ReadonlySet<string> = new Set<FieldName>([
+  "label",
+  "recipientName",
+  "postalCode",
+  "line1",
+  "number",
+  "complement",
+  "reference",
+  "neighborhood",
+  "city",
+  "state",
+  "isDefault",
+]);
+
+function toFormDefaults(initial?: AddressFormInitialValues): FormValues {
   return {
     label: initial?.label ?? "",
     recipientName: initial?.recipientName ?? "",
@@ -81,25 +101,27 @@ function toFormState(initial?: AddressFormInitialValues): FormState {
     reference: initial?.reference ?? "",
     neighborhood: initial?.neighborhood ?? "",
     city: initial?.city ?? "",
-    state: initial?.state ?? "",
+    // String vazia para forçar o usuário a escolher uma UF no dropdown.
+    // O Zod enum rejeita "" e cai no message "Selecione um estado.".
+    state: (initial?.state ?? "") as FormValues["state"],
     isDefault: initial?.isDefault ?? false,
   };
 }
 
-function buildPayload(form: FormState): AddressFormPayload {
+function valuesToPayload(values: FormValues): AddressFormPayload {
   return {
-    recipientName: form.recipientName,
-    postalCode: form.postalCode,
-    line1: form.line1,
-    number: form.number,
-    neighborhood: form.neighborhood,
-    city: form.city,
-    state: form.state.toUpperCase(),
+    recipientName: values.recipientName,
+    postalCode: values.postalCode,
+    line1: values.line1,
+    number: values.number,
+    neighborhood: values.neighborhood,
+    city: values.city,
+    state: values.state,
     country: "BR",
-    isDefault: form.isDefault,
-    ...(form.label ? { label: form.label } : {}),
-    ...(form.complement ? { complement: form.complement } : {}),
-    ...(form.reference ? { reference: form.reference } : {}),
+    isDefault: values.isDefault,
+    ...(values.label ? { label: values.label } : {}),
+    ...(values.complement ? { complement: values.complement } : {}),
+    ...(values.reference ? { reference: values.reference } : {}),
   };
 }
 
@@ -109,38 +131,72 @@ export default function AddressForm({
   onCancel,
   saving = false,
   error = null,
+  serverIssues,
   title = "Endereço",
   submitLabel = "Salvar",
   cancelLabel = "Cancelar",
   hideIsDefault = false,
+  hideLabel = false,
 }: AddressFormProps) {
-  const [form, setForm] = useState<FormState>(() => toFormState(initialValues));
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(addressFormSchema),
+    mode: "onBlur",
+    defaultValues: toFormDefaults(initialValues),
+  });
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    await onSubmit(buildPayload(form));
-  }
+  // Mapeia issues do servidor (ZodIssue[]) para erros por campo.
+  useEffect(() => {
+    if (!serverIssues || serverIssues.length === 0) return;
+    for (const issue of serverIssues) {
+      const path = issue.path[0];
+      if (typeof path === "string" && FIELD_NAMES.has(path)) {
+        setError(path as FieldName, {
+          type: "server",
+          message: issue.message,
+        });
+      }
+    }
+  }, [serverIssues, setError]);
+
+  const submit = handleSubmit((values) => onSubmit(valuesToPayload(values)));
+
+  // CEP: mascara enquanto digita. Mutamos `e.target.value` antes do onChange
+  // do RHF para que o estado do form receba o valor já formatado. Spread do
+  // `register` cuida de name/ref/onBlur (acessar .ref no JSX direto dispara o
+  // lint `react-hooks/refs`).
+  const postalReg = register("postalCode");
+  const onPostalChange = (e: ChangeEvent<HTMLInputElement>) => {
+    e.target.value = formatCep(e.target.value);
+    void postalReg.onChange(e);
+  };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <form className={styles.form} onSubmit={submit} noValidate>
       {title && <h3 className={styles.formTitle}>{title}</h3>}
-      {error && (
-        <p role="alert" className={styles.error}>
-          {error}
-        </p>
-      )}
 
-      <div className={styles.field}>
-        <label htmlFor="address-label" className={styles.label}>
-          Apelido (ex: Casa, Trabalho)
-        </label>
-        <input
-          id="address-label"
-          className={styles.input}
-          value={form.label}
-          onChange={(e) => setForm({ ...form, label: e.target.value })}
-        />
-      </div>
+      {!hideLabel && (
+        <div className={styles.field}>
+          <label htmlFor="address-label" className={styles.label}>
+            Apelido (ex: Casa, Trabalho)
+          </label>
+          <input
+            id="address-label"
+            className={styles.input}
+            aria-invalid={Boolean(errors.label) || undefined}
+            {...register("label")}
+          />
+          {errors.label?.message && (
+            <span role="alert" className={styles.fieldError}>
+              {errors.label.message}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className={styles.field}>
         <label htmlFor="address-recipient" className={styles.label}>
@@ -149,10 +205,15 @@ export default function AddressForm({
         <input
           id="address-recipient"
           className={styles.input}
-          value={form.recipientName}
-          onChange={(e) => setForm({ ...form, recipientName: e.target.value })}
-          required
+          aria-invalid={Boolean(errors.recipientName) || undefined}
+          autoComplete="name"
+          {...register("recipientName")}
         />
+        {errors.recipientName?.message && (
+          <span role="alert" className={styles.fieldError}>
+            {errors.recipientName.message}
+          </span>
+        )}
       </div>
 
       <div className={styles.row}>
@@ -163,24 +224,42 @@ export default function AddressForm({
           <input
             id="address-postal"
             className={styles.input}
-            value={form.postalCode}
-            onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
+            inputMode="numeric"
+            autoComplete="postal-code"
             placeholder="00000-000"
-            required
+            aria-invalid={Boolean(errors.postalCode) || undefined}
+            {...postalReg}
+            onChange={onPostalChange}
           />
+          {errors.postalCode?.message && (
+            <span role="alert" className={styles.fieldError}>
+              {errors.postalCode.message}
+            </span>
+          )}
         </div>
         <div className={styles.field}>
           <label htmlFor="address-state" className={styles.label}>
             UF
           </label>
-          <input
+          <select
             id="address-state"
             className={styles.input}
-            value={form.state}
-            onChange={(e) => setForm({ ...form, state: e.target.value })}
-            maxLength={2}
-            required
-          />
+            aria-invalid={Boolean(errors.state) || undefined}
+            autoComplete="address-level1"
+            {...register("state")}
+          >
+            <option value="">Selecione</option>
+            {UFS.map((uf) => (
+              <option key={uf} value={uf}>
+                {uf} — {UF_LABELS[uf]}
+              </option>
+            ))}
+          </select>
+          {errors.state?.message && (
+            <span role="alert" className={styles.fieldError}>
+              {errors.state.message}
+            </span>
+          )}
         </div>
       </div>
 
@@ -191,10 +270,15 @@ export default function AddressForm({
         <input
           id="address-line1"
           className={styles.input}
-          value={form.line1}
-          onChange={(e) => setForm({ ...form, line1: e.target.value })}
-          required
+          autoComplete="address-line1"
+          aria-invalid={Boolean(errors.line1) || undefined}
+          {...register("line1")}
         />
+        {errors.line1?.message && (
+          <span role="alert" className={styles.fieldError}>
+            {errors.line1.message}
+          </span>
+        )}
       </div>
 
       <div className={styles.row}>
@@ -205,11 +289,15 @@ export default function AddressForm({
           <input
             id="address-number"
             className={styles.input}
-            value={form.number}
-            onChange={(e) => setForm({ ...form, number: e.target.value })}
             placeholder="ou S/N"
-            required
+            aria-invalid={Boolean(errors.number) || undefined}
+            {...register("number")}
           />
+          {errors.number?.message && (
+            <span role="alert" className={styles.fieldError}>
+              {errors.number.message}
+            </span>
+          )}
         </div>
         <div className={styles.field}>
           <label htmlFor="address-complement" className={styles.label}>
@@ -218,10 +306,16 @@ export default function AddressForm({
           <input
             id="address-complement"
             className={styles.input}
-            value={form.complement}
-            onChange={(e) => setForm({ ...form, complement: e.target.value })}
             placeholder="apto, bloco…"
+            autoComplete="address-line2"
+            aria-invalid={Boolean(errors.complement) || undefined}
+            {...register("complement")}
           />
+          {errors.complement?.message && (
+            <span role="alert" className={styles.fieldError}>
+              {errors.complement.message}
+            </span>
+          )}
         </div>
       </div>
 
@@ -232,10 +326,14 @@ export default function AddressForm({
         <input
           id="address-neighborhood"
           className={styles.input}
-          value={form.neighborhood}
-          onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
-          required
+          aria-invalid={Boolean(errors.neighborhood) || undefined}
+          {...register("neighborhood")}
         />
+        {errors.neighborhood?.message && (
+          <span role="alert" className={styles.fieldError}>
+            {errors.neighborhood.message}
+          </span>
+        )}
       </div>
 
       <div className={styles.field}>
@@ -245,10 +343,15 @@ export default function AddressForm({
         <input
           id="address-city"
           className={styles.input}
-          value={form.city}
-          onChange={(e) => setForm({ ...form, city: e.target.value })}
-          required
+          autoComplete="address-level2"
+          aria-invalid={Boolean(errors.city) || undefined}
+          {...register("city")}
         />
+        {errors.city?.message && (
+          <span role="alert" className={styles.fieldError}>
+            {errors.city.message}
+          </span>
+        )}
       </div>
 
       <div className={styles.field}>
@@ -258,20 +361,27 @@ export default function AddressForm({
         <input
           id="address-reference"
           className={styles.input}
-          value={form.reference}
-          onChange={(e) => setForm({ ...form, reference: e.target.value })}
+          aria-invalid={Boolean(errors.reference) || undefined}
+          {...register("reference")}
         />
+        {errors.reference?.message && (
+          <span role="alert" className={styles.fieldError}>
+            {errors.reference.message}
+          </span>
+        )}
       </div>
 
       {!hideIsDefault && (
         <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={form.isDefault}
-            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-          />
+          <input type="checkbox" {...register("isDefault")} />
           Tornar este o endereço padrão
         </label>
+      )}
+
+      {error && (
+        <p role="alert" className={styles.submitError}>
+          {error}
+        </p>
       )}
 
       <div className={styles.formActions}>

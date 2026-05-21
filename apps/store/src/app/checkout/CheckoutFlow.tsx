@@ -1,8 +1,8 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Address, CartItem } from "@luratha/schemas";
+import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
@@ -23,6 +23,7 @@ import OrderSummary, {
   type AppliedCoupon,
 } from "@/src/components/checkout/OrderSummary";
 import CouponField from "@/src/components/checkout/CouponField";
+import ReviewSummary from "@/src/components/checkout/ReviewSummary";
 import styles from "./CheckoutFlow.module.css";
 
 type StepId = "address" | "shipping" | "payment" | "review" | "result";
@@ -131,6 +132,38 @@ export default function CheckoutFlow() {
   const { user } = useAuth();
   const { items, clearCart } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // Carrega o UserProfile uma vez por sessão pra pré-popular o PaymentStep
+  // (email, nome, CPF). Falha silenciosa: se 404 ou rede ruim, os campos
+  // do form vêm vazios e o usuário preenche manualmente — não bloqueamos.
+  const userId = user?.uid;
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${userId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as UserProfile;
+        if (!cancelled) setProfile(data);
+      } catch (err) {
+        if (!(err instanceof TypeError)) throw err;
+        // fetch lança TypeError em falha de rede — silencioso aqui.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Scroll pro topo a cada troca de step. Sem isso, ao avançar de Address
+  // (botão Continuar no rodapé) pro Shipping, o usuário vê a página rolada
+  // pra baixo, ficando perdido. O StepIndicator no topo dá contexto visual.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [state.step]);
 
   if (!user) return null;
 
@@ -175,8 +208,8 @@ export default function CheckoutFlow() {
         service: state.quote.service,
         serviceCode: state.quote.serviceCode,
         price: state.quote.price,
-        basePrice: state.quote.price,
-        freeShippingApplied: false,
+        basePrice: state.quote.basePrice,
+        freeShippingApplied: state.quote.freeShippingApplied,
         estimatedDays: state.quote.estimatedDays,
       },
     };
@@ -241,6 +274,11 @@ export default function CheckoutFlow() {
             <AddressStep
               userId={user!.uid}
               selectedAddressId={state.address?.id ?? null}
+              defaultRecipientName={
+                profile
+                  ? `${profile.firstName} ${profile.lastName}`.trim()
+                  : user!.name
+              }
               onSelect={(a) => dispatch({ type: "SET_ADDRESS", address: a })}
               onContinue={() => dispatch({ type: "GO_TO", step: "shipping" })}
             />
@@ -250,6 +288,7 @@ export default function CheckoutFlow() {
             <ShippingStep
               postalCode={state.address.postalCode}
               items={items}
+              subtotal={subtotal}
               selectedQuote={state.quote}
               onSelect={(q) => dispatch({ type: "SET_QUOTE", quote: q })}
               onContinue={() => dispatch({ type: "GO_TO", step: "payment" })}
@@ -260,7 +299,6 @@ export default function CheckoutFlow() {
           {state.step === "payment" && state.address && (
             <PaymentStep
               cartTotal={grandTotal}
-              defaultRecipientName={state.address.recipientName}
               shippingAddress={{
                 postalCode: state.address.postalCode,
                 line1: state.address.line1,
@@ -269,6 +307,22 @@ export default function CheckoutFlow() {
                 city: state.address.city,
                 state: state.address.state,
               }}
+              defaultEmail={profile?.email ?? user!.email}
+              defaultFirstName={profile?.firstName ?? user!.name.split(/\s+/)[0]}
+              defaultLastName={
+                profile?.lastName ??
+                user!.name.split(/\s+/).slice(1).join(" ")
+              }
+              defaultIdentificationType={
+                profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF"
+              }
+              defaultIdentificationNumber={
+                profile?.taxIdentity?.type === "PF"
+                  ? profile.taxIdentity.cpf
+                  : profile?.taxIdentity?.type === "PJ"
+                    ? profile.taxIdentity.cnpj
+                    : undefined
+              }
               onBack={() => dispatch({ type: "GO_TO", step: "shipping" })}
               onSubmit={async (draft) => {
                 dispatch({ type: "SET_PAYMENT_DRAFT", draft });
@@ -276,40 +330,43 @@ export default function CheckoutFlow() {
             />
           )}
 
-          {state.step === "review" && (
-            <section className={styles.reviewSection}>
-              <h2 className={styles.heading}>Revise antes de pagar</h2>
-              <CouponField
-                cartTotal={subtotal + shippingTotal}
-                applied={state.appliedCoupon}
-                onApplied={(c) => dispatch({ type: "APPLY_COUPON", coupon: c })}
-                onCleared={() => dispatch({ type: "CLEAR_COUPON" })}
-              />
-              {state.error && (
-                <p role="alert" className={styles.error}>
-                  {state.error}
-                </p>
-              )}
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.backBtn}
-                  onClick={() => dispatch({ type: "GO_TO", step: "payment" })}
-                  disabled={state.submitting}
-                >
-                  Voltar
-                </button>
-                <button
-                  type="button"
-                  className={styles.confirmBtn}
-                  onClick={confirmOrder}
-                  disabled={state.submitting}
-                >
-                  {state.submitting ? "Processando…" : "Confirmar pedido"}
-                </button>
-              </div>
-            </section>
-          )}
+          {state.step === "review" &&
+            state.address &&
+            state.quote &&
+            state.paymentDraft && (
+              <section className={styles.reviewSection}>
+                <h2 className={styles.heading}>Revise antes de pagar</h2>
+                <ReviewSummary
+                  address={state.address}
+                  quote={state.quote}
+                  paymentDraft={state.paymentDraft}
+                  onEditAddress={() => dispatch({ type: "GO_TO", step: "address" })}
+                  onEditShipping={() => dispatch({ type: "GO_TO", step: "shipping" })}
+                  onEditPayment={() => dispatch({ type: "GO_TO", step: "payment" })}
+                />
+                <CouponField
+                  cartTotal={subtotal + shippingTotal}
+                  applied={state.appliedCoupon}
+                  onApplied={(c) => dispatch({ type: "APPLY_COUPON", coupon: c })}
+                  onCleared={() => dispatch({ type: "CLEAR_COUPON" })}
+                />
+                {state.error && (
+                  <p role="alert" className={styles.error}>
+                    {state.error}
+                  </p>
+                )}
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={styles.backBtn}
+                    onClick={() => dispatch({ type: "GO_TO", step: "payment" })}
+                    disabled={state.submitting}
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </section>
+            )}
 
           {state.step === "result" && state.paymentResult && state.orderId && (
             <section className={styles.reviewSection}>
@@ -338,7 +395,18 @@ export default function CheckoutFlow() {
             shippingTotal={shippingTotal}
             discountTotal={discountTotal}
             appliedCoupon={state.appliedCoupon}
-          />
+          >
+            {state.step === "review" && (
+              <button
+                type="button"
+                className={styles.confirmBtn}
+                onClick={confirmOrder}
+                disabled={state.submitting}
+              >
+                {state.submitting ? "Processando…" : "Confirmar pedido"}
+              </button>
+            )}
+          </OrderSummary>
         </aside>
       </div>
     </div>

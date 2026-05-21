@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { z } from "zod";
 import type { Address } from "@luratha/schemas";
 import AddressForm, {
   type AddressFormPayload,
 } from "@/src/components/checkout/AddressForm";
-import { ApiResponseError } from "@/src/lib/errors";
+import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 import styles from "./AddressStep.module.css";
 
 export interface AddressStepProps {
   userId: string;
   selectedAddressId: string | null;
+  /** Nome do user logado — usado pra pré-preencher recipientName do form. */
+  defaultRecipientName?: string;
   onSelect: (address: Address) => void;
   onContinue: () => void;
 }
@@ -18,17 +21,25 @@ export interface AddressStepProps {
 type ViewState =
   | { kind: "loading" }
   | { kind: "list"; addresses: Address[] }
-  | { kind: "creating"; addresses: Address[] }
+  /**
+   * `wasInitiallyEmpty: true` quando o usuário caiu no form porque ainda
+   * não tinha nenhum endereço (1ª compra). Nesse caso, salvar avança direto
+   * pro Frete. `false` quando ele clicou "+ Adicionar" tendo outros já
+   * salvos — aí volta pra lista com o novo selecionado pra ele revisar.
+   */
+  | { kind: "creating"; addresses: Address[]; wasInitiallyEmpty: boolean }
   | { kind: "error"; message: string };
 
 export default function AddressStep({
   userId,
   selectedAddressId,
+  defaultRecipientName,
   onSelect,
   onContinue,
 }: AddressStepProps) {
   const [state, setState] = useState<ViewState>({ kind: "loading" });
   const [formError, setFormError] = useState<string | null>(null);
+  const [serverIssues, setServerIssues] = useState<z.core.$ZodIssue[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -46,7 +57,9 @@ export default function AddressStep({
       const addresses = (await res.json()) as Address[];
       if (cancelled) return;
       if (addresses.length === 0) {
-        setState({ kind: "creating", addresses });
+        // 1ª compra do usuário — sem tela de seleção, vai direto pro form
+        // e ao salvar pula pro Frete.
+        setState({ kind: "creating", addresses, wasInitiallyEmpty: true });
       } else {
         setState({ kind: "list", addresses });
         if (!selectedAddressId) {
@@ -69,6 +82,7 @@ export default function AddressStep({
 
   async function handleCreate(payload: AddressFormPayload) {
     setFormError(null);
+    setServerIssues([]);
     setSaving(true);
     try {
       const res = await fetch(`/api/users/${userId}/addresses`, {
@@ -77,19 +91,23 @@ export default function AddressStep({
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new ApiResponseError(
-          body.message ?? "Falha ao salvar endereço.",
-          res.status,
-        );
+        // throwIfNotOk extrai `message` + `errors` (ZodIssue[]) do body 400.
+        await throwIfNotOk(res, "Falha ao salvar endereço.");
       }
       const created = (await res.json()) as Address;
+      onSelect(created);
+      // 1º endereço (wasInitiallyEmpty): avança direto pro Frete sem mostrar lista.
+      // Caso contrário, volta pra lista com o recém-criado selecionado.
+      if (state.kind === "creating" && state.wasInitiallyEmpty) {
+        onContinue();
+        return;
+      }
       const addresses = await refresh();
       setState({ kind: "list", addresses });
-      onSelect(created);
     } catch (err) {
       if (err instanceof ApiResponseError) {
         setFormError(err.message);
+        setServerIssues(err.issues.slice());
       } else {
         throw err;
       }
@@ -128,7 +146,12 @@ export default function AddressStep({
           submitLabel="Salvar endereço"
           saving={saving}
           error={formError}
+          serverIssues={serverIssues}
           hideIsDefault
+          hideLabel
+          initialValues={
+            defaultRecipientName ? { recipientName: defaultRecipientName } : undefined
+          }
           onSubmit={handleCreate}
         />
       </section>
@@ -177,7 +200,13 @@ export default function AddressStep({
       <button
         type="button"
         className={styles.addBtn}
-        onClick={() => setState({ kind: "creating", addresses: state.addresses })}
+        onClick={() =>
+          setState({
+            kind: "creating",
+            addresses: state.addresses,
+            wasInitiallyEmpty: false,
+          })
+        }
       >
         + Adicionar novo endereço
       </button>

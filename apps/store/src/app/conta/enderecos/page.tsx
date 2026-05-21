@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { z } from "zod";
 import { useAuth } from "@/src/contexts/AuthContext";
 import type { Address } from "@luratha/schemas";
 import AddressCard from "@/src/components/conta/AddressCard";
@@ -8,7 +9,7 @@ import AddressForm, {
   type AddressFormInitialValues,
   type AddressFormPayload,
 } from "@/src/components/checkout/AddressForm";
-import { ApiResponseError } from "@/src/lib/errors";
+import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 import styles from "./page.module.css";
 
 export default function EnderecosPage() {
@@ -16,6 +17,7 @@ export default function EnderecosPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serverIssues, setServerIssues] = useState<z.core.$ZodIssue[]>([]);
 
   // Quando `editingId` é null e `showForm` true, é criação; com `editingId` é edição
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export default function EnderecosPage() {
     setInitial(undefined);
     setShowForm(true);
     setError(null);
+    setServerIssues([]);
   }
 
   function startEdit(a: Address) {
@@ -70,17 +73,20 @@ export default function EnderecosPage() {
     });
     setShowForm(true);
     setError(null);
+    setServerIssues([]);
   }
 
   function cancelForm() {
     setShowForm(false);
     setEditingId(null);
     setError(null);
+    setServerIssues([]);
   }
 
   async function handleSave(payload: AddressFormPayload) {
     if (!uid) return;
     setError(null);
+    setServerIssues([]);
     setSaving(true);
     try {
       const url = editingId
@@ -92,19 +98,14 @@ export default function EnderecosPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const responseBody = (await res.json()) as { message?: string };
-        throw new ApiResponseError(
-          responseBody.message ?? "Falha ao salvar endereço.",
-          res.status,
-        );
-      }
+      await throwIfNotOk(res, "Falha ao salvar endereço.");
 
       await refresh();
       cancelForm();
     } catch (err) {
       if (err instanceof ApiResponseError) {
         setError(err.message);
+        setServerIssues(err.issues.slice());
       } else {
         throw err;
       }
@@ -152,6 +153,7 @@ export default function EnderecosPage() {
             cancelLabel="Cancelar"
             saving={saving}
             error={error}
+            serverIssues={serverIssues}
             onSubmit={handleSave}
             onCancel={cancelForm}
           />

@@ -67,11 +67,32 @@ interface PendingSubmit {
   reject: (err: unknown) => void;
 }
 
+/**
+ * Controller "ativo" no módulo. O SDK do MP rejeita um segundo `cardForm({...})`
+ * enquanto o anterior ainda está vivo ("Context 'expirationFields' already
+ * exists"). Em Next.js dev (Strict Mode), o `useEffect` do PaymentStep dispara
+ * 2× e essa proteção desmonta o antigo antes do novo subir, eliminando a
+ * corrida sem precisar de timeouts ou retries.
+ */
+let activeController: CardFormController | null = null;
+
 export async function mountCardForm(
   options: MountCardFormOptions,
   mp?: MercadoPagoInstance,
 ): Promise<CardFormHandle> {
   const sdk = mp ?? (await getMercadoPagoSdk());
+
+  // Strict Mode dev pode chamar mountCardForm 2× antes do cleanup do primeiro
+  // resolver. Desmonta proativamente o anterior pra evitar "Context already exists".
+  if (activeController) {
+    try {
+      activeController.unmount();
+    } catch (err) {
+      if (!(err instanceof Error)) throw err;
+      // SDK pode reclamar se já foi desmontado por outro caminho — tolerável.
+    }
+    activeController = null;
+  }
 
   let pending: PendingSubmit | null = null;
   let controller: CardFormController | null = null;
@@ -105,6 +126,8 @@ export async function mountCardForm(
       },
       cardholderEmail: { id: options.ids.cardholderEmail, placeholder: "E-mail" },
     },
+    // Registra o controller como ativo logo após o sdk.cardForm() retornar.
+    // (Atribuição abaixo, após declararmos `controller`.)
     callbacks: {
       onFormMounted: (error) => {
         if (error) {
@@ -138,6 +161,7 @@ export async function mountCardForm(
       },
     },
   });
+  activeController = controller;
 
   return {
     submit(): Promise<TokenizedCardPayload> {
@@ -159,6 +183,9 @@ export async function mountCardForm(
       });
     },
     unmount(): void {
+      if (controller && activeController === controller) {
+        activeController = null;
+      }
       controller?.unmount();
       controller = null;
     },
