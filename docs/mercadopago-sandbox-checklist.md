@@ -15,10 +15,39 @@ provider; rode antes de marcar uma PR de pagamento como pronta.
 - Credenciais de **teste** configuradas no `.env` da raiz
   (`MERCADOPAGO_ACCESS_TOKEN=TEST-...`, `MERCADOPAGO_WEBHOOK_SECRET=...`,
   `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=TEST-...`). Veja `docs/mercadopago-setup.md`.
-- `pnpm dev` rodando em `http://localhost:3000`.
+- Para **PIX e Boleto**: `pnpm dev` em `http://localhost:3000` basta.
+- Para **Cartão**: testar via deploy no Firebase App Hosting (URL HTTPS real).
+  Veja seção HTTPS abaixo.
 - Conta de teste logada na loja (cadastre uma em `/register`).
-- Webhook simulável: ou rode `pnpm dlx ngrok http 3000` e cole a URL pública
-  em `MERCADOPAGO_WEBHOOK_URL`, ou use o **simulador de webhooks** do painel MP.
+- Webhook simulável via o **simulador de webhooks** do painel MP
+  (não precisa de tunnel pra esse pedaço).
+
+## HTTPS obrigatório pro Cartão
+
+O SDK do MercadoPago injeta um iframe cross-origin que tenta setar o cookie
+`x-meli-session-id` (device fingerprinting, parte do antifraude). Em
+`http://localhost:3000` os navegadores modernos rejeitam esse cookie
+(`SameSite=None` requer `Secure`, que requer HTTPS). Sem ele a tokenização
+do cartão funciona, mas a taxa de aprovação cai e em alguns casos a API da
+MP rejeita o payment com `cc_rejected_high_risk`.
+
+**Recomendado**: subir o branch num backend do Firebase App Hosting e testar
+pela URL HTTPS gerada — o cookie do MP é aceito normalmente porque é
+domínio com TLS válido. Mesmo fluxo do CI, com credenciais reais.
+
+```bash
+firebase deploy --only apphosting:store
+# ou apenas push no branch que dispara o build no App Hosting
+```
+
+A URL aparece no console do Firebase (algo como
+`https://store--luratha-96386.us-central1.hosted.app`).
+
+**Se você só está testando PIX/Boleto**, pode usar `pnpm dev` em localhost —
+esses métodos não dependem do fingerprinting.
+
+**No CI**: o suite mocka todas as chamadas à MP, então não há dependência
+de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
 ## Cartões de teste (Brasil — MLB)
 
