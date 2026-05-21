@@ -80,7 +80,17 @@ export interface CartsRepository {
   ): Promise<CartSnapshot>;
   removeItem(userId: string, itemId: string): Promise<CartSnapshot>;
   clear(userId: string): Promise<void>;
-  mergeItems(userId: string, inputs: CartItemWrite[]): Promise<CartSnapshot>;
+  /**
+   * Mescla itens de um carrinho de guest (localStorage) no cart do usuário
+   * autenticado. Idempotente via `mergeToken` (UUID): se o token já estiver em
+   * `cart.recentMergeTokens`, retorna o snapshot atual sem alterar nada —
+   * resolve duplicações em reload, multi-tab, Strict Mode dev, etc.
+   */
+  mergeItems(
+    userId: string,
+    inputs: CartItemWrite[],
+    mergeToken: string,
+  ): Promise<CartSnapshot>;
 }
 
 export function createCartsRepository(adminDb: AdminFirestore): CartsRepository {
@@ -113,7 +123,12 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
     });
   }
 
-  function computeTotals(items: CartItem[], isoNow: string, userId: string): Cart {
+  function computeTotals(
+    items: CartItem[],
+    isoNow: string,
+    userId: string,
+    recentMergeTokens: string[] = [],
+  ): Cart {
     const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
     const subtotalCents = items.reduce(
       (sum, i) => sum + toCents(i.unitPrice) * i.quantity,
@@ -130,6 +145,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
       shippingTotal: 0,
       grandTotal,
       currency: "BRL",
+      recentMergeTokens,
       updatedAt: isoNow,
     });
   }
@@ -168,10 +184,14 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
       return await adminDb.runTransaction(async (tx) => {
         const cartDocRef = cartRef(userId);
         const itemDocRef = itemsCollection(userId).doc(itemId);
+        const cartSnap = await tx.get(cartDocRef);
         const allItemsSnap = await tx.get(itemsCollection(userId));
         const itemSnap = await tx.get(itemDocRef);
 
         const previousItems: CartItem[] = allItemsSnap.docs.map((d) => d.data());
+        const previousTokens = cartSnap.exists
+          ? (cartSnap.data()?.recentMergeTokens ?? [])
+          : [];
 
         let updatedItem: CartItem;
         if (itemSnap.exists) {
@@ -209,7 +229,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         }
 
         const nextItems = mergeIntoList(previousItems, updatedItem);
-        const nextCart = computeTotals(nextItems, isoNow, userId);
+        const nextCart = computeTotals(nextItems, isoNow, userId, previousTokens);
 
         tx.set(itemDocRef, updatedItem);
         tx.set(cartDocRef, nextCart);
@@ -247,7 +267,9 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
       const isoNow = new Date().toISOString();
 
       return await adminDb.runTransaction(async (tx) => {
+        const cartDocRef = cartRef(userId);
         const itemDocRef = itemsCollection(userId).doc(itemId);
+        const cartSnap = await tx.get(cartDocRef);
         const allItemsSnap = await tx.get(itemsCollection(userId));
         const itemSnap = await tx.get(itemDocRef);
 
@@ -266,11 +288,14 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         });
 
         const previousItems = allItemsSnap.docs.map((d) => d.data());
+        const previousTokens = cartSnap.exists
+          ? (cartSnap.data()?.recentMergeTokens ?? [])
+          : [];
         const nextItems = mergeIntoList(previousItems, updated);
-        const nextCart = computeTotals(nextItems, isoNow, userId);
+        const nextCart = computeTotals(nextItems, isoNow, userId, previousTokens);
 
         tx.set(itemDocRef, updated);
-        tx.set(cartRef(userId), nextCart);
+        tx.set(cartDocRef, nextCart);
         return { cart: nextCart, items: nextItems };
       });
     } catch (error) {
@@ -283,7 +308,9 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
       const isoNow = new Date().toISOString();
 
       return await adminDb.runTransaction(async (tx) => {
+        const cartDocRef = cartRef(userId);
         const itemDocRef = itemsCollection(userId).doc(itemId);
+        const cartSnap = await tx.get(cartDocRef);
         const allItemsSnap = await tx.get(itemsCollection(userId));
         const itemSnap = await tx.get(itemDocRef);
 
@@ -297,10 +324,13 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         const previousItems = allItemsSnap.docs
           .map((d) => d.data())
           .filter((i) => i.id !== itemId);
-        const nextCart = computeTotals(previousItems, isoNow, userId);
+        const previousTokens = cartSnap.exists
+          ? (cartSnap.data()?.recentMergeTokens ?? [])
+          : [];
+        const nextCart = computeTotals(previousItems, isoNow, userId, previousTokens);
 
         tx.delete(itemDocRef);
-        tx.set(cartRef(userId), nextCart);
+        tx.set(cartDocRef, nextCart);
         return { cart: nextCart, items: previousItems };
       });
     } catch (error) {
@@ -325,6 +355,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
   async function mergeItems(
     userId: string,
     inputs: CartItemWrite[],
+    mergeToken: string,
   ): Promise<CartSnapshot> {
     try {
       if (!Array.isArray(inputs) || inputs.length === 0) {
@@ -335,7 +366,25 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
       const isoNow = new Date().toISOString();
 
       return await adminDb.runTransaction(async (tx) => {
+        const cartDocRef = cartRef(userId);
+        const cartSnap = await tx.get(cartDocRef);
         const existingItemsSnap = await tx.get(itemsCollection(userId));
+
+        const previousTokens = cartSnap.exists
+          ? (cartSnap.data()?.recentMergeTokens ?? [])
+          : [];
+
+        // Idempotência: se essa leva já foi mesclada (mesmo token), devolve
+        // o snapshot atual sem alterar nada. Cobre reload, multi-tab,
+        // Strict Mode dev e qualquer retry que mande o mesmo payload.
+        if (previousTokens.includes(mergeToken)) {
+          const currentItems = existingItemsSnap.docs.map((d) => d.data());
+          const currentCart = cartSnap.exists
+            ? cartSnap.data()!
+            : computeTotals(currentItems, isoNow, userId, previousTokens);
+          return { cart: currentCart, items: currentItems };
+        }
+
         const existingById = new Map<string, CartItem>();
         for (const doc of existingItemsSnap.docs) {
           const data = doc.data();
@@ -374,8 +423,11 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
           }
         }
 
-        const nextCart = computeTotals(nextItems, isoNow, userId);
-        tx.set(cartRef(userId), nextCart);
+        // Anexa o token; cap FIFO em 10. Suficiente pra deduplicar bursts
+        // de retries (multi-tab, Strict Mode) sem acumular indefinidamente.
+        const nextTokens = [...previousTokens, mergeToken].slice(-10);
+        const nextCart = computeTotals(nextItems, isoNow, userId, nextTokens);
+        tx.set(cartDocRef, nextCart);
         return { cart: nextCart, items: nextItems };
       });
     } catch (error) {

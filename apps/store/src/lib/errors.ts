@@ -6,6 +6,7 @@
  * any caller that needs to react to a thrown error from our own code (HTTP
  * responses, auth flow) should throw one of the classes defined here.
  */
+import type { z } from "zod";
 
 /**
  * Thrown by client-side fetch wrappers when the server responds with a
@@ -17,11 +18,18 @@
  */
 export class ApiResponseError extends Error {
   readonly status: number;
+  /**
+   * Quando o backend responde 400 com Zod issues (`{ message, errors }`),
+   * a lista vem aqui para que forms possam mapear cada issue ao seu campo
+   * via `setError(path, { message })`. Vazio para outros tipos de erro.
+   */
+  readonly issues: readonly z.core.$ZodIssue[];
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, issues: readonly z.core.$ZodIssue[] = []) {
     super(message);
     this.name = "ApiResponseError";
     this.status = status;
+    this.issues = issues;
   }
 }
 
@@ -62,5 +70,10 @@ export async function throwIfNotOk(response: Response, fallbackMessage: string):
     typeof (payload as { message: unknown }).message === "string"
       ? (payload as { message: string }).message
       : fallbackMessage;
-  throw new ApiResponseError(message, response.status);
+  const issues =
+    payload && typeof payload === "object" && "errors" in payload &&
+    Array.isArray((payload as { errors: unknown }).errors)
+      ? ((payload as { errors: z.core.$ZodIssue[] }).errors)
+      : [];
+  throw new ApiResponseError(message, response.status, issues);
 }

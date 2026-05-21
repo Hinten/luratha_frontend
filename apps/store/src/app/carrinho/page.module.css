@@ -213,8 +213,13 @@
   line-height: 1;
 }
 
-.stepperBtn:hover {
+.stepperBtn:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.stepperBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .stepperCount {
@@ -242,9 +247,14 @@
   transition: color 200ms ease, background-color 200ms ease;
 }
 
-.removeBtn:hover {
+.removeBtn:hover:not(:disabled) {
   color: var(--color-error);
   background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+
+.removeBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ── Order summary panel ── */
@@ -323,11 +333,21 @@
   color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
   cursor: pointer;
   transition: border-color 200ms ease, color 200ms ease;
+  /* Alinha Spinner inline com "Limpando…" no estado pendente */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-.clearBtn:hover {
+.clearBtn:hover:not(:disabled) {
   border-color: var(--color-neutral-dark);
   color: var(--color-neutral-dark);
+}
+
+.clearBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .error {

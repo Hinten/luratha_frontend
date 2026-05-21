@@ -2,19 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { CartItem } from "@luratha/schemas";
 import { useCart } from "@/src/contexts/CartContext";
 import { useCartShipping } from "@/src/hooks/useCartShipping";
 import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
 import CartShippingOptions, {
   cartShippingQuoteKey,
 } from "@/src/components/shipping/CartShippingOptions";
+import Spinner from "@/src/components/Spinner";
 import styles from "./page.module.css";
 
 const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CarrinhoPage() {
+  const router = useRouter();
   const {
     items,
     removeItem,
@@ -90,83 +94,13 @@ export default function CarrinhoPage() {
             <section aria-label="Itens do carrinho">
               <ul className={styles.itemsList} role="list">
                 {items.map((item, index) => (
-                  <li key={item.id} className={styles.item}>
-                    {/* Thumbnail */}
-                    <Link
-                      href={`/produto/${item.productSlug}`}
-                      className={styles.itemThumbLink}
-                      aria-hidden="true"
-                      tabIndex={-1}
-                    >
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        width={100}
-                        height={100}
-                        sizes="(max-width: 640px) 88px, 100px"
-                        className={styles.itemThumb}
-                        loading={index < 3 ? "eager" : "lazy"}
-                      />
-                    </Link>
-
-                    {/* Body */}
-                    <div className={styles.itemBody}>
-                      <p className={styles.itemName}>
-                        <Link
-                          href={`/produto/${item.productSlug}`}
-                          className={styles.itemNameLink}
-                        >
-                          {item.name}
-                        </Link>
-                      </p>
-                      {item.variantLabel ? (
-                        <p className={styles.itemMeta}>{item.variantLabel}</p>
-                      ) : null}
-                      <p className={styles.itemPrice}>{formatBRL(item.unitPrice)}</p>
-
-                      <div className={styles.itemFooter}>
-                        {/* Quantity stepper */}
-                        <div
-                          className={styles.stepper}
-                          role="group"
-                          aria-label={`Quantidade de ${item.name}`}
-                        >
-                          <button
-                            type="button"
-                            className={styles.stepperBtn}
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            disabled={isSyncing}
-                            aria-label="Diminuir quantidade"
-                          >
-                            −
-                          </button>
-                          <span className={styles.stepperCount} aria-live="polite">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.stepperBtn}
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            disabled={isSyncing}
-                            aria-label="Aumentar quantidade"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        {/* Remove */}
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={() => removeItem(item.id)}
-                          disabled={isSyncing}
-                          aria-label={`Remover ${item.name} do carrinho`}
-                        >
-                          ✕ Remover
-                        </button>
-                      </div>
-                    </div>
-                  </li>
+                  <CartItemRow
+                    key={item.id}
+                    item={item}
+                    eager={index < 3}
+                    onUpdateQuantity={updateQuantity}
+                    onRemove={removeItem}
+                  />
                 ))}
               </ul>
             </section>
@@ -219,24 +153,177 @@ export default function CarrinhoPage() {
               <button
                 type="button"
                 className={styles.checkoutBtn}
-                onClick={() => alert("Em breve: integração com checkout!")}
-                disabled={isSyncing}
+                onClick={() => router.push("/checkout")}
+                disabled={isSyncing || items.length === 0}
               >
                 Finalizar Compra
               </button>
 
-              <button
-                type="button"
-                className={styles.clearBtn}
-                onClick={() => clearCart()}
-                disabled={isSyncing}
-              >
-                Limpar carrinho
-              </button>
+              <ClearCartButton onClear={clearCart} />
             </aside>
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+interface CartItemRowProps {
+  item: CartItem;
+  eager: boolean;
+  onUpdateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  onRemove: (itemId: string) => Promise<void>;
+}
+
+/**
+ * Linha de item no carrinho com loaders **por botão** (em vez do
+ * `isSyncing` global). Clicar `+` no item A só desabilita o `+` do item A —
+ * os demais botões continuam clicáveis.
+ */
+function CartItemRow({ item, eager, onUpdateQuantity, onRemove }: CartItemRowProps) {
+  const [pendingInc, setPendingInc] = useState(false);
+  const [pendingDec, setPendingDec] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState(false);
+
+  async function handleDecrement() {
+    setPendingDec(true);
+    try {
+      await onUpdateQuantity(item.id, item.quantity - 1);
+    } finally {
+      setPendingDec(false);
+    }
+  }
+
+  async function handleIncrement() {
+    setPendingInc(true);
+    try {
+      await onUpdateQuantity(item.id, item.quantity + 1);
+    } finally {
+      setPendingInc(false);
+    }
+  }
+
+  async function handleRemove() {
+    setPendingRemove(true);
+    try {
+      await onRemove(item.id);
+    } finally {
+      // Componente pode desmontar quando o item sai da lista — o setState é
+      // no-op nesse caso. React ignora silenciosamente em strict mode.
+      setPendingRemove(false);
+    }
+  }
+
+  return (
+    <li className={styles.item}>
+      <Link
+        href={`/produto/${item.productSlug}`}
+        className={styles.itemThumbLink}
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        <Image
+          src={item.imageUrl}
+          alt={item.name}
+          width={100}
+          height={100}
+          sizes="(max-width: 640px) 88px, 100px"
+          className={styles.itemThumb}
+          loading={eager ? "eager" : "lazy"}
+        />
+      </Link>
+
+      <div className={styles.itemBody}>
+        <p className={styles.itemName}>
+          <Link href={`/produto/${item.productSlug}`} className={styles.itemNameLink}>
+            {item.name}
+          </Link>
+        </p>
+        {item.variantLabel ? (
+          <p className={styles.itemMeta}>{item.variantLabel}</p>
+        ) : null}
+        <p className={styles.itemPrice}>{formatBRL(item.unitPrice)}</p>
+
+        <div className={styles.itemFooter}>
+          <div
+            className={styles.stepper}
+            role="group"
+            aria-label={`Quantidade de ${item.name}`}
+          >
+            <button
+              type="button"
+              className={styles.stepperBtn}
+              onClick={handleDecrement}
+              disabled={pendingDec}
+              aria-busy={pendingDec || undefined}
+              aria-label="Diminuir quantidade"
+            >
+              {pendingDec ? <Spinner size={14} /> : "−"}
+            </button>
+            <span className={styles.stepperCount} aria-live="polite">
+              {item.quantity}
+            </span>
+            <button
+              type="button"
+              className={styles.stepperBtn}
+              onClick={handleIncrement}
+              disabled={pendingInc}
+              aria-busy={pendingInc || undefined}
+              aria-label="Aumentar quantidade"
+            >
+              {pendingInc ? <Spinner size={14} /> : "+"}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className={styles.removeBtn}
+            onClick={handleRemove}
+            disabled={pendingRemove}
+            aria-busy={pendingRemove || undefined}
+            aria-label={`Remover ${item.name} do carrinho`}
+          >
+            {pendingRemove ? (
+              <>
+                <Spinner size={14} /> Removendo…
+              </>
+            ) : (
+              "✕ Remover"
+            )}
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ClearCartButton({ onClear }: { onClear: () => Promise<void> }) {
+  const [pending, setPending] = useState(false);
+
+  async function handleClear() {
+    setPending(true);
+    try {
+      await onClear();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={styles.clearBtn}
+      onClick={handleClear}
+      disabled={pending}
+      aria-busy={pending || undefined}
+    >
+      {pending ? (
+        <>
+          <Spinner size={14} /> Limpando…
+        </>
+      ) : (
+        "Limpar carrinho"
+      )}
+    </button>
   );
 }

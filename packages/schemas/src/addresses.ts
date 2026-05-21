@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UFS } from "@luratha/schemas/constants";
 import {
   nonEmptyStringSchema,
   timestampSchema,
@@ -20,34 +21,51 @@ export const addressSchema = z.object({
   id: nonEmptyStringSchema,
 
   /** Rótulo livre escolhido pelo usuário ("Casa", "Trabalho"). Opcional. */
-  label: z.string().trim().max(50).optional(),
+  label: z.string().trim().max(50, "Apelido muito longo (máx. 50).").optional(),
 
   /** Nome de quem recebe — pode diferir do nome do usuário. */
-  recipientName: nonEmptyStringSchema,
+  recipientName: z
+    .string()
+    .trim()
+    .min(1, "Informe o nome do destinatário."),
 
   /** CEP no formato 99999-999. */
-  postalCode: z.string().regex(/^\d{5}-\d{3}$/),
+  postalCode: z
+    .string()
+    .regex(/^\d{5}-\d{3}$/, "CEP inválido. Use o formato 00000-000."),
 
   /** Logradouro (rua/avenida). */
-  line1: nonEmptyStringSchema,
+  line1: z.string().trim().min(1, "Informe o logradouro."),
 
   /** Número do imóvel. Aceita "S/N" para imóveis sem numeração. */
-  number: z.string().trim().min(1).max(20),
+  number: z
+    .string()
+    .trim()
+    .min(1, "Informe o número (use S/N se não houver).")
+    .max(20, "Número muito longo (máx. 20)."),
 
   /** Complemento (apto, bloco, sala). Opcional. */
-  complement: z.string().trim().max(100).optional(),
+  complement: z
+    .string()
+    .trim()
+    .max(100, "Complemento muito longo (máx. 100).")
+    .optional(),
 
   /** Ponto de referência (opcional). */
-  reference: z.string().trim().max(200).optional(),
+  reference: z
+    .string()
+    .trim()
+    .max(200, "Referência muito longa (máx. 200).")
+    .optional(),
 
   /** Bairro. */
-  neighborhood: nonEmptyStringSchema,
+  neighborhood: z.string().trim().min(1, "Informe o bairro."),
 
   /** Município. */
-  city: nonEmptyStringSchema,
+  city: z.string().trim().min(1, "Informe a cidade."),
 
-  /** UF (sigla de 2 letras). */
-  state: z.string().trim().length(2),
+  /** UF (sigla de 2 letras) — 26 estados + DF + EX (estrangeiro). */
+  state: z.enum(UFS, { message: "Selecione um estado." }),
 
   /** Código IBGE do município (7 dígitos). Necessário para NF-e. Opcional aqui. */
   ibgeCode: z.string().regex(/^\d{7}$/).optional(),
@@ -66,6 +84,32 @@ export type Address = z.infer<typeof addressSchema>;
 export function validateAddress(input: unknown): Address {
   return addressSchema.parse(input);
 }
+
+/**
+ * Schema para o input do AddressForm (sem campos server-controlled). Usado
+ * com `zodResolver` no react-hook-form para validação inline por campo. Não
+ * inclui `id`, `createdAt`, `updatedAt`, `country` (literal sempre "BR") nem
+ * `ibgeCode` (resolvido server-side).
+ *
+ * O `isDefault` é re-declarado sem `.default(false)`: o form sempre fornece
+ * um valor inicial (controlado pelo `useForm.defaultValues`), e manter o
+ * `.default()` deixaria o **input type** do Zod como `isDefault?: boolean`,
+ * que conflita com o **output type** `isDefault: boolean` esperado pelo
+ * `zodResolver` do react-hook-form.
+ */
+export const addressFormSchema = addressSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    country: true,
+    ibgeCode: true,
+  })
+  .extend({
+    isDefault: z.boolean(),
+  });
+
+export type AddressFormInput = z.infer<typeof addressFormSchema>;
 
 /**
  * Constrói o caminho Firestore completo de um endereço.

@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { ZodError } from "zod";
 import { useCart, type CartItemInput } from "@/src/contexts/CartContext";
+import Spinner from "@/src/components/Spinner";
 import styles from "./AddToCartButton.module.css";
 
 export interface AddToCartButtonProps {
@@ -60,9 +61,18 @@ export default function AddToCartButton({
         className={className ?? styles.addToCart}
         onClick={handleClick}
         disabled={disabled || busy || isSyncing}
+        aria-busy={busy || undefined}
         aria-label={`Adicionar ${item.name} ao carrinho`}
       >
-        {added ? "✓ ADICIONADO!" : "ADICIONAR AO CARRINHO"}
+        {busy ? (
+          <>
+            <Spinner size={16} /> ADICIONANDO…
+          </>
+        ) : added ? (
+          "✓ ADICIONADO!"
+        ) : (
+          "ADICIONAR AO CARRINHO"
+        )}
       </button>
       {failed && (
         <span className={styles.error} role="alert">

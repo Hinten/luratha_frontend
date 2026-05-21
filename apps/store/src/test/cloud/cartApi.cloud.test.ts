@@ -842,6 +842,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   it("POST /api/cart/merge merges valid items and drops invalid ones", async () => {
     const merged = await mergePOST(
       jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
         items: [
           // valid simple
           buildItemPayload({ quantity: 1 }),
@@ -868,7 +869,10 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   it("POST /api/cart/merge with empty items array returns current snapshot", async () => {
     await itemsPOST(jsonRequest("http://localhost/api/cart/items", buildItemPayload()));
     const response = await mergePOST(
-      jsonRequest("http://localhost/api/cart/merge", { items: [] }),
+      jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
+        items: [],
+      }),
     );
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -878,6 +882,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   it("POST /api/cart/merge refreshes prices from the catalog (ignores stale local price)", async () => {
     const merged = await mergePOST(
       jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
         items: [buildItemPayload({ unitPrice: 1, quantity: 1 })],
       }),
     );
@@ -893,6 +898,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     );
     const merged = await mergePOST(
       jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
         items: [buildItemPayload({ quantity: 3 })],
       }),
     );
@@ -901,17 +907,58 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     expect(body.items[0].quantity).toBe(5);
   });
 
+  it("POST /api/cart/merge é idempotente quando recebe o mesmo mergeToken", async () => {
+    const token = crypto.randomUUID();
+    const payload = {
+      mergeToken: token,
+      items: [buildItemPayload({ quantity: 2 })],
+    };
+
+    // 1ª chamada: merge real, server cart fica com qty 2.
+    const first = await mergePOST(jsonRequest("http://localhost/api/cart/merge", payload));
+    expect(first.status).toBe(200);
+    expect((await first.json()).items[0].quantity).toBe(2);
+
+    // 2ª chamada com mesmo token: dedupe — quantity NÃO duplica pra 4.
+    const second = await mergePOST(jsonRequest("http://localhost/api/cart/merge", payload));
+    expect(second.status).toBe(200);
+    expect((await second.json()).items[0].quantity).toBe(2);
+
+    // 3ª chamada com token DIFERENTE: soma normalmente (comportamento legítimo).
+    const third = await mergePOST(
+      jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
+        items: [buildItemPayload({ quantity: 1 })],
+      }),
+    );
+    expect(third.status).toBe(200);
+    expect((await third.json()).items[0].quantity).toBe(3);
+  });
+
   it("POST /api/cart/merge returns 401 without a session", async () => {
     mockAuthedUser(null);
     const response = await mergePOST(
-      jsonRequest("http://localhost/api/cart/merge", { items: [] }),
+      jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
+        items: [],
+      }),
     );
     expect(response.status).toBe(401);
   });
 
   it("POST /api/cart/merge returns 400 on invalid payload (items not an array)", async () => {
     const response = await mergePOST(
-      jsonRequest("http://localhost/api/cart/merge", { items: "nope" }),
+      jsonRequest("http://localhost/api/cart/merge", {
+        mergeToken: crypto.randomUUID(),
+        items: "nope",
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("POST /api/cart/merge returns 400 sem mergeToken", async () => {
+    const response = await mergePOST(
+      jsonRequest("http://localhost/api/cart/merge", { items: [] }),
     );
     expect(response.status).toBe(400);
   });

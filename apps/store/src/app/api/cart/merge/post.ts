@@ -14,6 +14,12 @@ import {
 export const runtime = "nodejs";
 
 const mergePayloadSchema = z.object({
+  /**
+   * Token UUID gerado no client (uma vez por "sessão de guest cart"). Permite
+   * que o repository deduplique chamadas concorrentes/retries — o cliente
+   * pode mandar o mesmo payload N vezes sem multiplicar quantidades.
+   */
+  mergeToken: z.uuid(),
   items: z.array(cartItemInputSchema).max(50),
 });
 
@@ -152,7 +158,11 @@ export async function POST(request: Request) {
 
   const repository = createCartsRepository(adminDb);
   try {
-    const snapshot = await repository.mergeItems(authedUser.uid, accepted);
+    const snapshot = await repository.mergeItems(
+      authedUser.uid,
+      accepted,
+      parsed.mergeToken,
+    );
     return NextResponse.json({ ...snapshot, dropped }, { status: 200 });
   } catch (error) {
     if (error instanceof CartRepositoryError) {

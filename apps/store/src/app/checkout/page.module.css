@@ -1,0 +1,8 @@
+.loading {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}

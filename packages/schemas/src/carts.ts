@@ -53,6 +53,14 @@ export const cartSchema = z
     shippingTotal: nonNegativeMoneySchema.default(0),
     grandTotal: nonNegativeMoneySchema,
     currency: z.literal("BRL"),
+    /**
+     * Tokens UUID das chamadas recentes de `/api/cart/merge`. Quando o cliente
+     * reenviar a mesma "leva" de itens (reload, multi-tab, hot-reload em dev,
+     * falha intermitente do `persistGuestItems([])`), o token já aparece aqui e
+     * o repository pula a soma de quantidades — torna o merge idempotente.
+     * Cap em 10 — basta pra deduplicar; os mais antigos são descartados em FIFO.
+     */
+    recentMergeTokens: z.array(z.uuid()).max(10).default([]),
     updatedAt: timestampSchema,
   })
   .superRefine((cart, ctx) => {

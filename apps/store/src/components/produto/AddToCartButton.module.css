@@ -13,6 +13,11 @@
   letter-spacing: 0.08em;
   cursor: pointer;
   transition: background-color 300ms ease, transform 200ms ease;
+  /* inline-flex pra alinhar o Spinner inline com o texto durante busy */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .addToCart:hover:not(:disabled) {
