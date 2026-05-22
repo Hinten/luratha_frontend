@@ -2,7 +2,7 @@
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
   minInstances: 0
-  # maxInstances: 100
+  maxInstances: 10
   # concurrency: 80
   # cpu: 1
   # memoryMiB: 512
@@ -33,10 +33,25 @@ env:
       - BUILD
       - RUNTIME
 
-  # URL publica do receiver de webhook. Opcional: se ausente, o MP usa a URL
-  # cadastrada no painel. Descomente apos saber a URL do backend App Hosting.
-  # - variable: MERCADOPAGO_WEBHOOK_URL
-  #   value: "https://SEU-BACKEND.hosted.app/api/webhooks/mercadopago"
-  #   availability:
-  #     - RUNTIME
+  # ── Melhor Envio (cálculo de frete) ────────────────────────────────────────
+  # Token Bearer da API. Lido em runtime por resolveConfig() em
+  # apps/store/src/lib/shipping/melhorEnvio/client.ts. Sem ele,
+  # POST /api/checkout/shipping responde 502 (code: config_missing).
+  # Como obter o token: docs/melhor-envio-setup.md.
+  - variable: MELHOR_ENVIO_TOKEN
+    secret: melhor-envio-token
+    availability:
+      - RUNTIME
+
+  - variable: MELHOR_ENVIO_USER_AGENT
+    secret: melhor-envio-user-agent
+    availability:
+      - RUNTIME
+
+  # Ambiente da API: "sandbox" (default) ou "production". O token DEVE ser do
+  # mesmo ambiente — token de sandbox nao funciona em producao e vice-versa.
+  - variable: MELHOR_ENVIO_ENV
+    value: "sandbox"
+    availability:
+      - RUNTIME
 
