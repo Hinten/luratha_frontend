@@ -1,0 +1,146 @@
+name: Open promote PR (master → production)
+
+# Roda todo domingo às 21:00 UTC (18:00 BRT) e abre — ou atualiza —
+# um PR draft de master para production listando os commits a promover.
+# Se as branches estiverem alinhadas, encerra sem criar PR.
+#
+# Observação importante: PRs criados pelo GITHUB_TOKEN padrão NÃO disparam
+# o workflow `test.yml` automaticamente (proteção do GitHub contra loops).
+# Para ativar o CI no PR é preciso fechar e reabrir o PR manualmente, ou
+# trocar este workflow para usar um PAT/GitHub App token no futuro.
+
+on:
+  schedule:
+    - cron: "0 21 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    name: Open or update promote PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Fetch master and production
+        run: git fetch origin master production
+
+      - name: Count commits ahead of production
+        id: diff
+        run: |
+          count=$(git rev-list --count origin/production..origin/master)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Commits em master ainda não promovidos: $count"
+
+      - name: Skip when production is already up to date
+        if: steps.diff.outputs.count == '0'
+        run: echo "::notice::Sem commits para promover — production já está alinhado com master."
+
+      - name: Build PR body
+        if: steps.diff.outputs.count != '0'
+        run: |
+          {
+            echo "## Promote master → production"
+            echo ""
+            echo "_PR aberto automaticamente por \`open-promote-pr.yml\` em $(date -u +'%Y-%m-%d %H:%M UTC')._"
+            echo ""
+            echo "**Commits a promover:** ${{ steps.diff.outputs.count }}"
+            echo ""
+            echo "### Changelog"
+            echo ""
+            git log origin/production..origin/master --pretty=format:'- %s (%h) — %an' --no-merges
+            echo ""
+            echo ""
+            echo "### Checklist antes do merge"
+            echo ""
+            echo "- [ ] CI verde (lint, unit, integration-cloud, e2e-cloud, functions-cloud)"
+            echo "- [ ] Smoke test manual em staging"
+            echo "- [ ] Sem migrações pendentes"
+            echo ""
+            echo "> ⚠️ PRs abertos pelo \`GITHUB_TOKEN\` padrão não disparam o workflow \`test.yml\` automaticamente."
+            echo "> Para rodar o CI, feche e reabra este PR manualmente — ou substitua o token deste workflow por um PAT/GitHub App."
+          } > pr-body.md
+
+      - name: Create or update PR
+        if: steps.diff.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="chore: promote master → production ($(date -u +'%Y-%m-%d'))"
+          existing=$(gh pr list --base production --head master --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "$title" --body-file pr-body.md
+            echo "Atualizado PR existente #$existing"
+          else
+            gh pr create \
+              --base production \
+              --head master \
+              --title "$title" \
+              --body-file pr-body.md \
+              --draft
+          fi
+
+  report-failure:
+    name: Report failure logs
+    # Workflow agendado não tem PR onde comentar — em caso de falha, puxa o
+    # tail dos logs do job que falhou e abre (ou comenta numa) issue de
+    # rastreamento, para a falha não passar despercebida.
+    needs: open-pr
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Fetch failed job logs and open tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "O workflow \`${{ github.workflow }}\` falhou em $(date -u +'%Y-%m-%d %H:%M UTC')."
+            echo
+            echo "[Ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            # tail -c 12000 mantém os últimos ~12KB (onde costuma estar o erro real).
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          title="Falha no workflow agendado: open-promote-pr.yml"
+          existing=$(gh issue list --repo "$REPO" --state open --search "$title in:title" \
+            --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body-file /tmp/body.md
+            echo "Comentado na issue de rastreamento #$existing"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body-file /tmp/body.md
+          fi

@@ -2,15 +2,18 @@
 # Files listed here are excluded from the build context sent to Cloud Run,
 # reducing image size and keeping test code out of production.
 
-# Node modules (restored via npm ci during build)
+# Node modules (restored via pnpm install during build)
 node_modules/
 
 # Test source files and configuration
-e2e/
-src/**/__tests__/
-src/test/
-vitest.config.mts
-playwright.config.ts
+apps/store/e2e/
+apps/store/test-images/
+**/__tests__/
+**/test/
+**/vitest.config.mts
+**/vitest.cloud.config.mts
+**/vitest.cloud-functions.config.mts
+**/playwright.config.ts
 
 # Test output artifacts
 coverage/
@@ -20,7 +23,7 @@ blob-report/
 
 # Local environment files
 .env*
-!.env.example
+!**/.env.example
 
 # Next.js build cache (rebuilt during deployment)
 .next/
@@ -31,3 +34,6 @@ blob-report/
 # Editor and OS files
 .DS_Store
 *.pem
+
+#firebase emulator logs
+firestore-debug.log

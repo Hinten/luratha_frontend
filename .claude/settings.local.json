@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(npm test *)",
+      "Bash(git *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm build *)",
+      "Bash(node *)",
+      "PowerShell(pnpm build *)",
+      "PowerShell(pnpm test *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "next-devtools",
+    "playwright",
+    "vitest"
+  ]
+}

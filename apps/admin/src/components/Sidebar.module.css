@@ -1,0 +1,51 @@
+.sidebar {
+  flex-shrink: 0;
+  width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem;
+  background: var(--color-neutral-dark);
+  color: var(--color-neutral-light);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  padding: 0 0.5rem;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.navLink {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.navLink:hover {
+  background: color-mix(in srgb, var(--color-neutral-light) 12%, transparent);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-neutral-light) 16%, transparent);
+}
+
+.email {
+  font-size: 0.75rem;
+  padding: 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--color-neutral-light) 70%, transparent);
+}

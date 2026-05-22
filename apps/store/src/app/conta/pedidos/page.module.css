@@ -1,0 +1,22 @@
+.container {
+  font-family: var(--font-body);
+  color: var(--color-neutral-dark);
+}
+
+.heading {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.muted {
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}

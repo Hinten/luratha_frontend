@@ -1,0 +1,58 @@
+# Luratha
+
+> Luratha é uma marca brasileira de moda feminina artesanal — slow fashion com foco em peças versáteis, sustentáveis e feitas com amor para durar.
+
+Luratha vende roupas femininas artesanais (vestidos, blusas, calças, saias, conjuntos, moletons e acessórios). Fundada com o compromisso de oferecer slow fashion de verdade: menos coleções, mais significado. Peças brasileiras, feitas à mão com materiais responsáveis e processos éticos.
+
+A Luratha acredita que a moda pode ser um ato de amor — amor a si mesma, ao trabalho artesanal e ao planeta. Cada peça é pensada para ser especial no dia em que você a usa e anos depois.
+
+## Loja
+
+- [Todas as Peças](/todas-as-pecas): Catálogo completo de produtos Luratha
+- [Vestidos](/categoria/vestidos): Vestidos artesanais femininos
+- [Blusas](/categoria/blusas): Blusas e tops artesanais
+- [Calças](/categoria/calcas): Calças e pantalonas artesanais
+- [Saias](/categoria/saias): Saias artesanais femininas
+- [Shorts](/categoria/shorts): Shorts femininos artesanais
+- [Conjuntos](/categoria/conjuntos): Conjuntos e coordenados artesanais
+- [Moletons](/categoria/moletons): Moletons e agasalhos artesanais
+- [Acessórios](/categoria/acessorios): Acessórios artesanais femininos
+- [Busca](/busca): Página de busca global de produtos por termo, preço e tags
+- [Produto](/produto/[slug]): Página de detalhe de produto (ex: /produto/vestido-bordado-floral)
+- [Vestidos](/colecao/vestidos): Vestidos artesanais femininos
+- [Blusas](/colecao/blusas): Blusas e tops artesanais
+- [Calças](/colecao/calcas): Calças e pantalonas artesanais
+- [Saias](/colecao/saias): Saias artesanais femininas
+- [Shorts](/colecao/shorts): Shorts femininos artesanais
+- [Conjuntos](/colecao/conjuntos): Conjuntos e coordenados artesanais
+- [Moletons](/colecao/moletons): Moletons e agasalhos artesanais
+- [Acessórios](/colecao/acessorios): Acessórios artesanais femininos
+- [Sale](/sale): Peças em promoção
+
+## Institucional
+
+- [Sobre](/sobre): História, valores e manifesto da marca Luratha
+- [Contato](/contato): Fale conosco — WhatsApp, telefone e formulário
+- [Política de Trocas](/politica-de-trocas): Política de trocas e devoluções
+- [Referência de Medidas](/referencia-de-medidas): Guia completo de tamanhos (PP ao XGG)
+
+## Contato
+
+- Telefone: (11) 99999-9999
+- WhatsApp: (11) 99999-9999 — https://wa.me/5511999999999
+- Instagram: https://instagram.com/_luratha
+- Facebook: https://facebook.com/Lurathaa
+- YouTube: https://youtube.com/channel/UC2RLNR2ZAzUxB97XYNFUnBg
+
+## Sobre a Marca
+
+**Missão:** Criar peças artesanais femininas que durem e contem histórias, com respeito ao meio ambiente e às pessoas que as fazem.
+
+**Valores:**
+- **Artesanal:** Cada peça é criada com cuidado e atenção aos detalhes. Valorizamos as mãos que costuram.
+- **Versátil:** Desenvolvemos roupas que se adaptam à vida real — do dia a dia ao momento especial.
+- **Sustentável:** Produzimos em pequenas coleções, priorizando materiais responsáveis e processos éticos.
+
+**Tamanhos disponíveis:** PP, P, M, G, GG, XGG
+
+**País de origem:** Brasil

@@ -1,0 +1,36 @@
+/* ─── Sort Dropdown ──────────────────────────────────────────────────────── */
+
+.wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 70%, transparent);
+  white-space: nowrap;
+}
+
+.select {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-neutral-dark);
+  background-color: var(--color-neutral-light);
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: border-color 300ms ease;
+  outline: none;
+}
+
+.select:hover {
+  border-color: var(--color-primary);
+}
+
+.select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}

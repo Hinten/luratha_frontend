@@ -1,45 +1,85 @@
 {
+  "functions": [
+    {
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ],
+      "source": "functions"
+    }
+  ],
   "firestore": {
     "database": "default",
     "location": "us-east5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "apphosting": {
-    "backendId": "luratha-app-frontend",
-    "rootDir": "/",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
-    ]
-  },
+  "apphosting": [
+    {
+      "backendId": "luratha-app-frontend",
+      "rootDir": "apps/store",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions",
+        "**/__tests__",
+        "**/test",
+        "apps/store/e2e",
+        "apps/store/test-images",
+        "docs",
+        "plan",
+        "**/playwright.config.ts",
+        "**/vitest.config.mts",
+        "**/vitest.cloud.config.mts",
+        "**/vitest.cloud-functions.config.mts",
+        "README.md",
+        "storage.rules",
+        "firestore.rules",
+        "**/playwright-report",
+        ".playwright-mcp"
+      ]
+    },
+    {
+      "backendId": "luratha-app-admin",
+      "rootDir": "apps/admin",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions",
+        "apps/store",
+        "docs",
+        "plan",
+        "**/__tests__",
+        "**/test",
+        "**/vitest.config.mts",
+        "**/playwright.config.ts",
+        "README.md",
+        "storage.rules",
+        "firestore.rules"
+      ]
+    }
+  ],
   "storage": {
     "rules": "storage.rules"
-  },
-  "emulators": {
-    "auth": {
-      "port": 9099
-    },
-    "firestore": {
-      "port": 8080
-    },
-    "storage": {
-      "port": 9199
-    },
-    "ui": {
-      "enabled": true
-    },
-    "singleProjectMode": true
   },
   "auth": {
     "providers": {
       "emailPassword": true,
       "googleSignIn": {
         "oAuthBrandDisplayName": "Luratha Auth",
-        "supportEmail": "francelino25lucas@gmail.com"
+        "supportEmail": "contato@luratha.com.br"
       }
     }
   }

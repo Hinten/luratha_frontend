@@ -1,0 +1,124 @@
+/* ─── ProductDetailPage ───────────────────────────────────────────────────── */
+
+/* Two-column layout: gallery left, info right */
+.productLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin-block: 2rem;
+}
+
+@media (min-width: 768px) {
+  .productLayout {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .productLayout {
+    grid-template-columns: 55fr 45fr;
+    gap: 4rem;
+  }
+}
+
+.galleryCol {
+  /* No sticky on mobile — single column scrolls naturally */
+}
+
+@media (min-width: 768px) {
+  .galleryCol {
+    position: sticky;
+    top: 6rem;
+  }
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Product title (h1) */
+.productName {
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* Star rating row */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.ratingStar {
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.ratingValue {
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+}
+
+.ratingCount {
+  color: color-mix(in srgb, var(--color-neutral-dark) 55%, transparent);
+}
+
+/* Price block wrapper */
+.priceWrapper {
+  padding-block: 0.5rem;
+  border-block: 1px solid var(--color-neutral-mid);
+}
+
+/* Reviews section */
+.reviewsSection {
+  margin-top: 4rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--color-neutral-mid);
+}
+
+/* Related products section */
+.relatedSection {
+  margin-top: 4rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--color-neutral-mid);
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  margin-bottom: 1.5rem;
+}
+
+/* Related products horizontal scroll */
+.relatedScroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-mid) transparent;
+}
+
+.relatedCard {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+@media (min-width: 768px) {
+  .relatedCard {
+    width: 240px;
+  }
+}
+

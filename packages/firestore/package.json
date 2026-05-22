@@ -1,0 +1,27 @@
+{
+  "name": "@luratha/firestore",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@luratha/schemas": "workspace:*",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.10.0",
+    "next": "16.2.6",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "eslint": "^9.39.4",
+    "typescript": "^5",
+    "vitest": "^4.1.6"
+  }
+}

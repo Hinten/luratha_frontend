@@ -1,0 +1,41 @@
+/* ─── PriceBlock ──────────────────────────────────────────────────────────── */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-self: flex-start;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: 0.03em;
+}
+
+.original {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 50%, transparent);
+  text-decoration: line-through;
+}
+
+.current {
+  font-family: var(--font-body);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-neutral-dark);
+  line-height: 1.1;
+}
+
+.installments {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+}

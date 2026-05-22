@@ -1,0 +1,220 @@
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: color-mix(in srgb, var(--color-neutral-light) 95%, transparent);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--color-neutral-mid);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 6rem; /* 96px */
+}
+
+@media (min-width: 768px) {
+  .inner {
+    height: 7rem; /* 112px */
+  }
+}
+
+/* ── Desktop navigation ── */
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: 2rem;
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+  }
+}
+
+.navLink {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.9375rem; /* 15px */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-neutral-dark);
+  text-underline-offset: 4px;
+  /* Transition both underline color and text-decoration-color */
+  transition: text-decoration-color 300ms ease;
+}
+
+/*
+ * Legibility rule: blush (#E8B9C9) text on neutral-light (#F8F5F0) bg has
+ * ~1.5:1 contrast — near-invisible. Keep text dark; signal hover with a
+ * primary-colored underline instead (visible + brand-aligned).
+ */
+.navLink:hover {
+  color: var(--color-neutral-dark);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+}
+
+/* ── Actions (cart + hamburger) ── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.searchArea {
+  flex: 1;
+  min-width: 0;
+  max-width: 18rem;
+}
+
+@media (min-width: 768px) {
+  .searchArea {
+    flex: 0 0 20rem;
+  }
+
+  .actions {
+    gap: 1rem;
+  }
+}
+
+.desktopOnly {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktopOnly {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/*
+ * Legibility rule: blush icon on light background has ~1.5:1 contrast.
+ * Keep icon dark; add a soft blush background disc as the hover cue.
+ */
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-neutral-dark);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 0.5rem;
+  transition: background-color 300ms ease;
+}
+
+.iconBtn:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* Show hamburger on mobile only */
+.hamburger {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .hamburger {
+    display: none;
+  }
+}
+
+/* ── Mobile overlay menu ── */
+.mobileMenu {
+  border-top: 1px solid var(--color-neutral-mid);
+  background-color: var(--color-neutral-light);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mobileNavLink {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 1.125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-neutral-dark);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 300ms ease;
+}
+
+.mobileNavLink:hover {
+  color: var(--color-neutral-dark);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+}
+
+/* ── Cart badge ── */
+.cartBtn {
+  position: relative;
+}
+
+.cartBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+  text-align: center;
+  padding-inline: 3px;
+  pointer-events: none;
+}
+
+/* ── User greeting (desktop) ── */
+.userGreeting {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-neutral-dark);
+}
+
+@media (min-width: 768px) {
+  .userGreeting {
+    display: flex;
+  }
+}
+
+.sairBtn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 200ms ease, background-color 200ms ease;
+}
+
+.sairBtn:hover {
+  color: var(--color-neutral-dark);
+  background-color: color-mix(in srgb, var(--color-neutral-dark) 8%, transparent);
+}
+
+/* ── Mobile user name ── */
+.mobileUserName {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  padding-block: 0.25rem;
+}

@@ -1,0 +1,137 @@
+.dashboard {
+  font-family: var(--font-body);
+  color: var(--color-neutral-dark);
+}
+
+.greeting {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.subline {
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+  margin-bottom: 2rem;
+}
+
+.alertBox {
+  background-color: color-mix(in srgb, var(--color-warning) 10%, var(--color-neutral-light));
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.alertCta {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  background-color: var(--color-primary);
+  color: var(--color-neutral-dark);
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background-color 200ms ease;
+}
+
+.alertCta:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  background-color: #fff;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 200ms ease, transform 200ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.cardLabel {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.cardHint {
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.sectionHeading {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.muted {
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.lastOrderCard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  background-color: #fff;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 200ms ease;
+}
+
+.lastOrderCard:hover {
+  border-color: var(--color-secondary);
+}
+
+.orderNumber {
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
+.orderStatus {
+  flex: 1;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 70%, transparent);
+}
+
+.orderTotal {
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+}

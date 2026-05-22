@@ -1,0 +1,314 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [master, production]
+
+# Cancel previous runs on the same PR to avoid wasted minutes.
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  lint-typecheck:
+    name: Lint & TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: TypeScript check
+        run: pnpm run typecheck
+      - name: ESLint
+        run: pnpm run lint
+
+  unit:
+    name: Unit / component (Vitest jsdom)
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test
+
+  build:
+    name: Build (Next.js — store + admin)
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    # The storefront `next build` prerenders pages that read Firestore, so it
+    # needs credentials + network. Skips (like the other cloud jobs) when the
+    # secrets are absent — the admin build alone never needs credentials.
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando build. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Build all apps
+        if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm run build
+
+  integration-cloud:
+    name: Integration (cloud Firestore)
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    # Serialize across all PRs targeting master/production — the test project
+    # is shared and concurrent suites would race on the same collections.
+    concurrency:
+      group: luratha-96386-firestore
+      cancel-in-progress: false
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Sandbox do Melhor Envio — habilita melhorEnvio.cloud.test.ts.
+      # Ausente o token, o teste pula sozinho (describeMelhorEnvio).
+      MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
+      MELHOR_ENVIO_ENV: ${{ secrets.MELHOR_ENVIO_ENV }}
+      MELHOR_ENVIO_USER_AGENT: ${{ secrets.MELHOR_ENVIO_USER_AGENT }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando integration-cloud. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Run cloud integration tests
+        if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm run test:firestore
+
+  functions-cloud:
+    name: Functions trigger (cloud deploy + tests)
+    # Heavy job (deploy + cold-start tests). Only runs on PRs targeting
+    # production, where the cost is justified before promoting code.
+    if: github.base_ref == 'production'
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    concurrency:
+      group: luratha-96386-functions
+      cancel-in-progress: false
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_FUNCTIONS_CI_DEPLOYER: ${{ secrets.FIREBASE_FUNCTIONS_CI_DEPLOYER }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] || [ -z "$FIREBASE_FUNCTIONS_CI_DEPLOYER" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64, FIREBASE_WEB_APP_CONFIG_BASE64 ou FIREBASE_FUNCTIONS_CI_DEPLOYER ausentes — pulando functions-cloud. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install and build Functions
+        if: steps.check_secrets.outputs.skip != 'true'
+        # Functions keep their own npm-based toolchain — not part of the pnpm workspace.
+        run: |
+          npm --prefix functions ci
+          npm --prefix functions run build
+      - name: Write deployer service account to disk
+        if: steps.check_secrets.outputs.skip != 'true'
+        # FIREBASE_FUNCTIONS_CI_DEPLOYER is the JSON of a SA dedicated to deploy
+        # (cloudfunctions.admin + iam.serviceAccountUser on the runtime SA, etc.).
+        # The Admin SDK in the test step keeps using FIREBASE_SERVICE_ACCOUNT_BASE64.
+        run: |
+          mkdir -p .ci-secrets
+          printf '%s' "$FIREBASE_FUNCTIONS_CI_DEPLOYER" > .ci-secrets/deployer.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$PWD/.ci-secrets/deployer.json" >> "$GITHUB_ENV"
+      - name: Deploy Functions to luratha-96386
+        if: steps.check_secrets.outputs.skip != 'true'
+        run: npx firebase-tools deploy --only functions --project luratha-96386 --force --non-interactive
+      - name: Run Functions trigger tests
+        if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm run test:functions:cloud
+      - name: Cleanup credentials
+        if: always() && steps.check_secrets.outputs.skip != 'true'
+        run: rm -rf .ci-secrets
+
+  e2e-cloud:
+    name: E2E (Playwright + cloud)
+    runs-on: ubuntu-latest
+    needs: [unit, integration-cloud]
+    concurrency:
+      group: luratha-96386-e2e
+      cancel-in-progress: false
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando e2e-cloud. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        if: steps.check_secrets.outputs.skip != 'true'
+        working-directory: apps/store
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E tests
+        if: steps.check_secrets.outputs.skip != 'true'
+        timeout-minutes: 6
+        run: pnpm run test:e2e
+      - name: Upload Playwright report
+        if: always() && steps.check_secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/store/playwright-report
+          retention-days: 7
+
+  report-failure:
+    name: Post failure logs on PR
+    # Quando qualquer job acima falha, este job puxa o tail dos logs dos jobs
+    # que falharam (via API actions:read) e posta como comentário no PR.
+    # Substitui o antigo workflow externo post-ci-logs.yml — agora o próprio
+    # workflow Test reporta a falha, sem depender de um workflow_run separado.
+    needs: [lint-typecheck, unit, build, integration-cloud, functions-cloud, e2e-cloud]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          # Lista os jobs deste run que terminaram em falha (este job ainda
+          # está em execução, então não aparece como failure).
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            # tail -c 12000 mantém os últimos ~12KB (onde costuma estar o erro real).
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md

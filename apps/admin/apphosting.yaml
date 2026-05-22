@@ -1,0 +1,7 @@
+# Firebase App Hosting backend config for the admin app (luratha-app-admin).
+# See https://firebase.google.com/docs/app-hosting/configure
+runConfig:
+  minInstances: 0
+
+# Secrets/env are configured on the backend in Fase 5 (FIREBASE_SERVICE_ACCOUNT_BASE64,
+# FIREBASE_WEB_APP_CONFIG_BASE64, …).

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm install*)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm --filter *)",
+      "Bash(npx turbo *)",
+      "Bash(java -version)",
+      "Bash(firebase --version)",
+      "Bash(npx playwright *)",
+      "Bash(nvm --version)",
+      "Bash(fnm --version)",
+      "Bash(echo \"EXIT:$?\")"
+    ],
+    "deny": [
+      "Edit(node_modules/**)",
+      "Write(node_modules/**)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != \"true\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && corepack enable && pnpm install --frozen-lockfile"
+          }
+        ]
+      }
+    ]
+  }
+}

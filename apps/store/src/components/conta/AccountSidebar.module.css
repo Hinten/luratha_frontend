@@ -1,0 +1,51 @@
+.sidebar {
+  font-family: var(--font-body);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.link,
+.logoutBtn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-neutral-dark);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.link:hover,
+.logoutBtn:hover {
+  background-color: var(--color-accent);
+}
+
+.link:focus-visible,
+.logoutBtn:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.linkActive {
+  background-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.logoutBtn {
+  margin-top: 0.5rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 75%, transparent);
+}

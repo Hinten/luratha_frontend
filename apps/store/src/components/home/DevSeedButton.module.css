@@ -1,0 +1,114 @@
+.wrapper {
+  position: relative;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 9999px;
+  background: none;
+  color: var(--color-neutral-dark);
+  cursor: pointer;
+  transition: background-color 300ms ease;
+}
+
+.iconButton:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 13rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-neutral-mid);
+  border-radius: 0.75rem;
+  background-color: var(--color-neutral-light);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--color-neutral-dark) 10%, transparent);
+  z-index: 60;
+}
+
+.actionButton {
+  width: 100%;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--color-accent);
+  color: var(--color-neutral-dark);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 300ms ease;
+}
+
+.actionButton:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.actionButton:disabled {
+  background-color: var(--color-neutral-mid);
+  cursor: not-allowed;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-neutral-mid);
+  margin: 0.25rem 0;
+}
+
+.deleteButton {
+  width: 100%;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 300ms ease;
+}
+
+.deleteButton:hover {
+  background-color: color-mix(in srgb, var(--color-error) 22%, transparent);
+}
+
+.deleteButton:disabled {
+  background-color: var(--color-neutral-mid);
+  color: var(--color-neutral-dark);
+  cursor: not-allowed;
+}
+
+.successMessage,
+.errorMessage {
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-neutral-mid);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.successMessage {
+  color: var(--color-neutral-dark);
+}
+
+.errorMessage {
+  color: var(--color-error);
+}

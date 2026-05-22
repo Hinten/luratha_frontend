@@ -1,36 +1,178 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Luratha Frontend
 
-## Getting Started
+> ## ⚠️ Work in Progress
+>
+> Este repositório é um **frontend em desenvolvimento** e **não é a versão em produção** da Luratha. A loja oficial em [`luratha.com.br`](https://www.luratha.com.br) hoje roda em outra plataforma;
+>
+> **Não use em produção.**
 
-First, run the development server:
+
+---
+
+## Sobre o projeto
+
+Frontend da **Luratha**, marca brasileira de slow fashion feminina (vestidos, blusas, calças, saias, conjuntos, moletons e acessórios artesanais).
+
+
+### O que já existe (catálogo + storefront)
+
+- Páginas públicas: home, categorias, produto, busca, sobre, contato, política de trocas, referência de medidas
+- Autenticação (e-mail/senha + Google) via Firebase Auth
+- Carrinho persistido em Firestore por usuário
+- Busca por similaridade vetorial (Vertex AI embeddings + `findNearest`)
+- API CRUD de produtos, categorias, estoque, imagens, pedidos e endereços
+- Área do cliente (`/conta`): dashboard, dados pessoais, endereços, pedidos
+- Cobertura de testes em três níveis (Vitest unit, Vitest cloud-integration, Playwright E2E contra projeto real)
+
+### O que ainda falta (resumo)
+
+- **Auth/AuthZ middleware** nas rotas de API — atualmente abertas
+- Fluxo de checkout (intent de pagamento, cálculo de frete, confirmação)
+- Webhooks de pagamento e baixa de estoque transacional
+- Painel administrativo do catálogo
+- Integração com gateway de pagamento e meios logísticos
+- Rate limiting e proteções contra abuso
+
+Roadmap detalhado em [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-roadmap.md).
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Framework | Next.js 16.2.2 (App Router, Turbopack) |
+| UI | React 19 + TypeScript strict |
+| Estilo | Tailwind CSS v4 + CSS Modules |
+| Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting, Functions) |
+| Embeddings/IA | Vertex AI (`text-embedding-005`) |
+| Testes | Vitest + React Testing Library + Playwright |
+| CI | GitHub Actions (lint/typecheck, unit, build, cloud-integration, E2E, deploy de Functions) |
+
+## Pré-requisitos
+
+- Node.js 22, npm 10
+- Firebase CLI (`npm install -g firebase-tools@latest`)
+- Playwright Chromium (`npx playwright install --with-deps chromium`)
+- Para rodar suites cloud (`test:firestore`, `test:e2e`, etc.) — credenciais do projeto de teste em variáveis de ambiente:
+  - `FIREBASE_SERVICE_ACCOUNT_BASE64`
+  - `FIREBASE_WEB_APP_CONFIG_BASE64`
+  - `NEXT_PUBLIC_FIREBASE_*`
+
+  Sem essas variáveis, as suites cloud são puladas automaticamente.
+
+## Como rodar localmente
+
+Monorepo **pnpm + Turborepo** (Node 22, pnpm 10):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev         # storefront em :3000, admin em :3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts principais
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Comando | Uso |
+|---|---|
+| `npm run dev` | Dev server (Turbopack) |
+| `npm run build` | Build de produção |
+| `npm run start` | Servir build |
+| `npm run lint` | ESLint |
+| `npm test` | Testes unitários/componentes (Vitest, jsdom — sem rede) |
+| `npm run test:coverage` | Mesma suite com relatório de cobertura |
+| `npm run test:firestore` | Integração contra Firestore real do projeto de teste |
+| `npm run test:functions:cloud` | Triggers de Cloud Functions deployados |
+| `npm run test:e2e` | Playwright contra o projeto de teste |
+| `npm run test:e2e:ui` | Playwright em modo UI |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Ordem de validação
 
-## Learn More
+```bash
+npx tsc --noEmit
+npm run lint
+npm test
+npm run test:e2e
+```
 
-To learn more about Next.js, take a look at the following resources:
+Para mudanças em schemas, queries ou fluxos Firebase, rodar também:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test:firestore
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Arquitetura (visão rápida)
 
-## Deploy on Vercel
+```mermaid
+flowchart LR
+  A[src/app<br/>rotas + API handlers] --> B[src/components<br/>UI]
+  A --> C[src/lib/repositories<br/>acesso a dados]
+  C --> D[src/lib/firestore<br/>SDK clients + converters]
+  D --> E[(Firebase<br/>Auth/Firestore/Storage)]
+  A --> F[src/schemas/firestore<br/>Zod + contratos]
+  C --> G[src/lib/embeddingService<br/>Vertex AI]
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Pastas relevantes:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/` — rotas, layouts, metadata, sitemap, robots, API handlers
+- `src/app/api/` — CRUD por entidade (cada método em arquivo próprio)
+- `src/components/` — UI compartilhada e componentes por domínio (`categoria/`, `produto/`, `conta/`)
+- `src/lib/firestore/` — wrappers do SDK (client/SSR/admin) e DataConverters
+- `src/lib/repositories/` — camada de acesso a Firestore
+- `src/schemas/firestore/` — schemas Zod (contrato único de dados)
+- `e2e/` — specs Playwright (rodam contra projeto real)
+- `src/test/cloud/`, `src/test/cloud-functions/` — suites de integração contra `luratha-96386`
+- `functions/` — Cloud Functions (gatilhos Firestore e Storage)
+- `docs/` — guias operacionais
+
+## Padrões de engenharia
+
+- **TypeScript strict** com imports por alias `@/src/...`
+- Preferência por **Server Components**; `"use client"` apenas quando necessário
+- **CSS Modules** + design tokens em `src/app/globals.css` (`var(--color-*)`, `var(--font-*)`) — nada de hex hard-coded
+- **Acessibilidade**: landmarks semânticos, um `<h1>` por página, foco visível, `alt` descritivo
+- **SEO**: cada rota com metadata, JSON-LD, canonical e atualização de `sitemap.ts`/`robots.ts`/`llms.txt`
+- **Segurança de credenciais**: nenhum secret no código; tudo via env (`FIREBASE_SERVICE_ACCOUNT_BASE64`, etc.) ou GitHub Actions secrets
+
+## SEO / AEO / GEO
+
+Já contemplados:
+
+- Metadata por rota (`generateMetadata`)
+- JSON-LD via componente `<JsonLd>` (Product, BreadcrumbList, ContactPage, LocalBusiness, etc.)
+- `src/app/sitemap.ts` e `src/app/robots.ts` dinâmicos
+- `public/llms.txt` para descobribilidade por LLMs
+
+## Deploy
+
+Monorepo com dois apps Next.js, cada um no seu backend do **Firebase App Hosting**
+(declarados em `firebase.json` → `apphosting`):
+
+| App | Backend | `rootDir` | Domínio |
+|---|---|---|---|
+| Storefront (`@luratha/store`) | `luratha-app-frontend` | `apps/store` | `luratha.com.br` |
+| Admin (`@luratha/admin`) | `luratha-app-admin` | `apps/admin` | `admin.luratha.com.br` |
+
+Cada backend é reconstruído de forma independente a partir do seu `rootDir` quando
+há push na branch ligada — uma falha/deploy do admin não afeta a loja.
+
+Provisionar o backend do admin (passos manuais, uma única vez, no console/CLI Firebase):
+
+1. **Criar o backend** — `firebase apphosting:backends:create`, com backendId
+   `luratha-app-admin`, ligado ao repositório e à branch de deploy.
+2. **Domínio** — adicionar `admin.luratha.com.br` ao backend (App Hosting → Domains)
+   e criar o registro DNS apontado para o App Hosting.
+3. **Env/secrets** — configurar as variáveis do backend (`FIREBASE_WEB_APP_CONFIG_BASE64`,
+   `MELHOR_ENVIO_TOKEN`, etc.) via `apps/admin/apphosting.yaml` + Cloud Secret Manager.
+
+A sessão do admin é isolada da loja: o cookie `__session` é gravado **host-only**
+(sem atributo `domain`), então logar no admin não cria sessão na loja e vice-versa.
+
+## Documentação adicional
+
+- Guia de testes — [`docs/testing.md`](./docs/testing.md)
+- Guia de CRUD/Firestore — [`docs/firestore-crud-emulator.md`](./docs/firestore-crud-emulator.md)
+- Roadmap de checkout — [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-roadmap.md)
+- Convenções para agentes (Claude Code, Copilot) — [`CLAUDE.md`](./CLAUDE.md)
+
+## Licença e uso
+
+Repositório pessoal exposto publicamente como portfólio técnico. O conteúdo de marca (logo, manifesto, nomes de produto) pertence à Luratha; o código pode ser estudado livremente. Não use a marca "Luratha" em derivados.
