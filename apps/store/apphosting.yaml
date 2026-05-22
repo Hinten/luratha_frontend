@@ -8,16 +8,35 @@ runConfig:
   # memoryMiB: 512
 
 # Environment variables and secrets.
-# env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
+env:
+  # ── MercadoPago ────────────────────────────────────────────────────────────
+  # Access token do servidor. TEST-... = sandbox, APP_USR-... = produção.
+  # Lido em apps/store/src/lib/payment/mercadoPago/client.ts.
+  - variable: MERCADOPAGO_ACCESS_TOKEN
+    secret: mercadopago-access-token
+    availability:
+      - RUNTIME
+
+  # Secret de assinatura dos webhooks (painel MP -> Webhooks). Valida o header
+  # x-signature em POST /api/webhooks/mercadopago.
+  - variable: MERCADOPAGO_WEBHOOK_SECRET
+    secret: mercadopago-webhook-secret
+    availability:
+      - RUNTIME
+
+  # Public key exposta ao browser para tokenizar o cartao (@mercadopago/sdk-js).
+  # NEXT_PUBLIC_* e inlinado no bundle em BUILD time -> precisa de BUILD,
+  # senao o cardForm nao carrega os iframes.
+  - variable: NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+    secret: mercadopago-public-key
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # URL publica do receiver de webhook. Opcional: se ausente, o MP usa a URL
+  # cadastrada no painel. Descomente apos saber a URL do backend App Hosting.
+  # - variable: MERCADOPAGO_WEBHOOK_URL
+  #   value: "https://SEU-BACKEND.hosted.app/api/webhooks/mercadopago"
   #   availability:
-  #     - BUILD
   #     - RUNTIME
 
-  # Grant access to secrets in Cloud Secret Manager.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  # - variable: MY_SECRET
-  #   secret: mySecretRef
