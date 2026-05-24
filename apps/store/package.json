@@ -18,7 +18,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^5.4.0",
     "@luratha/auth": "workspace:*",
     "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
@@ -27,13 +27,13 @@
     "@mercadopago/sdk-js": "^0.0.3",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
-    "mercadopago": "^2.12.1",
+    "mercadopago": "^2.13.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-hook-form": "^7.76.0",
+    "react-hook-form": "^7.76.1",
     "sharp": "^0.34.5",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -43,18 +43,18 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.19.41",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.1",
-    "typescript": "^5",
-    "vite": "^8.0.10",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.14",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }

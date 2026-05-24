@@ -17,6 +17,6 @@
   "devDependencies": {
     "@types/node": "^20.19.41",
     "eslint": "^9.39.4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
