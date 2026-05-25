@@ -244,6 +244,14 @@ test.describe("Checkout — fluxo PIX mockado", () => {
     await expect(
       page.getByRole("img", { name: "QR Code para pagamento PIX" }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "Acompanhar pedido" })).toBeVisible();
+
+    // Steps refletem na URL agora (?step=review depois do submit, com a view
+    // de result derivada de paymentResult em memória).
+    await expect(page).toHaveURL(/\/checkout\?step=review/);
+
+    // "Acompanhar pedido" deve aterrissar em /checkout/sucesso/{id} —
+    // antes a race com clearCart mandava o user pro /carrinho.
+    await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
   });
 });

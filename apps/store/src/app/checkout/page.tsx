@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
@@ -48,5 +48,11 @@ export default function CheckoutPage() {
     return null;
   }
 
-  return <CheckoutFlow />;
+  // Suspense boundary exigido pelo `useSearchParams` em client component
+  // (CheckoutFlow lê `?step=` da URL).
+  return (
+    <Suspense fallback={null}>
+      <CheckoutFlow />
+    </Suspense>
+  );
 }
