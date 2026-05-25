@@ -10,16 +10,23 @@ import {
 /**
  * Estilo aplicado dentro dos 3 iframes do MP (PAN/expiry/CVV). O iframe está
  * em outro origin (sandbox PCI), então CSS Modules do nosso lado não chega
- * lá — precisa passar via config do SDK. Valores literais (não CSS vars) pq
- * `var(--color-*)` também não atravessa o boundary do iframe.
+ * lá — precisa passar via config do SDK. Tudo em valores literais:
+ *   - `var(--color-*)` não atravessa o boundary do iframe → cores hardcoded
+ *     casando com os tokens (`--color-neutral-dark = #3A2F2A`).
+ *   - Inter via `next/font` também não chega ao iframe → stack nativa
+ *     (`system-ui`) como aproximação visual.
+ *   - Padding apenas horizontal: o iframe usa `height: 100%` pra preencher
+ *     o container `.iframeMount` (2.75rem) e o conteúdo centraliza vertical
+ *     naturalmente; passar vertical aqui duplica e empurra o texto.
  */
 const IFRAME_FIELD_STYLE: CardFormFieldStyle = {
   height: "100%",
   width: "100%",
   fontSize: "15px",
-  fontFamily: "inherit",
-  color: "#1f1f1f",
-  placeholderColor: "#888",
+  fontFamily: "system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+  color: "#3A2F2A",
+  placeholderColor: "#9b8f86",
+  padding: "0 0.9rem",
 };
 
 /**
