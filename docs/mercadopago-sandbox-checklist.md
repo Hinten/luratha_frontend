@@ -49,6 +49,13 @@ esses métodos não dependem do fingerprinting.
 **No CI**: o suite mocka todas as chamadas à MP, então não há dependência
 de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
+> ⚠️ **Cartão não funciona em `http://localhost` dev**: API MP rejeita CORS
+> pra `/v1/card_tokens` sem HTTPS. Pra testar Cartão localmente, use
+> `pnpm --filter @luratha/store exec next dev --experimental-https`
+> (Next gera cert self-signed) ou suba no App Hosting. PIX/Boleto funcionam
+> em HTTP local porque não tokenizam no client. **CORS é política do
+> servidor MP — não há configuração nossa.**
+
 ## Cartões de teste (Brasil — MLB)
 
 > ⚠️ **Cartões de teste são por país (siteId)**. Use APENAS os números do

@@ -10,6 +10,8 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 
 Cobertura real da API MercadoPago — até agora só houve mocks. Subir o branch num backend do App Hosting (URL HTTPS) e exercitar cada cenário. `pnpm dev` local serve só pra PIX/Boleto; Cartão precisa de HTTPS por causa do cookie `x-meli-session-id`.
 
+> **⚠️ Cartão não funciona em `http://localhost` dev**: a API MP (`/v1/card_tokens`) responde 200 mas SEM `Access-Control-Allow-Origin` quando o referer é HTTP — browser bloqueia por CORS. PIX/Boleto funcionam local (não tokenizam no client). Pra testar Cartão localmente: `pnpm --filter @luratha/store exec next dev --experimental-https` (Next gera cert self-signed; aceita o aviso) **OU** subir no App Hosting e testar lá. **Não há configuração de CORS do nosso lado — é política do servidor MP, não controlamos.**
+>
 > **⚠️ Cartões de teste são por país (siteId)**. A conta MP do projeto é **Brasil (MLB)**, então use:
 > - **Mastercard**: `5031 4332 1540 6351` — CVV `123`, validade `11/30`
 > - **Visa**: `4235 6477 2802 5682` — CVV `123`, validade `11/30`
