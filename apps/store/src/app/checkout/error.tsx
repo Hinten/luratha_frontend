@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -9,7 +10,7 @@ interface ErrorProps {
 
 export default function CheckoutError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error("[checkout] route error", error);
+    console.error(`[checkout] route error ${serializeLogPayload({ error, digest: error.digest })}`);
   }, [error]);
 
   return (

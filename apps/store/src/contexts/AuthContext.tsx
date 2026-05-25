@@ -19,6 +19,7 @@ import {
 } from "firebase/auth";
 import { getClientAuth } from "@luratha/firestore/firebaseClient";
 import { AuthClientError } from "@/src/lib/errors";
+import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
 
 export interface AuthUser {
   uid: string;
@@ -132,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!(err instanceof FirebaseError)) {
         throw err;
       }
-      console.warn("Firebase Auth indisponível — verifique a configuração.", err);
+      console.warn(`Firebase Auth indisponível — verifique a configuração. ${serializeLogPayload({ err })}`);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
     }

@@ -11,6 +11,7 @@ import {
   resolveMercadoPagoConfig,
   resolveWebhookSecret,
 } from "@/src/lib/payment/mercadoPago/client";
+import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
 
 /**
  * Adapter do MercadoPago — Checkout Transparente (`/v1/payments`).
@@ -108,6 +109,13 @@ export async function createPayment(
     });
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
+    console.error(
+      `[mercadoPago.createPayment] provider call failed ${serializeLogPayload({
+        orderId: input.orderId,
+        paymentMethod: input.paymentMethod,
+        err,
+      })}`,
+    );
     throw new PaymentProviderError(
       "Falha ao criar pagamento no MercadoPago.",
       "provider_unavailable",
@@ -172,6 +180,12 @@ export async function getPayment(paymentId: string): Promise<ProviderPaymentSumm
     response = await payment.get({ id: paymentId });
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
+    console.error(
+      `[mercadoPago.getPayment] provider call failed ${serializeLogPayload({
+        paymentId,
+        err,
+      })}`,
+    );
     throw new PaymentProviderError(
       "Falha ao consultar pagamento no MercadoPago.",
       "provider_unavailable",

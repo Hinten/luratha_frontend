@@ -176,6 +176,22 @@ catch (err) {
 
 The ESLint rules (`no-empty`, `no-restricted-syntax`) enforce **(a)** that the catch is bound and **(b)** that the body contains either an `instanceof` check or a `throw`. The rule can't check that you picked a *specific* class on the RHS of `instanceof` — that part is convention. Do not weaken either rule to `warn` to silence violations; refactor the site instead.
 
+### Logging conventions
+
+Single-line logs only. Firebase App Hosting forwards stdout/stderr to Cloud Logging, which splits `console.error("msg", obj)` into one entry per line of `util.inspect` — that makes errors uncopyable. Always serialize the payload into the message string with `serializeLogPayload` from `@luratha/core/logging/serializeLogPayload`:
+
+```ts
+// ❌ multi-entry — broken in Cloud Logging
+console.error("[scope] op failed", { context, err });
+
+// ✅ single entry — copy-paste-friendly
+console.error(`[scope] op failed ${serializeLogPayload({ context, err })}`);
+```
+
+Applies to `console.error` and `console.warn` whenever a payload (object or `Error`) accompanies the message. Pure string messages without a payload (`console.log("starting…")`, `console.warn(\`product "${slug}" not found\`)`) are fine as-is.
+
+The helper omits `error.stack` — Cloud Logging keeps the stack separately and inlining it defeats the single-line goal.
+
 ## Testing Conventions
 
 - Unit/component tests: `src/**/__tests__/*.test.ts(x)` (Vitest, jsdom; no Firebase)

@@ -26,6 +26,7 @@ import {
 } from "@luratha/schemas";
 import { toCents } from "@luratha/schemas/utils";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
+import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */
 export interface CartItemInput {
@@ -456,9 +457,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // "Não autenticado" no banner do /carrinho com o user logado é
           // confuso. Próxima ação de cart (addItem etc) re-tenta a sync.
           console.warn(
-            "[cart] merge falhou (silencioso):",
-            err.status,
-            err.message,
+            `[cart] merge falhou (silencioso) ${serializeLogPayload({ status: err.status, message: err.message })}`,
           );
         } finally {
           // mergeDone flips regardless of success — otherwise a merge failure
