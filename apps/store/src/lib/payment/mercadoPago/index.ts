@@ -57,31 +57,67 @@ function serializeLogPayload(value: unknown): string {
 }
 
 /**
- * Extrai status/cause de um erro do SDK MP e loga via `console.error` antes
- * de re-embrulhar em `PaymentProviderError`. O pacote `mercadopago` não exporta
- * uma classe de erro específica — anexa `status` (HTTP da API MP) e `cause`
- * (array estruturado de erros do MP) num Error genérico — então o narrowing
- * é por shape. Sem este log o `.cause` se perde no JSON da resposta e o
- * diagnóstico no Cloud Logging vira impossível.
+ * Extrai `name`/`message`/`status` de um erro do SDK MP. O pacote `mercadopago`
+ * lança em dois shapes distintos:
+ *   1. `Error` nativo — raro, geralmente quando o failure mode é local (rede,
+ *      AbortError, etc.).
+ *   2. **Objeto plain** — caminho padrão pra 4xx/5xx do gateway MP. Shape:
+ *      `{ message, error, status, cause }`. **Não** é instância de `Error`,
+ *      então `err instanceof Error` é falso e `String(err)` produz
+ *      `"[object Object]"` (foi o bug que motivou esse helper).
+ *
+ * Exportado pra ter cobertura de teste sem precisar bater no SDK real.
+ */
+export function describeMercadoPagoError(err: unknown): {
+  name: string;
+  message: string;
+  status: number | undefined;
+} {
+  if (err instanceof Error) {
+    const s = (err as { status?: unknown }).status;
+    return {
+      name: err.name,
+      message: err.message,
+      status: typeof s === "number" ? s : undefined,
+    };
+  }
+  if (typeof err === "object" && err !== null) {
+    const obj = err as Record<string, unknown>;
+    const parts: string[] = [];
+    if (typeof obj.message === "string") parts.push(obj.message);
+    if (typeof obj.error === "string" && obj.error !== obj.message) {
+      parts.push(`(${obj.error})`);
+    }
+    const message =
+      parts.length > 0 ? parts.join(" ") : JSON.stringify(obj).slice(0, 240);
+    const status = typeof obj.status === "number" ? obj.status : undefined;
+    return { name: "MercadoPagoApiError", message, status };
+  }
+  return { name: "Unknown", message: String(err), status: undefined };
+}
+
+/**
+ * Loga uma linha (`console.error` + JSON compacto) com o erro do SDK MP e
+ * devolve um `PaymentProviderError` pra propagar pro handler da rota.
+ *
+ * Nota sobre 5xx + "communication_error": geralmente é transiente — o gateway
+ * MP não conseguiu falar com algum downstream (rede PIX/banco). Retry manual
+ * costuma resolver porque cada submit do checkout cria nova Order (idempotency
+ * key muda). Se a frequência for alta, abrir issue com orderId/timestamp.
  */
 function logAndRewrapMpError(
   operation: "create" | "get",
   context: Record<string, unknown>,
   err: unknown,
 ): PaymentProviderError {
-  const status =
-    typeof err === "object" && err !== null && "status" in err
-      ? (err as { status?: unknown }).status
-      : undefined;
-  const name = err instanceof Error ? err.name : "Unknown";
-  const sdkMessage = err instanceof Error ? err.message : String(err);
+  const { name, message, status } = describeMercadoPagoError(err);
 
   // Single-line: Cloud Logging quebra o objeto em várias entries se for
   // passado como 2º arg de console.error. Stringify pra entry única copiável.
   const payload = serializeLogPayload({
     ...context,
     name,
-    message: sdkMessage,
+    message,
     status,
     cause: err,
   });
@@ -95,9 +131,19 @@ function logAndRewrapMpError(
     );
   }
   if (typeof status === "number") {
-    const verb = operation === "create" ? "a criação" : "a consulta";
+    if (status >= 500) {
+      return new PaymentProviderError(
+        `MercadoPago temporariamente indisponível (HTTP ${status}). Tente novamente em instantes.`,
+        "provider_unavailable",
+        err,
+      );
+    }
+    // 4xx: mensagem do MP costuma ser informativa ("Invalid user identification
+    // number", etc.) — incluir truncada pra dar pista ao usuário sem leak de
+    // payload gigante. Log completo (não truncado) segue íntegro no Cloud Logging.
+    const truncated = message.length > 160 ? `${message.slice(0, 160)}…` : message;
     return new PaymentProviderError(
-      `MercadoPago rejeitou ${verb} do pagamento (HTTP ${status}).`,
+      `MercadoPago rejeitou o pagamento (HTTP ${status}): ${truncated}`,
       "provider_unavailable",
       err,
     );
