@@ -49,12 +49,32 @@ esses métodos não dependem do fingerprinting.
 **No CI**: o suite mocka todas as chamadas à MP, então não há dependência
 de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
-> ⚠️ **Cartão não funciona em `http://localhost` dev**: API MP rejeita CORS
-> pra `/v1/card_tokens` sem HTTPS. Pra testar Cartão localmente, use
-> `pnpm --filter @luratha/store exec next dev --experimental-https`
-> (Next gera cert self-signed) ou suba no App Hosting. PIX/Boleto funcionam
-> em HTTP local porque não tokenizam no client. **CORS é política do
-> servidor MP — não há configuração nossa.**
+> ⚠️ **Cartão não funciona em localhost — nem HTTP nem HTTPS**: o servidor
+> MP rejeita CORS para `/v1/card_tokens` quando o referer é
+> `localhost`/`127.0.0.1`. Testes empíricos com `next dev --experimental-https`
+> (HTTPS local) confirmam que o bloqueio persiste — não é só sobre protocolo.
+> A doc oficial avisa: "Não utilize domínios locais com ou sem porta
+> especificada". **Único caminho para testar Cartão: deployment no App
+> Hosting** (HTTPS público).
+>
+> PIX/Boleto funcionam em HTTP local porque a tokenização não roda no client
+> — só `/api/checkout/payment-intent` chama MP server-to-server. **CORS é
+> política do servidor MP, não há configuração nossa.**
+
+## Onde cada chamada acontece (auditoria arquitetural)
+
+| Operação | Lado | Arquivo / por quê |
+|---|---|---|
+| Carregar SDK MP (`https://sdk.mercadopago.com/js/v2`) | Client | `apps/store/src/lib/mercadopago/loadSdk.ts` — `loadMercadoPago()` |
+| Inicializar `cardForm` (cria iframes MP) | Client | `apps/store/src/lib/mercadopago/cardForm.ts:143` — `sdk.cardForm({...})` |
+| `POST /v1/card_tokens` (PAN+CVV → token) | **Iframe MP** | PCI compliance — PAN/CVV ficam no domínio `mercadopago.com`, nosso JS nunca vê |
+| `GET /v1/payment_methods/search` (BIN → métodos) | **Iframe MP** | Idem |
+| `POST /v1/payments` (criar pagamento usando token) | **Nosso server** | `apps/store/src/lib/payment/mercadoPago/index.ts` via `/api/checkout/payment-intent` (runtime `nodejs`, usa `MERCADOPAGO_ACCESS_TOKEN`) |
+| Webhook (`POST /api/webhooks/mercadopago`) | **Nosso server** | MP chama nosso server; sem CORS |
+
+> A tokenização **tem** que ser client-side: se nosso JS tocasse o PAN ou CVV,
+> entraríamos em PCI scope D (certificação, audit anual). O iframe hospedado
+> existe pra terceirizar isso.
 
 ## Cartões de teste (Brasil — MLB)
 

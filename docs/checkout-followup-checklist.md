@@ -10,7 +10,13 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 
 Cobertura real da API MercadoPago — até agora só houve mocks. Subir o branch num backend do App Hosting (URL HTTPS) e exercitar cada cenário. `pnpm dev` local serve só pra PIX/Boleto; Cartão precisa de HTTPS por causa do cookie `x-meli-session-id`.
 
-> **⚠️ Cartão não funciona em `http://localhost` dev**: a API MP (`/v1/card_tokens`) responde 200 mas SEM `Access-Control-Allow-Origin` quando o referer é HTTP — browser bloqueia por CORS. PIX/Boleto funcionam local (não tokenizam no client). Pra testar Cartão localmente: `pnpm --filter @luratha/store exec next dev --experimental-https` (Next gera cert self-signed; aceita o aviso) **OU** subir no App Hosting e testar lá. **Não há configuração de CORS do nosso lado — é política do servidor MP, não controlamos.**
+> **⚠️ Cartão NÃO funciona em localhost — nem HTTP nem HTTPS**: o servidor MP rejeita CORS para `api.mercadopago.com/v1/card_tokens` quando o referer é `localhost`/`127.0.0.1`, mesmo com `next dev --experimental-https` (confirmado empiricamente: `https://localhost:3000` deu o mesmo erro). A doc oficial reforça: ["Não utilize domínios locais ... com ou sem porta especificada"](https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/configure-back-urls). **Deploy no App Hosting é obrigatório para testar Cartão.** Não há configuração CORS do nosso lado — é política do servidor MP.
+>
+> PIX/Boleto funcionam em localhost normalmente, porque a tokenização não acontece no client — só nosso `/api/checkout/payment-intent` chama o MP server-to-server (`apps/store/src/lib/payment/mercadoPago/`, runtime `nodejs`).
+>
+> **Onde cada chamada MP acontece** (auditoria):
+> - **Iframe MP (client)** → `POST /v1/card_tokens`, `GET /v1/payment_methods/search` — PCI compliance: PAN/CVV ficam no iframe hospedado pelo MP, nosso JS nunca toca dados sensíveis.
+> - **Nosso server** → `POST /v1/payments`, webhook receiver — sem CORS, usa `MERCADOPAGO_ACCESS_TOKEN`.
 >
 > **⚠️ Cartões de teste são por país (siteId)**. A conta MP do projeto é **Brasil (MLB)**, então use:
 > - **Mastercard**: `5031 4332 1540 6351` — CVV `123`, validade `11/30`
