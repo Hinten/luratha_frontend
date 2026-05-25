@@ -51,19 +51,36 @@ de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
 ## Cartões de teste (Brasil — MLB)
 
-| Bandeira | Número | CVV | Validade | Comportamento |
-|---|---|---|---|---|
-| Mastercard | `5031 7557 3453 0604` | qualquer 3 dígitos | qualquer futura | **APRO** — aprovado |
-| Visa | `4235 6477 2802 5682` | qualquer 3 dígitos | qualquer futura | **APRO** — aprovado |
-| Mastercard | `5031 4332 1540 6351` | qualquer 3 dígitos | qualquer futura | **OTHE** — recusado (motivo genérico) |
-| Mastercard | `5031 4332 1540 6351` *(use nome `CONT`)* | qualquer | qualquer | **CONT** — pendente (pending) |
+> ⚠️ **Cartões de teste são por país (siteId)**. Use APENAS os números do
+> seu siteId. Cartão de outro país gera `No payment methods found` no
+> `onBinChange` (browser reporta como CORS error, mas a causa real é o
+> BIN não estar configurado na conta MP). Para Brasil (MLB) use a tabela
+> abaixo; para outros países, consulte a
+> [doc oficial MP](https://www.mercadopago.com.br/developers/pt/docs/checkout-bricks/additional-content/your-integrations/test/cards).
 
-> Para forçar status específicos, **mude o nome no cartão** (campo
-> "Nome impresso") para o status desejado: `APRO`, `OTHE`, `CONT`, `CALL`,
-> `FUND`, `SECU`, `EXPI`, `FORM`. Esse é o protocolo oficial da MP para
-> simular respostas em sandbox.
+| Bandeira | Número | CVV | Validade |
+|---|---|---|---|
+| Mastercard | `5031 4332 1540 6351` | `123` | `11/30` |
+| Visa | `4235 6477 2802 5682` | `123` | `11/30` |
+| Amex | `3753 651535 56885` | `1234` | `11/30` |
+| Elo (débito) | `5067 7667 8388 8311` | `123` | `11/30` |
 
-Documento: qualquer CPF válido (ex.: `12345678909`).
+O **número** identifica país + bandeira; o **nome impresso** controla o
+cenário de status. Use qualquer número MLB acima e **mude o nome** para
+forçar o resultado:
+
+| Nome impresso | Resultado |
+|---|---|
+| `APRO` | Aprovado |
+| `OTHE` | Recusado por erro geral |
+| `CONT` | Pendente |
+| `CALL` | Recusado, validação manual |
+| `FUND` | Saldo insuficiente |
+| `SECU` | CVV inválido |
+| `EXPI` | Validade inválida |
+| `FORM` | Erro de formulário |
+
+Documento (CPF) para APRO/OTHE: `12345678909`.
 
 ## Roteiro PIX
 
@@ -84,9 +101,9 @@ Documento: qualquer CPF válido (ex.: `12345678909`).
 
 1. Steps 1–2 como acima.
 2. Step 3: escolha **Cartão**, preencha:
-   - e-mail + CPF do pagador
+   - e-mail + CPF do pagador (dígitos puros, ex.: `12345678909`)
    - nome impresso = `APRO`
-   - número `5031 7557 3453 0604`, validade `12/30`, CVV `123`
+   - número `5031 4332 1540 6351` (Mastercard MLB), validade `11/30`, CVV `123`
    - parcelas: 1
 3. Confirmar pagamento → step 4 → confirmar pedido.
 4. **Esperado:** `router.replace` para `/checkout/sucesso/<orderId>` imediato

@@ -201,10 +201,14 @@ de design + payload correto para nosso backend.
 ## Sandbox / teste manual
 
 Após qualquer mudança no fluxo, rode o checklist manual em
-`docs/mercadopago-sandbox-checklist.md` — cartões de teste (`5031 7557 3453 0604` =
-APRO, `5031 4332 1540 6351` = OTHE), forçar status via nome no cartão (`APRO`,
-`OTHE`, `CONT`, ...) e simulador de webhook. A suíte automatizada nunca chama
-a MP real.
+`docs/mercadopago-sandbox-checklist.md`. **Cartões de teste são por país
+(siteId)**: a conta MP do projeto é Brasil (MLB), então use Mastercard
+`5031 4332 1540 6351` ou Visa `4235 6477 2802 5682` (CVV `123`, val `11/30`).
+Cartões de outros países (ex.: `5031 7557 3453 0604` é Argentina/Uruguai/Peru)
+quebram com `No payment methods found` — o BIN não existe na conta brasileira.
+Status é forçado pelo **nome impresso** no cartão (`APRO`, `OTHE`, `CONT`,
+`FUND`, `CALL`, `SECU`, `EXPI`, `FORM`, ...), não pelo número. CPF padrão
+pra APRO/OTHE: `12345678909`. A suíte automatizada nunca chama a MP real.
 
 ## References
 

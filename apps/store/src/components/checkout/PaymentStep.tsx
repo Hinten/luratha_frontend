@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
@@ -9,7 +9,6 @@ import {
   CardFormError,
   type CardFormHandle,
 } from "@/src/lib/mercadopago/cardForm";
-import { formatCpf } from "@/src/lib/format/cpf";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -201,17 +200,6 @@ export default function PaymentStep(props: PaymentStepProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardFormStarted]);
 
-  // CPF mask while typing — UX brasileira. O input carrega o ID que o SDK
-  // cardForm do MP lê no submit; pra evitar que o MP receba `123.456.789-09`
-  // e rejeite com "invalid parameter identificationNumber" (code 324), o
-  // `processSubmit` faz strip+restore do `.value` em torno do
-  // `cardFormHandle.submit()`.
-  const cpfReg = register("identificationNumber");
-  const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
-    e.target.value = formatCpf(e.target.value);
-    void cpfReg.onChange(e);
-  };
-
   async function processSubmit(values: PayerFormInput) {
     setError(null);
     setSubmitting(true);
@@ -261,32 +249,19 @@ export default function PaymentStep(props: PaymentStepProps) {
         throw new CardFormError("Formulário de cartão ainda não está pronto.");
       }
 
-      // O SDK MP cardForm lê `.value` do input identificationNumber no
-      // momento do submit (síncrono — não usa cache via event listener,
-      // confirmado depois do debug do erro "324 invalid identificationNumber"
-      // ser revelado como ARMOR/Firefox-ETP). Strip+restore simples: zera
-      // a máscara antes do submit, restaura no finally pra UX preservar
-      // `123.456.789-09` na tela.
-      const cpfInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
-      let originalCpf: string | null = null;
-      if (cpfInput instanceof HTMLInputElement) {
-        originalCpf = cpfInput.value;
-        cpfInput.value = originalCpf.replace(/\D/g, "");
-      }
-      try {
-        const card = await cardFormHandle.current.submit();
-        await onSubmit({
-          paymentMethod: "credit_card",
-          payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
-          cardToken: card.token,
-          installments: card.installments,
-          paymentMethodId: card.paymentMethodId,
-        });
-      } finally {
-        if (cpfInput instanceof HTMLInputElement && originalCpf !== null) {
-          cpfInput.value = originalCpf;
-        }
-      }
+      // O SDK MP cardForm lê `.value` do input identificationNumber direto
+      // do DOM. Input é sem máscara (UX subóptima mas única forma robusta:
+      // tentativas de strip+restore com nativeSetter+dispatchEvent não
+      // atualizavam o cache interno do SDK; doc oficial confirma que não
+      // há setter programático).
+      const card = await cardFormHandle.current.submit();
+      await onSubmit({
+        paymentMethod: "credit_card",
+        payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
+        cardToken: card.token,
+        installments: card.installments,
+        paymentMethodId: card.paymentMethodId,
+      });
     } catch (err) {
       if (err instanceof CardFormError) {
         setError(err.message);
@@ -439,15 +414,19 @@ export default function PaymentStep(props: PaymentStepProps) {
               id={CARD_FORM_IDS.identificationNumber}
               className={styles.input}
               inputMode="numeric"
+              pattern="\d*"
+              maxLength={14}
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
               placeholder={
                 getValues("identificationType") === "CNPJ"
-                  ? "00.000.000/0000-00"
-                  : "000.000.000-00"
+                  ? "00000000000000"
+                  : "00000000000"
               }
-              {...cpfReg}
-              onChange={onCpfChange}
+              {...register("identificationNumber")}
             />
+            <span className={styles.muted}>
+              Apenas números — sem pontos ou traços.
+            </span>
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>
                 {errors.identificationNumber.message}
