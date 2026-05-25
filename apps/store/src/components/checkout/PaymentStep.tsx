@@ -89,6 +89,22 @@ const TABS: { id: PaymentMethod; label: string }[] = [
   { id: "boleto", label: "Boleto" },
 ];
 
+/**
+ * Setter "React-safe" — atualiza `.value` via prototype native setter e dispara
+ * `input` event, garantindo que value trackers (incluindo o do MercadoPago
+ * cardForm) atualizem seus caches internos. Atribuir `input.value = …` puro
+ * não dispara evento, então MP continua usando o valor cacheado da última
+ * digitação do usuário.
+ */
+function setNativeInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function makeDefaults(props: PaymentStepProps): PayerFormInput {
   return {
     email: props.defaultEmail ?? "",
@@ -205,10 +221,16 @@ export default function PaymentStep(props: PaymentStepProps) {
   // O input carrega o ID que o SDK cardForm do MP lê no submit; pra evitar
   // que o MP receba `123.456.789-09` e rejeite com "invalid parameter
   // identificationNumber" (code 324), o `processSubmit` faz strip+restore
-  // do `.value` em torno do `cardFormHandle.submit()`.
+  // do `.value` (usando `setNativeInputValue`) em torno do
+  // `cardFormHandle.submit()`. Durante esse strip, o `bypassMaskRef` desliga
+  // a aplicação de `formatCpf` pra o evento `input` programático não cair em
+  // loop re-mascarando o valor.
+  const bypassMaskRef = useRef(false);
   const cpfReg = register("identificationNumber");
   const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
-    e.target.value = formatCpf(e.target.value);
+    if (!bypassMaskRef.current) {
+      e.target.value = formatCpf(e.target.value);
+    }
     void cpfReg.onChange(e);
   };
 
@@ -261,18 +283,20 @@ export default function PaymentStep(props: PaymentStepProps) {
         throw new CardFormError("Formulário de cartão ainda não está pronto.");
       }
 
-      // MP cardForm lê `.value` do input identificationNumber direto do DOM no
-      // submit. A doc oficial usa `<input type="text">` (não hidden) — quando
-      // trocamos pra hidden, o SDK falhava em "get payment methods". Mantemos
-      // o input visível com máscara pra UX brasileira, e despimos a máscara
-      // só durante o submit pra não cair em "invalid parameter
-      // identificationNumber" (code 324). O `finally` interno restaura mesmo
-      // se o submit rejeitar.
+      // MP cardForm escuta `input` event do CPF e cacheia o valor — atribuir
+      // `.value = raw` direto NÃO atualiza esse cache, então MP segue
+      // submetendo o valor mascarado e rejeita com "invalid parameter
+      // identificationNumber" (code 324). Solução: usar `setNativeInputValue`
+      // (prototype native setter + `dispatchEvent('input')`) pra MP ver a
+      // mudança. O `bypassMaskRef` desliga o `formatCpf` no `onCpfChange`
+      // durante esse dispatch — sem isso, o handler RHF re-aplica máscara
+      // e a gente cai em loop. Restaura no `finally` (mesmo se rejeitar).
       const cpfInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
       let originalCpf: string | null = null;
       if (cpfInput instanceof HTMLInputElement) {
         originalCpf = cpfInput.value;
-        cpfInput.value = originalCpf.replace(/\D/g, "");
+        bypassMaskRef.current = true;
+        setNativeInputValue(cpfInput, originalCpf.replace(/\D/g, ""));
       }
       try {
         const card = await cardFormHandle.current.submit();
@@ -285,7 +309,8 @@ export default function PaymentStep(props: PaymentStepProps) {
         });
       } finally {
         if (cpfInput instanceof HTMLInputElement && originalCpf !== null) {
-          cpfInput.value = originalCpf;
+          setNativeInputValue(cpfInput, originalCpf);
+          bypassMaskRef.current = false;
         }
       }
     } catch (err) {
