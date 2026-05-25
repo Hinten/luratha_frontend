@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
@@ -9,7 +9,6 @@ import {
   CardFormError,
   type CardFormHandle,
 } from "@/src/lib/mercadopago/cardForm";
-import { formatCpf } from "@/src/lib/format/cpf";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -88,22 +87,6 @@ const TABS: { id: PaymentMethod; label: string }[] = [
   { id: "credit_card", label: "Cartão" },
   { id: "boleto", label: "Boleto" },
 ];
-
-/**
- * Setter "React-safe" — atualiza `.value` via prototype native setter e dispara
- * `input` event, garantindo que value trackers (incluindo o do MercadoPago
- * cardForm) atualizem seus caches internos. Atribuir `input.value = …` puro
- * não dispara evento, então MP continua usando o valor cacheado da última
- * digitação do usuário.
- */
-function setNativeInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 function makeDefaults(props: PaymentStepProps): PayerFormInput {
   return {
@@ -217,23 +200,6 @@ export default function PaymentStep(props: PaymentStepProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardFormStarted]);
 
-  // CPF mask while typing: muta o evento ANTES do onChange do RHF processar.
-  // O input carrega o ID que o SDK cardForm do MP lê no submit; pra evitar
-  // que o MP receba `123.456.789-09` e rejeite com "invalid parameter
-  // identificationNumber" (code 324), o `processSubmit` faz strip+restore
-  // do `.value` (usando `setNativeInputValue`) em torno do
-  // `cardFormHandle.submit()`. Durante esse strip, o `bypassMaskRef` desliga
-  // a aplicação de `formatCpf` pra o evento `input` programático não cair em
-  // loop re-mascarando o valor.
-  const bypassMaskRef = useRef(false);
-  const cpfReg = register("identificationNumber");
-  const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!bypassMaskRef.current) {
-      e.target.value = formatCpf(e.target.value);
-    }
-    void cpfReg.onChange(e);
-  };
-
   async function processSubmit(values: PayerFormInput) {
     setError(null);
     setSubmitting(true);
@@ -283,36 +249,19 @@ export default function PaymentStep(props: PaymentStepProps) {
         throw new CardFormError("Formulário de cartão ainda não está pronto.");
       }
 
-      // MP cardForm escuta `input` event do CPF e cacheia o valor — atribuir
-      // `.value = raw` direto NÃO atualiza esse cache, então MP segue
-      // submetendo o valor mascarado e rejeita com "invalid parameter
-      // identificationNumber" (code 324). Solução: usar `setNativeInputValue`
-      // (prototype native setter + `dispatchEvent('input')`) pra MP ver a
-      // mudança. O `bypassMaskRef` desliga o `formatCpf` no `onCpfChange`
-      // durante esse dispatch — sem isso, o handler RHF re-aplica máscara
-      // e a gente cai em loop. Restaura no `finally` (mesmo se rejeitar).
-      const cpfInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
-      let originalCpf: string | null = null;
-      if (cpfInput instanceof HTMLInputElement) {
-        originalCpf = cpfInput.value;
-        bypassMaskRef.current = true;
-        setNativeInputValue(cpfInput, originalCpf.replace(/\D/g, ""));
-      }
-      try {
-        const card = await cardFormHandle.current.submit();
-        await onSubmit({
-          paymentMethod: "credit_card",
-          payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
-          cardToken: card.token,
-          installments: card.installments,
-          paymentMethodId: card.paymentMethodId,
-        });
-      } finally {
-        if (cpfInput instanceof HTMLInputElement && originalCpf !== null) {
-          setNativeInputValue(cpfInput, originalCpf);
-          bypassMaskRef.current = false;
-        }
-      }
+      // O SDK MP cardForm lê o `.value` do input identificationNumber direto
+      // do DOM. O input já é sem máscara (UX subóptima mas única forma
+      // robusta: a doc oficial confirma que não há setter programático no
+      // SDK pra bypassar máscara, e tentativas com nativeSetter +
+      // dispatchEvent não atualizavam o cache interno do SDK).
+      const card = await cardFormHandle.current.submit();
+      await onSubmit({
+        paymentMethod: "credit_card",
+        payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
+        cardToken: card.token,
+        installments: card.installments,
+        paymentMethodId: card.paymentMethodId,
+      });
     } catch (err) {
       if (err instanceof CardFormError) {
         setError(err.message);
@@ -465,15 +414,19 @@ export default function PaymentStep(props: PaymentStepProps) {
               id={CARD_FORM_IDS.identificationNumber}
               className={styles.input}
               inputMode="numeric"
+              pattern="\d*"
+              maxLength={14}
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
               placeholder={
                 getValues("identificationType") === "CNPJ"
-                  ? "00.000.000/0000-00"
-                  : "000.000.000-00"
+                  ? "00000000000000"
+                  : "00000000000"
               }
-              {...cpfReg}
-              onChange={onCpfChange}
+              {...register("identificationNumber")}
             />
+            <span className={styles.muted}>
+              Apenas números — sem pontos ou traços.
+            </span>
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>
                 {errors.identificationNumber.message}
