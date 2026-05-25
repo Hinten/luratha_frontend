@@ -264,7 +264,7 @@ export default function PaymentStep(props: PaymentStepProps) {
         paymentMethodId: card.paymentMethodId,
       });
     } catch (err) {
-      if (err instanceof CardFormError || err instanceof Error) {
+      if (err instanceof CardFormError) {
         setError(err.message);
       } else {
         throw err;

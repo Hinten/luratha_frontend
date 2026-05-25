@@ -21,6 +21,57 @@ import {
 
 const BOLETO_PAYMENT_METHOD_ID = "bolbradesco";
 
+/**
+ * Extrai status/cause de um erro do SDK MP e loga via `console.error` antes
+ * de re-embrulhar em `PaymentProviderError`. O pacote `mercadopago` não exporta
+ * uma classe de erro específica — anexa `status` (HTTP da API MP) e `cause`
+ * (array estruturado de erros do MP) num Error genérico — então o narrowing
+ * é por shape. Sem este log o `.cause` se perde no JSON da resposta e o
+ * diagnóstico no Cloud Logging vira impossível.
+ */
+function logAndRewrapMpError(
+  operation: "create" | "get",
+  context: Record<string, unknown>,
+  err: unknown,
+): PaymentProviderError {
+  const status =
+    typeof err === "object" && err !== null && "status" in err
+      ? (err as { status?: unknown }).status
+      : undefined;
+  const name = err instanceof Error ? err.name : "Unknown";
+  const sdkMessage = err instanceof Error ? err.message : String(err);
+
+  console.error(`[mercadoPago] payment.${operation} failed`, {
+    ...context,
+    name,
+    message: sdkMessage,
+    status,
+    cause: err,
+  });
+
+  if (name === "AbortError") {
+    return new PaymentProviderError(
+      "Tempo limite ao contatar o MercadoPago (10s).",
+      "provider_unavailable",
+      err,
+    );
+  }
+  if (typeof status === "number") {
+    const verb = operation === "create" ? "a criação" : "a consulta";
+    return new PaymentProviderError(
+      `MercadoPago rejeitou ${verb} do pagamento (HTTP ${status}).`,
+      "provider_unavailable",
+      err,
+    );
+  }
+  const action = operation === "create" ? "criar" : "consultar";
+  return new PaymentProviderError(
+    `Falha ao ${action} pagamento no MercadoPago.`,
+    "provider_unavailable",
+    err,
+  );
+}
+
 /** Mapeia o status do MercadoPago para o vocabulário de `Order.paymentStatus`. */
 export function mapMpStatus(mpStatus: string | undefined): PaymentStatus {
   switch (mpStatus) {
@@ -108,9 +159,9 @@ export async function createPayment(
     });
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
-    throw new PaymentProviderError(
-      "Falha ao criar pagamento no MercadoPago.",
-      "provider_unavailable",
+    throw logAndRewrapMpError(
+      "create",
+      { orderId: input.orderId, paymentMethod: input.paymentMethod },
       err,
     );
   }
@@ -172,11 +223,7 @@ export async function getPayment(paymentId: string): Promise<ProviderPaymentSumm
     response = await payment.get({ id: paymentId });
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
-    throw new PaymentProviderError(
-      "Falha ao consultar pagamento no MercadoPago.",
-      "provider_unavailable",
-      err,
-    );
+    throw logAndRewrapMpError("get", { paymentId }, err);
   }
 
   const orderId = response.external_reference;
