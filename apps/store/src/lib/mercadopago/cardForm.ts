@@ -3,8 +3,28 @@
 import {
   getMercadoPagoSdk,
   type CardFormController,
+  type CardFormFieldStyle,
   type MercadoPagoInstance,
 } from "./loadSdk";
+
+/**
+ * Estilo aplicado dentro dos 3 iframes do MP (PAN/expiry/CVV). Valores
+ * propositalmente conservadores — uma versão anterior com `fontFamily`
+ * complexo + `padding` em rem fez o SDK falhar silenciosamente em
+ * fetchar payment methods e installments. A doc oficial `fields.md` só
+ * documenta exemplos em px e não enumera quais propriedades/unidades
+ * são parseadas corretamente. Antes de expandir aqui, usar os debug
+ * callbacks (`onPaymentMethodsReceived`, `onInstallmentsReceived`,
+ * `onBinChange`) pra confirmar que cada adição não quebra a inicialização.
+ */
+const IFRAME_FIELD_STYLE: CardFormFieldStyle = {
+  height: "100%",
+  width: "100%",
+  fontSize: "15px",
+  fontFamily: "inherit",
+  color: "#1f1f1f",
+  placeholderColor: "#888",
+};
 
 /**
  * Wrapper sobre `mp.cardForm(...)` que devolve uma `Promise<TokenizedCardPayload>`
@@ -20,6 +40,8 @@ export interface CardFormFieldIds {
   expirationDate: string;
   securityCode: string;
   cardholderName: string;
+  /** Banco emissor — obrigatório pelo SDK, populado automaticamente via BIN. */
+  issuer: string;
   installments: string;
   identificationType: string;
   identificationNumber: string;
@@ -48,7 +70,7 @@ export interface MountCardFormOptions {
 export interface CardFormHandle {
   /** Dispara submit do form; resolve com o payload tokenizado. */
   submit(): Promise<TokenizedCardPayload>;
-  /** Remove iframes injetados pelo MP. */
+  /** Decrementa o refcount; remove iframes só quando ninguém mais segura. */
   unmount(): void;
 }
 
@@ -67,127 +89,205 @@ interface PendingSubmit {
   reject: (err: unknown) => void;
 }
 
+interface ActiveMount {
+  handle: CardFormHandle;
+  controller: CardFormController;
+}
+
 /**
- * Controller "ativo" no módulo. O SDK do MP rejeita um segundo `cardForm({...})`
- * enquanto o anterior ainda está vivo ("Context 'expirationFields' already
- * exists"). Em Next.js dev (Strict Mode), o `useEffect` do PaymentStep dispara
- * 2× e essa proteção desmonta o antigo antes do novo subir, eliminando a
- * corrida sem precisar de timeouts ou retries.
+ * Refcount global: cada `mountCardForm` incrementa, cada `handle.unmount()`
+ * decrementa. O `sdk.cardForm(...)` só é chamado UMA VEZ por ciclo (até o
+ * refcount voltar a zero).
+ *
+ * Motivo: o SDK do MP guarda os "contexts" (cardNumber/expirationDate/CVV/...)
+ * num registry interno e rejeita re-registrar com erro **"Context
+ * 'expirationFields' already exists"**. Em Strict Mode dev (e em qualquer
+ * cenário onde o `useEffect` do PaymentStep dispare 2× antes do mount async
+ * resolver), múltiplas chamadas concorrentes a `sdk.cardForm` resultavam nessa
+ * falha — iframes ficavam meio-inicializados (campos bloqueados, parcelas não
+ * carregam). O refcount garante uma única chamada e múltiplos consumidores
+ * compartilham o mesmo handle.
  */
-let activeController: CardFormController | null = null;
+let intentCount = 0;
+let active: ActiveMount | null = null;
+let pending: Promise<CardFormHandle> | null = null;
 
 export async function mountCardForm(
   options: MountCardFormOptions,
   mp?: MercadoPagoInstance,
 ): Promise<CardFormHandle> {
-  const sdk = mp ?? (await getMercadoPagoSdk());
+  intentCount++;
 
-  // Strict Mode dev pode chamar mountCardForm 2× antes do cleanup do primeiro
-  // resolver. Desmonta proativamente o anterior pra evitar "Context already exists".
-  if (activeController) {
-    try {
-      activeController.unmount();
-    } catch (err) {
-      if (!(err instanceof Error)) throw err;
-      // SDK pode reclamar se já foi desmontado por outro caminho — tolerável.
-    }
-    activeController = null;
-  }
+  // Já montado: reusa o handle. As 2 IIFEs do Strict Mode dev recebem a
+  // mesma referência; a 1ª chama unmount() (decrementa pra 1), a 2ª mantém
+  // o form vivo.
+  if (active) return active.handle;
 
-  let pending: PendingSubmit | null = null;
-  let controller: CardFormController | null = null;
+  // Mount em andamento (entre `await getMercadoPagoSdk()` e o retorno do
+  // `sdk.cardForm`): segue a mesma promise — quando resolver, o `active` já
+  // está set e o caller recebe o mesmo handle.
+  if (pending) return pending;
 
-  const finishPending = () => {
-    const p = pending;
-    pending = null;
-    return p;
-  };
+  const promise: Promise<CardFormHandle> = (async () => {
+    const sdk = mp ?? (await getMercadoPagoSdk());
 
-  controller = sdk.cardForm({
-    amount: options.amount.toFixed(2),
-    iframe: true,
-    form: {
-      id: options.ids.formId,
-      cardNumber: { id: options.ids.cardNumber, placeholder: "Número do cartão" },
-      expirationDate: { id: options.ids.expirationDate, placeholder: "MM/AA" },
-      securityCode: { id: options.ids.securityCode, placeholder: "CVV" },
-      cardholderName: {
-        id: options.ids.cardholderName,
-        placeholder: "Nome impresso no cartão",
+    let pendingSubmit: PendingSubmit | null = null;
+    let controller: CardFormController | null = null;
+
+    const finishPending = () => {
+      const p = pendingSubmit;
+      pendingSubmit = null;
+      return p;
+    };
+
+    controller = sdk.cardForm({
+      amount: options.amount.toFixed(2),
+      iframe: true,
+      form: {
+        id: options.ids.formId,
+        cardNumber: {
+          id: options.ids.cardNumber,
+          placeholder: "Número do cartão",
+          style: IFRAME_FIELD_STYLE,
+        },
+        expirationDate: {
+          id: options.ids.expirationDate,
+          placeholder: "MM/AA",
+          style: IFRAME_FIELD_STYLE,
+        },
+        securityCode: {
+          id: options.ids.securityCode,
+          placeholder: "CVV",
+          style: IFRAME_FIELD_STYLE,
+        },
+        cardholderName: {
+          id: options.ids.cardholderName,
+          placeholder: "Nome impresso no cartão",
+        },
+        issuer: { id: options.ids.issuer, placeholder: "Banco emissor" },
+        installments: { id: options.ids.installments, placeholder: "Parcelas" },
+        identificationType: {
+          id: options.ids.identificationType,
+          placeholder: "Tipo de documento",
+        },
+        identificationNumber: {
+          id: options.ids.identificationNumber,
+          placeholder: "Número do documento",
+        },
+        cardholderEmail: { id: options.ids.cardholderEmail, placeholder: "E-mail" },
       },
-      installments: { id: options.ids.installments, placeholder: "Parcelas" },
-      identificationType: {
-        id: options.ids.identificationType,
-        placeholder: "Tipo de documento",
+      callbacks: {
+        onFormMounted: (error) => {
+          if (error) {
+            console.warn("[mp.cardForm] onFormMounted error", error);
+          } else {
+            console.info("[mp.cardForm] mounted");
+          }
+        },
+        onBinChange: (bin) => {
+          console.info("[mp.cardForm] bin change", bin);
+        },
+        onPaymentMethodsReceived: (error, methods) => {
+          if (error) {
+            console.warn("[mp.cardForm] paymentMethods error", error);
+          } else {
+            console.info("[mp.cardForm] paymentMethods", methods);
+          }
+        },
+        onInstallmentsReceived: (error, installments) => {
+          if (error) {
+            console.warn("[mp.cardForm] installments error", error);
+          } else {
+            console.info("[mp.cardForm] installments", installments);
+          }
+        },
+        onSubmit: (event) => {
+          event.preventDefault();
+          const p = finishPending();
+          if (!p || !controller) return;
+          const data = controller.getCardFormData();
+          if (!data.token || !data.paymentMethodId) {
+            p.reject(
+              new CardFormError(
+                "Não foi possível gerar o token do cartão. Verifique os dados.",
+              ),
+            );
+            return;
+          }
+          p.resolve({
+            token: data.token,
+            paymentMethodId: data.paymentMethodId,
+            installments: Number(data.installments) || 1,
+            cardholderEmail: data.cardholderEmail,
+          });
+        },
+        onError: (error) => {
+          const p = finishPending();
+          options.onError?.(error);
+          p?.reject(error);
+        },
       },
-      identificationNumber: {
-        id: options.ids.identificationNumber,
-        placeholder: "Número do documento",
-      },
-      cardholderEmail: { id: options.ids.cardholderEmail, placeholder: "E-mail" },
-    },
-    // Registra o controller como ativo logo após o sdk.cardForm() retornar.
-    // (Atribuição abaixo, após declararmos `controller`.)
-    callbacks: {
-      onFormMounted: (error) => {
-        if (error) {
-          console.warn("[mercadopago] cardForm onFormMounted error", error);
-        }
-      },
-      onSubmit: (event) => {
-        event.preventDefault();
-        const p = finishPending();
-        if (!p || !controller) return;
-        const data = controller.getCardFormData();
-        if (!data.token || !data.paymentMethodId) {
-          p.reject(
-            new CardFormError(
-              "Não foi possível gerar o token do cartão. Verifique os dados.",
-            ),
-          );
-          return;
-        }
-        p.resolve({
-          token: data.token,
-          paymentMethodId: data.paymentMethodId,
-          installments: Number(data.installments) || 1,
-          cardholderEmail: data.cardholderEmail,
+    });
+
+    const handle: CardFormHandle = {
+      submit(): Promise<TokenizedCardPayload> {
+        return new Promise<TokenizedCardPayload>((resolve, reject) => {
+          if (pendingSubmit) {
+            reject(new CardFormError("Submit já em andamento."));
+            return;
+          }
+          pendingSubmit = { resolve, reject };
+          const form = document.getElementById(options.ids.formId);
+          if (!(form instanceof HTMLFormElement)) {
+            finishPending();
+            reject(
+              new CardFormError(`Form "${options.ids.formId}" não encontrado no DOM.`),
+            );
+            return;
+          }
+          form.requestSubmit();
         });
       },
-      onError: (error) => {
-        const p = finishPending();
-        options.onError?.(error);
-        p?.reject(error);
+      unmount(): void {
+        intentCount = Math.max(0, intentCount - 1);
+        // Só desmonta de fato quando ninguém mais segura. Em Strict Mode dev,
+        // a 1ª IIFE decrementa pra 1, a 2ª mantém — controller fica vivo.
+        if (intentCount === 0 && active && active.controller === controller) {
+          try {
+            controller?.unmount();
+          } catch (err) {
+            if (!(err instanceof Error)) throw err;
+            // SDK pode reclamar se já foi desmontado por outro caminho — tolerável.
+          }
+          active = null;
+          controller = null;
+        }
       },
-    },
-  });
-  activeController = controller;
+    };
 
-  return {
-    submit(): Promise<TokenizedCardPayload> {
-      return new Promise<TokenizedCardPayload>((resolve, reject) => {
-        if (pending) {
-          reject(new CardFormError("Submit já em andamento."));
-          return;
-        }
-        pending = { resolve, reject };
-        const form = document.getElementById(options.ids.formId);
-        if (!(form instanceof HTMLFormElement)) {
-          finishPending();
-          reject(
-            new CardFormError(`Form "${options.ids.formId}" não encontrado no DOM.`),
-          );
-          return;
-        }
-        form.requestSubmit();
-      });
-    },
-    unmount(): void {
-      if (controller && activeController === controller) {
-        activeController = null;
-      }
-      controller?.unmount();
-      controller = null;
-    },
-  };
+    active = { handle, controller };
+    return handle;
+  })();
+
+  pending = promise;
+  try {
+    return await promise;
+  } finally {
+    if (pending === promise) pending = null;
+  }
+}
+
+/** Reset interno — uso exclusivo em testes pra isolar entre cases. */
+export function __resetCardFormForTesting(): void {
+  if (active) {
+    try {
+      active.controller.unmount();
+    } catch (err) {
+      // Test setup teardown: SDK fake pode lançar — propagar só não-Error.
+      if (!(err instanceof Error)) throw err;
+    }
+  }
+  intentCount = 0;
+  active = null;
+  pending = null;
 }

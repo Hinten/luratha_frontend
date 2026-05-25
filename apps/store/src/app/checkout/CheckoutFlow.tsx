@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { startTransition, useEffect, useReducer, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -302,14 +302,22 @@ export default function CheckoutFlow() {
   const shippingTotal = state.quote?.price ?? 0;
   const grandTotal = Math.max(0, subtotal - discountTotal + shippingTotal);
 
+  // `startTransition` marca a mudança de URL como não-urgente: o Suspense
+  // boundary do CheckoutPage mantém a UI anterior visível enquanto o Next
+  // processa a nova rota, em vez de mostrar `fallback={null}` (flash branco).
+  // Sem isso a transição entre steps tem latência perceptível.
   function goToStep(step: VisibleStepId) {
     dispatch({ type: "CLEAR_ERROR" });
-    router.push(`/checkout?step=${step}`);
+    startTransition(() => {
+      router.push(`/checkout?step=${step}`);
+    });
   }
 
   function goBack() {
     dispatch({ type: "CLEAR_ERROR" });
-    router.back();
+    startTransition(() => {
+      router.back();
+    });
   }
 
   async function confirmOrder() {
@@ -492,7 +500,9 @@ export default function CheckoutFlow() {
               onBack={goBack}
               onSubmit={async (draft) => {
                 dispatch({ type: "SET_PAYMENT_DRAFT", draft });
-                router.push("/checkout?step=review");
+                startTransition(() => {
+                  router.push("/checkout?step=review");
+                });
               }}
             />
           )}
@@ -541,7 +551,9 @@ export default function CheckoutFlow() {
                 result={state.paymentResult}
                 onTryAgain={() => {
                   dispatch({ type: "TRY_AGAIN" });
-                  router.push("/checkout?step=payment");
+                  startTransition(() => {
+                    router.push("/checkout?step=payment");
+                  });
                 }}
               />
               <button

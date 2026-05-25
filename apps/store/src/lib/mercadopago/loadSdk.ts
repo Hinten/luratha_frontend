@@ -12,9 +12,30 @@ import { loadMercadoPago } from "@mercadopago/sdk-js";
  *   - usa locale pt-BR (público da loja)
  */
 
+/**
+ * Estilo aplicado dentro do iframe MP (cardNumber/expirationDate/securityCode).
+ * O iframe vive em outro origin (sandbox PCI) — CSS externo do nosso CSS Module
+ * não atravessa o boundary. A única forma de estilizar o conteúdo é via esta
+ * config, repassada ao SDK na construção do cardForm. Propriedades aceitas
+ * conforme docs MP `fields.md`.
+ */
+export interface CardFormFieldStyle {
+  height?: string;
+  width?: string;
+  fontFamily?: string;
+  fontSize?: string;
+  fontWeight?: string | number;
+  color?: string;
+  placeholderColor?: string;
+  textAlign?: string;
+  padding?: string;
+  margin?: string;
+}
+
 interface CardFormFieldDef {
   id: string;
   placeholder?: string;
+  style?: CardFormFieldStyle;
 }
 
 interface CardFormFormConfig {
@@ -23,6 +44,13 @@ interface CardFormFormConfig {
   expirationDate: CardFormFieldDef;
   securityCode: CardFormFieldDef;
   cardholderName: CardFormFieldDef;
+  /**
+   * Banco emissor — obrigatório pela SDK. Sem este `<select>` no DOM o SDK
+   * lança `"Required field 'issuer' is missing"` durante a detecção de BIN.
+   * Populado automaticamente pelo SDK conforme o número do cartão é digitado;
+   * normalmente vem uma única opção (auto-selecionada) pra cartões BR.
+   */
+  issuer: CardFormFieldDef;
   installments: CardFormFieldDef;
   identificationType: CardFormFieldDef;
   identificationNumber: CardFormFieldDef;
@@ -33,6 +61,15 @@ export interface CardFormCallbacks {
   onFormMounted?: (error?: unknown) => void;
   onSubmit?: (event: Event) => void;
   onError?: (error: unknown) => void;
+  /**
+   * Disparado quando o usuário digita o BIN (6 primeiros dígitos do PAN).
+   * Útil pra confirmar que o iframe cardNumber está fluindo eventos
+   * corretamente até o SDK. Sem isso, qualquer mudança no `style:` que
+   * quebre o iframe é invisível.
+   */
+  onBinChange?: (bin: string) => void;
+  onPaymentMethodsReceived?: (error: unknown, paymentMethods?: unknown) => void;
+  onInstallmentsReceived?: (error: unknown, installments?: unknown) => void;
 }
 
 export interface CardFormConfig {

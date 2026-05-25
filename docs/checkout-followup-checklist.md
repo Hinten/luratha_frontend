@@ -10,6 +10,17 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 
 Cobertura real da API MercadoPago — até agora só houve mocks. Subir o branch num backend do App Hosting (URL HTTPS) e exercitar cada cenário. `pnpm dev` local serve só pra PIX/Boleto; Cartão precisa de HTTPS por causa do cookie `x-meli-session-id`.
 
+> **⚠️ Testando Cartão localmente**: o **MercadoPago Armor** (sistema de fraud detection) precisa de cookies third-party + iframe context + device fingerprint não-mascarado. Falha em:
+> - **Firefox** com Enhanced Tracking Protection (qualquer nível além de Standard) → bloqueia `x-meli-session-id`, mascara `screen.availWidth/Height`, bloqueia `api.mercadolibre.com/tracks` por CORS. Erro típico no console: `[object ProgressEvent]` em `/checkout/api_integration`, e POST `/v1/card_tokens` retorna **`code: 324 invalid parameter identificationNumber`** mesmo com CPF correto — o MP retorna erro genérico mascarando "fraud check failed".
+> - **Norton/qualquer AV com TLS interception**: idem.
+>
+> Pra testar Cartão localmente:
+> 1. Desligar ETP no Firefox pra `localhost` (escudo na barra de endereço → desativar pra este site), **ou**
+> 2. Usar Chrome com perfil novo (sem extensions de privacidade), **ou**
+> 3. Subir no Firebase App Hosting (HTTPS público — Armor funciona).
+>
+> Chrome com `--disable-web-security` **não** resolve por si só (CORS é parte do problema, não tudo); precisa combinar com `--disable-features=PartitionedCookies,ThirdPartyStoragePartitioning` E perfil novo. Mais simples: testar em deployment.
+
 - [ ] **PIX**: criar pagamento → QR Code renderiza (base64), botão "Copiar código" copia → marcar pago manualmente no painel MP → webhook hit em `POST /api/webhooks/mercadopago` → `Order.paymentStatus` flippa pra `paid` + `paidAt` preenchido → `/conta/pedidos/{orderId}` mostra status final.
 - [ ] **Cartão APRO** (`5031 7557 3453 0604`, nome impresso `APRO`, CVV `123`, validade `12/30`): tokeniza com cardForm SDK, redireciona pra `/checkout/sucesso/{orderId}` direto (aprovação síncrona), `clearCart()` rodou, página de sucesso renderiza com número do pedido + JSON-LD.
 - [ ] **Cartão OTHE** (mesmo número, nome `OTHE`): `PaymentResult` mostra "Pagamento recusado" + statusDetail; botão "Tentar outro método" volta pro Step 3 sem perder o cart.

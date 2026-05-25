@@ -76,6 +76,7 @@ const CARD_FORM_IDS = {
   expirationDate: "luratha-card-expiry",
   securityCode: "luratha-card-cvv",
   cardholderName: "luratha-card-name",
+  issuer: "luratha-card-issuer",
   installments: "luratha-card-installments",
   identificationType: "luratha-card-id-type",
   identificationNumber: "luratha-card-id-number",
@@ -200,7 +201,11 @@ export default function PaymentStep(props: PaymentStepProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardFormStarted]);
 
-  // CPF mask while typing: muta o evento ANTES do onChange do RHF processar.
+  // CPF mask while typing — UX brasileira. O input carrega o ID que o SDK
+  // cardForm do MP lê no submit; pra evitar que o MP receba `123.456.789-09`
+  // e rejeite com "invalid parameter identificationNumber" (code 324), o
+  // `processSubmit` faz strip+restore do `.value` em torno do
+  // `cardFormHandle.submit()`.
   const cpfReg = register("identificationNumber");
   const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
     e.target.value = formatCpf(e.target.value);
@@ -255,20 +260,53 @@ export default function PaymentStep(props: PaymentStepProps) {
       if (!cardFormHandle.current) {
         throw new CardFormError("Formulário de cartão ainda não está pronto.");
       }
-      const card = await cardFormHandle.current.submit();
-      await onSubmit({
-        paymentMethod: "credit_card",
-        payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
-        cardToken: card.token,
-        installments: card.installments,
-        paymentMethodId: card.paymentMethodId,
-      });
+
+      // O SDK MP cardForm lê `.value` do input identificationNumber no
+      // momento do submit (síncrono — não usa cache via event listener,
+      // confirmado depois do debug do erro "324 invalid identificationNumber"
+      // ser revelado como ARMOR/Firefox-ETP). Strip+restore simples: zera
+      // a máscara antes do submit, restaura no finally pra UX preservar
+      // `123.456.789-09` na tela.
+      const cpfInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
+      let originalCpf: string | null = null;
+      if (cpfInput instanceof HTMLInputElement) {
+        originalCpf = cpfInput.value;
+        cpfInput.value = originalCpf.replace(/\D/g, "");
+      }
+      try {
+        const card = await cardFormHandle.current.submit();
+        await onSubmit({
+          paymentMethod: "credit_card",
+          payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
+          cardToken: card.token,
+          installments: card.installments,
+          paymentMethodId: card.paymentMethodId,
+        });
+      } finally {
+        if (cpfInput instanceof HTMLInputElement && originalCpf !== null) {
+          cpfInput.value = originalCpf;
+        }
+      }
     } catch (err) {
       if (err instanceof CardFormError) {
         setError(err.message);
-      } else {
-        throw err;
+        return;
       }
+      // O SDK MP rejeita o submit do cardForm com um objeto cru estruturado
+      // (ex.: `{ code: '324', message: 'invalid parameter ...' }`), que não é
+      // CardFormError nem subclasse de Error. Sem este narrow por shape, o
+      // erro escapa como unhandledRejection e o usuário fica preso em
+      // "Processando…" sem feedback.
+      if (typeof err === "object" && err !== null && "message" in err) {
+        const e = err as { code?: unknown; message?: unknown };
+        const msg =
+          typeof e.message === "string"
+            ? e.message
+            : "Falha ao processar pagamento com cartão.";
+        setError(`Erro do MercadoPago: ${msg}`);
+        return;
+      }
+      throw err;
     } finally {
       setSubmitting(false);
     }
@@ -470,6 +508,20 @@ export default function PaymentStep(props: PaymentStepProps) {
               <div id={CARD_FORM_IDS.securityCode} className={styles.iframeMount} />
             </div>
           </div>
+          {/* Issuer (banco emissor) — exigido pelo SDK MP no DOM mas
+              populado automaticamente via BIN. Não interativo: escondido
+              visualmente mas mantido ativo no DOM pra getElementById. */}
+          <select
+            id={CARD_FORM_IDS.issuer}
+            className={styles.visuallyHidden}
+            aria-hidden="true"
+            tabIndex={-1}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Banco emissor
+            </option>
+          </select>
           <div className={styles.field}>
             <label htmlFor={CARD_FORM_IDS.installments} className={styles.label}>
               Parcelas
