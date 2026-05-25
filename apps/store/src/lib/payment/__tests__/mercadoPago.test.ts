@@ -1,6 +1,10 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mapMpStatus, verifyWebhookSignature } from "@/src/lib/payment/mercadoPago";
+import {
+  describeMercadoPagoError,
+  mapMpStatus,
+  verifyWebhookSignature,
+} from "@/src/lib/payment/mercadoPago";
 
 describe("mapMpStatus", () => {
   it("maps approved to paid", () => {
@@ -33,6 +37,78 @@ describe("mapMpStatus", () => {
     expect(mapMpStatus("in_process")).toBe("pending");
     expect(mapMpStatus(undefined)).toBe("pending");
     expect(mapMpStatus("something-new")).toBe("pending");
+  });
+});
+
+describe("describeMercadoPagoError", () => {
+  it("extracts name/message/status from a native Error with attached status", () => {
+    const err = new Error("Boom");
+    (err as unknown as Record<string, unknown>).status = 500;
+
+    expect(describeMercadoPagoError(err)).toEqual({
+      name: "Error",
+      message: "Boom",
+      status: 500,
+    });
+  });
+
+  it("handles a plain object with message + error + status (real MP shape)", () => {
+    // Shape do log que motivou o helper: 500 communication_error.
+    const err = {
+      message: "fill and validate error list: communication_error\n: 400",
+      error: "internal_server_error",
+      status: 500,
+      cause: [],
+    };
+
+    expect(describeMercadoPagoError(err)).toEqual({
+      name: "MercadoPagoApiError",
+      message:
+        "fill and validate error list: communication_error\n: 400 (internal_server_error)",
+      status: 500,
+    });
+  });
+
+  it("uses only message when error field is absent or duplicates message", () => {
+    expect(describeMercadoPagoError({ message: "Invalid CPF", status: 400 })).toEqual({
+      name: "MercadoPagoApiError",
+      message: "Invalid CPF",
+      status: 400,
+    });
+    expect(
+      describeMercadoPagoError({ message: "Same", error: "Same", status: 400 }),
+    ).toEqual({
+      name: "MercadoPagoApiError",
+      message: "Same",
+      status: 400,
+    });
+  });
+
+  it("falls back to JSON.stringify (truncated) when no message/error available", () => {
+    const err = { foo: "bar", baz: 1 };
+    expect(describeMercadoPagoError(err)).toEqual({
+      name: "MercadoPagoApiError",
+      message: JSON.stringify(err),
+      status: undefined,
+    });
+  });
+
+  it("handles primitives (string, undefined, null)", () => {
+    expect(describeMercadoPagoError("oops")).toEqual({
+      name: "Unknown",
+      message: "oops",
+      status: undefined,
+    });
+    expect(describeMercadoPagoError(undefined)).toEqual({
+      name: "Unknown",
+      message: "undefined",
+      status: undefined,
+    });
+    expect(describeMercadoPagoError(null)).toEqual({
+      name: "Unknown",
+      message: "null",
+      status: undefined,
+    });
   });
 });
 
