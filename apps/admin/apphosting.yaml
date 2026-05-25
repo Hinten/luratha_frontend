@@ -3,5 +3,8 @@
 runConfig:
   minInstances: 0
 
-# Secrets/env are configured on the backend in Fase 5 (FIREBASE_SERVICE_ACCOUNT_BASE64,
-# FIREBASE_WEB_APP_CONFIG_BASE64, …).
+# Firebase não exige segredos declarados aqui:
+# - Client SDK: o App Hosting injeta FIREBASE_WEBAPP_CONFIG (config web) automaticamente
+#   em build e runtime — o código lê essa variável para popular as NEXT_PUBLIC_FIREBASE_*.
+# - Admin SDK: usa Application Default Credentials (ADC), fornecidas pelo Cloud Run.
+# Outros segredos do backend (se houver) são configurados no painel do App Hosting.
