@@ -127,6 +127,23 @@ function shippingAddressPath(userId: string, addressId: string): string {
   return `userProfiles/${userId}/addresses/${addressId}`;
 }
 
+// 25s: margem confortável sobre os 10s do SDK MP server-side + round-trip + Firestore.
+const CONFIRM_TIMEOUT_MS = 25_000;
+
+async function fetchWithTimeout(
+  input: RequestInfo,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default function CheckoutFlow() {
   const router = useRouter();
   const { user } = useAuth();
@@ -215,11 +232,15 @@ export default function CheckoutFlow() {
     };
 
     try {
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
+      const orderRes = await fetchWithTimeout(
+        "/api/orders",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload),
+        },
+        CONFIRM_TIMEOUT_MS,
+      );
       if (!orderRes.ok) {
         const body = (await orderRes.json().catch(() => ({}))) as { message?: string };
         throw new ApiResponseError(
@@ -229,11 +250,15 @@ export default function CheckoutFlow() {
       }
       const created = (await orderRes.json()) as { id: string };
 
-      const intentRes = await fetch("/api/checkout/payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...state.paymentDraft, orderId: created.id }),
-      });
+      const intentRes = await fetchWithTimeout(
+        "/api/checkout/payment-intent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...state.paymentDraft, orderId: created.id }),
+        },
+        CONFIRM_TIMEOUT_MS,
+      );
       if (!intentRes.ok) {
         const body = (await intentRes.json().catch(() => ({}))) as { message?: string };
         throw new ApiResponseError(
@@ -253,6 +278,17 @@ export default function CheckoutFlow() {
     } catch (err) {
       if (err instanceof ApiResponseError) {
         dispatch({ type: "SUBMIT_FAIL", message: err.message });
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        dispatch({
+          type: "SUBMIT_FAIL",
+          message: "Tempo limite excedido. Verifique sua conexão e tente novamente.",
+        });
+      } else if (err instanceof TypeError) {
+        dispatch({
+          type: "SUBMIT_FAIL",
+          message:
+            "Sua conexão caiu ou está instável. Verifique a internet e tente novamente.",
+        });
       } else {
         throw err;
       }

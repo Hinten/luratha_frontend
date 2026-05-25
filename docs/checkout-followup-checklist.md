@@ -70,8 +70,11 @@ Documentadas em código/PR mas sem owner. Cada uma é uma decisão técnica pend
 
 ## 5. CI / infra (housekeeping)
 
+> **Histórico**: `apphosting.yaml` populado com refs de secret MP em master (8feb3f8). Bug `auth/invalid-api-key` no login resolvido em PR #128 — o App Hosting injeta `FIREBASE_WEBAPP_CONFIG` automaticamente, não precisa mais dos 6 `NEXT_PUBLIC_FIREBASE_*` manuais.
+
+- [ ] **Secrets MercadoPago no App Hosting**: `apphosting.yaml` já referencia `mercadopago-access-token`, `mercadopago-webhook-secret`, `mercadopago-public-key`. Falta criar cada um: `firebase apphosting:secrets:set <nome> --project luratha-96386` (valores no `.env` da raiz).
 - [ ] **E2E na branch**: rodar `pnpm test:e2e` no CI (flaky local por causa do Turbopack cold start). Confirmar que `checkout.spec.ts` passa contra `luratha-96386`.
-- [ ] **App Hosting build**: confirmar que o build do storefront passa no ambiente do App Hosting com as novas deps (`react-hook-form`, `@hookform/resolvers`) e variáveis Firebase.
+- [x] **`pnpm build` local passa** com as deps novas (`react-hook-form`, `@hookform/resolvers`). Nesta máquina exige `NODE_OPTIONS=--use-system-ca` (interceptação TLS do Norton). Falta confirmar o build no ambiente do App Hosting com as env vars acima.
 - [ ] **Webhook URL em produção**: setar `MERCADOPAGO_WEBHOOK_URL` no env do backend Firebase apontando pra URL pública do App Hosting.
 
 ---
