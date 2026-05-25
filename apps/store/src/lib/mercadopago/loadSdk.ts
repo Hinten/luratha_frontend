@@ -61,6 +61,15 @@ export interface CardFormCallbacks {
   onFormMounted?: (error?: unknown) => void;
   onSubmit?: (event: Event) => void;
   onError?: (error: unknown) => void;
+  /**
+   * Disparado quando o usuário digita o BIN (6 primeiros dígitos do PAN).
+   * Útil pra confirmar que o iframe cardNumber está fluindo eventos
+   * corretamente até o SDK. Sem isso, qualquer mudança no `style:` que
+   * quebre o iframe é invisível.
+   */
+  onBinChange?: (bin: string) => void;
+  onPaymentMethodsReceived?: (error: unknown, paymentMethods?: unknown) => void;
+  onInstallmentsReceived?: (error: unknown, installments?: unknown) => void;
 }
 
 export interface CardFormConfig {
