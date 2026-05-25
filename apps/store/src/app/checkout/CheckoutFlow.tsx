@@ -6,6 +6,8 @@ import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
+import { formatCpf } from "@/src/lib/format/cpf";
+import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
 import ShippingStep, {
   type ShippingQuote,
@@ -144,6 +146,53 @@ async function fetchWithTimeout(
   }
 }
 
+/**
+ * Persiste lastName + taxIdentity (CPF) no UserProfile após a Order ser
+ * criada, pra próxima compra pré-popular esses campos. Best-effort:
+ * se falhar, NÃO bloqueia o pagamento — só loga. PJ fica fora porque o
+ * form do checkout não coleta legalName/stateRegistration exigidos pelo
+ * userProfileSchema PJ.
+ */
+async function persistProfileFields(
+  userId: string,
+  payer: PaymentSubmitPayload["payer"],
+): Promise<void> {
+  const patchBody: Record<string, unknown> = { lastName: payer.lastName };
+  if (payer.identification.type === "CPF") {
+    patchBody.taxIdentity = {
+      type: "PF",
+      cpf: formatCpf(payer.identification.number),
+    };
+  }
+
+  try {
+    const res = await fetch(`/api/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patchBody),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new ApiResponseError(
+        body.message ?? "Falha ao salvar perfil.",
+        res.status,
+      );
+    }
+  } catch (err) {
+    if (err instanceof ApiResponseError) {
+      console.warn(
+        `[checkout] PATCH /api/users/${userId} falhou ${err.status}: ${err.message}`,
+      );
+      return;
+    }
+    if (err instanceof TypeError) {
+      console.warn(`[checkout] PATCH /api/users/${userId} rede falhou: ${err.message}`);
+      return;
+    }
+    throw err;
+  }
+}
+
 export default function CheckoutFlow() {
   const router = useRouter();
   const { user } = useAuth();
@@ -249,6 +298,11 @@ export default function CheckoutFlow() {
         );
       }
       const created = (await orderRes.json()) as { id: string };
+
+      // Fire-and-forget: persiste lastName + CPF no UserProfile em paralelo
+      // com a chamada ao MP, pra próxima compra trazer pré-preenchido. Se
+      // falhar, persistProfileFields apenas loga (não derruba o pagamento).
+      void persistProfileFields(user!.uid, state.paymentDraft.payer);
 
       const intentRes = await fetchWithTimeout(
         "/api/checkout/payment-intent",
@@ -438,8 +492,15 @@ export default function CheckoutFlow() {
                 className={styles.confirmBtn}
                 onClick={confirmOrder}
                 disabled={state.submitting}
+                aria-busy={state.submitting}
               >
-                {state.submitting ? "Processando…" : "Confirmar pedido"}
+                {state.submitting ? (
+                  <>
+                    <Spinner size={16} /> Processando…
+                  </>
+                ) : (
+                  "Confirmar pedido"
+                )}
               </button>
             )}
           </OrderSummary>

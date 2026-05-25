@@ -104,6 +104,11 @@
   transition: background-color 200ms ease;
   /* full-width quando dentro do OrderSummary footer (aside) */
   width: 100%;
+  /* inline-flex pra alinhar o Spinner inline com o texto durante submit */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .confirmBtn:hover:not(:disabled) {

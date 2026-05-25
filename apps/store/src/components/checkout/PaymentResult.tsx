@@ -64,9 +64,8 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
         <span className={styles.badge} data-tone={copy.tone}>
           {copy.label}
         </span>
-        {result.statusDetail && (
-          <p className={styles.muted}>{result.statusDetail}</p>
-        )}
+        {/* statusDetail do MP (ex.: "pending_waiting_transfer") é jargão
+            técnico; mantemos no tipo pra logs/debug mas não exibimos. */}
       </header>
 
       {result.paymentMethod === "pix" && result.pix && (
