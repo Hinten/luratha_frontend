@@ -139,8 +139,39 @@
   background-color: var(--color-neutral-light);
   border: 1.5px solid var(--color-neutral-mid);
   border-radius: 10px;
-  padding: 0.7rem 0.9rem;
+  /* O iframe do MP tem padding interno próprio — duplicar aqui causa offset
+     e texto cortado. Mantemos border/radius/background no container e
+     deixamos o iframe preencher 100%. */
+  padding: 0;
   min-height: 2.75rem;
+  /* Clipa cantos do iframe pra respeitar o border-radius. */
+  overflow: hidden;
+}
+
+.iframeMount iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 2.75rem;
+  border: 0;
+  display: block;
+}
+
+/**
+ * Esconde o elemento visualmente mas o mantém ativo no DOM (acessível pra
+ * `getElementById`). Usado no `<select>` do issuer do cardForm — o SDK MP
+ * precisa do elemento pra popular as opções via BIN, mas o usuário não
+ * interage com ele.
+ */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .actions {

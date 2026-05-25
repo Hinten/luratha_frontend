@@ -202,10 +202,18 @@ export default function PaymentStep(props: PaymentStepProps) {
   }, [cardFormStarted]);
 
   // CPF mask while typing: muta o evento ANTES do onChange do RHF processar.
+  // Também sincroniza um input hidden (`#luratha-card-id-number`) com dígitos
+  // puros — é dele que o SDK cardForm do MP lê `.value` no submit. Se o MP
+  // recebesse `123.456.789-09` com máscara, rejeita com "invalid parameter
+  // identificationNumber" (code 324).
   const cpfReg = register("identificationNumber");
   const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
     e.target.value = formatCpf(e.target.value);
     void cpfReg.onChange(e);
+    const mpInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
+    if (mpInput instanceof HTMLInputElement) {
+      mpInput.value = e.target.value.replace(/\D/g, "");
+    }
   };
 
   async function processSubmit(values: PayerFormInput) {
@@ -267,9 +275,23 @@ export default function PaymentStep(props: PaymentStepProps) {
     } catch (err) {
       if (err instanceof CardFormError) {
         setError(err.message);
-      } else {
-        throw err;
+        return;
       }
+      // O SDK MP rejeita o submit do cardForm com um objeto cru estruturado
+      // (ex.: `{ code: '324', message: 'invalid parameter ...' }`), que não é
+      // CardFormError nem subclasse de Error. Sem este narrow por shape, o
+      // erro escapa como unhandledRejection e o usuário fica preso em
+      // "Processando…" sem feedback.
+      if (typeof err === "object" && err !== null && "message" in err) {
+        const e = err as { code?: unknown; message?: unknown };
+        const msg =
+          typeof e.message === "string"
+            ? e.message
+            : "Falha ao processar pagamento com cartão.";
+        setError(`Erro do MercadoPago: ${msg}`);
+        return;
+      }
+      throw err;
     } finally {
       setSubmitting(false);
     }
@@ -395,11 +417,11 @@ export default function PaymentStep(props: PaymentStepProps) {
             )}
           </div>
           <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.identificationNumber} className={styles.label}>
+            <label htmlFor="luratha-card-id-display" className={styles.label}>
               Número do documento
             </label>
             <input
-              id={CARD_FORM_IDS.identificationNumber}
+              id="luratha-card-id-display"
               className={styles.input}
               inputMode="numeric"
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
@@ -410,6 +432,15 @@ export default function PaymentStep(props: PaymentStepProps) {
               }
               {...cpfReg}
               onChange={onCpfChange}
+            />
+            {/* MP cardForm lê este input no submit — guarda dígitos puros
+                (sem máscara) pra não cair em "invalid parameter
+                identificationNumber" (code 324). Sincronizado pelo
+                onCpfChange acima. */}
+            <input
+              type="hidden"
+              id={CARD_FORM_IDS.identificationNumber}
+              defaultValue={defaultIdentificationNumber?.replace(/\D/g, "") ?? ""}
             />
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>
@@ -471,20 +502,20 @@ export default function PaymentStep(props: PaymentStepProps) {
               <div id={CARD_FORM_IDS.securityCode} className={styles.iframeMount} />
             </div>
           </div>
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.issuer} className={styles.label}>
+          {/* Issuer (banco emissor) — exigido pelo SDK MP no DOM mas
+              populado automaticamente via BIN. Não interativo: escondido
+              visualmente mas mantido ativo no DOM pra getElementById. */}
+          <select
+            id={CARD_FORM_IDS.issuer}
+            className={styles.visuallyHidden}
+            aria-hidden="true"
+            tabIndex={-1}
+            defaultValue=""
+          >
+            <option value="" disabled>
               Banco emissor
-            </label>
-            <select
-              id={CARD_FORM_IDS.issuer}
-              className={styles.input}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Selecione
-              </option>
-            </select>
-          </div>
+            </option>
+          </select>
           <div className={styles.field}>
             <label htmlFor={CARD_FORM_IDS.installments} className={styles.label}>
               Parcelas
