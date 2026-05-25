@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CardFormError, mountCardForm } from "../cardForm";
+import {
+  CardFormError,
+  __resetCardFormForTesting,
+  mountCardForm,
+} from "../cardForm";
 import type {
   CardFormCallbacks,
   CardFormConfig,
@@ -74,9 +78,11 @@ const ids = {
 describe("mountCardForm", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    __resetCardFormForTesting();
   });
 
   afterEach(() => {
+    __resetCardFormForTesting();
     vi.restoreAllMocks();
   });
 
@@ -158,5 +164,71 @@ describe("mountCardForm", () => {
     cardForm.unmount();
 
     expect(handle().unmount).toHaveBeenCalled();
+  });
+
+  // Comportamento de refcount — defesa contra "Context 'expirationFields'
+  // already exists" do SDK MP em cenários de double-mount (Strict Mode dev,
+  // re-renders inesperados durante navegação CSR, etc.).
+  describe("refcount (Strict Mode race protection)", () => {
+    it("invokes sdk.cardForm() once when called twice concurrently", async () => {
+      const cardFormSpy = vi.fn();
+      const { mp, handle } = createFakeMpInstance({});
+      const wrappedMp: MercadoPagoInstance = {
+        cardForm(config) {
+          cardFormSpy(config);
+          return mp.cardForm(config);
+        },
+      };
+      setupFormInDom(ids.formId);
+
+      const [a, b] = await Promise.all([
+        mountCardForm({ amount: 50, ids }, wrappedMp),
+        mountCardForm({ amount: 50, ids }, wrappedMp),
+      ]);
+
+      expect(cardFormSpy).toHaveBeenCalledTimes(1);
+      // Mesma handle compartilhada entre os 2 callers.
+      expect(a).toBe(b);
+      // Underlying controller ainda não foi unmounted.
+      expect(handle().unmount).not.toHaveBeenCalled();
+    });
+
+    it("does not tear down the controller until refcount reaches zero", async () => {
+      const { mp, handle } = createFakeMpInstance({});
+      setupFormInDom(ids.formId);
+
+      // 2 callers (simula Strict Mode dev: IIFE#1 + IIFE#2).
+      const handleA = await mountCardForm({ amount: 50, ids }, mp);
+      const handleB = await mountCardForm({ amount: 50, ids }, mp);
+      expect(handleA).toBe(handleB);
+
+      // IIFE#1 (cancelled) chama unmount → refcount=1, controller vivo.
+      handleA.unmount();
+      expect(handle().unmount).not.toHaveBeenCalled();
+
+      // IIFE#2 (consumer real) chama unmount no cleanup do React → refcount=0,
+      // controller desmontado de verdade.
+      handleB.unmount();
+      expect(handle().unmount).toHaveBeenCalledTimes(1);
+    });
+
+    it("allows a fresh mount after refcount returns to zero", async () => {
+      const cardFormSpy = vi.fn();
+      const { mp } = createFakeMpInstance({});
+      const wrappedMp: MercadoPagoInstance = {
+        cardForm(config) {
+          cardFormSpy(config);
+          return mp.cardForm(config);
+        },
+      };
+      setupFormInDom(ids.formId);
+
+      const first = await mountCardForm({ amount: 50, ids }, wrappedMp);
+      first.unmount(); // refcount=0, teardown.
+
+      const second = await mountCardForm({ amount: 50, ids }, wrappedMp);
+      expect(cardFormSpy).toHaveBeenCalledTimes(2);
+      expect(second).not.toBe(first); // novo handle, novo ciclo.
+    });
   });
 });
