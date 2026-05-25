@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
@@ -28,7 +28,14 @@ import CouponField from "@/src/components/checkout/CouponField";
 import ReviewSummary from "@/src/components/checkout/ReviewSummary";
 import styles from "./CheckoutFlow.module.css";
 
-type StepId = "address" | "shipping" | "payment" | "review" | "result";
+/**
+ * Steps visíveis na URL (`?step=...`) — refletidos no histórico do navegador,
+ * permitindo back/forward natural entre as 4 etapas. O step "result" é uma
+ * view transiente (pós-submit), derivada da presença de `state.paymentResult`
+ * em memória; não tem URL própria.
+ */
+type VisibleStepId = "address" | "shipping" | "payment" | "review";
+type StepId = VisibleStepId | "result";
 
 const VISIBLE_STEPS: CheckoutStep[] = [
   { id: "address", label: "Endereço" },
@@ -37,8 +44,16 @@ const VISIBLE_STEPS: CheckoutStep[] = [
   { id: "review", label: "Revisão" },
 ];
 
+function isVisibleStepId(value: string | null): value is VisibleStepId {
+  return (
+    value === "address" ||
+    value === "shipping" ||
+    value === "payment" ||
+    value === "review"
+  );
+}
+
 interface State {
-  step: StepId;
   address: Address | null;
   quote: ShippingQuote | null;
   paymentDraft: PaymentSubmitPayload | null;
@@ -50,30 +65,33 @@ interface State {
 }
 
 type Action =
-  | { type: "GO_TO"; step: StepId }
   | { type: "SET_ADDRESS"; address: Address }
   | { type: "SET_QUOTE"; quote: ShippingQuote }
   | { type: "SET_PAYMENT_DRAFT"; draft: PaymentSubmitPayload }
   | { type: "APPLY_COUPON"; coupon: AppliedCoupon }
   | { type: "CLEAR_COUPON" }
+  | { type: "CLEAR_ERROR" }
+  | { type: "TRY_AGAIN" }
   | { type: "SUBMIT_START" }
   | { type: "SUBMIT_OK"; orderId: string; result: PaymentResultData }
   | { type: "SUBMIT_FAIL"; message: string };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "GO_TO":
-      return { ...state, step: action.step, error: null };
     case "SET_ADDRESS":
       return { ...state, address: action.address };
     case "SET_QUOTE":
       return { ...state, quote: action.quote };
     case "SET_PAYMENT_DRAFT":
-      return { ...state, paymentDraft: action.draft, step: "review", error: null };
+      return { ...state, paymentDraft: action.draft, error: null };
     case "APPLY_COUPON":
       return { ...state, appliedCoupon: action.coupon };
     case "CLEAR_COUPON":
       return { ...state, appliedCoupon: null };
+    case "CLEAR_ERROR":
+      return { ...state, error: null };
+    case "TRY_AGAIN":
+      return { ...state, paymentResult: null, orderId: null, error: null };
     case "SUBMIT_START":
       return { ...state, submitting: true, error: null };
     case "SUBMIT_OK":
@@ -82,7 +100,6 @@ function reducer(state: State, action: Action): State {
         submitting: false,
         orderId: action.orderId,
         paymentResult: action.result,
-        step: "result",
       };
     case "SUBMIT_FAIL":
       return { ...state, submitting: false, error: action.message };
@@ -91,7 +108,6 @@ function reducer(state: State, action: Action): State {
 
 function emptyInitial(): State {
   return {
-    step: "address",
     address: null,
     quote: null,
     paymentDraft: null,
@@ -101,6 +117,28 @@ function emptyInitial(): State {
     submitting: false,
     error: null,
   };
+}
+
+/**
+ * Garante que o step solicitado satisfaz os pré-requisitos de estado.
+ * Deep link em `?step=review` sem `paymentDraft` cai pra "address" — bloqueia
+ * pular etapas via URL e mantém a navegação consistente com o reducer.
+ */
+function enforceStepPrereqs(
+  requested: VisibleStepId,
+  state: State,
+): VisibleStepId {
+  if (requested === "shipping" && !state.address) return "address";
+  if (requested === "payment" && (!state.address || !state.quote)) {
+    return "address";
+  }
+  if (
+    requested === "review" &&
+    (!state.address || !state.quote || !state.paymentDraft)
+  ) {
+    return "address";
+  }
+  return requested;
 }
 
 function orderItemsFromCart(items: CartItem[]) {
@@ -195,10 +233,36 @@ async function persistProfileFields(
 
 export default function CheckoutFlow() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { items, clearCart } = useCart();
+  // clearCart deliberadamente NÃO consumido aqui: a página de sucesso
+  // (SuccessClient) já limpa o cart ao montar, e limpar aqui dispararia o
+  // guard de "carrinho vazio" do CheckoutPage antes da navegação completar
+  // (race que mandava o usuário pro /carrinho em vez de /checkout/sucesso).
+  const { items } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // URL → step (com fallback pra "address" se o param for inválido).
+  const rawStepParam = searchParams.get("step");
+  const requestedStep: VisibleStepId = isVisibleStepId(rawStepParam)
+    ? rawStepParam
+    : "address";
+  const urlStep: VisibleStepId = enforceStepPrereqs(requestedStep, state);
+
+  // Se temos resultado de pagamento em memória, ele sobrepõe o urlStep —
+  // o user precisa ver o QR/confirmação até clicar "Acompanhar pedido".
+  const showingResult =
+    state.paymentResult !== null && state.orderId !== null;
+  const activeStep: StepId = showingResult ? "result" : urlStep;
+
+  // Sincroniza a URL quando o requested foi rebaixado pelos pré-reqs
+  // (deep link em ?step=review sem ter passado pelo address, etc.).
+  useEffect(() => {
+    if (urlStep !== requestedStep) {
+      router.replace(`/checkout?step=${urlStep}`);
+    }
+  }, [urlStep, requestedStep, router]);
 
   // Carrega o UserProfile uma vez por sessão pra pré-popular o PaymentStep
   // (email, nome, CPF). Falha silenciosa: se 404 ou rede ruim, os campos
@@ -229,7 +293,7 @@ export default function CheckoutFlow() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [state.step]);
+  }, [activeStep]);
 
   if (!user) return null;
 
@@ -237,6 +301,16 @@ export default function CheckoutFlow() {
   const discountTotal = state.appliedCoupon?.discount ?? 0;
   const shippingTotal = state.quote?.price ?? 0;
   const grandTotal = Math.max(0, subtotal - discountTotal + shippingTotal);
+
+  function goToStep(step: VisibleStepId) {
+    dispatch({ type: "CLEAR_ERROR" });
+    router.push(`/checkout?step=${step}`);
+  }
+
+  function goBack() {
+    dispatch({ type: "CLEAR_ERROR" });
+    router.back();
+  }
 
   async function confirmOrder() {
     if (
@@ -323,7 +397,9 @@ export default function CheckoutFlow() {
       const result = (await intentRes.json()) as PaymentResultData;
 
       if (result.status === "paid") {
-        await clearCart();
+        // Cart é limpo no SuccessClient quando a página de sucesso monta —
+        // limpar aqui dispararia o guard de empty-cart do CheckoutPage antes
+        // do replace completar.
         router.replace(`/checkout/sucesso/${created.id}`);
         return;
       }
@@ -354,13 +430,13 @@ export default function CheckoutFlow() {
       <header className={styles.stepperWrap}>
         <StepIndicator
           steps={VISIBLE_STEPS}
-          currentStep={state.step === "result" ? "review" : state.step}
+          currentStep={activeStep === "result" ? "review" : activeStep}
         />
       </header>
 
       <div className={styles.grid}>
         <main className={styles.main}>
-          {state.step === "address" && (
+          {activeStep === "address" && (
             <AddressStep
               userId={user!.uid}
               selectedAddressId={state.address?.id ?? null}
@@ -370,23 +446,23 @@ export default function CheckoutFlow() {
                   : user!.name
               }
               onSelect={(a) => dispatch({ type: "SET_ADDRESS", address: a })}
-              onContinue={() => dispatch({ type: "GO_TO", step: "shipping" })}
+              onContinue={() => goToStep("shipping")}
             />
           )}
 
-          {state.step === "shipping" && state.address && (
+          {activeStep === "shipping" && state.address && (
             <ShippingStep
               postalCode={state.address.postalCode}
               items={items}
               subtotal={subtotal}
               selectedQuote={state.quote}
               onSelect={(q) => dispatch({ type: "SET_QUOTE", quote: q })}
-              onContinue={() => dispatch({ type: "GO_TO", step: "payment" })}
-              onBack={() => dispatch({ type: "GO_TO", step: "address" })}
+              onContinue={() => goToStep("payment")}
+              onBack={goBack}
             />
           )}
 
-          {state.step === "payment" && state.address && (
+          {activeStep === "payment" && state.address && (
             <PaymentStep
               cartTotal={grandTotal}
               shippingAddress={{
@@ -413,14 +489,15 @@ export default function CheckoutFlow() {
                     ? profile.taxIdentity.cnpj
                     : undefined
               }
-              onBack={() => dispatch({ type: "GO_TO", step: "shipping" })}
+              onBack={goBack}
               onSubmit={async (draft) => {
                 dispatch({ type: "SET_PAYMENT_DRAFT", draft });
+                router.push("/checkout?step=review");
               }}
             />
           )}
 
-          {state.step === "review" &&
+          {activeStep === "review" &&
             state.address &&
             state.quote &&
             state.paymentDraft && (
@@ -430,9 +507,9 @@ export default function CheckoutFlow() {
                   address={state.address}
                   quote={state.quote}
                   paymentDraft={state.paymentDraft}
-                  onEditAddress={() => dispatch({ type: "GO_TO", step: "address" })}
-                  onEditShipping={() => dispatch({ type: "GO_TO", step: "shipping" })}
-                  onEditPayment={() => dispatch({ type: "GO_TO", step: "payment" })}
+                  onEditAddress={() => goToStep("address")}
+                  onEditShipping={() => goToStep("shipping")}
+                  onEditPayment={() => goToStep("payment")}
                 />
                 <CouponField
                   cartTotal={subtotal + shippingTotal}
@@ -449,7 +526,7 @@ export default function CheckoutFlow() {
                   <button
                     type="button"
                     className={styles.backBtn}
-                    onClick={() => dispatch({ type: "GO_TO", step: "payment" })}
+                    onClick={goBack}
                     disabled={state.submitting}
                   >
                     Voltar
@@ -458,19 +535,21 @@ export default function CheckoutFlow() {
               </section>
             )}
 
-          {state.step === "result" && state.paymentResult && state.orderId && (
+          {activeStep === "result" && state.paymentResult && state.orderId && (
             <section className={styles.reviewSection}>
               <PaymentResult
                 result={state.paymentResult}
-                onTryAgain={() => dispatch({ type: "GO_TO", step: "payment" })}
+                onTryAgain={() => {
+                  dispatch({ type: "TRY_AGAIN" });
+                  router.push("/checkout?step=payment");
+                }}
               />
               <button
                 type="button"
                 className={styles.confirmBtn}
-                onClick={async () => {
-                  await clearCart();
-                  router.replace(`/checkout/sucesso/${state.orderId}`);
-                }}
+                onClick={() =>
+                  router.replace(`/checkout/sucesso/${state.orderId}`)
+                }
               >
                 Acompanhar pedido
               </button>
@@ -486,7 +565,7 @@ export default function CheckoutFlow() {
             discountTotal={discountTotal}
             appliedCoupon={state.appliedCoupon}
           >
-            {state.step === "review" && (
+            {activeStep === "review" && (
               <button
                 type="button"
                 className={styles.confirmBtn}
