@@ -202,18 +202,14 @@ export default function PaymentStep(props: PaymentStepProps) {
   }, [cardFormStarted]);
 
   // CPF mask while typing: muta o evento ANTES do onChange do RHF processar.
-  // Também sincroniza um input hidden (`#luratha-card-id-number`) com dígitos
-  // puros — é dele que o SDK cardForm do MP lê `.value` no submit. Se o MP
-  // recebesse `123.456.789-09` com máscara, rejeita com "invalid parameter
-  // identificationNumber" (code 324).
+  // O input carrega o ID que o SDK cardForm do MP lê no submit; pra evitar
+  // que o MP receba `123.456.789-09` e rejeite com "invalid parameter
+  // identificationNumber" (code 324), o `processSubmit` faz strip+restore
+  // do `.value` em torno do `cardFormHandle.submit()`.
   const cpfReg = register("identificationNumber");
   const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
     e.target.value = formatCpf(e.target.value);
     void cpfReg.onChange(e);
-    const mpInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
-    if (mpInput instanceof HTMLInputElement) {
-      mpInput.value = e.target.value.replace(/\D/g, "");
-    }
   };
 
   async function processSubmit(values: PayerFormInput) {
@@ -264,14 +260,34 @@ export default function PaymentStep(props: PaymentStepProps) {
       if (!cardFormHandle.current) {
         throw new CardFormError("Formulário de cartão ainda não está pronto.");
       }
-      const card = await cardFormHandle.current.submit();
-      await onSubmit({
-        paymentMethod: "credit_card",
-        payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
-        cardToken: card.token,
-        installments: card.installments,
-        paymentMethodId: card.paymentMethodId,
-      });
+
+      // MP cardForm lê `.value` do input identificationNumber direto do DOM no
+      // submit. A doc oficial usa `<input type="text">` (não hidden) — quando
+      // trocamos pra hidden, o SDK falhava em "get payment methods". Mantemos
+      // o input visível com máscara pra UX brasileira, e despimos a máscara
+      // só durante o submit pra não cair em "invalid parameter
+      // identificationNumber" (code 324). O `finally` interno restaura mesmo
+      // se o submit rejeitar.
+      const cpfInput = document.getElementById(CARD_FORM_IDS.identificationNumber);
+      let originalCpf: string | null = null;
+      if (cpfInput instanceof HTMLInputElement) {
+        originalCpf = cpfInput.value;
+        cpfInput.value = originalCpf.replace(/\D/g, "");
+      }
+      try {
+        const card = await cardFormHandle.current.submit();
+        await onSubmit({
+          paymentMethod: "credit_card",
+          payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
+          cardToken: card.token,
+          installments: card.installments,
+          paymentMethodId: card.paymentMethodId,
+        });
+      } finally {
+        if (cpfInput instanceof HTMLInputElement && originalCpf !== null) {
+          cpfInput.value = originalCpf;
+        }
+      }
     } catch (err) {
       if (err instanceof CardFormError) {
         setError(err.message);
@@ -417,11 +433,11 @@ export default function PaymentStep(props: PaymentStepProps) {
             )}
           </div>
           <div className={styles.field}>
-            <label htmlFor="luratha-card-id-display" className={styles.label}>
+            <label htmlFor={CARD_FORM_IDS.identificationNumber} className={styles.label}>
               Número do documento
             </label>
             <input
-              id="luratha-card-id-display"
+              id={CARD_FORM_IDS.identificationNumber}
               className={styles.input}
               inputMode="numeric"
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
@@ -432,15 +448,6 @@ export default function PaymentStep(props: PaymentStepProps) {
               }
               {...cpfReg}
               onChange={onCpfChange}
-            />
-            {/* MP cardForm lê este input no submit — guarda dígitos puros
-                (sem máscara) pra não cair em "invalid parameter
-                identificationNumber" (code 324). Sincronizado pelo
-                onCpfChange acima. */}
-            <input
-              type="hidden"
-              id={CARD_FORM_IDS.identificationNumber}
-              defaultValue={defaultIdentificationNumber?.replace(/\D/g, "") ?? ""}
             />
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>

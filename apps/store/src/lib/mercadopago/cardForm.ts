@@ -3,8 +3,24 @@
 import {
   getMercadoPagoSdk,
   type CardFormController,
+  type CardFormFieldStyle,
   type MercadoPagoInstance,
 } from "./loadSdk";
+
+/**
+ * Estilo aplicado dentro dos 3 iframes do MP (PAN/expiry/CVV). O iframe está
+ * em outro origin (sandbox PCI), então CSS Modules do nosso lado não chega
+ * lá — precisa passar via config do SDK. Valores literais (não CSS vars) pq
+ * `var(--color-*)` também não atravessa o boundary do iframe.
+ */
+const IFRAME_FIELD_STYLE: CardFormFieldStyle = {
+  height: "100%",
+  width: "100%",
+  fontSize: "15px",
+  fontFamily: "inherit",
+  color: "#1f1f1f",
+  placeholderColor: "#888",
+};
 
 /**
  * Wrapper sobre `mp.cardForm(...)` que devolve uma `Promise<TokenizedCardPayload>`
@@ -125,9 +141,21 @@ export async function mountCardForm(
       iframe: true,
       form: {
         id: options.ids.formId,
-        cardNumber: { id: options.ids.cardNumber, placeholder: "Número do cartão" },
-        expirationDate: { id: options.ids.expirationDate, placeholder: "MM/AA" },
-        securityCode: { id: options.ids.securityCode, placeholder: "CVV" },
+        cardNumber: {
+          id: options.ids.cardNumber,
+          placeholder: "Número do cartão",
+          style: IFRAME_FIELD_STYLE,
+        },
+        expirationDate: {
+          id: options.ids.expirationDate,
+          placeholder: "MM/AA",
+          style: IFRAME_FIELD_STYLE,
+        },
+        securityCode: {
+          id: options.ids.securityCode,
+          placeholder: "CVV",
+          style: IFRAME_FIELD_STYLE,
+        },
         cardholderName: {
           id: options.ids.cardholderName,
           placeholder: "Nome impresso no cartão",

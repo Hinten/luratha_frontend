@@ -12,9 +12,30 @@ import { loadMercadoPago } from "@mercadopago/sdk-js";
  *   - usa locale pt-BR (público da loja)
  */
 
+/**
+ * Estilo aplicado dentro do iframe MP (cardNumber/expirationDate/securityCode).
+ * O iframe vive em outro origin (sandbox PCI) — CSS externo do nosso CSS Module
+ * não atravessa o boundary. A única forma de estilizar o conteúdo é via esta
+ * config, repassada ao SDK na construção do cardForm. Propriedades aceitas
+ * conforme docs MP `fields.md`.
+ */
+export interface CardFormFieldStyle {
+  height?: string;
+  width?: string;
+  fontFamily?: string;
+  fontSize?: string;
+  fontWeight?: string | number;
+  color?: string;
+  placeholderColor?: string;
+  textAlign?: string;
+  padding?: string;
+  margin?: string;
+}
+
 interface CardFormFieldDef {
   id: string;
   placeholder?: string;
+  style?: CardFormFieldStyle;
 }
 
 interface CardFormFormConfig {
