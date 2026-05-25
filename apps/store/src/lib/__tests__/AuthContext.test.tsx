@@ -89,6 +89,13 @@ vi.mock("@luratha/firestore/firebaseClient", () => ({
   getClientAuth: () => ({}),
 }));
 
+const mockRefresh = vi.fn();
+const mockPush = vi.fn();
+const fakeRouter = { refresh: mockRefresh, push: mockPush };
+vi.mock("next/navigation", () => ({
+  useRouter: () => fakeRouter,
+}));
+
 import { AuthProvider, useAuth } from "@/src/contexts/AuthContext";
 import {
   createUserWithEmailAndPassword,

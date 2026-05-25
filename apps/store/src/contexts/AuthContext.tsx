@@ -5,8 +5,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
@@ -98,6 +100,11 @@ async function postSession(idToken: string): Promise<void> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  // Tracks the uid we last propagated so we only invalidate the RSC cache on
+  // identity transitions (null → user, user → null, A → B) — not on every
+  // hourly token refresh from Firebase.
+  const previousUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -120,10 +127,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!fbUser) {
           setUser(null);
           setIsLoading(false);
+          if (previousUidRef.current !== null) {
+            previousUidRef.current = null;
+            // Invalidate the RSC cache so Server Components below the header
+            // re-render without the (now stale) session cookie.
+            router.refresh();
+          }
           return;
         }
         try {
-          setUser(await buildAuthUser(fbUser));
+          // Establish the server session cookie BEFORE exposing `user` to
+          // consumers. Otherwise CartContext (and any other consumer keyed on
+          // `useAuth().user`) would fire cookie-authenticated requests like
+          // POST /api/cart/merge before the __session cookie reaches the
+          // browser, getting 401s from `requireUser()`.
+          const idToken = await fbUser.getIdToken();
+          await postSession(idToken);
+          const authedUser = await buildAuthUser(fbUser);
+          setUser(authedUser);
+          if (previousUidRef.current !== authedUser.uid) {
+            previousUidRef.current = authedUser.uid;
+            router.refresh();
+          }
+        } catch (err) {
+          if (
+            !(err instanceof AuthClientError) &&
+            !(err instanceof TypeError) &&
+            !(err instanceof FirebaseError)
+          ) {
+            throw err;
+          }
+          // postSession (AuthClientError) or fetch network (TypeError) failed —
+          // sign out of the Firebase client to avoid a divergent state where
+          // the client is authenticated but the server has no session cookie.
+          try {
+            await signOut(auth);
+          } catch (signOutErr) {
+            if (!(signOutErr instanceof FirebaseError)) {
+              throw signOutErr;
+            }
+            // Already signed out — non-fatal.
+          }
+          setUser(null);
+          console.warn("Falha ao estabelecer sessão server-side; usuário deslogado.", err);
         } finally {
           setIsLoading(false);
         }
@@ -137,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
     return () => unsubscribe?.();
-  }, []);
+  }, [router]);
 
   const register = useCallback(
     async (name: string, email: string, password: string) => {
