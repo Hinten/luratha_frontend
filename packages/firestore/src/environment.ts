@@ -24,54 +24,76 @@ export function getFirebaseStorageBucket(projectId = getFirebaseProjectId()): st
   if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
     return process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
   }
-  const webConfigBucket = readBucketFromBase64Config();
-  if (webConfigBucket) {
+  const webConfigBucket = readWebConfigFromEnv()?.storageBucket;
+  if (typeof webConfigBucket === "string" && webConfigBucket.length > 0) {
     return webConfigBucket;
   }
   return `${projectId}.appspot.com`;
 }
 
-function readBucketFromBase64Config(): string | undefined {
-  if (!process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
-    return undefined;
+type RawFirebaseWebConfig = {
+  apiKey?: string;
+  authDomain?: string;
+  projectId?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+};
+
+/**
+ * Resolves the Firebase web (client SDK) config from the environment.
+ *
+ * Two encodings are supported:
+ * - `FIREBASE_WEB_APP_CONFIG_BASE64` — base64-encoded JSON, used by CI and the
+ *   cloud test suites.
+ * - `FIREBASE_WEBAPP_CONFIG` — plain JSON, the variable Firebase App Hosting
+ *   populates automatically at build and runtime.
+ */
+function readWebConfigFromEnv(): RawFirebaseWebConfig | undefined {
+  const base64 = process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
+  if (base64) {
+    const parsed = parseWebConfigJson(
+      Buffer.from(base64, "base64").toString("utf8"),
+      "FIREBASE_WEB_APP_CONFIG_BASE64",
+    );
+    if (parsed) return parsed;
   }
+
+  const inline = process.env.FIREBASE_WEBAPP_CONFIG;
+  if (inline) {
+    const parsed = parseWebConfigJson(inline, "FIREBASE_WEBAPP_CONFIG");
+    if (parsed) return parsed;
+  }
+
+  return undefined;
+}
+
+function parseWebConfigJson(raw: string, source: string): RawFirebaseWebConfig | undefined {
+  let parsed: unknown;
   try {
-    const decoded = Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8");
-    const parsed = JSON.parse(decoded);
-    return typeof parsed?.storageBucket === "string" && parsed.storageBucket.length > 0
-      ? parsed.storageBucket
-      : undefined;
-  } catch (err) {
-    if (err instanceof SyntaxError) {
-      // Malformed base64 JSON — fall back to the conventional bucket name.
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      // Malformed JSON — fall back to the next config source.
+      console.warn(`Failed to parse ${source}. Expected a valid JSON object.`, error);
       return undefined;
     }
-    throw err;
+    throw error;
   }
+  return parsed && typeof parsed === "object" ? (parsed as RawFirebaseWebConfig) : undefined;
 }
 
 export function getFirebaseWebConfig() {
-  if (process.env.FIREBASE_WEB_APP_CONFIG_BASE64) {
-    const decodedValue = Buffer.from(process.env.FIREBASE_WEB_APP_CONFIG_BASE64, "base64").toString("utf8");
-    try {
-      const parsedConfig = JSON.parse(decodedValue);
-      return {
-        apiKey: parsedConfig.apiKey || "",
-        authDomain: parsedConfig.authDomain || "",
-        projectId: parsedConfig.projectId || getFirebaseProjectId(),
-        storageBucket: parsedConfig.storageBucket || "",
-        messagingSenderId: parsedConfig.messagingSenderId || "",
-        appId: parsedConfig.appId || "",
-      };
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) {
-        throw error;
-      }
-      console.warn(
-        "Failed to parse FIREBASE_WEB_APP_CONFIG_BASE64. Ensure it's a valid base64-encoded JSON string.",
-        error,
-      );
-    }
+  const fromEnv = readWebConfigFromEnv();
+  if (fromEnv) {
+    return {
+      apiKey: fromEnv.apiKey || "",
+      authDomain: fromEnv.authDomain || "",
+      projectId: fromEnv.projectId || getFirebaseProjectId(),
+      storageBucket: fromEnv.storageBucket || "",
+      messagingSenderId: fromEnv.messagingSenderId || "",
+      appId: fromEnv.appId || "",
+    };
   }
 
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || getFirebaseProjectId();

@@ -3,23 +3,47 @@ import type { NextConfig } from "next";
 import { loadRootEnv } from "./loadRootEnv";
 
 /**
- * Backfill NEXT_PUBLIC_FIREBASE_* into process.env from
- * FIREBASE_WEB_APP_CONFIG_BASE64 BEFORE Next.js inlines them into the client
- * bundle (the login page uses the Firebase client SDK).
+ * Backfill NEXT_PUBLIC_FIREBASE_* into process.env BEFORE Next.js inlines them
+ * into the client bundle (the login page uses the Firebase client SDK, which
+ * validates `apiKey` eagerly).
+ *
+ * The web config is read from FIREBASE_WEB_APP_CONFIG_BASE64 (base64 JSON, used
+ * by CI and the cloud test suites) or FIREBASE_WEBAPP_CONFIG (plain JSON, the
+ * variable Firebase App Hosting populates automatically at build time).
  */
-function backfillFirebaseClientEnv(): void {
-  const base64 = process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
-  if (!base64) return;
-
-  let cfg: Record<string, unknown>;
+function parseJsonConfig(raw: string): Record<string, unknown> | undefined {
+  let parsed: unknown;
   try {
-    cfg = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+    parsed = JSON.parse(raw);
   } catch (err) {
     if (err instanceof SyntaxError) {
-      return;
+      // Malformed JSON — treat as "no config".
+      return undefined;
     }
     throw err;
   }
+  return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : undefined;
+}
+
+function readFirebaseWebConfig(): Record<string, unknown> | undefined {
+  const base64 = process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
+  if (base64) {
+    const parsed = parseJsonConfig(Buffer.from(base64, "base64").toString("utf8"));
+    if (parsed) return parsed;
+  }
+
+  const inline = process.env.FIREBASE_WEBAPP_CONFIG;
+  if (inline) {
+    const parsed = parseJsonConfig(inline);
+    if (parsed) return parsed;
+  }
+
+  return undefined;
+}
+
+function backfillFirebaseClientEnv(): void {
+  const cfg = readFirebaseWebConfig();
+  if (!cfg) return;
 
   const map: Array<[string, string]> = [
     ["NEXT_PUBLIC_FIREBASE_API_KEY", "apiKey"],
