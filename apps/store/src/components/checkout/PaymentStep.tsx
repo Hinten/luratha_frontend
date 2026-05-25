@@ -76,6 +76,7 @@ const CARD_FORM_IDS = {
   expirationDate: "luratha-card-expiry",
   securityCode: "luratha-card-cvv",
   cardholderName: "luratha-card-name",
+  issuer: "luratha-card-issuer",
   installments: "luratha-card-installments",
   identificationType: "luratha-card-id-type",
   identificationNumber: "luratha-card-id-number",
@@ -469,6 +470,20 @@ export default function PaymentStep(props: PaymentStepProps) {
               </label>
               <div id={CARD_FORM_IDS.securityCode} className={styles.iframeMount} />
             </div>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor={CARD_FORM_IDS.issuer} className={styles.label}>
+              Banco emissor
+            </label>
+            <select
+              id={CARD_FORM_IDS.issuer}
+              className={styles.input}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Selecione
+              </option>
+            </select>
           </div>
           <div className={styles.field}>
             <label htmlFor={CARD_FORM_IDS.installments} className={styles.label}>

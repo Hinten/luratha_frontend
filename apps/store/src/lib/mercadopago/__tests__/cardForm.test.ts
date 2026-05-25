@@ -69,6 +69,7 @@ const ids = {
   expirationDate: "exp",
   securityCode: "cvv",
   cardholderName: "name",
+  issuer: "issuer",
   installments: "inst",
   identificationType: "doc-type",
   identificationNumber: "doc-number",
@@ -97,6 +98,7 @@ describe("mountCardForm", () => {
     expect(handle().capturedConfig.iframe).toBe(true);
     expect(handle().capturedConfig.form.id).toBe("card-form");
     expect(handle().capturedConfig.form.cardNumber.id).toBe("cn");
+    expect(handle().capturedConfig.form.issuer.id).toBe("issuer");
     expect(handle().capturedConfig.form.cardholderEmail.id).toBe("email");
   });
 

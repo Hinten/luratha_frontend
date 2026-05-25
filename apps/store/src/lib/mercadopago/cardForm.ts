@@ -20,6 +20,8 @@ export interface CardFormFieldIds {
   expirationDate: string;
   securityCode: string;
   cardholderName: string;
+  /** Banco emissor — obrigatório pelo SDK, populado automaticamente via BIN. */
+  issuer: string;
   installments: string;
   identificationType: string;
   identificationNumber: string;
@@ -130,6 +132,7 @@ export async function mountCardForm(
           id: options.ids.cardholderName,
           placeholder: "Nome impresso no cartão",
         },
+        issuer: { id: options.ids.issuer, placeholder: "Banco emissor" },
         installments: { id: options.ids.installments, placeholder: "Parcelas" },
         identificationType: {
           id: options.ids.identificationType,

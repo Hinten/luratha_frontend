@@ -23,6 +23,13 @@ interface CardFormFormConfig {
   expirationDate: CardFormFieldDef;
   securityCode: CardFormFieldDef;
   cardholderName: CardFormFieldDef;
+  /**
+   * Banco emissor — obrigatório pela SDK. Sem este `<select>` no DOM o SDK
+   * lança `"Required field 'issuer' is missing"` durante a detecção de BIN.
+   * Populado automaticamente pelo SDK conforme o número do cartão é digitado;
+   * normalmente vem uma única opção (auto-selecionada) pra cartões BR.
+   */
+  issuer: CardFormFieldDef;
   installments: CardFormFieldDef;
   identificationType: CardFormFieldDef;
   identificationNumber: CardFormFieldDef;
