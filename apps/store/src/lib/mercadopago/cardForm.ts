@@ -190,6 +190,11 @@ export async function mountCardForm(
         onPaymentMethodsReceived: (error, methods) => {
           if (error) {
             console.warn("[mp.cardForm] paymentMethods error", error);
+            // Propaga pro UI — sintoma típico é BIN de cartão de outro
+            // país (ex.: cartão argentino em conta MLB → "No payment
+            // methods found"). Sem propagar, o user só vê o iframe
+            // travado sem feedback.
+            options.onError?.(error);
           } else {
             console.info("[mp.cardForm] paymentMethods", methods);
           }
@@ -197,6 +202,7 @@ export async function mountCardForm(
         onInstallmentsReceived: (error, installments) => {
           if (error) {
             console.warn("[mp.cardForm] installments error", error);
+            options.onError?.(error);
           } else {
             console.info("[mp.cardForm] installments", installments);
           }

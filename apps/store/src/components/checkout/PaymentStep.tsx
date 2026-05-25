@@ -169,11 +169,20 @@ export default function PaymentStep(props: PaymentStepProps) {
           amount: cartTotal,
           ids: CARD_FORM_IDS,
           onError: (err) => {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Erro ao carregar o formulário de cartão.",
-            );
+            const raw = err instanceof Error ? err.message : "";
+            // "No payment methods found" do SDK MP = BIN não existe na
+            // conta (típico: cartão de país diferente do siteId da conta).
+            // Mensagem genérica pro user — não vamos hardcodar números de
+            // cartão na UI; eles vivem nos docs de teste manual.
+            if (raw.includes("No payment methods")) {
+              setError(
+                "Este cartão não foi reconhecido. Confira o número e tente novamente.",
+              );
+            } else {
+              setError(
+                raw || "Erro ao carregar o formulário de cartão.",
+              );
+            }
           },
         });
         if (cancelled) {
