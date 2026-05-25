@@ -22,6 +22,41 @@ import {
 const BOLETO_PAYMENT_METHOD_ID = "bolbradesco";
 
 /**
+ * Serializa um payload arbitrário em JSON compacto (uma linha) para logging.
+ * Cloud Logging trata cada `console.error(msg, obj)` com objeto multi-linha
+ * como múltiplas entries — converter pra string única deixa o log copiável.
+ *
+ * `Error` não é serializado por `JSON.stringify` nativamente (name/message
+ * não são enumeráveis); o replacer extrai name/message + props customizadas
+ * (`status`, `cause`, …) e omite `stack` pra manter terso.
+ */
+function serializeLogPayload(value: unknown): string {
+  try {
+    return JSON.stringify(value, (_key, val) => {
+      if (val instanceof Error) {
+        const out: Record<string, unknown> = {
+          name: val.name,
+          message: val.message,
+        };
+        for (const k of Object.getOwnPropertyNames(val)) {
+          if (k === "name" || k === "message" || k === "stack") continue;
+          out[k] = (val as unknown as Record<string, unknown>)[k];
+        }
+        return out;
+      }
+      return val;
+    });
+  } catch (err) {
+    if (err instanceof TypeError) {
+      // Ref circular ou BigInt na chain — fallback pra String() pra não
+      // mascarar o erro original do request por uma falha de logging.
+      return String(value);
+    }
+    throw err;
+  }
+}
+
+/**
  * Extrai status/cause de um erro do SDK MP e loga via `console.error` antes
  * de re-embrulhar em `PaymentProviderError`. O pacote `mercadopago` não exporta
  * uma classe de erro específica — anexa `status` (HTTP da API MP) e `cause`
@@ -41,13 +76,16 @@ function logAndRewrapMpError(
   const name = err instanceof Error ? err.name : "Unknown";
   const sdkMessage = err instanceof Error ? err.message : String(err);
 
-  console.error(`[mercadoPago] payment.${operation} failed`, {
+  // Single-line: Cloud Logging quebra o objeto em várias entries se for
+  // passado como 2º arg de console.error. Stringify pra entry única copiável.
+  const payload = serializeLogPayload({
     ...context,
     name,
     message: sdkMessage,
     status,
     cause: err,
   });
+  console.error(`[mercadoPago] payment.${operation} failed ${payload}`);
 
   if (name === "AbortError") {
     return new PaymentProviderError(
