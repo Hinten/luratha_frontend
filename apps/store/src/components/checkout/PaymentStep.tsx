@@ -225,9 +225,32 @@ export default function PaymentStep(props: PaymentStepProps) {
     setError(null);
     setSubmitting(true);
 
+    // TODO: remove after card flow validated — log cru do Brick (com token
+    // mascarado pra não vazar PCI no console).
+    console.log("[checkout] Brick formData:", {
+      ...formData,
+      token: formData.token
+        ? `${formData.token.slice(0, 6)}…${formData.token.slice(-4)}`
+        : undefined,
+    });
+
     const payerEmail = formData.payer?.email ?? defaultEmail ?? "";
     const idType = (formData.payer?.identification?.type as "CPF" | "CNPJ" | undefined) ?? "CPF";
-    const idNumber = (formData.payer?.identification?.number ?? "").replace(/\D/g, "");
+    const brickIdNumber = (formData.payer?.identification?.number ?? "").replace(/\D/g, "");
+    // Fallback pro CPF que o usuário cadastrou no perfil — quando o Brick
+    // não inclui identification (perfil novo, Brick configurado sem o campo,
+    // ou Brick devolve em outro lugar), tentamos o default propagado pelo
+    // CheckoutFlow. Sem isso, o Zod do server rejeita com 400.
+    const defaultIdDigits = (defaultIdentificationNumber ?? "").replace(/\D/g, "");
+    const idNumber = brickIdNumber || defaultIdDigits;
+
+    if (idNumber.length !== 11 && idNumber.length !== 14) {
+      setSubmitting(false);
+      setError(
+        "Não recebemos seu CPF/CNPJ do formulário do Mercado Pago. Recarregue a página e preencha o documento antes de pagar.",
+      );
+      return;
+    }
 
     try {
       await onSubmit({
