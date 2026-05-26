@@ -409,7 +409,16 @@ export default function CheckoutFlow() {
         CONFIRM_TIMEOUT_MS,
       );
       if (!intentRes.ok) {
-        const body = (await intentRes.json().catch(() => ({}))) as { message?: string };
+        const body = (await intentRes.json().catch(() => ({}))) as {
+          message?: string;
+          errors?: unknown;
+        };
+        // TODO: remove after card flow validated — capturar o body de erro
+        // detalhado (Zod issues, código do MP, etc) pra diagnóstico.
+        console.error("[checkout] payment-intent failed:", {
+          status: intentRes.status,
+          body,
+        });
         throw new ApiResponseError(
           body.message ?? "Não foi possível processar o pagamento.",
           intentRes.status,
@@ -539,6 +548,11 @@ export default function CheckoutFlow() {
 
           {activeStep === "payment" && state.address && (
             <>
+              {state.error && (
+                <p role="alert" className={styles.error}>
+                  {state.error}
+                </p>
+              )}
               <PaymentStep
                 cartTotal={grandTotal}
                 shippingAddress={{
@@ -568,11 +582,6 @@ export default function CheckoutFlow() {
                 onBack={goBack}
                 onSubmit={confirmOrder}
               />
-              {state.error && (
-                <p role="alert" className={styles.error}>
-                  {state.error}
-                </p>
-              )}
             </>
           )}
 
