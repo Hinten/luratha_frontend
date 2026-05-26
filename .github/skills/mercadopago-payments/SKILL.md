@@ -192,6 +192,24 @@ para tokenizar o cartão no browser. Há dois helpers em `apps/store/src/lib/mer
 sensíveis (PAN, expiry, CVV); o resto do form é nosso HTML controlado por
 CSS Modules. A loja nunca toca o PAN/CVV.
 
+**Onde cada chamada MP roda** (auditoria):
+
+- **Iframe MP (client, fora do nosso controle)** chama `POST /v1/card_tokens`
+  e `GET /v1/payment_methods/search` direto pra `api.mercadopago.com` —
+  PAN+CVV nunca passam pelo nosso JS. Esse é o ponto do PCI scope.
+- **Nosso server** (`apps/store/src/lib/payment/mercadoPago/index.ts`, runtime
+  `nodejs`) chama `POST /v1/payments` server-to-server com o `token` opaco
+  recebido do client + `MERCADOPAGO_ACCESS_TOKEN`. Sem CORS.
+- **Webhook receiver** (`/api/webhooks/mercadopago`) é nosso server — MP é
+  quem chama.
+
+Consequência: a tokenização **não pode** ser movida pro server (entraria em
+PCI scope D). Por isso o cardForm não funciona em `localhost` (HTTP ou
+HTTPS): o servidor MP rejeita CORS pra domínios locais. Pra testar Cartão
+de verdade, **deploy no App Hosting é obrigatório**. PIX/Boleto continuam
+funcionando local porque tokenização não acontece no client (só nosso
+`/api/checkout/payment-intent` chama o MP).
+
 **Por que não Bricks**: o Payment Brick devolve um `formData` no shape de
 `POST /v1/payments` direto, que não casa com nosso body discriminado por
 `paymentMethod` no `/api/checkout/payment-intent`; e o visual do Brick está

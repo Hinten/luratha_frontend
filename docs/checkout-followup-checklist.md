@@ -6,11 +6,58 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 
 ---
 
+## 0. Status atual (PR #124 — em andamento)
+
+Última iteração `b15ec7b` (2026-05-25). Resumo de onde o trabalho parou:
+
+**O que funciona** (validado pelo user):
+- Fluxo PIX completo em `pnpm dev` local — QR Code renderiza, copia código, redirect.
+- Fluxo Boleto local (URL PDF + linha digitável).
+- Login + 4 steps do checkout em local e em App Hosting.
+- Removida máscara do CPF (input aceita raw digits) — schema Zod normaliza.
+
+**O que NÃO funciona ainda — cardForm de Cartão**:
+- Local (`http://localhost:3000` E `https://localhost:3000` via `next dev --experimental-https`): CORS bloqueia em `api.mercadopago.com/v1/card_tokens` e `/v1/payment_methods/search`. Doc MP confirma: rejeita domínios locais.
+- **App Hosting deployed**: também dá CORS em `card_tokens` no último teste do user (`luratha-app-frontend--luratha-96386.us-east5.hosted.app`). Isso é o impasse atual — não tínhamos previsto.
+
+**Hipóteses pra investigar amanhã** (ordem decrescente de probabilidade):
+
+1. **Domínio do App Hosting não está autorizado no painel MP**. Public keys do MP têm uma seção de "URLs/domínios autorizados" no painel de desenvolvedores. Verificar em https://www.mercadopago.com.br/developers/panel → app de teste → public key → se há campo de domínios autorizados, adicionar `luratha-app-frontend--luratha-96386.us-east5.hosted.app`. Provavelmente o problema é esse.
+
+2. **Public key TEST está congelada/desativada**. Algumas contas MP têm public keys de teste limitadas a um período ou a domínios específicos. Conferir no painel se há aviso.
+
+3. **`processing_mode=aggregator` requer config adicional**. O log mostra esse query param na request — pode requerer ativação adicional na conta.
+
+4. **Cookie `x-meli-session-id` ainda sendo rejeitado em produção**. Olhar com calma os logs do App Hosting deploy — se o cookie é rejeitado, fraud detection (Armor) também trava.
+
+5. **Ad blocker / Norton interceptando localmente** — só relevante pra logs de `[object ProgressEvent]` (telemetria, não bloqueia funcionalidade).
+
+**Próximas ações pra próximo turno**:
+
+- [ ] User confere no painel MP se há "Authorized domains" ou similar pra a public key TEST. Se sim, adicionar URL do App Hosting.
+- [ ] Se não houver whitelist no painel, abrir issue/ticket no suporte MP — comportamento de CORS pra HTTPS público não documentado.
+- [ ] Tentar com public key de PROD (não TEST) em um app paralelo só pra ver se o problema é específico de credencial TEST.
+- [ ] Como fallback de UX: documentar mensagem amigável "Pagamento por cartão indisponível no momento, use PIX ou Boleto" se a tokenização falhar.
+
+**Arquivos de referência**:
+- `apps/store/src/lib/mercadopago/cardForm.ts` — callbacks de debug já logam `[mp.cardForm] bin change`, `paymentMethods`, `installments`. Pedir pro user copiar esses logs no próximo teste.
+- `apps/store/src/components/checkout/PaymentStep.tsx` — input CPF sem máscara, submit usa `cardFormHandle.submit()`.
+- `apps/store/src/lib/payment/mercadoPago/client.ts` — server-side, usa `MERCADOPAGO_ACCESS_TOKEN`.
+- `docs/mercadopago-sandbox-checklist.md` — cartões MLB corretos, tabela client vs server.
+
+---
+
 ## 1. Sandbox live (Firebase App Hosting HTTPS)
 
 Cobertura real da API MercadoPago — até agora só houve mocks. Subir o branch num backend do App Hosting (URL HTTPS) e exercitar cada cenário. `pnpm dev` local serve só pra PIX/Boleto; Cartão precisa de HTTPS por causa do cookie `x-meli-session-id`.
 
-> **⚠️ Cartão não funciona em `http://localhost` dev**: a API MP (`/v1/card_tokens`) responde 200 mas SEM `Access-Control-Allow-Origin` quando o referer é HTTP — browser bloqueia por CORS. PIX/Boleto funcionam local (não tokenizam no client). Pra testar Cartão localmente: `pnpm --filter @luratha/store exec next dev --experimental-https` (Next gera cert self-signed; aceita o aviso) **OU** subir no App Hosting e testar lá. **Não há configuração de CORS do nosso lado — é política do servidor MP, não controlamos.**
+> **⚠️ Cartão NÃO funciona em localhost — nem HTTP nem HTTPS**: o servidor MP rejeita CORS para `api.mercadopago.com/v1/card_tokens` quando o referer é `localhost`/`127.0.0.1`, mesmo com `next dev --experimental-https` (confirmado empiricamente: `https://localhost:3000` deu o mesmo erro). A doc oficial reforça: ["Não utilize domínios locais ... com ou sem porta especificada"](https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/configure-back-urls). **Deploy no App Hosting é obrigatório para testar Cartão.** Não há configuração CORS do nosso lado — é política do servidor MP.
+>
+> PIX/Boleto funcionam em localhost normalmente, porque a tokenização não acontece no client — só nosso `/api/checkout/payment-intent` chama o MP server-to-server (`apps/store/src/lib/payment/mercadoPago/`, runtime `nodejs`).
+>
+> **Onde cada chamada MP acontece** (auditoria):
+> - **Iframe MP (client)** → `POST /v1/card_tokens`, `GET /v1/payment_methods/search` — PCI compliance: PAN/CVV ficam no iframe hospedado pelo MP, nosso JS nunca toca dados sensíveis.
+> - **Nosso server** → `POST /v1/payments`, webhook receiver — sem CORS, usa `MERCADOPAGO_ACCESS_TOKEN`.
 >
 > **⚠️ Cartões de teste são por país (siteId)**. A conta MP do projeto é **Brasil (MLB)**, então use:
 > - **Mastercard**: `5031 4332 1540 6351` — CVV `123`, validade `11/30`
