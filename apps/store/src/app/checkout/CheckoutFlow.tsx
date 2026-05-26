@@ -417,12 +417,27 @@ export default function CheckoutFlow() {
       }
       const result = (await intentRes.json()) as PaymentResultData;
 
+      // TODO: remove after card flow validated — pra diagnosticar caso o
+      // cartão volte pro step de pagamento em vez de redirecionar.
+      console.log("[checkout] payment-intent result:", result);
+
       if (result.status === "paid") {
-        // Cartão aprovado na hora — SuccessClient limpa o cart no mount.
-        router.replace(`/checkout/sucesso/${created.id}`);
+        // TODO: remove after card flow validated
+        console.log(
+          `[checkout] paid → navigating to /checkout/sucesso/${created.id}`,
+        );
+        // `window.location.assign` em vez de `router.replace` por robustez:
+        // o client router do Next pode ser interrompido por re-renders do
+        // Brick após `onSubmit` resolver. Full reload garante navegação.
+        // SuccessClient limpa o cart no mount da página de sucesso.
+        window.location.assign(`/checkout/sucesso/${created.id}`);
         return;
       }
 
+      // TODO: remove after card flow validated
+      console.log(
+        `[checkout] !paid (status=${result.status}) → dispatching SUBMIT_OK`,
+      );
       // PIX/Boleto pendentes: limpa cart antes de mostrar o PaymentResult. O
       // guard de cart vazio (logo abaixo) bypassa o redirect enquanto
       // `state.paymentResult` está presente, então o user permanece vendo o

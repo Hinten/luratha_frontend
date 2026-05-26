@@ -127,6 +127,64 @@
   gap: 1rem;
 }
 
+/* Container do Brick — relativo pra ancorar o overlay absoluto. */
+.brickContainer {
+  position: relative;
+  /* Altura mínima evita "pulo" de layout quando o overlay cobre o Brick
+     vazio (visibility:hidden) durante o mount. ~520px cobre o form típico
+     do Card Payment Brick. */
+  min-height: 520px;
+}
+
+.brickMount {
+  /* Brick injetado pelo SDK; ele controla seu próprio layout interno. */
+  width: 100%;
+}
+
+/* Overlay com cadeado + spinner usado em dois estados:
+   1. Mount do Brick (brickReady=false): "Carregando ambiente seguro…"
+   2. Submit em andamento (submitting=true): "Processando pagamento…" */
+.brickOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-neutral-light);
+  border-radius: 10px;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-neutral-dark);
+  /* Camada acima do Brick (z-index baixo, evita conflito com overlays
+     globais como toasts/modais). */
+  z-index: 1;
+}
+
+.lockIcon {
+  color: color-mix(in srgb, var(--color-neutral-dark) 70%, transparent);
+  margin-bottom: 0.25rem;
+}
+
+.overlayTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.overlaySubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.overlaySpinner {
+  margin-top: 0.5rem;
+  color: var(--color-secondary);
+}
+
 .actions {
   display: flex;
   justify-content: space-between;

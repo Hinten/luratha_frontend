@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
+import Spinner from "@/src/components/Spinner";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -89,6 +90,28 @@ if (typeof window !== "undefined" && MP_PUBLIC_KEY) {
   initMercadoPago(MP_PUBLIC_KEY, { locale: "pt-BR" });
 }
 
+/** Ícone de cadeado — comunica segurança no overlay do Brick. */
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 /** Shape mínimo do payload que o Card Payment Brick devolve em `onSubmit`. */
 interface CardBrickFormData {
   token: string;
@@ -116,6 +139,13 @@ export default function PaymentStep(props: PaymentStepProps) {
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * `brickReady` vira true quando o `onReady` do CardPayment dispara — ou
+   * seja, quando os iframes do Brick terminaram de carregar e o form de
+   * cartão está pronto. Enquanto false, mostramos um overlay com cadeado
+   * pra evitar o "quadrado em branco" durante os ~2s de mount inicial.
+   */
+  const [brickReady, setBrickReady] = useState(false);
 
   const {
     register,
@@ -242,34 +272,69 @@ export default function PaymentStep(props: PaymentStepProps) {
 
       {method === "credit_card" ? (
         <div className={styles.form} aria-label="Pagamento com cartão">
-          {/* O Card Payment Brick renderiza seu próprio form + botão Pagar
-              dentro de um iframe hospedado pelo MercadoPago. A tokenização do
-              cartão acontece na origem deles, então não há chamada do nosso
-              domínio pra api.mercadopago.com/v1/card_tokens. */}
-          <CardPayment
-            initialization={{
-              amount: cartTotal,
-              ...(defaultEmail ? { payer: { email: defaultEmail } } : {}),
-            }}
-            customization={{
-              paymentMethods: { maxInstallments: 12 },
-            }}
-            onSubmit={async (param) => {
-              await processCardSubmit(param as unknown as CardBrickFormData);
-            }}
-            onError={(err) => {
-              const msg =
-                err && typeof err === "object" && "message" in err
-                  ? String((err as { message?: unknown }).message)
-                  : "Erro ao processar pagamento com cartão.";
-              setError(msg);
-            }}
-          />
           {error && (
             <p role="alert" className={styles.submitError}>
               {error}
             </p>
           )}
+          {/* Container relativo pro overlay sobrepor o Brick durante o mount
+              (evita o "quadrado em branco") e durante o submit (feedback
+              visual entre o tokenize e o redirect). */}
+          <div className={styles.brickContainer}>
+            {/* O Brick fica oculto via visibility até onReady disparar; mantemos
+                ele no DOM pra não desmontar/remontar (cada remount = novo
+                fetch dos iframes seguros). */}
+            <div
+              className={styles.brickMount}
+              style={{ visibility: brickReady ? "visible" : "hidden" }}
+            >
+              <CardPayment
+                initialization={{
+                  amount: cartTotal,
+                  ...(defaultEmail ? { payer: { email: defaultEmail } } : {}),
+                }}
+                customization={{
+                  paymentMethods: { maxInstallments: 12 },
+                }}
+                onReady={() => setBrickReady(true)}
+                onSubmit={async (param) => {
+                  await processCardSubmit(param as unknown as CardBrickFormData);
+                }}
+                onError={(err) => {
+                  const msg =
+                    err && typeof err === "object" && "message" in err
+                      ? String((err as { message?: unknown }).message)
+                      : "Erro ao processar pagamento com cartão.";
+                  setError(msg);
+                }}
+              />
+            </div>
+
+            {!brickReady && (
+              <div className={styles.brickOverlay} aria-live="polite">
+                <LockIcon className={styles.lockIcon} />
+                <p className={styles.overlayTitle}>
+                  Carregando ambiente seguro de pagamento
+                </p>
+                <p className={styles.overlaySubtitle}>
+                  Conexão criptografada com o Mercado Pago
+                </p>
+                <Spinner size={20} className={styles.overlaySpinner} />
+              </div>
+            )}
+
+            {brickReady && submitting && (
+              <div className={styles.brickOverlay} aria-live="polite">
+                <LockIcon className={styles.lockIcon} />
+                <p className={styles.overlayTitle}>Processando pagamento…</p>
+                <p className={styles.overlaySubtitle}>
+                  Não feche esta janela — você será redirecionado
+                </p>
+                <Spinner size={20} className={styles.overlaySpinner} />
+              </div>
+            )}
+          </div>
+
           <div className={styles.actions}>
             <button
               type="button"
