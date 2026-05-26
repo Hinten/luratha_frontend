@@ -1,8 +1,7 @@
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
-import { createPayment, getPayment } from "@/src/lib/payment/mercadoPago";
-import { resolveWebhookUrl } from "@/src/lib/payment/mercadoPago/client";
+import { createOrder, getOrder } from "@/src/lib/payment/mercadoPago";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
@@ -98,10 +97,9 @@ export async function createPaymentIntent(
     orderId: order.id,
     amount: order.grandTotal,
     description: `Pedido ${order.orderNumber} — Luratha`,
-    notificationUrl: resolveWebhookUrl(),
   };
 
-  const result = await createPayment(
+  const result = await createOrder(
     methodInput.paymentMethod === "credit_card"
       ? {
           ...base,
@@ -130,17 +128,17 @@ export async function createPaymentIntent(
 }
 
 /**
- * Aplica a um pedido a confirmação assíncrona vinda de um webhook do
- * MercadoPago. Idempotente: se o pedido já está no status-alvo, não reescreve.
+ * Aplica a um pedido a confirmação assíncrona vinda de um webhook da API de
+ * Orders. Idempotente: se o pedido já está no status-alvo, não reescreve.
  */
-export async function applyPaymentWebhook(
-  paymentId: string,
+export async function applyOrderWebhook(
+  mpOrderId: string,
 ): Promise<{ changed: boolean; orderId: string; status: PaymentStatus }> {
-  const summary = await getPayment(paymentId);
+  const summary = await getOrder(mpOrderId);
   const order = await loadOrder(summary.orderId);
   if (!order) {
     throw new PaymentProviderError(
-      `Pedido "${summary.orderId}" referenciado pelo pagamento ${paymentId} não existe.`,
+      `Pedido "${summary.orderId}" referenciado pela order ${mpOrderId} não existe.`,
       "invalid_input",
     );
   }

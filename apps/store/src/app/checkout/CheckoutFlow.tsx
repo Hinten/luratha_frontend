@@ -40,8 +40,8 @@ type StepId = VisibleStepId | "result";
 const VISIBLE_STEPS: CheckoutStep[] = [
   { id: "address", label: "Endereço" },
   { id: "shipping", label: "Frete" },
-  { id: "payment", label: "Pagamento" },
   { id: "review", label: "Revisão" },
+  { id: "payment", label: "Pagamento" },
 ];
 
 function isVisibleStepId(value: string | null): value is VisibleStepId {
@@ -56,7 +56,6 @@ function isVisibleStepId(value: string | null): value is VisibleStepId {
 interface State {
   address: Address | null;
   quote: ShippingQuote | null;
-  paymentDraft: PaymentSubmitPayload | null;
   appliedCoupon: AppliedCoupon | null;
   paymentResult: PaymentResultData | null;
   orderId: string | null;
@@ -67,7 +66,6 @@ interface State {
 type Action =
   | { type: "SET_ADDRESS"; address: Address }
   | { type: "SET_QUOTE"; quote: ShippingQuote }
-  | { type: "SET_PAYMENT_DRAFT"; draft: PaymentSubmitPayload }
   | { type: "APPLY_COUPON"; coupon: AppliedCoupon }
   | { type: "CLEAR_COUPON" }
   | { type: "CLEAR_ERROR" }
@@ -82,8 +80,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, address: action.address };
     case "SET_QUOTE":
       return { ...state, quote: action.quote };
-    case "SET_PAYMENT_DRAFT":
-      return { ...state, paymentDraft: action.draft, error: null };
     case "APPLY_COUPON":
       return { ...state, appliedCoupon: action.coupon };
     case "CLEAR_COUPON":
@@ -110,7 +106,6 @@ function emptyInitial(): State {
   return {
     address: null,
     quote: null,
-    paymentDraft: null,
     appliedCoupon: null,
     paymentResult: null,
     orderId: null,
@@ -121,20 +116,21 @@ function emptyInitial(): State {
 
 /**
  * Garante que o step solicitado satisfaz os pré-requisitos de estado.
- * Deep link em `?step=review` sem `paymentDraft` cai pra "address" — bloqueia
+ * Deep link em `?step=payment` sem endereço/frete cai pra "address" — bloqueia
  * pular etapas via URL e mantém a navegação consistente com o reducer.
+ *
+ * Ordem: Endereço → Frete → Revisão → Pagamento. Review e Payment exigem os
+ * mesmos pré-requisitos (address + quote); o que diferencia é que Payment é
+ * onde o user finaliza o pagamento (chama `confirmOrder`).
  */
 function enforceStepPrereqs(
   requested: VisibleStepId,
   state: State,
 ): VisibleStepId {
   if (requested === "shipping" && !state.address) return "address";
-  if (requested === "payment" && (!state.address || !state.quote)) {
-    return "address";
-  }
   if (
-    requested === "review" &&
-    (!state.address || !state.quote || !state.paymentDraft)
+    (requested === "review" || requested === "payment") &&
+    (!state.address || !state.quote)
   ) {
     return "address";
   }
@@ -235,11 +231,12 @@ export default function CheckoutFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  // clearCart deliberadamente NÃO consumido aqui: a página de sucesso
-  // (SuccessClient) já limpa o cart ao montar, e limpar aqui dispararia o
-  // guard de "carrinho vazio" do CheckoutPage antes da navegação completar
-  // (race que mandava o usuário pro /carrinho em vez de /checkout/sucesso).
-  const { items } = useCart();
+  // `clearCart` é chamado em confirmOrder() depois do payment-intent OK pra
+  // PIX/Boleto, antes de mostrar o `PaymentResult`. O CheckoutPage guard de
+  // cart vazio precisa de bypass quando `state.paymentResult` está presente —
+  // sem isso, o user seria redirecionado pro /carrinho assim que o cart
+  // esvazia, em vez de ver o QR/boleto. O guard local (mais abaixo) faz isso.
+  const { items, isReady: cartReady, clearCart } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -263,6 +260,18 @@ export default function CheckoutFlow() {
       router.replace(`/checkout?step=${urlStep}`);
     }
   }, [urlStep, requestedStep, router]);
+
+  // Guard de carrinho vazio. Bypassa quando há `paymentResult` em memória —
+  // isso acontece imediatamente após o submit de PIX/Boleto, quando o cart é
+  // limpo pra zerar mas o user precisa continuar vendo o QR/boleto até clicar
+  // "Acompanhar pedido". Sem esse bypass, o user seria redirecionado pro
+  // /carrinho assim que clearCart() terminasse.
+  useEffect(() => {
+    if (!cartReady) return;
+    if (items.length > 0) return;
+    if (state.paymentResult) return;
+    router.replace("/carrinho");
+  }, [cartReady, items.length, state.paymentResult, router]);
 
   // Carrega o UserProfile uma vez por sessão pra pré-popular o PaymentStep
   // (email, nome, CPF). Falha silenciosa: se 404 ou rede ruim, os campos
@@ -320,13 +329,17 @@ export default function CheckoutFlow() {
     });
   }
 
-  async function confirmOrder() {
-    if (
-      !state.address ||
-      !state.quote ||
-      !state.paymentDraft ||
-      items.length === 0
-    ) {
+  /**
+   * Cria a Order + dispara o payment-intent no MP. Recebe o `draft` direto do
+   * `onSubmit` do PaymentStep (último step) — não há mais `state.paymentDraft`
+   * persistido porque o payment é o último step e não há "Revisão pós-pagamento".
+   *
+   * Quando o pagamento é PIX/Boleto, limpa o cart e mostra o `PaymentResult`
+   * com QR/link. Quando é cartão aprovado na hora, vai direto pro sucesso (o
+   * SuccessClient limpa o cart no mount).
+   */
+  async function confirmOrder(draft: PaymentSubmitPayload) {
+    if (!state.address || !state.quote || items.length === 0) {
       dispatch({
         type: "SUBMIT_FAIL",
         message: "Faltam dados para finalizar o pedido.",
@@ -339,7 +352,7 @@ export default function CheckoutFlow() {
       userId: user!.uid,
       orderNumber: makeOrderNumber(),
       status: "pending_payment" as const,
-      paymentMethod: state.paymentDraft.paymentMethod,
+      paymentMethod: draft.paymentMethod,
       paymentStatus: "pending" as const,
       items: orderItemsFromCart(items),
       itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
@@ -384,14 +397,14 @@ export default function CheckoutFlow() {
       // Fire-and-forget: persiste lastName + CPF no UserProfile em paralelo
       // com a chamada ao MP, pra próxima compra trazer pré-preenchido. Se
       // falhar, persistProfileFields apenas loga (não derruba o pagamento).
-      void persistProfileFields(user!.uid, state.paymentDraft.payer);
+      void persistProfileFields(user!.uid, draft.payer);
 
       const intentRes = await fetchWithTimeout(
         "/api/checkout/payment-intent",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...state.paymentDraft, orderId: created.id }),
+          body: JSON.stringify({ ...draft, orderId: created.id }),
         },
         CONFIRM_TIMEOUT_MS,
       );
@@ -405,13 +418,16 @@ export default function CheckoutFlow() {
       const result = (await intentRes.json()) as PaymentResultData;
 
       if (result.status === "paid") {
-        // Cart é limpo no SuccessClient quando a página de sucesso monta —
-        // limpar aqui dispararia o guard de empty-cart do CheckoutPage antes
-        // do replace completar.
+        // Cartão aprovado na hora — SuccessClient limpa o cart no mount.
         router.replace(`/checkout/sucesso/${created.id}`);
         return;
       }
 
+      // PIX/Boleto pendentes: limpa cart antes de mostrar o PaymentResult. O
+      // guard de cart vazio (logo abaixo) bypassa o redirect enquanto
+      // `state.paymentResult` está presente, então o user permanece vendo o
+      // QR/boleto até clicar "Acompanhar pedido".
+      await clearCart();
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result });
     } catch (err) {
       if (err instanceof ApiResponseError) {
@@ -465,85 +481,85 @@ export default function CheckoutFlow() {
               subtotal={subtotal}
               selectedQuote={state.quote}
               onSelect={(q) => dispatch({ type: "SET_QUOTE", quote: q })}
-              onContinue={() => goToStep("payment")}
+              onContinue={() => goToStep("review")}
               onBack={goBack}
             />
+          )}
+
+          {activeStep === "review" && state.address && state.quote && (
+            <section className={styles.reviewSection}>
+              <h2 className={styles.heading}>Revise antes de pagar</h2>
+              <ReviewSummary
+                address={state.address}
+                quote={state.quote}
+                onEditAddress={() => goToStep("address")}
+                onEditShipping={() => goToStep("shipping")}
+              />
+              <CouponField
+                cartTotal={subtotal + shippingTotal}
+                applied={state.appliedCoupon}
+                onApplied={(c) => dispatch({ type: "APPLY_COUPON", coupon: c })}
+                onCleared={() => dispatch({ type: "CLEAR_COUPON" })}
+              />
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.backBtn}
+                  onClick={goBack}
+                  disabled={state.submitting}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  className={styles.confirmBtn}
+                  onClick={() => goToStep("payment")}
+                  disabled={state.submitting}
+                >
+                  Continuar para pagamento
+                </button>
+              </div>
+            </section>
           )}
 
           {activeStep === "payment" && state.address && (
-            <PaymentStep
-              cartTotal={grandTotal}
-              shippingAddress={{
-                postalCode: state.address.postalCode,
-                line1: state.address.line1,
-                number: state.address.number,
-                neighborhood: state.address.neighborhood,
-                city: state.address.city,
-                state: state.address.state,
-              }}
-              defaultEmail={profile?.email ?? user!.email}
-              defaultFirstName={profile?.firstName ?? user!.name.split(/\s+/)[0]}
-              defaultLastName={
-                profile?.lastName ??
-                user!.name.split(/\s+/).slice(1).join(" ")
-              }
-              defaultIdentificationType={
-                profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF"
-              }
-              defaultIdentificationNumber={
-                profile?.taxIdentity?.type === "PF"
-                  ? profile.taxIdentity.cpf
-                  : profile?.taxIdentity?.type === "PJ"
-                    ? profile.taxIdentity.cnpj
-                    : undefined
-              }
-              onBack={goBack}
-              onSubmit={async (draft) => {
-                dispatch({ type: "SET_PAYMENT_DRAFT", draft });
-                startTransition(() => {
-                  router.push("/checkout?step=review");
-                });
-              }}
-            />
+            <>
+              <PaymentStep
+                cartTotal={grandTotal}
+                shippingAddress={{
+                  postalCode: state.address.postalCode,
+                  line1: state.address.line1,
+                  number: state.address.number,
+                  neighborhood: state.address.neighborhood,
+                  city: state.address.city,
+                  state: state.address.state,
+                }}
+                defaultEmail={profile?.email ?? user!.email}
+                defaultFirstName={profile?.firstName ?? user!.name.split(/\s+/)[0]}
+                defaultLastName={
+                  profile?.lastName ??
+                  user!.name.split(/\s+/).slice(1).join(" ")
+                }
+                defaultIdentificationType={
+                  profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF"
+                }
+                defaultIdentificationNumber={
+                  profile?.taxIdentity?.type === "PF"
+                    ? profile.taxIdentity.cpf
+                    : profile?.taxIdentity?.type === "PJ"
+                      ? profile.taxIdentity.cnpj
+                      : undefined
+                }
+                onBack={goBack}
+                onSubmit={confirmOrder}
+              />
+              {state.error && (
+                <p role="alert" className={styles.error}>
+                  {state.error}
+                </p>
+              )}
+            </>
           )}
-
-          {activeStep === "review" &&
-            state.address &&
-            state.quote &&
-            state.paymentDraft && (
-              <section className={styles.reviewSection}>
-                <h2 className={styles.heading}>Revise antes de pagar</h2>
-                <ReviewSummary
-                  address={state.address}
-                  quote={state.quote}
-                  paymentDraft={state.paymentDraft}
-                  onEditAddress={() => goToStep("address")}
-                  onEditShipping={() => goToStep("shipping")}
-                  onEditPayment={() => goToStep("payment")}
-                />
-                <CouponField
-                  cartTotal={subtotal + shippingTotal}
-                  applied={state.appliedCoupon}
-                  onApplied={(c) => dispatch({ type: "APPLY_COUPON", coupon: c })}
-                  onCleared={() => dispatch({ type: "CLEAR_COUPON" })}
-                />
-                {state.error && (
-                  <p role="alert" className={styles.error}>
-                    {state.error}
-                  </p>
-                )}
-                <div className={styles.actions}>
-                  <button
-                    type="button"
-                    className={styles.backBtn}
-                    onClick={goBack}
-                    disabled={state.submitting}
-                  >
-                    Voltar
-                  </button>
-                </div>
-              </section>
-            )}
 
           {activeStep === "result" && state.paymentResult && state.orderId && (
             <section className={styles.reviewSection}>
@@ -577,22 +593,10 @@ export default function CheckoutFlow() {
             discountTotal={discountTotal}
             appliedCoupon={state.appliedCoupon}
           >
-            {activeStep === "review" && (
-              <button
-                type="button"
-                className={styles.confirmBtn}
-                onClick={confirmOrder}
-                disabled={state.submitting}
-                aria-busy={state.submitting}
-              >
-                {state.submitting ? (
-                  <>
-                    <Spinner size={16} /> Processando…
-                  </>
-                ) : (
-                  "Confirmar pedido"
-                )}
-              </button>
+            {activeStep === "payment" && state.submitting && (
+              <p className={styles.processing} aria-busy="true">
+                <Spinner size={16} /> Processando pagamento…
+              </p>
             )}
           </OrderSummary>
         </aside>

@@ -49,8 +49,6 @@ interface BaseCreatePaymentInput {
   amount: number;
   description: string;
   payer: PaymentPayer;
-  /** URL pública do webhook. Omitida quando não configurada (usa a do painel MP). */
-  notificationUrl?: string;
 }
 
 export interface CreatePixPaymentInput extends BaseCreatePaymentInput {
@@ -59,10 +57,10 @@ export interface CreatePixPaymentInput extends BaseCreatePaymentInput {
 
 export interface CreateCardPaymentInput extends BaseCreatePaymentInput {
   paymentMethod: "credit_card";
-  /** Token gerado no browser pelo @mercadopago/sdk-js (nunca o número do cartão). */
+  /** Token gerado pelo Card Payment Brick (nunca o número do cartão). */
   cardToken: string;
   installments: number;
-  /** Bandeira resolvida no browser (ex.: "visa", "master"). */
+  /** Bandeira resolvida no browser pelo Brick (ex.: "visa", "master"). */
   paymentMethodId: string;
 }
 

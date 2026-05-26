@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/src/lib/payment/mercadoPago";
-import { applyPaymentWebhook } from "@/src/lib/payment/service";
+import { applyOrderWebhook } from "@/src/lib/payment/service";
 import { PaymentProviderError } from "@/src/lib/payment/types";
 
 export const runtime = "nodejs";
@@ -8,11 +8,11 @@ export const runtime = "nodejs";
 /**
  * POST /api/webhooks/mercadopago
  *
- * Receiver de notificações do MercadoPago. Endpoint público (chamado pelos
- * servidores do MP) — a segurança é a validação da assinatura `x-signature`,
- * NÃO há `requireUser`.
+ * Receiver de notificações do MercadoPago (API de Orders). Endpoint público
+ * (chamado pelos servidores do MP) — a segurança é a validação da assinatura
+ * `x-signature`, NÃO há `requireUser`.
  *
- * Em notificações de pagamento, consulta o pagamento no MP e atualiza a Order
+ * Em notificações de order, consulta a Order no MP e atualiza o pedido
  * correspondente (`external_reference`). Idempotente: reenvios do mesmo evento
  * não reescrevem o pedido.
  */
@@ -73,18 +73,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Assinatura do webhook inválida." }, { status: 401 });
   }
 
-  // Apenas notificações de pagamento são acionáveis; o resto é apenas confirmado.
-  if (type !== "payment" || !dataId) {
+  // Apenas notificações de order são acionáveis; o resto é apenas confirmado.
+  if (type !== "order" || !dataId) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
   try {
-    const outcome = await applyPaymentWebhook(dataId);
+    const outcome = await applyOrderWebhook(dataId);
     return NextResponse.json({ received: true, ...outcome }, { status: 200 });
   } catch (error) {
     if (error instanceof PaymentProviderError) {
       if (error.code === "invalid_input") {
-        // Pagamento sem pedido correspondente (ex.: pagamento de outra loja no
+        // Order sem pedido correspondente (ex.: pagamento de outra loja no
         // mesmo app, ou teste). Confirma 200 para o MP não reentregar.
         return NextResponse.json({ received: true, ignored: error.message }, { status: 200 });
       }
