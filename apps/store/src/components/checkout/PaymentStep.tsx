@@ -252,13 +252,20 @@ export default function PaymentStep(props: PaymentStepProps) {
       return;
     }
 
+    // Sanitiza nome/sobrenome: strings vazias viram `undefined`, porque o
+    // schema do server tem `.string().min(1).optional()` — `.optional()`
+    // aceita undefined mas não aceita "". User sem sobrenome cadastrado
+    // (split de "Lucas" → ["Lucas"], slice(1) = [], join = "") batia 400.
+    const sanitizedFirstName = defaultFirstName?.trim() || undefined;
+    const sanitizedLastName = defaultLastName?.trim() || undefined;
+
     try {
       await onSubmit({
         paymentMethod: "credit_card",
         payer: {
           email: payerEmail,
-          firstName: defaultFirstName,
-          lastName: defaultLastName,
+          firstName: sanitizedFirstName,
+          lastName: sanitizedLastName,
           identification: { type: idType, number: idNumber },
         },
         cardToken: formData.token,
