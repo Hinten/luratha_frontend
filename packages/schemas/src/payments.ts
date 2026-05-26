@@ -2,12 +2,12 @@ import { z } from "zod";
 
 /**
  * Schema do formulário do **pagador** (Step 3 do checkout) — usado com
- * `react-hook-form` + `zodResolver` para validação inline por campo. É o
- * subconjunto comum a PIX / Cartão / Boleto: o que o MercadoPago precisa
- * pra atribuir um pagamento a um usuário fiscal.
+ * `react-hook-form` + `zodResolver` para validação inline por campo. Aplicável
+ * a PIX e Boleto (Cartão é gerenciado pelo Card Payment Brick do MP, que tem
+ * seu próprio form de payer e tokeniza o cartão na origem deles).
  *
- * Não inclui dados do cartão (PAN/CVV/expiry) — esses são tokenizados pelo
- * cardForm SDK do MP (iframes) e nunca passam pelo nosso JS.
+ * O campo `cardholderName` é legado e permanece optional — não é usado pelo
+ * Brick mas é mantido pra compatibilidade do tipo.
  */
 export const payerFormSchema = z
   .object({

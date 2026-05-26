@@ -5,24 +5,37 @@ import PaymentStep, {
   type PaymentSubmitPayload,
 } from "@/src/components/checkout/PaymentStep";
 
-// `mountCardForm` carregaria o SDK MP no browser (network + iframes) — em
-// jsdom isso explode. Stubamos retornando um handle inerte; o ramo Cartão
-// é coberto por outras camadas. Os testes deste arquivo focam no CPF e no
-// fluxo PIX (que NÃO precisa do cardForm).
-const cardFormHandleStub = {
-  submit: vi.fn(),
-  unmount: vi.fn(),
-};
-
-vi.mock("@/src/lib/mercadopago/cardForm", async () => {
-  const actual = await vi.importActual<
-    typeof import("@/src/lib/mercadopago/cardForm")
-  >("@/src/lib/mercadopago/cardForm");
-  return {
-    ...actual,
-    mountCardForm: vi.fn(async () => cardFormHandleStub),
-  };
-});
+// `@mercadopago/sdk-react` carrega o Brick num iframe em mercadopago.com —
+// em jsdom isso explode. Mocamos `CardPayment` por um botão de teste que
+// dispara `onSubmit` com payload fake; mocamos `initMercadoPago` por no-op.
+const brickSubmit = vi.fn();
+vi.mock("@mercadopago/sdk-react", () => ({
+  initMercadoPago: vi.fn(),
+  CardPayment: (props: {
+    onSubmit: (formData: unknown) => Promise<void> | void;
+  }) => {
+    brickSubmit.mockImplementation(props.onSubmit);
+    return (
+      <button
+        type="button"
+        data-testid="card-brick-stub"
+        onClick={() =>
+          props.onSubmit({
+            token: "stub-card-token",
+            payment_method_id: "master",
+            installments: 1,
+            payer: {
+              email: "card-payer@testuser.com",
+              identification: { type: "CPF", number: "12345678909" },
+            },
+          })
+        }
+      >
+        Pagar (stub)
+      </button>
+    );
+  },
+}));
 
 describe("PaymentStep", () => {
   beforeEach(() => {
@@ -40,12 +53,10 @@ describe("PaymentStep", () => {
       );
 
       const cpfInput = screen.getByLabelText("Número do documento") as HTMLInputElement;
-      // Placeholder mostra só dígitos, sem `.` ou `-`.
       expect(cpfInput.placeholder).toBe("00000000000");
       expect(cpfInput.inputMode).toBe("numeric");
       expect(cpfInput.getAttribute("pattern")).toBe("\\d*");
       expect(cpfInput.maxLength).toBe(14);
-      // Helper text orienta usuário a digitar só números.
       expect(screen.getByText(/apenas números/i)).toBeInTheDocument();
     });
 
@@ -61,7 +72,6 @@ describe("PaymentStep", () => {
 
       const cpfInput = screen.getByLabelText("Número do documento") as HTMLInputElement;
       await user.type(cpfInput, "12345678909");
-      // Sem máscara: 11 dígitos puros (nada de `123.456.789-09`).
       expect(cpfInput.value).toBe("12345678909");
     });
 
@@ -85,7 +95,6 @@ describe("PaymentStep", () => {
       const cpfInput = screen.getByLabelText("Número do documento") as HTMLInputElement;
       await user.type(cpfInput, "12345678909");
 
-      // PIX é o método default (tab selecionada inicialmente).
       const submitBtn = screen.getByRole("button", { name: "Confirmar pagamento" });
       await user.click(submitBtn);
 
@@ -127,7 +136,7 @@ describe("PaymentStep", () => {
     });
   });
 
-  describe("ramo PIX", () => {
+  describe("tab PIX (default)", () => {
     it("inicia com PIX selecionado e renderiza heading correto", () => {
       render(
         <PaymentStep cartTotal={250} onSubmit={vi.fn()} onBack={vi.fn()} />,
@@ -137,6 +146,49 @@ describe("PaymentStep", () => {
       ).toBeInTheDocument();
       const pixTab = screen.getByRole("tab", { name: "PIX" });
       expect(pixTab).toHaveAttribute("aria-selected", "true");
+    });
+  });
+
+  describe("tab Cartão (Brick)", () => {
+    it("renderiza o Brick e propaga token + payer pro onSubmit", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(
+        async () => {},
+      );
+
+      render(
+        <PaymentStep
+          cartTotal={250}
+          defaultFirstName="Marina"
+          defaultLastName="Souza"
+          defaultEmail="marina@example.com"
+          onSubmit={onSubmit}
+          onBack={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByRole("tab", { name: "Cartão" }));
+
+      // O Brick (stub) substitui o form local — sem botão "Confirmar pagamento".
+      expect(screen.getByTestId("card-brick-stub")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Confirmar pagamento" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId("card-brick-stub"));
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = onSubmit.mock.calls[0][0];
+      expect(payload.paymentMethod).toBe("credit_card");
+      if (payload.paymentMethod !== "credit_card") return;
+      expect(payload.cardToken).toBe("stub-card-token");
+      expect(payload.paymentMethodId).toBe("master");
+      expect(payload.installments).toBe(1);
+      expect(payload.payer.email).toBe("card-payer@testuser.com");
+      expect(payload.payer.identification.number).toBe("12345678909");
     });
   });
 });

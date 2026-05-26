@@ -7,34 +7,28 @@ import {
 } from "@/src/lib/payment/mercadoPago";
 
 describe("mapMpStatus", () => {
-  it("maps approved to paid", () => {
-    expect(mapMpStatus("approved")).toBe("paid");
+  it("maps processed to paid (Orders API)", () => {
+    expect(mapMpStatus("processed")).toBe("paid");
   });
 
-  it("maps authorized to authorized", () => {
-    expect(mapMpStatus("authorized")).toBe("authorized");
+  it("maps action_required to pending (PIX/boleto aguardando)", () => {
+    expect(mapMpStatus("action_required")).toBe("pending");
   });
 
-  it("maps rejected and cancelled to failed", () => {
-    expect(mapMpStatus("rejected")).toBe("failed");
+  it("maps cancelled, failed and rejected to failed", () => {
     expect(mapMpStatus("cancelled")).toBe("failed");
+    expect(mapMpStatus("failed")).toBe("failed");
+    expect(mapMpStatus("rejected")).toBe("failed");
   });
 
-  it("maps refunded to refunded (voluntary)", () => {
+  it("maps refunded to refunded", () => {
     expect(mapMpStatus("refunded")).toBe("refunded");
   });
 
-  it("maps charged_back to charged_back (involuntary, post-dispute)", () => {
-    expect(mapMpStatus("charged_back")).toBe("charged_back");
-  });
-
-  it("maps in_mediation to in_dispute (paid then contested)", () => {
-    expect(mapMpStatus("in_mediation")).toBe("in_dispute");
-  });
-
-  it("maps pending, in_process and unknown values to pending", () => {
+  it("maps pending, in_process, created and unknown values to pending", () => {
     expect(mapMpStatus("pending")).toBe("pending");
     expect(mapMpStatus("in_process")).toBe("pending");
+    expect(mapMpStatus("created")).toBe("pending");
     expect(mapMpStatus(undefined)).toBe("pending");
     expect(mapMpStatus("something-new")).toBe("pending");
   });
@@ -52,39 +46,41 @@ describe("describeMercadoPagoError", () => {
     });
   });
 
-  it("handles a plain object with message + error + status (real MP shape)", () => {
-    // Shape do log que motivou o helper: 500 communication_error.
+  it("concatenates errors[] list from Orders API 4xx body", () => {
+    // Orders API retorna lista de erros (≠ Payments antigo que retornava um único).
     const err = {
-      message: "fill and validate error list: communication_error\n: 400",
-      error: "internal_server_error",
-      status: 500,
-      cause: [],
+      errors: [
+        { code: "required_properties", message: "Field 'transactions' is required" },
+        { code: "invalid_email_for_sandbox", message: "Email must end with @testuser.com" },
+      ],
+      status: 400,
     };
-
     expect(describeMercadoPagoError(err)).toEqual({
       name: "MercadoPagoApiError",
       message:
-        "fill and validate error list: communication_error\n: 400 (internal_server_error)",
+        "required_properties: Field 'transactions' is required; invalid_email_for_sandbox: Email must end with @testuser.com",
+      status: 400,
+    });
+  });
+
+  it("handles errors[] without a code (only message)", () => {
+    const err = { errors: [{ message: "Boom" }], status: 500 };
+    expect(describeMercadoPagoError(err)).toEqual({
+      name: "MercadoPagoApiError",
+      message: "Boom",
       status: 500,
     });
   });
 
-  it("uses only message when error field is absent or duplicates message", () => {
+  it("falls back to message field when errors[] is absent", () => {
     expect(describeMercadoPagoError({ message: "Invalid CPF", status: 400 })).toEqual({
       name: "MercadoPagoApiError",
       message: "Invalid CPF",
       status: 400,
     });
-    expect(
-      describeMercadoPagoError({ message: "Same", error: "Same", status: 400 }),
-    ).toEqual({
-      name: "MercadoPagoApiError",
-      message: "Same",
-      status: 400,
-    });
   });
 
-  it("falls back to JSON.stringify (truncated) when no message/error available", () => {
+  it("falls back to JSON.stringify (truncated) when no errors/message available", () => {
     const err = { foo: "bar", baz: 1 };
     expect(describeMercadoPagoError(err)).toEqual({
       name: "MercadoPagoApiError",
@@ -129,8 +125,8 @@ describe("verifyWebhookSignature", () => {
     return createHmac("sha256", SECRET).update(manifest).digest("hex");
   }
 
-  it("accepts a valid signature", () => {
-    const dataId = "123456";
+  it("accepts a valid signature for an Order ID (ORD...)", () => {
+    const dataId = "ord01j6tc8byrr0t4zky0qr39wgye";
     const requestId = "req-abc";
     const ts = "1700000000";
     const v1 = sign(dataId, requestId, ts);
@@ -146,7 +142,7 @@ describe("verifyWebhookSignature", () => {
         signatureHeader:
           "ts=1700000000,v1=0000000000000000000000000000000000000000000000000000000000000000",
         requestId: "req-abc",
-        dataId: "123456",
+        dataId: "ORD01J6TC8BYRR0T4ZKY0QR39WGYE",
       }),
     ).toBe(false);
   });
@@ -163,16 +159,16 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
-  it("lowercases an alphanumeric dataId in the manifest", () => {
+  it("lowercases an alphanumeric dataId (Order IDs arrive uppercase)", () => {
     const requestId = "req-1";
     const ts = "1700000001";
-    const v1 = sign("abc123", requestId, ts);
+    const v1 = sign("ord01jc1kvz0wjy8y4wa7mzad5s2t", requestId, ts);
 
     expect(
       verifyWebhookSignature({
         signatureHeader: `ts=${ts},v1=${v1}`,
         requestId,
-        dataId: "ABC123",
+        dataId: "ORD01JC1KVZ0WJY8Y4WA7MZAD5S2T",
       }),
     ).toBe(true);
   });

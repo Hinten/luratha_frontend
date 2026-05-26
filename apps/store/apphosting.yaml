@@ -24,9 +24,10 @@ env:
     availability:
       - RUNTIME
 
-  # Public key exposta ao browser para tokenizar o cartao (@mercadopago/sdk-js).
+  # Public key exposta ao browser para inicializar o Card Payment Brick
+  # (@mercadopago/sdk-react) que tokeniza o cartao na origem MP.
   # NEXT_PUBLIC_* e inlinado no bundle em BUILD time -> precisa de BUILD,
-  # senao o cardForm nao carrega os iframes.
+  # senao o Brick nao carrega.
   - variable: NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
     secret: mercadopago-public-key
     availability:
