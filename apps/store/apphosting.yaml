@@ -33,6 +33,17 @@ env:
     availability:
       - RUNTIME
 
+  # Email do test user comprador criado no painel MP (Suas integracoes → Sua
+  # aplicacao → Contas de teste). Formato: test_user_<N>@testuser.com.
+  # Em sandbox o servidor sobrescreve `payer.email` por esse valor antes de
+  # chamar o MP — sem isso, o cartao falha com `invalid_users_involved` (HTTP
+  # 402) porque o email "qualquer @testuser.com" resolve pro mesmo usuario do
+  # vendedor. Em producao a flag e ignorada.
+  - variable: MERCADOPAGO_SANDBOX_PAYER_EMAIL
+    value: ""
+    availability:
+      - RUNTIME
+
   # Public key exposta ao browser para inicializar o Card Payment Brick
   # (@mercadopago/sdk-react) que tokeniza o cartao na origem MP.
   # NEXT_PUBLIC_* e inlinado no bundle em BUILD time -> precisa de BUILD,
