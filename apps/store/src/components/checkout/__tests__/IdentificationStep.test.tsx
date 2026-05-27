@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { logger } from "@luratha/core/logging/logger";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
 import type { PaymentPayer } from "@/src/components/checkout/PaymentStep";
+
+vi.mock("@luratha/core/logging/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 function mockFetchResponse(init: { ok: boolean; status?: number; body?: unknown }) {
   return {
@@ -347,9 +357,7 @@ describe("IdentificationStep", () => {
   it("submit com PATCH 404 + PUT 4xx: exibe mensagem amigável e loga erro técnico", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    const consoleSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+    vi.mocked(logger.error).mockClear();
     fetchSpy
       .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404 }))
       .mockResolvedValueOnce(
@@ -377,20 +385,17 @@ describe("IdentificationStep", () => {
         screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
       ).toBeInTheDocument();
     });
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({ status: 400, message: "CPF inválido no perfil." }),
     );
     expect(onSubmit).not.toHaveBeenCalled();
-    consoleSpy.mockRestore();
   });
 
   it("submit com PATCH 4xx (não-404): exibe mensagem amigável e loga erro original", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    const consoleSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+    vi.mocked(logger.error).mockClear();
     fetchSpy.mockResolvedValue(
       mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
     );
@@ -416,7 +421,7 @@ describe("IdentificationStep", () => {
         screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
       ).toBeInTheDocument();
     });
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({
         status: 400,
@@ -424,7 +429,6 @@ describe("IdentificationStep", () => {
       }),
     );
     expect(onSubmit).not.toHaveBeenCalled();
-    consoleSpy.mockRestore();
   });
 
   it("submit com falha de rede (TypeError): exibe mensagem amigável de conexão", async () => {

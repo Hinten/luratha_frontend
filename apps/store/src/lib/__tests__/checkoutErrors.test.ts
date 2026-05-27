@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "@luratha/core/logging/logger";
 import { ApiResponseError } from "@/src/lib/errors";
 import {
   reportCheckoutError,
@@ -6,14 +7,19 @@ import {
   type ReportCheckoutErrorArgs,
 } from "@/src/lib/checkoutErrors";
 
-let consoleSpy: ReturnType<typeof vi.spyOn>;
+vi.mock("@luratha/core/logging/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+const loggerErrorMock = vi.mocked(logger.error);
 
 beforeEach(() => {
-  consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-});
-
-afterEach(() => {
-  consoleSpy.mockRestore();
+  loggerErrorMock.mockClear();
 });
 
 function callWith(
@@ -34,7 +40,7 @@ describe("reportCheckoutError — logging", () => {
   it("loga com prefixo do step e payload estruturado para ApiResponseError", () => {
     const err = new ApiResponseError("boom", 502, [], "provider_unavailable");
     callWith("shipping", err);
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:shipping]",
       expect.objectContaining({
         step: "shipping",
@@ -48,7 +54,7 @@ describe("reportCheckoutError — logging", () => {
 
   it("loga TypeError como erro de rede", () => {
     callWith("identification", new TypeError("Failed to fetch"));
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({
         errorName: "TypeError",
@@ -59,7 +65,7 @@ describe("reportCheckoutError — logging", () => {
 
   it("loga AbortError preservando o nome", () => {
     callWith("submit_order", abortError());
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:submit_order]",
       expect.objectContaining({
         errorName: "AbortError",
@@ -69,7 +75,7 @@ describe("reportCheckoutError — logging", () => {
 
   it("loga errorName='unknown' quando recebe string", () => {
     callWith("submit_order", "oops");
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:submit_order]",
       expect.objectContaining({
         errorName: "unknown",
@@ -80,7 +86,7 @@ describe("reportCheckoutError — logging", () => {
 
   it("loga errorName='unknown' quando recebe null sem lançar", () => {
     expect(() => callWith("submit_order", null)).not.toThrow();
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:submit_order]",
       expect.objectContaining({
         errorName: "unknown",
@@ -92,7 +98,7 @@ describe("reportCheckoutError — logging", () => {
     callWith("payment_card", new Error("brick"), {
       brickPayload: { type: "invalid" },
     });
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:payment_card]",
       expect.objectContaining({
         metadata: { brickPayload: { type: "invalid" } },
@@ -102,7 +108,7 @@ describe("reportCheckoutError — logging", () => {
 
   it("inclui timestamp ISO no payload", () => {
     callWith("coupon", new Error("x"));
-    const payload = consoleSpy.mock.calls[0][1] as { timestamp: string };
+    const payload = loggerErrorMock.mock.calls[0][1] as { timestamp: string };
     expect(payload.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
@@ -310,7 +316,7 @@ describe("reportCheckoutError — payment_card step", () => {
       { type: "invalid_card_number", cause: ["x"] },
       { brickPayload: { type: "invalid_card_number" } },
     );
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(loggerErrorMock).toHaveBeenCalledWith(
       "[checkout:payment_card]",
       expect.objectContaining({
         metadata: { brickPayload: { type: "invalid_card_number" } },

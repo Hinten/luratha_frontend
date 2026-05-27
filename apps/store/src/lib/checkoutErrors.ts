@@ -1,3 +1,4 @@
+import { logger } from "@luratha/core/logging/logger";
 import { ApiResponseError } from "@/src/lib/errors";
 
 /**
@@ -254,16 +255,16 @@ function pickFriendlyMessage(args: ReportCheckoutErrorArgs): string {
 }
 
 /**
- * Centraliza o tratamento de erros do checkout: registra um log estruturado
- * (console.error por enquanto — migra pro logger do projeto quando o PR #139
- * aterrissar) e devolve uma mensagem amigável em PT-BR para o cliente.
+ * Centraliza o tratamento de erros do checkout: emite um log estruturado via
+ * `@luratha/core/logging/logger` (severity ERROR → Cloud Logging classifica
+ * automaticamente em produção) e devolve uma mensagem amigável em PT-BR para
+ * o cliente.
  *
- * O payload do log mantém o formato estruturado (`step`, `errorName`, `status`,
- * `code`, `message`, `metadata`, `stack`) pronto para ser plugado num logger
- * remoto sem mudar os call sites.
+ * O payload (`step`, `errorName`, `status`, `code`, `message`, `metadata`,
+ * `stack`) é queryável no Logs Explorer via `jsonPayload.payload.<path>`.
  */
 export function reportCheckoutError(args: ReportCheckoutErrorArgs): string {
   const payload = buildLogPayload(args);
-  console.error(`[checkout:${args.step}]`, payload);
+  logger.error(`[checkout:${args.step}]`, payload);
   return pickFriendlyMessage(args);
 }
