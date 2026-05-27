@@ -150,29 +150,27 @@ describe("isMercadoPagoSandbox", () => {
       expect(isMercadoPagoSandbox("APP_USR-x")).toBe(true);
     });
 
-    it("ignora valor desconhecido e cai no fallback", () => {
+    it("joga PaymentProviderError quando o valor é desconhecido", () => {
       process.env.MERCADOPAGO_ENV = "staging";
-      expect(isMercadoPagoSandbox("TEST-x")).toBe(true);
-      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(false);
+      expect(() => isMercadoPagoSandbox("TEST-x")).toThrow(/MERCADOPAGO_ENV não configurado/);
     });
 
-    it("ignora string vazia e cai no fallback", () => {
+    it("joga PaymentProviderError quando MERCADOPAGO_ENV é string vazia", () => {
       process.env.MERCADOPAGO_ENV = "";
-      expect(isMercadoPagoSandbox("TEST-x")).toBe(true);
-      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(false);
+      expect(() => isMercadoPagoSandbox("TEST-x")).toThrow(/MERCADOPAGO_ENV não configurado/);
     });
   });
 
-  describe("fallback por prefixo do token (retrocompat)", () => {
-    it("retorna true para tokens com prefixo TEST-", () => {
-      expect(isMercadoPagoSandbox("TEST-1234567890")).toBe(true);
-      expect(isMercadoPagoSandbox("TEST-abc-xyz-456")).toBe(true);
+  describe("MERCADOPAGO_ENV ausente — falha explícita (config mandatória)", () => {
+    // O painel atual do MP nem sempre gera credenciais TEST com prefixo
+    // `TEST-`, então não dá pra inferir o ambiente do token. A função
+    // exige `MERCADOPAGO_ENV` setado pra evitar comportamento ambíguo.
+    it("joga PaymentProviderError quando MERCADOPAGO_ENV não está setado, mesmo com token TEST-", () => {
+      expect(() => isMercadoPagoSandbox("TEST-1234567890")).toThrow(/MERCADOPAGO_ENV não configurado/);
     });
 
-    it("retorna false para tokens de produção (sem prefixo)", () => {
-      expect(isMercadoPagoSandbox("APP_USR-1234567890")).toBe(false);
-      expect(isMercadoPagoSandbox("PROD-abc")).toBe(false);
-      expect(isMercadoPagoSandbox("")).toBe(false);
+    it("joga PaymentProviderError quando MERCADOPAGO_ENV não está setado, mesmo com token APP_USR-", () => {
+      expect(() => isMercadoPagoSandbox("APP_USR-1234567890")).toThrow(/MERCADOPAGO_ENV não configurado/);
     });
   });
 });

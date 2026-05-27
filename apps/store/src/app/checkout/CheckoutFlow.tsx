@@ -61,12 +61,27 @@ function isVisibleStepId(value: string | null): value is VisibleStepId {
   );
 }
 
+/**
+ * Snapshot dos totais do pedido no momento do submit. Preserva a apresentação
+ * do `OrderSummary` lateral depois que `clearCart()` esvazia o cart vivo —
+ * sem ele, o usuário fica olhando o QR PIX/boleto com a lateral toda zerada.
+ */
+interface PaidSnapshot {
+  items: CartItem[];
+  subtotal: number;
+  discountTotal: number;
+  shippingTotal: number;
+  grandTotal: number;
+  appliedCoupon: AppliedCoupon | null;
+}
+
 interface State {
   payer: PaymentPayer | null;
   address: Address | null;
   quote: ShippingQuote | null;
   appliedCoupon: AppliedCoupon | null;
   paymentResult: PaymentResultData | null;
+  paidSnapshot: PaidSnapshot | null;
   orderId: string | null;
   submitting: boolean;
   error: string | null;
@@ -81,7 +96,12 @@ type Action =
   | { type: "CLEAR_ERROR" }
   | { type: "TRY_AGAIN" }
   | { type: "SUBMIT_START" }
-  | { type: "SUBMIT_OK"; orderId: string; result: PaymentResultData }
+  | {
+      type: "SUBMIT_OK";
+      orderId: string;
+      result: PaymentResultData;
+      snapshot: PaidSnapshot;
+    }
   | { type: "SUBMIT_FAIL"; message: string };
 
 function reducer(state: State, action: Action): State {
@@ -99,7 +119,13 @@ function reducer(state: State, action: Action): State {
     case "CLEAR_ERROR":
       return { ...state, error: null };
     case "TRY_AGAIN":
-      return { ...state, paymentResult: null, orderId: null, error: null };
+      return {
+        ...state,
+        paymentResult: null,
+        paidSnapshot: null,
+        orderId: null,
+        error: null,
+      };
     case "SUBMIT_START":
       return { ...state, submitting: true, error: null };
     case "SUBMIT_OK":
@@ -108,6 +134,7 @@ function reducer(state: State, action: Action): State {
         submitting: false,
         orderId: action.orderId,
         paymentResult: action.result,
+        paidSnapshot: action.snapshot,
       };
     case "SUBMIT_FAIL":
       return { ...state, submitting: false, error: action.message };
@@ -121,6 +148,7 @@ function emptyInitial(): State {
     quote: null,
     appliedCoupon: null,
     paymentResult: null,
+    paidSnapshot: null,
     orderId: null,
     submitting: false,
     error: null,
@@ -401,12 +429,24 @@ export default function CheckoutFlow() {
         return;
       }
 
+      // Snapshot dos totais antes do `clearCart` chegar a zerar `items` via
+      // onSnapshot do Firestore — o `OrderSummary` lateral continua exibindo
+      // o que o usuário acabou de pagar mesmo com o cart real vazio.
+      const snapshot: PaidSnapshot = {
+        items: [...items],
+        subtotal,
+        discountTotal,
+        shippingTotal,
+        grandTotal,
+        appliedCoupon: state.appliedCoupon,
+      };
+
       // Dispatch SUBMIT_OK **antes** de qualquer clearCart pra garantir que
       // `state.paymentResult` está populado quando o snapshot Firestore
       // entregar `items=[]`. Sem isso, o cart-empty guard pode disparar
       // `router.replace("/carrinho")` antes do PaymentResult renderizar
       // (race entre o WebSocket do Firestore e o DELETE HTTP).
-      dispatch({ type: "SUBMIT_OK", orderId: created.id, result });
+      dispatch({ type: "SUBMIT_OK", orderId: created.id, result, snapshot });
 
       // Cartão **recusado/falhado** (status="failed") NÃO limpa o cart — o
       // user precisa do cart preservado pra clicar "Tentar outro método" e
@@ -440,7 +480,9 @@ export default function CheckoutFlow() {
       <header className={styles.stepperWrap}>
         <StepIndicator
           steps={VISIBLE_STEPS}
-          currentStep={activeStep === "result" ? "review" : activeStep}
+          // Na view "result" (QR PIX / boleto / cartão pending) mantemos o
+          // destaque em "Pagamento" — é o desfecho desse step, não da Revisão.
+          currentStep={activeStep === "result" ? "payment" : activeStep}
           // Desabilita cliques quando estamos na view de resultado (PIX/Boleto
           // gerado). Clicar num step ali destruiria o `state.paymentResult`
           // em memória e o user perderia o QR/link sem aviso — ele deve usar
@@ -596,12 +638,16 @@ export default function CheckoutFlow() {
         </main>
 
         <aside className={styles.aside}>
+          {/* Quando o pagamento foi confirmado (PIX/Boleto pendentes), lemos
+              do `paidSnapshot` em vez do cart vivo — `clearCart()` já zerou
+              `items` via Firestore onSnapshot, mas o usuário precisa
+              continuar vendo o resumo do que acabou de pagar. */}
           <OrderSummary
-            items={items}
-            subtotal={subtotal}
-            shippingTotal={shippingTotal}
-            discountTotal={discountTotal}
-            appliedCoupon={state.appliedCoupon}
+            items={state.paidSnapshot?.items ?? items}
+            subtotal={state.paidSnapshot?.subtotal ?? subtotal}
+            shippingTotal={state.paidSnapshot?.shippingTotal ?? shippingTotal}
+            discountTotal={state.paidSnapshot?.discountTotal ?? discountTotal}
+            appliedCoupon={state.paidSnapshot?.appliedCoupon ?? state.appliedCoupon}
           >
             {activeStep === "payment" && state.submitting && (
               <p className={styles.processing} aria-busy="true">
