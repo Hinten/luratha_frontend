@@ -1,5 +1,5 @@
 import { test, expect, type Route } from "@playwright/test";
-import { signInAsFixture } from "./_authHelpers";
+import { registerNewUser } from "./_authHelpers";
 import { seedFixtureCart } from "./_cartHelpers";
 
 /**
@@ -14,7 +14,7 @@ import { seedFixtureCart } from "./_cartHelpers";
  * a tokenização real é coberta por `paymentApi.cloud.test.ts` no server.
  */
 
-const FIXTURE_UID = process.env.E2E_FIXTURE_UID ?? "";
+const SKIP_CLOUD = process.env.E2E_CLOUD_SKIP === "1";
 const MOCK_ENABLED = process.env.NEXT_PUBLIC_E2E_MOCK_MP_BRICK === "1";
 
 const FIXTURE_PAYMENT_INTENT_CARD_PAID = {
@@ -106,23 +106,23 @@ async function mockCheckoutApis(page: import("@playwright/test").Page, uid: stri
 }
 
 test.describe("Checkout — cartão (Brick mockado)", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(() => {
     test.skip(
-      !FIXTURE_UID,
-      "E2E_FIXTURE_UID ausente — globalSetup pulou (sem credenciais Firebase).",
+      SKIP_CLOUD,
+      "E2E_CLOUD_SKIP=1 — sem credenciais Firebase, globalSetup pulou.",
     );
     test.skip(
       !MOCK_ENABLED,
       "NEXT_PUBLIC_E2E_MOCK_MP_BRICK não está '1' — Brick real não funciona em localhost.",
     );
-    await signInAsFixture(page);
   });
 
   test("submit do cartão envia cardToken correto e PaymentResult mostra Aprovado", async ({
     page,
   }) => {
-    await mockCheckoutApis(page, FIXTURE_UID);
-    await seedFixtureCart(FIXTURE_UID);
+    const uid = await registerNewUser(page);
+    await mockCheckoutApis(page, uid);
+    await seedFixtureCart(uid);
 
     // Intercepta payment-intent e captura o body submetido pra assertion.
     let capturedBody: Record<string, unknown> | null = null;

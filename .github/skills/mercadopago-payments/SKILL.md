@@ -162,16 +162,19 @@ mandatório no apphosting.yaml.
   `createCloudTestPrefix()`; clean up seeded docs in `afterAll`.
 - **E2E checkout** (`apps/store/e2e/checkout.spec.ts` PIX + Boleto;
   `apps/store/e2e/checkout-card.spec.ts` cartão): rodam contra `pnpm dev` no
-  CI (`e2e-cloud` job). O usuário fixture é criado uma vez por job pelo
-  `playwrightCloudSetup.globalSetup.ts` via Admin SDK (idempotente — reusa
-  entre runs) e suas credenciais são expostas via `process.env.E2E_FIXTURE_UID/
-  EMAIL/PASSWORD`. Cada spec faz login via UI (`signInAsFixture()` em
-  `e2e/_authHelpers.ts`) no `beforeEach` — só o cookie `__session` não
-  basta porque `CheckoutPage` é client component e checa `useAuth().user`
-  do Firebase client SDK (estado vive em IndexedDB). `/api/orders` e
-  `/api/checkout/payment-intent` são interceptados via `page.route` — não
-  batem em Firestore real nem na API do MP. O cartão usa o **mock do Brick**
-  (ver seção abaixo).
+  CI (`e2e-cloud` job). Cada teste **registra um user novo** via `/register`
+  UI (`registerNewUser()` em `e2e/_authHelpers.ts`) — só o cookie `__session`
+  não basta porque `CheckoutPage` é client component e checa
+  `useAuth().user` do Firebase client SDK (estado vive em IndexedDB), e
+  reusar um fixture user gerou race entre o snapshot inicial do `CartContext`
+  (que pode trazer cart pre-seeded) e o `seedFixtureCart` do teste. Depois do
+  register, o spec usa `seedFixtureCart(uid)` em `e2e/_cartHelpers.ts` pra
+  escrever o cart Firestore (via Admin SDK) — sem isso o `CheckoutFlow` guard
+  redireciona pra `/carrinho`. `/api/orders` e `/api/checkout/payment-intent`
+  são interceptados via `page.route` — não batem em Firestore real nem na API
+  do MP. O cartão usa o **mock do Brick** (ver seção abaixo). Trade-off:
+  ~3-4 users de lixo no projeto `luratha-96386` por PR run — Firebase aguenta
+  e dá pra limpar periodicamente.
 - Never make real MercadoPago API calls from the test suite.
 
 ## Pitfalls

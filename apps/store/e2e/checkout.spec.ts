@@ -1,20 +1,21 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { signInAsFixture } from "./_authHelpers";
+import { registerNewUser } from "./_authHelpers";
 import { seedFixtureCart } from "./_cartHelpers";
 
 /**
  * Checkout — fluxos PIX e Boleto.
  *
- * O usuário fixture é criado uma vez pelo `playwrightCloudSetup.globalSetup.ts`
- * (idempotente entre runs); cada teste faz login via UI no beforeEach (popula
- * o Firebase Auth client SDK que o `AuthContext` escuta). Sem credenciais
- * Firebase no ambiente, os tests de happy-path pulam sozinhos.
+ * Cada teste registra um usuário novo via `/register` (UI) no beforeEach —
+ * isso popula cookie `__session` + Firebase Auth client SDK (IndexedDB) +
+ * UserProfile de forma consistente, sem race entre snapshot inicial do
+ * `CartContext` e o `seedFixtureCart`. Sem credenciais Firebase, os tests
+ * pulam sozinhos via `E2E_CLOUD_SKIP`.
  *
  * O fluxo de cartão vive em `checkout-card.spec.ts` porque depende do mock do
  * Brick (gated em `NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1`).
  */
 
-const FIXTURE_UID = process.env.E2E_FIXTURE_UID ?? "";
+const SKIP_CLOUD = process.env.E2E_CLOUD_SKIP === "1";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -189,19 +190,19 @@ test.describe("Checkout — guards e UI", () => {
 // ── Happy paths (login via UI + APIs mockadas) ──────────────────────────────
 
 test.describe("Checkout — happy paths", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(() => {
     test.skip(
-      !FIXTURE_UID,
-      "E2E_FIXTURE_UID ausente — globalSetup pulou (sem credenciais Firebase).",
+      SKIP_CLOUD,
+      "E2E_CLOUD_SKIP=1 — sem credenciais Firebase, globalSetup pulou.",
     );
-    await signInAsFixture(page);
   });
 
   test("PIX: 5 steps → PaymentResult com QR Code", async ({ page }) => {
-    await mockCheckoutApis(page, FIXTURE_UID, {
+    const uid = await registerNewUser(page);
+    await mockCheckoutApis(page, uid, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_PIX,
     });
-    await seedFixtureCart(FIXTURE_UID);
+    await seedFixtureCart(uid);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);
@@ -219,10 +220,11 @@ test.describe("Checkout — happy paths", () => {
   });
 
   test("Boleto: 5 steps → PaymentResult com link do boleto", async ({ page }) => {
-    await mockCheckoutApis(page, FIXTURE_UID, {
+    const uid = await registerNewUser(page);
+    await mockCheckoutApis(page, uid, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_BOLETO,
     });
-    await seedFixtureCart(FIXTURE_UID);
+    await seedFixtureCart(uid);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);
