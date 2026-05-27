@@ -3,14 +3,14 @@ import {
   MP_API_BASE_URL,
   resolveMercadoPagoConfig,
   resolveWebhookSecret,
-} from "@/src/lib/payment/mercadoPago/client";
+} from "./client";
 import {
   type CreatePaymentInput,
   type PaymentIntentResult,
   type PaymentStatus,
   PaymentProviderError,
   type ProviderPaymentSummary,
-} from "@/src/lib/payment/types";
+} from "../types";
 
 /**
  * Adapter do MercadoPago — Checkout API via Orders (`POST /v1/orders`).

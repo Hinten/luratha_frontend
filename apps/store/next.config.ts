@@ -79,6 +79,7 @@ const nextConfig: NextConfig = {
     "@luratha/firestore",
     "@luratha/core",
     "@luratha/auth",
+    "@luratha/payments",
     "@luratha/repositories",
   ],
   serverExternalPackages: ["firebase", "firebase-admin"],

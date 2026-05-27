@@ -1,14 +1,14 @@
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
-import { createOrder, getOrder } from "@/src/lib/payment/mercadoPago";
+import { createOrder, getOrder } from "./mercadoPago";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
   type PaymentPayerAddress,
   type PaymentStatus,
   PaymentProviderError,
-} from "@/src/lib/payment/types";
+} from "./types";
 
 /**
  * Orquestração de pagamento: carrega/atualiza a Order via Admin SDK e delega

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { verifyWebhookSignature } from "@/src/lib/payment/mercadoPago";
-import { applyOrderWebhook } from "@/src/lib/payment/service";
-import { PaymentProviderError } from "@/src/lib/payment/types";
+import {
+  applyOrderWebhook,
+  PaymentProviderError,
+  verifyWebhookSignature,
+} from "@luratha/payments";
 
 export const runtime = "nodejs";
 

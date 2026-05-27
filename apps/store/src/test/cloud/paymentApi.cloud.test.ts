@@ -1,11 +1,14 @@
 /**
- * Cloud integration tests for the checkout payment endpoints.
+ * Cloud integration tests for the checkout payment-intent endpoint.
  *
  * Exercises the real Firestore path (project luratha-96386): the payment-intent
- * handler persisting `paymentIntentId` on the Order, and the MercadoPago webhook
- * advancing `paymentStatus` to `paid`.
+ * handler persisting `paymentIntentId` on the Order.
  *
  * The MercadoPago SDK adapter is mocked — no real calls to MercadoPago are made.
+ *
+ * The webhook scenarios that used to live here moved to
+ * `apps/mercadopago/src/test/cloud/webhook.cloud.test.ts` when the webhook was
+ * split into its own app.
  *
  * Execute: npm run test:firestore
  * The suite is automatically skipped when credentials are not available.
@@ -49,17 +52,18 @@ vi.mock("@luratha/auth/requireUser", () => {
 });
 
 // ── MercadoPago adapter mock (no real provider calls) ──────────────────────
+// The orderService uses createOrder/getOrder internally — by mocking the
+// adapter subpath we let the real createPaymentIntent run against Firestore.
 const mp = vi.hoisted(() => ({
   createOrder: vi.fn(),
   getOrder: vi.fn(),
   verifyWebhookSignature: vi.fn(() => true),
   mapMpStatus: vi.fn(),
 }));
-vi.mock("@/src/lib/payment/mercadoPago", () => mp);
+vi.mock("@luratha/payments/mercadoPago", () => mp);
 
 import { POST as ordersPOST } from "@/src/app/api/orders/route";
 import { POST as paymentIntentPOST } from "@/src/app/api/checkout/payment-intent/route";
-import { POST as webhookPOST } from "@/src/app/api/webhooks/mercadopago/route";
 
 type SeedDocument = { collection: string; id: string };
 
@@ -99,7 +103,7 @@ function buildOrderPayload(userId: string) {
   };
 }
 
-describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
+describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const userId = `${prefix}-user`;
   const seededDocs: SeedDocument[] = [];
@@ -162,72 +166,5 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
       .withConverter(adminOrderConverter)
       .get();
     expect(persisted.data()?.paymentIntentId).toBe("mp-cloud-001");
-  });
-
-  it("webhook advances the order to paid", async () => {
-    const orderId = await seedOrder();
-
-    mp.getOrder.mockResolvedValueOnce({
-      paymentId: "mp-cloud-002",
-      status: "paid",
-      orderId,
-      approvedAt: "2026-05-19T12:00:00.000Z",
-    });
-
-    const res = await webhookPOST(
-      new Request("http://localhost/api/webhooks/mercadopago", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-signature": "ts=1,v1=mocked",
-          "x-request-id": "req-cloud-1",
-        },
-        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-002" } }),
-      }),
-    );
-
-    expect(res.status).toBe(200);
-    const outcome = (await res.json()) as { changed: boolean; status: string };
-    expect(outcome.changed).toBe(true);
-    expect(outcome.status).toBe("paid");
-
-    const persisted = await adminDb
-      .collection(firestoreCollections.orders)
-      .doc(orderId)
-      .withConverter(adminOrderConverter)
-      .get();
-    const order = persisted.data();
-    expect(order?.paymentStatus).toBe("paid");
-    expect(order?.status).toBe("paid");
-    expect(order?.paidAt).toBe("2026-05-19T12:00:00.000Z");
-  });
-
-  it("webhook is idempotent on a repeated notification", async () => {
-    const orderId = await seedOrder();
-
-    mp.getOrder.mockResolvedValue({
-      paymentId: "ORD-cloud-003",
-      status: "paid",
-      orderId,
-      approvedAt: "2026-05-19T12:00:00.000Z",
-    });
-
-    const makeRequest = () =>
-      new Request("http://localhost/api/webhooks/mercadopago", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-signature": "ts=1,v1=mocked",
-          "x-request-id": "req-cloud-2",
-        },
-        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-003" } }),
-      });
-
-    const first = await webhookPOST(makeRequest());
-    expect((await first.json()).changed).toBe(true);
-
-    const second = await webhookPOST(makeRequest());
-    expect(second.status).toBe(200);
-    expect((await second.json()).changed).toBe(false);
   });
 });

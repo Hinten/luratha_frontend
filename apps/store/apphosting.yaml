@@ -17,13 +17,6 @@ env:
     availability:
       - RUNTIME
 
-  # Secret de assinatura dos webhooks (painel MP -> Webhooks). Valida o header
-  # x-signature em POST /api/webhooks/mercadopago.
-  - variable: MERCADOPAGO_WEBHOOK_SECRET
-    secret: mercadopago-webhook-secret
-    availability:
-      - RUNTIME
-
   # Ambiente da API: "sandbox" ou "production". Necessário porque as credenciais
   # TEST do painel MP nem sempre comecam com TEST-; sem essa flag, o rewrite do
   # payer.email pra @testuser.com (exigido em sandbox) nao acontece e o cartao

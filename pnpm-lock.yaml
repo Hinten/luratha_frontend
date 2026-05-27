@@ -88,6 +88,67 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
 
+  apps/mercadopago:
+    dependencies:
+      '@luratha/firestore':
+        specifier: workspace:*
+        version: link:../../packages/firestore
+      '@luratha/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
+      '@luratha/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      firebase:
+        specifier: ^12.13.0
+        version: 12.13.0
+      firebase-admin:
+        specifier: ^13.10.0
+        version: 13.10.0
+      next:
+        specifier: 16.2.6
+        version: 16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: 19.2.6
+        version: 19.2.6
+      react-dom:
+        specifier: 19.2.6
+        version: 19.2.6(react@19.2.6)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.14)
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: 16.2.6
+        version: 16.2.6(@typescript-eslint/parser@8.59.4(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      tsx:
+        specifier: ^4.22.1
+        version: 4.22.2
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite-tsconfig-paths:
+        specifier: ^6.1.1
+        version: 6.1.1(typescript@5.9.3)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
+
   apps/store:
     dependencies:
       '@hookform/resolvers':
@@ -102,6 +163,9 @@ importers:
       '@luratha/firestore':
         specifier: workspace:*
         version: link:../../packages/firestore
+      '@luratha/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
       '@luratha/repositories':
         specifier: workspace:*
         version: link:../../packages/repositories
@@ -271,6 +335,31 @@ importers:
       vitest:
         specifier: ^4.1.6
         version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
+
+  packages/payments:
+    dependencies:
+      '@luratha/firestore':
+        specifier: workspace:*
+        version: link:../firestore
+      '@luratha/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      firebase-admin:
+        specifier: ^13.10.0
+        version: 13.10.0
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.7.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/repositories:
     dependencies:
