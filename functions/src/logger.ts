@@ -13,6 +13,22 @@
 
 type Severity = "DEBUG" | "INFO" | "WARNING" | "ERROR";
 
+const PRETTY = process.env.NODE_ENV === "development";
+
+const TAG: Record<Severity, string> = {
+  DEBUG: "[DEBUG]",
+  INFO: "[INFO]",
+  WARNING: "[WARN]",
+  ERROR: "[ERROR]",
+};
+
+const ANSI: Record<Severity, string> = {
+  DEBUG: "\x1b[90m",
+  INFO: "\x1b[36m",
+  WARNING: "\x1b[33m",
+  ERROR: "\x1b[31m",
+};
+
 function errorReplacer(_key: string, value: unknown): unknown {
   if (value instanceof Error) {
     const err = value as Error & Record<string, unknown>;
@@ -29,7 +45,27 @@ function errorReplacer(_key: string, value: unknown): unknown {
   return value;
 }
 
+function emitPretty(severity: Severity, message: string, payload?: unknown): void {
+  const isTty = Boolean(process.stdout?.isTTY);
+  const prefix = isTty ? `${ANSI[severity]}${TAG[severity]}\x1b[0m` : TAG[severity];
+  const sink =
+    severity === "ERROR"
+      ? console.error
+      : severity === "WARNING"
+        ? console.warn
+        : console.log;
+  if (payload !== undefined) {
+    sink(`${prefix} ${message}`, payload);
+  } else {
+    sink(`${prefix} ${message}`);
+  }
+}
+
 function emit(severity: Severity, message: string, payload?: unknown): void {
+  if (PRETTY) {
+    emitPretty(severity, message, payload);
+    return;
+  }
   const entry: Record<string, unknown> = { severity, message };
   if (payload !== undefined) {
     entry.payload = payload;

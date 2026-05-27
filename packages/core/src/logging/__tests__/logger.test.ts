@@ -101,3 +101,73 @@ describe("logger", () => {
     expect(() => JSON.parse(lines[1])).not.toThrow();
   });
 });
+
+describe("logger pretty mode (NODE_ENV=development)", () => {
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+  // Use a separate logger instance whose module was loaded with
+  // NODE_ENV=development, since the PRETTY gate is evaluated at import time.
+  let prettyLogger: typeof import("../logger").logger;
+
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.resetModules();
+    prettyLogger = (await import("../logger")).logger;
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("routes logger.error to console.error", () => {
+    prettyLogger.error("[t] boom");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    const [first] = errorSpy.mock.calls[0];
+    expect(String(first)).toContain("[ERROR]");
+    expect(String(first)).toContain("[t] boom");
+  });
+
+  it("routes logger.warn to console.warn", () => {
+    prettyLogger.warn("[t] mild");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    const [first] = warnSpy.mock.calls[0];
+    expect(String(first)).toContain("[WARN]");
+    expect(String(first)).toContain("[t] mild");
+  });
+
+  it("routes logger.info and logger.debug to console.log", () => {
+    prettyLogger.info("[t] info");
+    prettyLogger.debug("[t] debug");
+    expect(logSpy).toHaveBeenCalledTimes(2);
+    expect(String(logSpy.mock.calls[0][0])).toContain("[INFO]");
+    expect(String(logSpy.mock.calls[1][0])).toContain("[DEBUG]");
+  });
+
+  it("passes payload as a separate argument (not stringified into the message)", () => {
+    const payload = { attempt: 2, reason: "transient" };
+    prettyLogger.warn("[t] retry", payload);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [first, second] = warnSpy.mock.calls[0];
+    expect(String(first)).toContain("[t] retry");
+    expect(String(first)).not.toContain("attempt");
+    expect(second).toBe(payload);
+  });
+
+  it("omits the payload arg entirely when no payload is given", () => {
+    prettyLogger.info("[t] no payload");
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy.mock.calls[0]).toHaveLength(1);
+  });
+});

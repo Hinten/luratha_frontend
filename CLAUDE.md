@@ -190,7 +190,9 @@ logger.error("[scope] op failed", { context, err });
 
 The `payload` (second arg, optional) is serialized through `serializeLogPayload`: `Error` instances become `{ name, message, ...customProps }` (stack omitted — Cloud Logging keeps stacks separately), and cycles/`BigInt` fall back to a `String(payload)` representation. Payload fields are queryable in Logs Explorer via `jsonPayload.payload.<path>`.
 
-Never call `console.error` / `console.warn` with a payload object — Cloud Logging splits `util.inspect` output across separate entries AND maps stderr to severity ERROR regardless of intent. Pure progress strings without a payload (`console.log("starting…")`) are still fine.
+In application code, never call `console.error` / `console.warn` with a payload object — Cloud Logging splits `util.inspect` output across separate entries AND maps stderr to severity ERROR regardless of intent. Pure progress strings without a payload (`console.log("starting…")`) are still fine. The logger itself is allowed to route to `console.warn`/`console.error` internally, but only behind a `NODE_ENV === "development"` gate: production and test always take the single-line `console.log` JSON path.
+
+When `NODE_ENV === "development"` (i.e. `pnpm dev`), the logger switches to a human-friendly pretty mode: a colored `[INFO]`/`[WARN]`/`[ERROR]` tag, severity-routed `console.*` for native terminal/DevTools highlighting, and the payload as a separate arg (so Node's `util.inspect` and DevTools both render it natively). Production stays 100% JSON.
 
 For `functions/` (separate npm project outside the pnpm workspace), use the local `functions/src/logger.ts` copy — same shape, kept in sync by hand.
 
