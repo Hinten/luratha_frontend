@@ -112,15 +112,68 @@ describe("describeMercadoPagoError", () => {
 });
 
 describe("isMercadoPagoSandbox", () => {
-  it("retorna true para tokens com prefixo TEST-", () => {
-    expect(isMercadoPagoSandbox("TEST-1234567890")).toBe(true);
-    expect(isMercadoPagoSandbox("TEST-abc-xyz-456")).toBe(true);
+  const ORIGINAL_ENV = process.env.MERCADOPAGO_ENV;
+
+  beforeEach(() => {
+    delete process.env.MERCADOPAGO_ENV;
   });
 
-  it("retorna false para tokens de produção (sem prefixo)", () => {
-    expect(isMercadoPagoSandbox("APP_USR-1234567890")).toBe(false);
-    expect(isMercadoPagoSandbox("PROD-abc")).toBe(false);
-    expect(isMercadoPagoSandbox("")).toBe(false);
+  afterEach(() => {
+    if (ORIGINAL_ENV === undefined) {
+      delete process.env.MERCADOPAGO_ENV;
+    } else {
+      process.env.MERCADOPAGO_ENV = ORIGINAL_ENV;
+    }
+  });
+
+  describe("MERCADOPAGO_ENV override", () => {
+    it("força sandbox quando MERCADOPAGO_ENV=sandbox, mesmo com token sem prefixo TEST-", () => {
+      process.env.MERCADOPAGO_ENV = "sandbox";
+      expect(isMercadoPagoSandbox("APP_USR-1234567890")).toBe(true);
+      expect(isMercadoPagoSandbox("anycredential")).toBe(true);
+    });
+
+    it("força produção quando MERCADOPAGO_ENV=production, mesmo com token TEST-", () => {
+      process.env.MERCADOPAGO_ENV = "production";
+      expect(isMercadoPagoSandbox("TEST-1234567890")).toBe(false);
+    });
+
+    it("normaliza case (SANDBOX/Production) via toLowerCase", () => {
+      process.env.MERCADOPAGO_ENV = "SANDBOX";
+      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(true);
+      process.env.MERCADOPAGO_ENV = "Production";
+      expect(isMercadoPagoSandbox("TEST-x")).toBe(false);
+    });
+
+    it("trata espaços em volta (trim)", () => {
+      process.env.MERCADOPAGO_ENV = "  sandbox  ";
+      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(true);
+    });
+
+    it("ignora valor desconhecido e cai no fallback", () => {
+      process.env.MERCADOPAGO_ENV = "staging";
+      expect(isMercadoPagoSandbox("TEST-x")).toBe(true);
+      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(false);
+    });
+
+    it("ignora string vazia e cai no fallback", () => {
+      process.env.MERCADOPAGO_ENV = "";
+      expect(isMercadoPagoSandbox("TEST-x")).toBe(true);
+      expect(isMercadoPagoSandbox("APP_USR-x")).toBe(false);
+    });
+  });
+
+  describe("fallback por prefixo do token (retrocompat)", () => {
+    it("retorna true para tokens com prefixo TEST-", () => {
+      expect(isMercadoPagoSandbox("TEST-1234567890")).toBe(true);
+      expect(isMercadoPagoSandbox("TEST-abc-xyz-456")).toBe(true);
+    });
+
+    it("retorna false para tokens de produção (sem prefixo)", () => {
+      expect(isMercadoPagoSandbox("APP_USR-1234567890")).toBe(false);
+      expect(isMercadoPagoSandbox("PROD-abc")).toBe(false);
+      expect(isMercadoPagoSandbox("")).toBe(false);
+    });
   });
 });
 
