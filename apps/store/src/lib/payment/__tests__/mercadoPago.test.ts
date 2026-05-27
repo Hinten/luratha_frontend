@@ -178,6 +178,20 @@ describe("isMercadoPagoSandbox", () => {
 });
 
 describe("withSandboxEmail", () => {
+  const ORIGINAL_PAYER_EMAIL = process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL;
+
+  beforeEach(() => {
+    delete process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL;
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_PAYER_EMAIL === undefined) {
+      delete process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL;
+    } else {
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = ORIGINAL_PAYER_EMAIL;
+    }
+  });
+
   function pixInput(email: string): CreatePaymentInput {
     return {
       paymentMethod: "pix",
@@ -193,32 +207,66 @@ describe("withSandboxEmail", () => {
     };
   }
 
-  it("reescreve o domínio mantendo o local-part quando não termina em @testuser.com", () => {
-    const result = withSandboxEmail(pixInput("francelino25lucas@gmail.com"));
-    expect(result.payer.email).toBe("francelino25lucas@testuser.com");
+  describe("MERCADOPAGO_SANDBOX_PAYER_EMAIL setada — força o test user explícito", () => {
+    it("sobrescreve o email original pelo email do test user comprador", () => {
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "test_user_123@testuser.com";
+      const result = withSandboxEmail(pixInput("francelino25lucas@gmail.com"));
+      expect(result.payer.email).toBe("test_user_123@testuser.com");
+    });
+
+    it("sobrescreve mesmo se o email original já estava em @testuser.com (mas diferente)", () => {
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "test_user_123@testuser.com";
+      const result = withSandboxEmail(pixInput("francelino25lucas@testuser.com"));
+      expect(result.payer.email).toBe("test_user_123@testuser.com");
+    });
+
+    it("é idempotente quando o email já bate com a env", () => {
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "test_user_123@testuser.com";
+      const input = pixInput("test_user_123@testuser.com");
+      const result = withSandboxEmail(input);
+      expect(result).toBe(input);
+    });
+
+    it("trata espaços em volta (trim) e ignora string vazia", () => {
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "  test_user_99@testuser.com  ";
+      expect(withSandboxEmail(pixInput("real@gmail.com")).payer.email).toBe(
+        "test_user_99@testuser.com",
+      );
+      process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "   ";
+      // Vazio após trim → fallback no rewrite de domínio.
+      expect(withSandboxEmail(pixInput("real@gmail.com")).payer.email).toBe(
+        "real@testuser.com",
+      );
+    });
   });
 
-  it("é idempotente quando o email já termina em @testuser.com", () => {
-    const input = pixInput("francelino25lucas@testuser.com");
-    const result = withSandboxEmail(input);
-    expect(result.payer.email).toBe("francelino25lucas@testuser.com");
-    // Mesma referência indica nenhum reprocessamento.
-    expect(result).toBe(input);
-  });
+  describe("fallback — rewrite de domínio quando env não está setada", () => {
+    it("reescreve o domínio mantendo o local-part quando não termina em @testuser.com", () => {
+      const result = withSandboxEmail(pixInput("francelino25lucas@gmail.com"));
+      expect(result.payer.email).toBe("francelino25lucas@testuser.com");
+    });
 
-  it("preserva os demais campos do payer e do input", () => {
-    const input = pixInput("user@example.com");
-    const result = withSandboxEmail(input);
-    expect(result.payer.firstName).toBe("Lucas");
-    expect(result.payer.lastName).toBe("Francelino");
-    expect(result.payer.identification).toEqual({ type: "CPF", number: "12345678909" });
-    expect(result.orderId).toBe("ord_test_123");
-    expect(result.amount).toBe(99.9);
-  });
+    it("é idempotente quando o email já termina em @testuser.com", () => {
+      const input = pixInput("francelino25lucas@testuser.com");
+      const result = withSandboxEmail(input);
+      expect(result.payer.email).toBe("francelino25lucas@testuser.com");
+      expect(result).toBe(input);
+    });
 
-  it("usa 'test' como fallback de local-part quando o email começa com @", () => {
-    const result = withSandboxEmail(pixInput("@gmail.com"));
-    expect(result.payer.email).toBe("test@testuser.com");
+    it("preserva os demais campos do payer e do input", () => {
+      const input = pixInput("user@example.com");
+      const result = withSandboxEmail(input);
+      expect(result.payer.firstName).toBe("Lucas");
+      expect(result.payer.lastName).toBe("Francelino");
+      expect(result.payer.identification).toEqual({ type: "CPF", number: "12345678909" });
+      expect(result.orderId).toBe("ord_test_123");
+      expect(result.amount).toBe(99.9);
+    });
+
+    it("usa 'test' como fallback de local-part quando o email começa com @", () => {
+      const result = withSandboxEmail(pixInput("@gmail.com"));
+      expect(result.payer.email).toBe("test@testuser.com");
+    });
   });
 });
 

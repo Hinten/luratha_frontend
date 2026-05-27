@@ -44,20 +44,31 @@ export function isMercadoPagoSandbox(accessToken: string): boolean {
 
 /**
  * Em sandbox, o MP rejeita pagamentos cujo `payer.email` não termina em
- * `@testuser.com` (erro `invalid_email_for_sandbox`, doc oficial da API de
- * Orders). O rewrite é transparente: pegamos o local-part do email real,
- * substituímos o domínio por `@testuser.com` e seguimos. A UI continua
- * exibindo o email real do usuário — apenas o payload enviado pro MP muda.
+ * `@testuser.com` (`invalid_email_for_sandbox`) e ainda exige que o email
+ * resolva pra um **test user comprador** distinto do vendedor — sem isso, o
+ * pagamento volta com `invalid_users_involved` (HTTP 402). A UI sempre exibe
+ * o email real do usuário; apenas o payload enviado pro MP muda.
  *
- * Idempotente: se já termina em `@testuser.com`, retorna o input inalterado.
+ * Resolução do email enviado:
+ *   1. `MERCADOPAGO_SANDBOX_PAYER_EMAIL` setado → usa esse valor exato. É o
+ *      caminho confiável: deve ser o email do test user comprador criado no
+ *      painel MP (formato `test_user_<NN>@testuser.com`).
+ *   2. Caso contrário, fallback: troca o domínio pra `@testuser.com`
+ *      preservando o local-part. Resolve o `invalid_email_for_sandbox` mas
+ *      pode bater em `invalid_users_involved` se o email gerado coincidir
+ *      com o vendedor.
+ *
+ * Idempotente: se o email do input já bate com o destino, retorna inalterado.
  */
 export function withSandboxEmail(input: CreatePaymentInput): CreatePaymentInput {
-  const email = input.payer.email;
-  if (email.endsWith("@testuser.com")) return input;
-  const localPart = email.split("@")[0] || "test";
+  const configured = process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL?.trim();
+  const target = configured && configured.length > 0
+    ? configured
+    : `${input.payer.email.split("@")[0] || "test"}@testuser.com`;
+  if (input.payer.email === target) return input;
   return {
     ...input,
-    payer: { ...input.payer, email: `${localPart}@testuser.com` },
+    payer: { ...input.payer, email: target },
   };
 }
 
@@ -398,11 +409,12 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
   const sandbox = isMercadoPagoSandbox(accessToken);
   const effectiveInput = sandbox ? withSandboxEmail(input) : input;
   if (sandbox && effectiveInput.payer.email !== input.payer.email) {
-    // Log informativo pra confirmar nos logs do servidor que o rewrite
-    // efetivamente rodou. Útil em deploys onde o cartão ainda falhava com
-    // `invalid_email_for_sandbox` por ambiente mal detectado.
+    // Log informativo pra confirmar nos logs do servidor qual email
+    // efetivamente foi enviado ao MP. Útil pra diferenciar uso de
+    // MERCADOPAGO_SANDBOX_PAYER_EMAIL (test user explícito) do fallback
+    // de domínio (que ainda pode bater em `invalid_users_involved`).
     console.info(
-      "[mercadoPago] sandbox detected — payer.email rewritten to @testuser.com",
+      `[mercadoPago] sandbox detected — payer.email rewritten to ${effectiveInput.payer.email}`,
     );
   }
   const body = buildOrderBody(effectiveInput);
