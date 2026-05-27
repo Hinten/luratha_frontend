@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { logger } from "@luratha/core/logging/logger";
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -9,7 +10,7 @@ interface ErrorProps {
 
 export default function CheckoutError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error("[checkout] route error", error);
+    logger.error("[checkout] route error", { error, digest: error.digest });
   }, [error]);
 
   return (
