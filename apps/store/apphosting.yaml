@@ -24,9 +24,30 @@ env:
     availability:
       - RUNTIME
 
-  # Public key exposta ao browser para tokenizar o cartao (@mercadopago/sdk-js).
+  # Ambiente da API: "sandbox" ou "production". Necessário porque as credenciais
+  # TEST do painel MP nem sempre comecam com TEST-; sem essa flag, o rewrite do
+  # payer.email pra @testuser.com (exigido em sandbox) nao acontece e o cartao
+  # falha com `invalid_email_for_sandbox`. Lido em isMercadoPagoSandbox().
+  - variable: MERCADOPAGO_ENV
+    value: "sandbox"
+    availability:
+      - RUNTIME
+
+  # Email do test user comprador criado no painel MP (Suas integracoes → Sua
+  # aplicacao → Contas de teste). Formato: test_user_<N>@testuser.com.
+  # Em sandbox o servidor sobrescreve `payer.email` por esse valor antes de
+  # chamar o MP — sem isso, o cartao falha com `invalid_users_involved` (HTTP
+  # 402) porque o email "qualquer @testuser.com" resolve pro mesmo usuario do
+  # vendedor. Em producao a flag e ignorada.
+  - variable: MERCADOPAGO_SANDBOX_PAYER_EMAIL
+    value: "test_user_6882404001016965566@testuser.com"
+    availability:
+      - RUNTIME
+
+  # Public key exposta ao browser para inicializar o Card Payment Brick
+  # (@mercadopago/sdk-react) que tokeniza o cartao na origem MP.
   # NEXT_PUBLIC_* e inlinado no bundle em BUILD time -> precisa de BUILD,
-  # senao o cardForm nao carrega os iframes.
+  # senao o Brick nao carrega.
   - variable: NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
     secret: mercadopago-public-key
     availability:

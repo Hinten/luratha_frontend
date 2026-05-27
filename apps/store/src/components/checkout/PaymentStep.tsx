@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
-import {
-  mountCardForm,
-  CardFormError,
-  type CardFormHandle,
-} from "@/src/lib/mercadopago/cardForm";
-import { formatCpf } from "@/src/lib/format/cpf";
+import { useState, type ReactElement } from "react";
+import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
+import Spinner from "@/src/components/Spinner";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -52,35 +45,11 @@ export interface PaymentStepProps {
     city: string;
     state: string;
   };
-  /** Defaults vindos do UserProfile carregado no CheckoutFlow. */
-  defaultEmail?: string;
-  defaultFirstName?: string;
-  defaultLastName?: string;
-  /** CPF mascarado (123.456.789-00) ou CNPJ mascarado. */
-  defaultIdentificationNumber?: string;
-  defaultIdentificationType?: "CPF" | "CNPJ";
+  /** Dados do pagador já confirmados no step "Seus dados". */
+  payer: PaymentPayer;
   onSubmit: (payload: PaymentSubmitPayload) => Promise<void>;
   onBack: () => void;
 }
-
-/**
- * IDs fixos que o cardForm SDK do MercadoPago usa pra ler campos do DOM.
- * Mantemos esses IDs **sempre** nos inputs (email/identificationType/
- * identificationNumber/cardholderName) — independente da aba ativa —
- * pra não ter que trocar atributos em runtime e pra o SDK funcionar
- * assim que monta.
- */
-const CARD_FORM_IDS = {
-  formId: "luratha-card-form",
-  cardNumber: "luratha-card-number",
-  expirationDate: "luratha-card-expiry",
-  securityCode: "luratha-card-cvv",
-  cardholderName: "luratha-card-name",
-  installments: "luratha-card-installments",
-  identificationType: "luratha-card-id-type",
-  identificationNumber: "luratha-card-id-number",
-  cardholderEmail: "luratha-card-email",
-};
 
 const TABS: { id: PaymentMethod; label: string }[] = [
   { id: "pix", label: "PIX" },
@@ -88,187 +57,222 @@ const TABS: { id: PaymentMethod; label: string }[] = [
   { id: "boleto", label: "Boleto" },
 ];
 
-function makeDefaults(props: PaymentStepProps): PayerFormInput {
-  return {
-    email: props.defaultEmail ?? "",
-    firstName: props.defaultFirstName ?? "",
-    lastName: props.defaultLastName ?? "",
-    identificationType: props.defaultIdentificationType ?? "CPF",
-    identificationNumber: props.defaultIdentificationNumber ?? "",
-    cardholderName: "",
-  };
+/**
+ * `initMercadoPago` é idempotente — múltiplas chamadas com a mesma chave são
+ * no-op. Chamamos uma vez no module-load pra garantir que o Brick consiga
+ * renderizar assim que o tab Cartão for selecionado.
+ *
+ * A public key vem do bundle (NEXT_PUBLIC_*, inlinada em build time). Quando
+ * ausente — ex.: dev sem .env.local — o Brick falha em runtime; preferimos isso
+ * a falhar no import porque PIX/Boleto continuam funcionando.
+ */
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "";
+if (typeof window !== "undefined" && MP_PUBLIC_KEY) {
+  initMercadoPago(MP_PUBLIC_KEY, { locale: "pt-BR" });
+}
+
+/** Ícone de cadeado — comunica segurança no overlay do Brick. */
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+/** Ícone PIX — quadrados nos 4 cantos formando o logo do PIX. */
+function PixIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M9.4 3.6 3.6 9.4a3.6 3.6 0 0 0 0 5.2l5.8 5.8a3.6 3.6 0 0 0 5.2 0l5.8-5.8a3.6 3.6 0 0 0 0-5.2L14.6 3.6a3.6 3.6 0 0 0-5.2 0Z" />
+      <path d="m7 9 3.5 3.5a2 2 0 0 0 2.8 0L17 9" />
+      <path d="m7 15 3.5-3.5a2 2 0 0 1 2.8 0L17 15" />
+    </svg>
+  );
+}
+
+/** Ícone do Boleto — código de barras estilizado. */
+function BoletoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="1.5" />
+      <line x1="7" y1="9" x2="7" y2="15" />
+      <line x1="9.5" y1="9" x2="9.5" y2="15" strokeWidth="2.5" />
+      <line x1="12.5" y1="9" x2="12.5" y2="15" />
+      <line x1="15" y1="9" x2="15" y2="15" strokeWidth="2.5" />
+      <line x1="17.5" y1="9" x2="17.5" y2="15" />
+    </svg>
+  );
+}
+
+/** Checkmark dentro de um círculo — usado nas listas de benefícios. */
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="m8 12 3 3 5-6" />
+    </svg>
+  );
+}
+
+interface MethodInfo {
+  Icon: (props: { className?: string }) => ReactElement;
+  title: string;
+  subtitle: string;
+  benefits: string[];
+  ctaLabel: string;
+  ctaProcessingLabel: string;
+}
+
+const PIX_INFO: MethodInfo = {
+  Icon: PixIcon,
+  title: "Pagamento via PIX",
+  subtitle: "Confirmação em minutos",
+  benefits: [
+    "QR Code seguro gerado pelo Mercado Pago",
+    "Pagamento confirmado em até 2 minutos",
+    "Sem taxas ou custos adicionais",
+  ],
+  ctaLabel: "Gerar PIX",
+  ctaProcessingLabel: "Gerando PIX…",
+};
+
+const BOLETO_INFO: MethodInfo = {
+  Icon: BoletoIcon,
+  title: "Boleto bancário",
+  subtitle: "Compensação em até 3 dias úteis",
+  benefits: [
+    "Pague em qualquer banco, app ou casa lotérica",
+    "Vencimento em 3 dias úteis a partir da emissão",
+    "Sem custos adicionais — só o valor do pedido",
+  ],
+  ctaLabel: "Gerar boleto",
+  ctaProcessingLabel: "Gerando boleto…",
+};
+
+/** Shape mínimo do payload que o Card Payment Brick devolve em `onSubmit`. */
+interface CardBrickFormData {
+  token: string;
+  payment_method_id: string;
+  installments: number;
 }
 
 export default function PaymentStep(props: PaymentStepProps) {
-  const {
-    cartTotal,
-    shippingAddress,
-    defaultEmail,
-    defaultFirstName,
-    defaultLastName,
-    defaultIdentificationNumber,
-    defaultIdentificationType,
-    onSubmit,
-    onBack,
-  } = props;
+  const { cartTotal, shippingAddress, payer, onSubmit, onBack } = props;
 
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
-   * Marca lazy-mount do cardForm: só vira `true` quando o usuário clica no
-   * tab Cartão pela 1ª vez. Antes disso, o `cardBlock` nem está no DOM e o
-   * SDK do MercadoPago não é invocado. Resolve o caso em que o usuário fica
-   * no PIX/Boleto e nunca usa Cartão — sem isso, o erro "Context
-   * 'expirationFields' already exists" aparece mesmo sem o user ir pro Cartão.
-   * Uma vez montado, permanece vivo para tabs PIX↔Cartão↔Boleto não
-   * re-disparar o SDK.
+   * `brickReady` vira true quando o `onReady` do CardPayment dispara — ou
+   * seja, quando os iframes do Brick terminaram de carregar e o form de
+   * cartão está pronto. Enquanto false, mostramos um overlay com cadeado
+   * pra evitar o "quadrado em branco" durante os ~2s de mount inicial.
    */
-  const [cardFormStarted, setCardFormStarted] = useState(false);
+  const [brickReady, setBrickReady] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    getValues,
-    formState: { errors },
-  } = useForm<PayerFormInput>({
-    resolver: zodResolver(payerFormSchema),
-    mode: "onBlur",
-    defaultValues: makeDefaults(props),
-  });
-
-  // Quando os defaults chegam tarde (CheckoutFlow ainda estava buscando o
-  // UserProfile), reseta o form. Sem isso, o usuário veria os campos vazios
-  // mesmo depois do profile carregar.
-  useEffect(() => {
-    reset(makeDefaults(props));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    defaultEmail,
-    defaultFirstName,
-    defaultLastName,
-    defaultIdentificationNumber,
-    defaultIdentificationType,
-    reset,
-  ]);
-
-  // cardForm: lazy mount UMA vez por sessão do PaymentStep, no 1º clique no
-  // tab Cartão. Antes disso o cardBlock nem está no DOM. Depois do 1º mount,
-  // o cardBlock permanece vivo (com display:none nas outras abas), evitando
-  // unmount/remount em toggles subsequentes. O singleton em cardForm.ts
-  // protege contra double-mount do React Strict Mode em dev.
-  const cardFormHandle = useRef<CardFormHandle | null>(null);
-  useEffect(() => {
-    if (!cardFormStarted) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const handle = await mountCardForm({
-          amount: cartTotal,
-          ids: CARD_FORM_IDS,
-          onError: (err) => {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Erro ao carregar o formulário de cartão.",
-            );
-          },
-        });
-        if (cancelled) {
-          handle.unmount();
-          return;
-        }
-        cardFormHandle.current = handle;
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          throw err;
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-      cardFormHandle.current?.unmount();
-      cardFormHandle.current = null;
-    };
-    // cartTotal mudar depois (cupom aplicado em Revisão) NÃO re-monta o
-    // cardForm — display de parcelas pode desatualizar, mas tokenização funciona.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardFormStarted]);
-
-  // CPF mask while typing: muta o evento ANTES do onChange do RHF processar.
-  const cpfReg = register("identificationNumber");
-  const onCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
-    e.target.value = formatCpf(e.target.value);
-    void cpfReg.onChange(e);
-  };
-
-  async function processSubmit(values: PayerFormInput) {
+  async function submitPix() {
     setError(null);
     setSubmitting(true);
-
-    const basePayer: PaymentPayer = {
-      email: values.email,
-      identification: {
-        type: values.identificationType,
-        number: values.identificationNumber.replace(/\D/g, ""),
-      },
-      firstName: values.firstName,
-      lastName: values.lastName,
-    };
-
     try {
-      if (method === "pix") {
-        await onSubmit({ paymentMethod: "pix", payer: basePayer });
-        return;
-      }
+      await onSubmit({ paymentMethod: "pix", payer });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-      if (method === "boleto") {
-        if (!shippingAddress) {
-          throw new CardFormError(
-            "Endereço de entrega obrigatório para gerar boleto.",
-          );
-        }
-        await onSubmit({
-          paymentMethod: "boleto",
-          payer: basePayer,
-          payerAddress: {
-            zipCode: shippingAddress.postalCode,
-            streetName: shippingAddress.line1,
-            streetNumber: shippingAddress.number,
-            neighborhood: shippingAddress.neighborhood,
-            city: shippingAddress.city,
-            federalUnit: shippingAddress.state.toUpperCase(),
-          },
-        });
-        return;
-      }
+  async function submitBoleto() {
+    setError(null);
+    if (!shippingAddress) {
+      setError("Endereço de entrega obrigatório para gerar boleto.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        paymentMethod: "boleto",
+        payer,
+        payerAddress: {
+          zipCode: shippingAddress.postalCode,
+          streetName: shippingAddress.line1,
+          streetNumber: shippingAddress.number,
+          neighborhood: shippingAddress.neighborhood,
+          city: shippingAddress.city,
+          federalUnit: shippingAddress.state.toUpperCase(),
+        },
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-      // credit_card: precisa do cardholderName preenchido + token do SDK.
-      if (!values.cardholderName || values.cardholderName.trim().length === 0) {
-        throw new CardFormError("Informe o nome impresso no cartão.");
-      }
-      if (!cardFormHandle.current) {
-        throw new CardFormError("Formulário de cartão ainda não está pronto.");
-      }
-      const card = await cardFormHandle.current.submit();
+  /**
+   * Submit do Card Payment Brick. O Brick coleta o cartão dentro dos iframes
+   * hospedados em mercadopago.com e devolve `token` + `payment_method_id` +
+   * `installments`. Os dados de payer **não** vêm daqui — usamos o `payer`
+   * prop (já validado no step "Seus dados" e pré-preenchido no Brick via
+   * `initialization.payer`).
+   */
+  async function processCardSubmit(formData: CardBrickFormData) {
+    setError(null);
+    setSubmitting(true);
+    try {
       await onSubmit({
         paymentMethod: "credit_card",
-        payer: { ...basePayer, email: card.cardholderEmail || basePayer.email },
-        cardToken: card.token,
-        installments: card.installments,
-        paymentMethodId: card.paymentMethodId,
+        payer,
+        cardToken: formData.token,
+        installments: formData.installments,
+        paymentMethodId: formData.payment_method_id,
       });
-    } catch (err) {
-      if (err instanceof CardFormError || err instanceof Error) {
-        setError(err.message);
-      } else {
-        throw err;
-      }
     } finally {
       setSubmitting(false);
     }
@@ -287,17 +291,20 @@ export default function PaymentStep(props: PaymentStepProps) {
             aria-selected={method === tab.id}
             className={styles.tab}
             data-active={method === tab.id || undefined}
+            // Bloqueia troca de tab enquanto um submit está em voo. Sem isso, o
+            // PIX/Boleto pode resolver depois do user trocar pra Cartão e o
+            // CheckoutFlow dispatcha SUBMIT_OK → activeStep vira "result"
+            // mostrando o PaymentResult que o user nem queria.
+            disabled={submitting}
             onClick={() => {
               setMethod(tab.id);
               setError(null);
-              // 1º clique em "Cartão" dispara o mount do cardForm SDK.
-              // Permanece true depois disso — não desmontamos em tab switch.
+              // Ao re-entrar no tab Cartão, o <CardPayment> desmonta+remonta
+              // (ternary swap). Sem reset, brickReady fica "true" stale do
+              // mount anterior e o overlay de "Carregando ambiente seguro"
+              // não renderiza durante os ~2s do segundo fetch dos iframes.
               if (tab.id === "credit_card") {
-                setCardFormStarted(true);
-              } else {
-                // Quando sai do cartão, limpa o cardholderName pra ele não bloquear
-                // a validação dos outros métodos (campo é optional no schema).
-                setValue("cardholderName", "", { shouldValidate: false });
+                setBrickReady(false);
               }
             }}
           >
@@ -306,224 +313,148 @@ export default function PaymentStep(props: PaymentStepProps) {
         ))}
       </div>
 
-      <form
-        id={CARD_FORM_IDS.formId}
-        className={styles.form}
-        onSubmit={(e) => {
-          // Arrow garante que handleSubmit + processSubmit só são invocados no
-          // submit (event-time), não durante render — silencia react-hooks/refs
-          // sem perder a checagem de ref-access em outros pontos.
-          void handleSubmit(processSubmit)(e);
-        }}
-        noValidate
-      >
-        <div className={styles.field}>
-          <label htmlFor={CARD_FORM_IDS.cardholderEmail} className={styles.label}>
-            E-mail do pagador
-          </label>
-          <input
-            id={CARD_FORM_IDS.cardholderEmail}
-            type="email"
-            className={styles.input}
-            autoComplete="email"
-            aria-invalid={Boolean(errors.email) || undefined}
-            {...register("email")}
-          />
-          {errors.email?.message && (
-            <span role="alert" className={styles.fieldError}>
-              {errors.email.message}
-            </span>
+      {method === "credit_card" ? (
+        <div className={styles.form} aria-label="Pagamento com cartão">
+          {error && (
+            <p role="alert" className={styles.submitError}>
+              {error}
+            </p>
           )}
-        </div>
-
-        <div className={styles.row}>
-          <div className={styles.field}>
-            <label htmlFor="payer-first" className={styles.label}>
-              Nome
-            </label>
-            <input
-              id="payer-first"
-              className={styles.input}
-              autoComplete="given-name"
-              aria-invalid={Boolean(errors.firstName) || undefined}
-              {...register("firstName")}
-            />
-            {errors.firstName?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.firstName.message}
-              </span>
-            )}
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="payer-last" className={styles.label}>
-              Sobrenome
-            </label>
-            <input
-              id="payer-last"
-              className={styles.input}
-              autoComplete="family-name"
-              aria-invalid={Boolean(errors.lastName) || undefined}
-              {...register("lastName")}
-            />
-            {errors.lastName?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.lastName.message}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.row}>
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.identificationType} className={styles.label}>
-              Tipo de documento
-            </label>
-            <select
-              id={CARD_FORM_IDS.identificationType}
-              className={styles.input}
-              aria-invalid={Boolean(errors.identificationType) || undefined}
-              {...register("identificationType")}
+          {/* Container relativo pro overlay sobrepor o Brick durante o mount
+              (evita o "quadrado em branco") e durante o submit (feedback
+              visual entre o tokenize e o redirect). */}
+          <div className={styles.brickContainer}>
+            {/* O Brick fica oculto via visibility até onReady disparar; mantemos
+                ele no DOM pra não desmontar/remontar (cada remount = novo
+                fetch dos iframes seguros). */}
+            <div
+              className={styles.brickMount}
+              style={{ visibility: brickReady ? "visible" : "hidden" }}
             >
-              <option value="CPF">CPF</option>
-              <option value="CNPJ">CNPJ</option>
-            </select>
-            {errors.identificationType?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.identificationType.message}
-              </span>
-            )}
-          </div>
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.identificationNumber} className={styles.label}>
-              Número do documento
-            </label>
-            <input
-              id={CARD_FORM_IDS.identificationNumber}
-              className={styles.input}
-              inputMode="numeric"
-              aria-invalid={Boolean(errors.identificationNumber) || undefined}
-              placeholder={
-                getValues("identificationType") === "CNPJ"
-                  ? "00.000.000/0000-00"
-                  : "000.000.000-00"
-              }
-              {...cpfReg}
-              onChange={onCpfChange}
-            />
-            {errors.identificationNumber?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.identificationNumber.message}
-              </span>
-            )}
-          </div>
-        </div>
+              <CardPayment
+                initialization={{
+                  amount: cartTotal,
+                  payer: {
+                    email: payer.email,
+                    ...(payer.firstName ? { firstName: payer.firstName } : {}),
+                    ...(payer.lastName ? { lastName: payer.lastName } : {}),
+                    identification: {
+                      type: payer.identification.type,
+                      number: payer.identification.number,
+                    },
+                  },
+                }}
+                customization={{
+                  paymentMethods: { maxInstallments: 12 },
+                }}
+                onReady={() => setBrickReady(true)}
+                onSubmit={async (param) => {
+                  await processCardSubmit(param as unknown as CardBrickFormData);
+                }}
+                onError={(err) => {
+                  const msg =
+                    err && typeof err === "object" && "message" in err
+                      ? String((err as { message?: unknown }).message)
+                      : "Erro ao processar pagamento com cartão.";
+                  setError(msg);
+                }}
+              />
+            </div>
 
-        {/*
-          Bloco do Cartão — renderizado SOMENTE depois do 1º clique no tab
-          Cartão (`cardFormStarted`). Antes disso, o SDK do MercadoPago não é
-          invocado, e nenhum erro "Context expirationFields already exists"
-          aparece para usuários que ficam só no PIX/Boleto.
-          Após o 1º mount, fica vivo (display:none nas outras abas) para
-          tabs PIX↔Cartão↔Boleto não dispararem unmount/remount.
-        */}
-        <div
-          className={styles.cardBlock}
-          style={{
-            display:
-              cardFormStarted && method === "credit_card" ? "flex" : "none",
-          }}
-          aria-hidden={method !== "credit_card"}
-        >
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.cardholderName} className={styles.label}>
-              Nome impresso no cartão
-            </label>
-            <input
-              id={CARD_FORM_IDS.cardholderName}
-              className={styles.input}
-              aria-invalid={Boolean(errors.cardholderName) || undefined}
-              {...register("cardholderName")}
-            />
-            {errors.cardholderName?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.cardholderName.message}
-              </span>
+            {!brickReady && (
+              <div className={styles.brickOverlay} aria-live="polite">
+                <LockIcon className={styles.lockIcon} />
+                <p className={styles.overlayTitle}>
+                  Carregando ambiente seguro de pagamento
+                </p>
+                <p className={styles.overlaySubtitle}>
+                  Conexão criptografada com o Mercado Pago
+                </p>
+                <Spinner size={20} className={styles.overlaySpinner} />
+              </div>
+            )}
+
+            {brickReady && submitting && (
+              <div className={styles.brickOverlay} aria-live="polite">
+                <LockIcon className={styles.lockIcon} />
+                <p className={styles.overlayTitle}>Processando pagamento…</p>
+                <p className={styles.overlaySubtitle}>
+                  Não feche esta janela — você será redirecionado
+                </p>
+                <Spinner size={20} className={styles.overlaySpinner} />
+              </div>
             )}
           </div>
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.cardNumber} className={styles.label}>
-              Número do cartão
-            </label>
-            <div id={CARD_FORM_IDS.cardNumber} className={styles.iframeMount} />
-          </div>
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor={CARD_FORM_IDS.expirationDate} className={styles.label}>
-                Validade
-              </label>
-              <div id={CARD_FORM_IDS.expirationDate} className={styles.iframeMount} />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor={CARD_FORM_IDS.securityCode} className={styles.label}>
-                CVV
-              </label>
-              <div id={CARD_FORM_IDS.securityCode} className={styles.iframeMount} />
-            </div>
-          </div>
-          <div className={styles.field}>
-            <label htmlFor={CARD_FORM_IDS.installments} className={styles.label}>
-              Parcelas
-            </label>
-            <select
-              id={CARD_FORM_IDS.installments}
-              className={styles.input}
-              defaultValue=""
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={onBack}
+              disabled={submitting}
             >
-              <option value="" disabled>
-                Selecione
-              </option>
-            </select>
+              Voltar
+            </button>
           </div>
-          <p className={styles.muted}>
-            Os campos número, validade e CVV são processados em segurança pelo
-            MercadoPago.
-          </p>
         </div>
+      ) : (
+        (() => {
+          const info = method === "pix" ? PIX_INFO : BOLETO_INFO;
+          const { Icon } = info;
+          return (
+            <div className={styles.form}>
+              <div className={styles.methodCard}>
+                <div className={styles.methodHeader}>
+                  <Icon className={styles.methodIcon} />
+                  <div className={styles.methodHeaderText}>
+                    <h3 className={styles.methodTitle}>{info.title}</h3>
+                    <p className={styles.methodSubtitle}>{info.subtitle}</p>
+                  </div>
+                </div>
+                <ul className={styles.benefits}>
+                  {info.benefits.map((text) => (
+                    <li key={text} className={styles.benefit}>
+                      <CheckIcon className={styles.benefitIcon} />
+                      <span>{text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-        {method === "boleto" && (
-          <p className={styles.muted}>
-            O boleto será emitido com o endereço de entrega já informado.
-            Compensação em até 3 dias úteis.
-          </p>
-        )}
+              {error && (
+                <p role="alert" className={styles.submitError}>
+                  {error}
+                </p>
+              )}
 
-        {method === "pix" && (
-          <p className={styles.muted}>
-            Você verá um QR Code para pagar com o app do seu banco. A confirmação
-            costuma chegar em poucos minutos.
-          </p>
-        )}
-
-        {error && (
-          <p role="alert" className={styles.submitError}>
-            {error}
-          </p>
-        )}
-
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.backBtn}
-            onClick={onBack}
-            disabled={submitting}
-          >
-            Voltar
-          </button>
-          <button type="submit" className={styles.submitBtn} disabled={submitting}>
-            {submitting ? "Processando…" : "Confirmar pagamento"}
-          </button>
-        </div>
-      </form>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.backBtn}
+                  onClick={onBack}
+                  disabled={submitting}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  className={styles.submitBtn}
+                  disabled={submitting}
+                  onClick={() => {
+                    if (method === "pix") {
+                      void submitPix();
+                    } else {
+                      void submitBoleto();
+                    }
+                  }}
+                >
+                  {submitting ? info.ctaProcessingLabel : info.ctaLabel}
+                </button>
+              </div>
+            </div>
+          );
+        })()
+      )}
     </section>
   );
 }

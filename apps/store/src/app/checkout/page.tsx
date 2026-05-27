@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
@@ -12,7 +12,12 @@ import styles from "./page.module.css";
  *
  * Guards client-side:
  *   - usuário não logado → /login?redirect=%2Fcheckout (alinha com src/proxy.ts)
- *   - carrinho vazio (depois de hidratado) → /carrinho
+ *
+ * O guard de carrinho vazio fica DENTRO do CheckoutFlow porque ele depende do
+ * estado `paymentResult` — depois de gerar QR/boleto, o cart é limpo mas o
+ * user deve continuar vendo o `PaymentResult` até clicar "Acompanhar pedido".
+ * Se o guard rodasse aqui, o user seria mandado pro /carrinho assim que o
+ * cart esvaziasse.
  *
  * A gating principal de auth acontece no src/proxy.ts via `__session` cookie.
  * Este guard cobre a janela rara em que o cookie sumiu no client.
@@ -22,18 +27,14 @@ import styles from "./page.module.css";
 export default function CheckoutPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { items, isReady: cartReady } = useCart();
+  const { isReady: cartReady } = useCart();
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace(`/login?redirect=${encodeURIComponent("/checkout")}`);
-      return;
     }
-    if (cartReady && items.length === 0) {
-      router.replace("/carrinho");
-    }
-  }, [authLoading, user, cartReady, items.length, router]);
+  }, [authLoading, user, router]);
 
   if (authLoading || !cartReady) {
     return (
@@ -43,10 +44,16 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!user || items.length === 0) {
+  if (!user) {
     // Aguardando redirect.
     return null;
   }
 
-  return <CheckoutFlow />;
+  // Suspense boundary exigido pelo `useSearchParams` em client component
+  // (CheckoutFlow lê `?step=` da URL).
+  return (
+    <Suspense fallback={null}>
+      <CheckoutFlow />
+    </Suspense>
+  );
 }
