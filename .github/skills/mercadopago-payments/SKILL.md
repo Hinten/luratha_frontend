@@ -8,14 +8,15 @@ compatibility: Next.js 16 App Router, firebase-admin v13, Zod v4, Vitest 4, Type
 
 ## Overview
 
-Luratha processes payments with **MercadoPago Checkout Transparente** — the
-payment is created in-site through the `/v1/payments` API, so the customer never
-leaves the store. Three methods are supported, all on the same endpoint:
+Luratha processes payments with **MercadoPago Checkout Transparente** via the
+new **Orders API** (`POST /v1/orders`) — the payment is created in-site, the
+customer never leaves the store. Three methods supported:
 
 - **PIX** — the API returns a QR code (string + base64 image) the customer scans.
-- **Credit card** — the card is tokenized **in the browser** with
-  `@mercadopago/sdk-js`; only the resulting `cardToken` reaches the server (PCI
-  scope stays minimal). Approval can be synchronous.
+- **Credit card** — the card is tokenized **in the browser** by the
+  **Card Payment Brick** from `@mercadopago/sdk-react`; only the resulting
+  `cardToken` reaches the server (PCI scope stays minimal). Approval can be
+  synchronous.
 - **Boleto** — the API returns a printable boleto URL + barcode.
 
 All payment code lives under `apps/store/src/lib/payment/`:
@@ -24,7 +25,7 @@ All payment code lives under `apps/store/src/lib/payment/`:
 |---|---|
 | `types.ts` | I/O contracts, `PaymentIntentResult`, `PaymentProviderError` |
 | `mercadoPago/client.ts` | Reads credentials from env, builds `MercadoPagoConfig` |
-| `mercadoPago/index.ts` | Adapter — `createPayment`, `getPayment`, `verifyWebhookSignature`, `mapMpStatus` |
+| `mercadoPago/index.ts` | Adapter — `createOrder`, `getOrder`, `verifyWebhookSignature`, `mapMpStatus`, `isMercadoPagoSandbox`, `withSandboxEmail` |
 | `service.ts` | `Order`-aware orchestration: load order, create payment, persist, apply webhook |
 
 API routes:
@@ -39,12 +40,12 @@ API routes:
 ```
 1. POST /api/orders            → Order created, status "pending_payment", paymentStatus "pending"
 2. POST /api/checkout/payment-intent (orderId, paymentMethod, payer, …)
-                               → MP payment created, external_reference = orderId
+                               → MP order created via createOrder(), external_reference = orderId
                                → Order.paymentIntentId persisted
                                → client receives QR / boleto URL / card status
 3. customer pays
 4. POST /api/webhooks/mercadopago  (MP server → us)
-                               → getPayment(id) → status → Order updated
+                               → getOrder(id) → status → Order updated
                                → on approval: paymentStatus "paid", status "paid", paidAt set
 ```
 
@@ -58,7 +59,7 @@ point at it — that is how the asynchronous webhook finds the right order.
   `payment.create` so a retried payment-intent never double-charges.
 - **The webhook is public and unauthenticated.** It must NOT call `requireUser()`.
   Its only gate is `verifyWebhookSignature` — an HMAC-SHA256 check on `x-signature`.
-- **The webhook is idempotent.** `applyPaymentWebhook` skips the write when the
+- **The webhook is idempotent.** `applyOrderWebhook` skips the write when the
   Order is already in the target `paymentStatus`. MP retries notifications.
 - **Order updates from server paths use the Admin SDK** (`adminDb` +
   `adminOrderConverter`), not the client `ordersRepository`. See `service.ts`.
@@ -79,30 +80,22 @@ MercadoPago redeliver the notification later.
 
 ## MercadoPago status → `Order` mapping (`mapMpStatus`)
 
-| MP `status` | `Order.paymentStatus` | `Order.status` side effect |
+The Orders API uses a smaller status vocabulary than the legacy Payments API.
+`mapMpStatus` normalizes everything to one of four terminal values:
+
+| MP Orders `status` | `Order.paymentStatus` | `Order.status` side effect |
 |---|---|---|
-| `approved` | `paid` | → `paid`, sets `paidAt` |
-| `authorized` | `authorized` | (stays `pending_payment`) |
-| `pending`, `in_process` | `pending` | (stays `pending_payment`) |
-| `in_mediation` | `in_dispute` | **untouched** — payment already happened; the order stays where it was (typically `paid`) while MP arbitrates |
-| `rejected`, `cancelled` | `failed` | (stays `pending_payment` — customer can retry) |
-| `refunded` | `refunded` | → `refunded` (voluntary refund issued by the store) |
-| `charged_back` | `charged_back` | → `refunded` (involuntary — bank chargeback after dispute) |
+| `processed` | `paid` | → `paid`, sets `paidAt` |
+| `action_required` | `pending` | (stays `pending_payment` — PIX/boleto aguardando compensação) |
+| `in_process`, `pending`, `created` | `pending` | (stays `pending_payment`) |
+| `cancelled`, `failed`, `rejected` | `failed` | (stays `pending_payment` — customer can retry) |
+| `refunded` | `refunded` | → `refunded` |
+| _anything else_ | `pending` | default fall-through |
 
-### Why `in_dispute` and `charged_back` are distinct from `refunded`
-
-`in_mediation` only fires **after** the payment has been approved — the buyer
-opened a dispute and the money is held while MercadoPago arbitrates. Mapping
-it to `pending` (the original behaviour) hid that fact: the customer's account
-page would show "aguardando pagamento" even though they had already paid.
-`in_dispute` is a paid order that is in active mediation; the storefront keeps
-serving it (no rollback) and the backoffice can act on the contestation.
-
-`charged_back` is the bank-issued involuntary reversal that may follow a lost
-dispute. It is operationally equivalent to a refund (money out) — the
-`Order.status` does go to `refunded` — but the `paymentStatus` keeps the
-distinction so the backoffice can tell a planned refund (`refunded`) from a
-bank chargeback (`charged_back`).
+> **Note**: dispute/chargeback semantics (`in_dispute`, `charged_back`,
+> `authorized`) that existed in the old Payments API are not surfaced by the
+> Orders API. If MP later exposes them, add a case in `mapMpStatus` and a
+> new member to `PaymentStatus` in `types.ts`.
 
 ## Webhook signature validation
 
@@ -125,14 +118,21 @@ See `docs/mercadopago-setup.md` for the full how-to.
 
 | Variable | Required | Notes |
 |---|---|---|
-| `MERCADOPAGO_ACCESS_TOKEN` | yes | Server token. `TEST-…` = sandbox, `APP_USR-…` = prod |
+| `MERCADOPAGO_ACCESS_TOKEN` | yes | Server token. Sandbox **may** start with `TEST-` (não é garantido pelo painel atual) |
 | `MERCADOPAGO_WEBHOOK_SECRET` | yes | Validates the `x-signature` header |
-| `MERCADOPAGO_WEBHOOK_URL` | no | Public webhook URL; if empty, MP uses the dashboard config |
-| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | yes (UI) | Browser key for card tokenization |
+| `MERCADOPAGO_ENV` | yes | `sandbox` ou `production`. Flag explícita lida em `isMercadoPagoSandbox`. Fallback: prefixo `TEST-` quando ausente |
+| `MERCADOPAGO_SANDBOX_PAYER_EMAIL` | sandbox only | Email do test user comprador (formato `test_user_<N>@testuser.com`). Em sandbox o adapter reescreve `payer.email` por esse valor pra evitar `invalid_users_involved` |
+| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | yes (UI) | Browser key for card tokenization via the Brick |
+
+A URL do webhook é configurada **no painel MP** (Suas integrações → Webhooks),
+não por env var — a Orders API não aceita `notification_url` por requisição.
 
 Secrets are read from `process.env` in server-only code (`client.ts`), never
-stored in Firestore, never committed. The environment (sandbox vs production)
-is determined by the access token prefix — there is no separate flag.
+stored in Firestore, never committed. **Sandbox detection** consulta
+`MERCADOPAGO_ENV` primeiro (caminho confiável); cai pro prefixo `TEST-` do
+token como fallback (retrocompat). O painel MP nem sempre gera credenciais
+TEST com prefixo `TEST-`, então setar `MERCADOPAGO_ENV` explicitamente é
+mandatório no apphosting.yaml.
 
 ## Extending — common changes
 
@@ -144,7 +144,7 @@ is determined by the access token prefix — there is no separate flag.
   a `PaymentProvider` interface + registry, mirroring `src/lib/shipping/`. Until
   then, do not add a registry speculatively — there is one provider.
 - **Stock decrement / coupon usage increment on payment:** these belong in
-  `applyPaymentWebhook` when the status becomes `paid`. They are intentionally
+  `applyOrderWebhook` when the status becomes `paid`. They are intentionally
   out of the current scope (issue #77) — coordinate with the order/coupon owners.
 
 ## Test patterns
@@ -156,7 +156,7 @@ is determined by the access token prefix — there is no separate flag.
   and the `@/src/lib/payment/service` module — assert status codes and branching
   without touching Firestore or MercadoPago.
 - **Cloud integration** (`src/test/cloud/paymentApi.cloud.test.ts`): mock the
-  whole `@/src/lib/payment/mercadoPago` module (so `createPayment`/`getPayment`/
+  whole `@/src/lib/payment/mercadoPago` module (so `createOrder`/`getOrder`/
   `verifyWebhookSignature` never call MP), seed a real Order, run the handlers,
   and assert the **real Firestore** write. Use `describeCloud` +
   `createCloudTestPrefix()`; clean up seeded docs in `afterAll`.
@@ -174,23 +174,21 @@ is determined by the access token prefix — there is no separate flag.
 - Treating a `rejected` payment as terminal — keep `Order.status` at
   `pending_payment` so the customer can try another method.
 
-## Client-side: tokenização de cartão com `cardForm`
+## Client-side: tokenização de cartão com Card Payment Brick
 
-A UI do checkout (`apps/store/src/app/checkout/`) usa o `@mercadopago/sdk-js`
-para tokenizar o cartão no browser. Há dois helpers em `apps/store/src/lib/mercadopago/`:
+A UI do checkout (`apps/store/src/components/checkout/PaymentStep.tsx`) usa
+o **Card Payment Brick** do `@mercadopago/sdk-react` pra tokenizar o cartão
+no browser. `initMercadoPago(NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY, { locale })`
+roda uma vez no module load; o componente `<CardPayment>` mounta o Brick
+quando o tab "Cartão" é selecionado.
 
-- **`loadSdk.ts`** — carrega o SDK uma única vez (cache + in-flight),
-  instancia `new MercadoPago(NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY, { locale: "pt-BR" })`
-  e expõe `getMercadoPagoSdk()`. Falha cedo se a public key não estiver no env.
-- **`cardForm.ts`** — `mountCardForm({ amount, ids })` envolve `mp.cardForm({
-  iframe: true, form: { id, ... }, callbacks })` e devolve um handle com
-  `.submit()` que resolve `{ token, paymentMethodId, installments, cardholderEmail }`
-  — shape exato do body `credit_card` do `/api/checkout/payment-intent`.
-  Erros do SDK chegam via `onError` e viram rejection na Promise (sem try/catch).
+O Brick recebe `initialization.payer` pré-preenchido (email + nome + CPF
+vindos do step "Seus dados") e chama nosso `onSubmit(formData)` quando o
+usuário envia. `formData` traz `{ token, payment_method_id, installments }`
+— os dados do payer vêm do **estado central do checkout**, não do iframe MP.
 
-**PCI scope**: o `cardForm` monta iframes oficiais da MP só nos campos
-sensíveis (PAN, expiry, CVV); o resto do form é nosso HTML controlado por
-CSS Modules. A loja nunca toca o PAN/CVV.
+**PCI scope**: o Brick monta iframes em `mercadopago.com` para PAN, expiry e
+CVV; o nosso JS nunca toca dados sensíveis do cartão.
 
 **Onde cada chamada MP roda** (auditoria):
 
@@ -198,23 +196,24 @@ CSS Modules. A loja nunca toca o PAN/CVV.
   e `GET /v1/payment_methods/search` direto pra `api.mercadopago.com` —
   PAN+CVV nunca passam pelo nosso JS. Esse é o ponto do PCI scope.
 - **Nosso server** (`apps/store/src/lib/payment/mercadoPago/index.ts`, runtime
-  `nodejs`) chama `POST /v1/payments` server-to-server com o `token` opaco
+  `nodejs`) chama `POST /v1/orders` server-to-server com o `token` opaco
   recebido do client + `MERCADOPAGO_ACCESS_TOKEN`. Sem CORS.
 - **Webhook receiver** (`/api/webhooks/mercadopago`) é nosso server — MP é
   quem chama.
 
 Consequência: a tokenização **não pode** ser movida pro server (entraria em
-PCI scope D). Por isso o cardForm não funciona em `localhost` (HTTP ou
-HTTPS): o servidor MP rejeita CORS pra domínios locais. Pra testar Cartão
-de verdade, **deploy no App Hosting é obrigatório**. PIX/Boleto continuam
-funcionando local porque tokenização não acontece no client (só nosso
+PCI scope D). Por isso o Brick não funciona em `localhost` (HTTP ou HTTPS):
+o servidor MP rejeita CORS pra domínios locais. Pra testar Cartão de verdade,
+**deploy no App Hosting é obrigatório**. PIX/Boleto continuam funcionando
+local porque tokenização não acontece no client (só nosso
 `/api/checkout/payment-intent` chama o MP).
 
-**Por que não Bricks**: o Payment Brick devolve um `formData` no shape de
-`POST /v1/payments` direto, que não casa com nosso body discriminado por
-`paymentMethod` no `/api/checkout/payment-intent`; e o visual do Brick está
-preso a 4 temas fixos (`default|dark|bootstrap|flat`). cardForm dá controle
-de design + payload correto para nosso backend.
+**Sandbox quirk** (importante): em sandbox, o MP exige que o `payer.email`
+termine em `@testuser.com` e que **resolva pro test user comprador** criado
+no painel — não basta um email genérico. O adapter sobrescreve o email
+transparente via `withSandboxEmail()` (em `mercadoPago/index.ts`), usando
+`MERCADOPAGO_SANDBOX_PAYER_EMAIL` quando setado, ou caindo num rewrite de
+domínio como fallback. UI sempre mostra o email real do user.
 
 ## Sandbox / teste manual
 
@@ -232,9 +231,9 @@ pra APRO/OTHE: `12345678909`. A suíte automatizada nunca chama a MP real.
 
 - Setup / credentials: `docs/mercadopago-setup.md`
 - Implementação backend: `apps/store/src/lib/payment/`
-- Implementação browser (cardForm): `apps/store/src/lib/mercadopago/`
+- Implementação browser (Card Payment Brick): `apps/store/src/components/checkout/PaymentStep.tsx`
 - UI checkout: `apps/store/src/app/checkout/` e `apps/store/src/components/checkout/`
 - Checklist sandbox: `docs/mercadopago-sandbox-checklist.md`
 - Roadmap: `plan/checkout-flow-roadmap.md`
-- MercadoPago Checkout API: <https://www.mercadopago.com.br/developers/pt/docs/checkout-api/landing>
+- MercadoPago Checkout API (Orders): <https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/landing>
 - Related skill: `luratha-crud-api` (API route conventions), `luratha-shipping-provider`

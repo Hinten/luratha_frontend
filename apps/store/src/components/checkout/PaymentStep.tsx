@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import Spinner from "@/src/components/Spinner";
 import styles from "./PaymentStep.module.css";
@@ -92,6 +92,112 @@ function LockIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** Ícone PIX — quadrados nos 4 cantos formando o logo do PIX. */
+function PixIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M9.4 3.6 3.6 9.4a3.6 3.6 0 0 0 0 5.2l5.8 5.8a3.6 3.6 0 0 0 5.2 0l5.8-5.8a3.6 3.6 0 0 0 0-5.2L14.6 3.6a3.6 3.6 0 0 0-5.2 0Z" />
+      <path d="m7 9 3.5 3.5a2 2 0 0 0 2.8 0L17 9" />
+      <path d="m7 15 3.5-3.5a2 2 0 0 1 2.8 0L17 15" />
+    </svg>
+  );
+}
+
+/** Ícone do Boleto — código de barras estilizado. */
+function BoletoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="1.5" />
+      <line x1="7" y1="9" x2="7" y2="15" />
+      <line x1="9.5" y1="9" x2="9.5" y2="15" strokeWidth="2.5" />
+      <line x1="12.5" y1="9" x2="12.5" y2="15" />
+      <line x1="15" y1="9" x2="15" y2="15" strokeWidth="2.5" />
+      <line x1="17.5" y1="9" x2="17.5" y2="15" />
+    </svg>
+  );
+}
+
+/** Checkmark dentro de um círculo — usado nas listas de benefícios. */
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="m8 12 3 3 5-6" />
+    </svg>
+  );
+}
+
+interface MethodInfo {
+  Icon: (props: { className?: string }) => ReactElement;
+  title: string;
+  subtitle: string;
+  benefits: string[];
+  ctaLabel: string;
+  ctaProcessingLabel: string;
+}
+
+const PIX_INFO: MethodInfo = {
+  Icon: PixIcon,
+  title: "Pagamento via PIX",
+  subtitle: "Confirmação em minutos",
+  benefits: [
+    "QR Code seguro gerado pelo Mercado Pago",
+    "Pagamento confirmado em até 2 minutos",
+    "Sem taxas ou custos adicionais",
+  ],
+  ctaLabel: "Gerar PIX",
+  ctaProcessingLabel: "Gerando PIX…",
+};
+
+const BOLETO_INFO: MethodInfo = {
+  Icon: BoletoIcon,
+  title: "Boleto bancário",
+  subtitle: "Compensação em até 3 dias úteis",
+  benefits: [
+    "Pague em qualquer banco, app ou casa lotérica",
+    "Vencimento em 3 dias úteis a partir da emissão",
+    "Sem custos adicionais — só o valor do pedido",
+  ],
+  ctaLabel: "Gerar boleto",
+  ctaProcessingLabel: "Gerando boleto…",
+};
 
 /** Shape mínimo do payload que o Card Payment Brick devolve em `onSubmit`. */
 interface CardBrickFormData {
@@ -185,9 +291,21 @@ export default function PaymentStep(props: PaymentStepProps) {
             aria-selected={method === tab.id}
             className={styles.tab}
             data-active={method === tab.id || undefined}
+            // Bloqueia troca de tab enquanto um submit está em voo. Sem isso, o
+            // PIX/Boleto pode resolver depois do user trocar pra Cartão e o
+            // CheckoutFlow dispatcha SUBMIT_OK → activeStep vira "result"
+            // mostrando o PaymentResult que o user nem queria.
+            disabled={submitting}
             onClick={() => {
               setMethod(tab.id);
               setError(null);
+              // Ao re-entrar no tab Cartão, o <CardPayment> desmonta+remonta
+              // (ternary swap). Sem reset, brickReady fica "true" stale do
+              // mount anterior e o overlay de "Carregando ambiente seguro"
+              // não renderiza durante os ~2s do segundo fetch dos iframes.
+              if (tab.id === "credit_card") {
+                setBrickReady(false);
+              }
             }}
           >
             {tab.label}
@@ -280,56 +398,62 @@ export default function PaymentStep(props: PaymentStepProps) {
           </div>
         </div>
       ) : (
-        <div className={styles.form}>
-          {method === "pix" && (
-            <p className={styles.muted}>
-              Você verá um QR Code para pagar com o app do seu banco. A confirmação
-              costuma chegar em poucos minutos.
-            </p>
-          )}
+        (() => {
+          const info = method === "pix" ? PIX_INFO : BOLETO_INFO;
+          const { Icon } = info;
+          return (
+            <div className={styles.form}>
+              <div className={styles.methodCard}>
+                <div className={styles.methodHeader}>
+                  <Icon className={styles.methodIcon} />
+                  <div className={styles.methodHeaderText}>
+                    <h3 className={styles.methodTitle}>{info.title}</h3>
+                    <p className={styles.methodSubtitle}>{info.subtitle}</p>
+                  </div>
+                </div>
+                <ul className={styles.benefits}>
+                  {info.benefits.map((text) => (
+                    <li key={text} className={styles.benefit}>
+                      <CheckIcon className={styles.benefitIcon} />
+                      <span>{text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          {method === "boleto" && (
-            <p className={styles.muted}>
-              O boleto será emitido com o endereço de entrega já informado.
-              Compensação em até 3 dias úteis.
-            </p>
-          )}
+              {error && (
+                <p role="alert" className={styles.submitError}>
+                  {error}
+                </p>
+              )}
 
-          {error && (
-            <p role="alert" className={styles.submitError}>
-              {error}
-            </p>
-          )}
-
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.backBtn}
-              onClick={onBack}
-              disabled={submitting}
-            >
-              Voltar
-            </button>
-            <button
-              type="button"
-              className={styles.submitBtn}
-              disabled={submitting}
-              onClick={() => {
-                if (method === "pix") {
-                  void submitPix();
-                } else {
-                  void submitBoleto();
-                }
-              }}
-            >
-              {submitting
-                ? "Processando…"
-                : method === "pix"
-                  ? "Gerar PIX"
-                  : "Gerar boleto"}
-            </button>
-          </div>
-        </div>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.backBtn}
+                  onClick={onBack}
+                  disabled={submitting}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  className={styles.submitBtn}
+                  disabled={submitting}
+                  onClick={() => {
+                    if (method === "pix") {
+                      void submitPix();
+                    } else {
+                      void submitBoleto();
+                    }
+                  }}
+                >
+                  {submitting ? info.ctaProcessingLabel : info.ctaLabel}
+                </button>
+              </div>
+            </div>
+          );
+        })()
       )}
     </section>
   );

@@ -84,6 +84,76 @@
   padding: 1.25rem;
 }
 
+/* Method card — usado nas tabs PIX/Boleto pra dar uma apresentação
+   convidativa (ícone + título + bullets) em vez de só um helper text seco.
+   Fundo levemente diferenciado pra destacar do form container externo. */
+.methodCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background-color: color-mix(in srgb, var(--color-accent) 35%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-secondary) 22%, transparent);
+  border-radius: 12px;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.methodHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.methodHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.methodIcon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+}
+
+.methodTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-neutral-dark);
+}
+
+.methodSubtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+}
+
+.benefits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--color-neutral-dark);
+}
+
+.benefitIcon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .field {
   display: flex;
   flex-direction: column;

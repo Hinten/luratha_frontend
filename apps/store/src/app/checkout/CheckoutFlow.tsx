@@ -386,20 +386,35 @@ export default function CheckoutFlow() {
       const result = (await intentRes.json()) as PaymentResultData;
 
       if (result.status === "paid") {
+        // Cartão aprovado: limpa o cart **antes** do redirect.
+        // O SuccessClient também tenta limpar no mount, mas em produção há
+        // race se o usuário sai da página de sucesso rapidamente (clica
+        // "Continuar comprando" antes do `void clearCart()` async terminar
+        // — o browser cancela o fetch in-flight). Bloquear aqui garante que
+        // quando a página de sucesso montar, o cart já está vazio no
+        // servidor e o snapshot Firestore chega zerado.
+        await clearCart();
         // `window.location.assign` em vez de `router.replace` por robustez:
         // o client router do Next pode ser interrompido por re-renders do
         // Brick após `onSubmit` resolver. Full reload garante navegação.
-        // SuccessClient limpa o cart no mount da página de sucesso.
         window.location.assign(`/checkout/sucesso/${created.id}`);
         return;
       }
 
-      // PIX/Boleto pendentes: limpa cart antes de mostrar o PaymentResult. O
-      // guard de cart vazio (logo abaixo) bypassa o redirect enquanto
-      // `state.paymentResult` está presente, então o user permanece vendo o
-      // QR/boleto até clicar "Acompanhar pedido".
-      await clearCart();
+      // Dispatch SUBMIT_OK **antes** de qualquer clearCart pra garantir que
+      // `state.paymentResult` está populado quando o snapshot Firestore
+      // entregar `items=[]`. Sem isso, o cart-empty guard pode disparar
+      // `router.replace("/carrinho")` antes do PaymentResult renderizar
+      // (race entre o WebSocket do Firestore e o DELETE HTTP).
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result });
+
+      // Cartão **recusado/falhado** (status="failed") NÃO limpa o cart — o
+      // user precisa do cart preservado pra clicar "Tentar outro método" e
+      // tentar de novo. PIX/Boleto pending limpam (fire-and-forget — o
+      // PaymentResult já está visível, server limpa em paralelo).
+      if (draft.paymentMethod !== "credit_card") {
+        void clearCart();
+      }
     } catch (err) {
       if (err instanceof ApiResponseError) {
         dispatch({ type: "SUBMIT_FAIL", message: err.message });
@@ -426,6 +441,17 @@ export default function CheckoutFlow() {
         <StepIndicator
           steps={VISIBLE_STEPS}
           currentStep={activeStep === "result" ? "review" : activeStep}
+          // Desabilita cliques quando estamos na view de resultado (PIX/Boleto
+          // gerado). Clicar num step ali destruiria o `state.paymentResult`
+          // em memória e o user perderia o QR/link sem aviso — ele deve usar
+          // "Acompanhar pedido" / "Tente novamente".
+          onStepClick={
+            activeStep === "result"
+              ? undefined
+              : (stepId) => {
+                  if (isVisibleStepId(stepId)) goToStep(stepId);
+                }
+          }
         />
       </header>
 

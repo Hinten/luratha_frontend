@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Address } from "@luratha/schemas";
+import { formatCnpj } from "@/src/lib/format/cnpj";
 import { formatCpf } from "@/src/lib/format/cpf";
 import type { PaymentPayer } from "./PaymentStep";
 import type { ShippingQuote } from "./ShippingStep";
@@ -31,12 +32,6 @@ const brl = new Intl.NumberFormat("pt-BR", {
 function deliveryText(days: number): string {
   if (days <= 0) return "";
   return `em até ${days} ${days === 1 ? "dia útil" : "dias úteis"}`;
-}
-
-function formatCnpj(digits: string): string {
-  const d = digits.replace(/\D/g, "").slice(0, 14);
-  if (d.length !== 14) return digits;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
 }
 
 function formatIdentification(payer: PaymentPayer): string {
