@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -9,7 +10,11 @@ interface ErrorProps {
 
 export default function CheckoutError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error("[checkout] route error", error);
+    reportCheckoutError({
+      error,
+      step: "boundary",
+      metadata: error.digest ? { digest: error.digest } : undefined,
+    });
   }, [error]);
 
   return (
@@ -33,8 +38,8 @@ export default function CheckoutError({ error, reset }: ErrorProps) {
         Algo deu errado no checkout
       </h1>
       <p style={{ marginBottom: "1.5rem" }}>
-        Tente novamente. Se o problema continuar, volte ao carrinho e refaça o
-        pedido.
+        Recarregue a página para tentar de novo. Se o problema persistir, volte
+        ao carrinho e refaça o pedido — seus itens estão salvos.
       </p>
       <button
         type="button"

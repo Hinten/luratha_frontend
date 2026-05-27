@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import Spinner from "@/src/components/Spinner";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -352,11 +353,13 @@ export default function PaymentStep(props: PaymentStepProps) {
                   await processCardSubmit(param as unknown as CardBrickFormData);
                 }}
                 onError={(err) => {
-                  const msg =
-                    err && typeof err === "object" && "message" in err
-                      ? String((err as { message?: unknown }).message)
-                      : "Erro ao processar pagamento com cartão.";
-                  setError(msg);
+                  setError(
+                    reportCheckoutError({
+                      error: err,
+                      step: "payment_card",
+                      metadata: { brickPayload: err },
+                    }),
+                  );
                 }}
               />
             </div>

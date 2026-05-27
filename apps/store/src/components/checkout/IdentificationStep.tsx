@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
 import { ApiResponseError } from "@/src/lib/errors";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import { persistProfileFields } from "@/src/lib/checkout/persistProfileFields";
 import { formatCnpj } from "@/src/lib/format/cnpj";
 import { formatCpf } from "@/src/lib/format/cpf";
@@ -137,12 +138,8 @@ export default function IdentificationStep(props: IdentificationStepProps) {
       await persistProfileFields(userId, payer);
       onSubmit(payer);
     } catch (err) {
-      if (err instanceof ApiResponseError) {
-        setError(err.message);
-        return;
-      }
-      if (err instanceof TypeError) {
-        setError("Sua conexão caiu ou está instável. Verifique a internet e tente novamente.");
+      if (err instanceof ApiResponseError || err instanceof TypeError) {
+        setError(reportCheckoutError({ error: err, step: "identification" }));
         return;
       }
       throw err;

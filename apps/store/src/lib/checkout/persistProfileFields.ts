@@ -61,18 +61,28 @@ export async function persistProfileFields(
       body: JSON.stringify(putBody),
     });
     if (!putRes.ok) {
-      const body = (await putRes.json().catch(() => ({}))) as { message?: string };
+      const body = (await putRes.json().catch(() => ({}))) as {
+        message?: string;
+        code?: string;
+      };
       throw new ApiResponseError(
         body.message ?? "Não foi possível criar seu perfil.",
         putRes.status,
+        [],
+        body.code,
       );
     }
     return;
   }
 
-  const body = (await patchRes.json().catch(() => ({}))) as { message?: string };
+  const body = (await patchRes.json().catch(() => ({}))) as {
+    message?: string;
+    code?: string;
+  };
   throw new ApiResponseError(
     body.message ?? "Não foi possível salvar seus dados.",
     patchRes.status,
+    [],
+    body.code,
   );
 }

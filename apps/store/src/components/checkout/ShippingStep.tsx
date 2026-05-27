@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CartItem } from "@luratha/schemas";
 import { ApiResponseError } from "@/src/lib/errors";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import styles from "./ShippingStep.module.css";
 
 export interface ShippingQuote {
@@ -111,10 +112,15 @@ export default function ShippingStep({
         });
         if (cancelled) return;
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as { message?: string };
+          const body = (await res.json().catch(() => ({}))) as {
+            message?: string;
+            code?: string;
+          };
           throw new ApiResponseError(
             body.message ?? "Não foi possível calcular o frete.",
             res.status,
+            [],
+            body.code,
           );
         }
         const data = (await res.json()) as QuoteResponse;
@@ -126,11 +132,18 @@ export default function ShippingStep({
         });
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiResponseError) {
-          setState({ kind: "error", message: err.message });
-        } else {
-          throw err;
+        if (
+          err instanceof ApiResponseError ||
+          err instanceof TypeError ||
+          (err instanceof DOMException && err.name === "AbortError")
+        ) {
+          setState({
+            kind: "error",
+            message: reportCheckoutError({ error: err, step: "shipping" }),
+          });
+          return;
         }
+        throw err;
       }
     })();
 

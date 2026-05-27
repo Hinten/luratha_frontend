@@ -344,9 +344,12 @@ describe("IdentificationStep", () => {
     });
   });
 
-  it("submit com PATCH 404 + PUT 4xx: propaga erro do PUT pra UI", async () => {
+  it("submit com PATCH 404 + PUT 4xx: exibe mensagem amigável e loga erro técnico", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     fetchSpy
       .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404 }))
       .mockResolvedValueOnce(
@@ -370,14 +373,24 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("CPF inválido no perfil.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
+      ).toBeInTheDocument();
     });
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[checkout:identification]",
+      expect.objectContaining({ status: 400, message: "CPF inválido no perfil." }),
+    );
     expect(onSubmit).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
-  it("submit com PATCH 4xx (não-404): exibe mensagem do server, não chama onSubmit", async () => {
+  it("submit com PATCH 4xx (não-404): exibe mensagem amigável e loga erro original", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     fetchSpy.mockResolvedValue(
       mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
     );
@@ -399,9 +412,19 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("CPF já cadastrado em outra conta.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
+      ).toBeInTheDocument();
     });
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[checkout:identification]",
+      expect.objectContaining({
+        status: 400,
+        message: "CPF já cadastrado em outra conta.",
+      }),
+    );
     expect(onSubmit).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   it("submit com falha de rede (TypeError): exibe mensagem amigável de conexão", async () => {

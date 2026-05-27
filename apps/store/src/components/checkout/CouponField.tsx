@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { ApiResponseError } from "@/src/lib/errors";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import type { AppliedCoupon } from "./OrderSummary";
 import styles from "./CouponField.module.css";
 
@@ -41,10 +42,15 @@ export default function CouponField({
         body: JSON.stringify({ code: code.trim(), cartTotal }),
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
         throw new ApiResponseError(
           body.message ?? "Não foi possível validar o cupom.",
           res.status,
+          [],
+          body.code,
         );
       }
       const data = (await res.json()) as ValidateResponse;
@@ -52,14 +58,16 @@ export default function CouponField({
         onApplied({ code: data.code, discount: data.discount, type: data.type });
         setCode("");
       } else {
+        // 200 com `valid: false`: mensagem já amigável vinda do backend
+        // (ex.: "Cupom expirado.", "Pedido abaixo do mínimo de R$ X.")
         setError(data.reason);
       }
     } catch (err) {
-      if (err instanceof ApiResponseError) {
-        setError(err.message);
-      } else {
-        throw err;
+      if (err instanceof ApiResponseError || err instanceof TypeError) {
+        setError(reportCheckoutError({ error: err, step: "coupon" }));
+        return;
       }
+      throw err;
     } finally {
       setSubmitting(false);
     }
