@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { registerNewUser } from "./_authHelpers";
-import { seedFixtureCart } from "./_cartHelpers";
+import { seedFixtureCart, waitForCartHydrated } from "./_cartHelpers";
 
 /**
  * Checkout — fluxos PIX e Boleto.
@@ -203,6 +203,7 @@ test.describe("Checkout — happy paths", () => {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_PIX,
     });
     await seedFixtureCart(uid);
+    await waitForCartHydrated(page);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);
@@ -225,6 +226,7 @@ test.describe("Checkout — happy paths", () => {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_BOLETO,
     });
     await seedFixtureCart(uid);
+    await waitForCartHydrated(page);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);

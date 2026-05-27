@@ -4,6 +4,7 @@ import {
   adminCartItemConverter,
 } from "@luratha/firestore/adminCartConverter";
 import { firestoreCollections, type CartItem } from "@luratha/schemas";
+import { expect, type Page } from "@playwright/test";
 
 /**
  * Semeia o carrinho do user fixture diretamente no Firestore — o
@@ -14,6 +15,11 @@ import { firestoreCollections, type CartItem } from "@luratha/schemas";
  *
  * Cada chamada substitui o conteúdo prévio (delete + set), garantindo
  * isolamento entre testes do mesmo run.
+ *
+ * IMPORTANTE: navegar para `/checkout` imediatamente após este awaits pode
+ * causar redirect pra `/carrinho` se o snapshot do Firestore ainda não tiver
+ * propagado pro browser. Use `waitForCartHydrated(page)` antes do
+ * `page.goto("/checkout")` pra garantir que o CartContext absorveu os items.
  */
 
 const DEFAULT_ITEM: Omit<CartItem, "userId" | "addedAt" | "updatedAt"> = {
@@ -76,3 +82,20 @@ export async function clearFixtureCart(uid: string): Promise<void> {
   await Promise.all(itemsSnap.docs.map((doc) => doc.ref.delete()));
   await cartRef.delete();
 }
+
+/**
+ * Espera o snapshot reativo do `CartContext` entregar os items semeados ao
+ * browser. Usa o badge numérico do link "Carrinho" no header como sentinel
+ * — ele só renderiza quando `totalItems > 0`.
+ *
+ * Sem esta espera, navegar pra `/checkout` antes do snapshot propagar
+ * dispara o guard `cartReady && items.length === 0` no CheckoutFlow e
+ * redireciona pra `/carrinho` antes do step "Seus dados" aparecer.
+ */
+export async function waitForCartHydrated(page: Page): Promise<void> {
+  const cartLink = page.getByRole("link", { name: "Carrinho" });
+  await expect(cartLink).toBeVisible({ timeout: 10_000 });
+  // O badge é um <span> filho do link com o texto do count. Aguarda aparecer.
+  await expect(cartLink.locator("span")).toBeVisible({ timeout: 15_000 });
+}
+

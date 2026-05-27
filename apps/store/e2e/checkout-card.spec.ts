@@ -1,6 +1,6 @@
 import { test, expect, type Route } from "@playwright/test";
 import { registerNewUser } from "./_authHelpers";
-import { seedFixtureCart } from "./_cartHelpers";
+import { seedFixtureCart, waitForCartHydrated } from "./_cartHelpers";
 
 /**
  * Checkout — fluxo de cartão (com mock do Brick).
@@ -123,6 +123,7 @@ test.describe("Checkout — cartão (Brick mockado)", () => {
     const uid = await registerNewUser(page);
     await mockCheckoutApis(page, uid);
     await seedFixtureCart(uid);
+    await waitForCartHydrated(page);
 
     // Intercepta payment-intent e captura o body submetido pra assertion.
     let capturedBody: Record<string, unknown> | null = null;
