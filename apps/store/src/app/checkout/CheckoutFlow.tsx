@@ -433,6 +433,17 @@ export default function CheckoutFlow() {
         <StepIndicator
           steps={VISIBLE_STEPS}
           currentStep={activeStep === "result" ? "review" : activeStep}
+          // Desabilita cliques quando estamos na view de resultado (PIX/Boleto
+          // gerado). Clicar num step ali destruiria o `state.paymentResult`
+          // em memória e o user perderia o QR/link sem aviso — ele deve usar
+          // "Acompanhar pedido" / "Tente novamente".
+          onStepClick={
+            activeStep === "result"
+              ? undefined
+              : (stepId) => {
+                  if (isVisibleStepId(stepId)) goToStep(stepId);
+                }
+          }
         />
       </header>
 
