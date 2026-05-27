@@ -39,7 +39,10 @@ export function isMercadoPagoSandbox(accessToken: string): boolean {
   const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
   if (explicit === "sandbox") return true;
   if (explicit === "production") return false;
-  return accessToken.startsWith("TEST-");
+  throw new PaymentProviderError(
+    "MERCADOPAGO_ENV não configurado. Defina como 'sandbox' ou 'production' para garantir o comportamento correto.",
+    "config_missing",
+  );
 }
 
 /**
@@ -403,36 +406,9 @@ interface OrderResponse {
   transactions?: { payments?: OrderPaymentResponse[] };
 }
 
-/**
- * Detecta config inconsistente entre `MERCADOPAGO_ENV` e o access token.
- *
- * Cenário crítico que isso evita: na promoção pra prod, alguém troca só o
- * secret do access token pra `APP_USR-...` e esquece de flipar `MERCADOPAGO_ENV`
- * de `"sandbox"` pra `"production"` no apphosting.yaml. Sem essa guarda, o
- * adapter continuaria reescrevendo o `payer.email` de pagamentos reais pra
- * `@testuser.com` → `invalid_users_involved` em todo pedido de produção.
- */
-function assertEnvMatchesToken(accessToken: string): void {
-  const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
-  if (explicit === "sandbox" && accessToken.startsWith("APP_USR-")) {
-    throw new PaymentProviderError(
-      "MERCADOPAGO_ENV=sandbox com token de produção (APP_USR-). Atualize a flag pra 'production' antes de processar pagamentos.",
-      "config_missing",
-    );
-  }
-  if (explicit === "production" && process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL?.trim()) {
-    // Não é fatal — mas log warning porque o operador provavelmente esqueceu
-    // de limpar a var ao promover.
-    console.warn(
-      "[mercadoPago] MERCADOPAGO_SANDBOX_PAYER_EMAIL setada em production — ignorada (sandbox é false).",
-    );
-  }
-}
-
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
   const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
-  assertEnvMatchesToken(accessToken);
   const sandbox = isMercadoPagoSandbox(accessToken);
   const effectiveInput = sandbox ? withSandboxEmail(input) : input;
   if (sandbox && effectiveInput.payer.email !== input.payer.email) {
