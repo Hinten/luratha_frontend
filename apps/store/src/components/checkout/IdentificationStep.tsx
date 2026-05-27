@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
 import { ApiResponseError } from "@/src/lib/errors";
 import { persistProfileFields } from "@/src/lib/checkout/persistProfileFields";
+import { formatCnpj } from "@/src/lib/format/cnpj";
+import { formatCpf } from "@/src/lib/format/cpf";
 import type { PaymentPayer } from "@/src/components/checkout/PaymentStep";
 import styles from "./IdentificationStep.module.css";
 
@@ -25,12 +27,18 @@ export interface IdentificationStepProps {
 
 function makeDefaults(props: IdentificationStepProps): PayerFormInput {
   const d = props.defaults;
+  const type = d.identificationType ?? "CPF";
+  const rawNumber = d.identificationNumber ?? "";
+  // Defaults vêm crus do UserProfile (CPF formatado "999.999.999-99" ou
+  // CNPJ "99.999.999/9999-99") ou só dígitos. Re-aplicamos a máscara pra
+  // garantir consistência com o que o usuário digita.
+  const formattedNumber = type === "CNPJ" ? formatCnpj(rawNumber) : formatCpf(rawNumber);
   return {
     email: d.email ?? "",
     firstName: d.firstName ?? "",
     lastName: d.lastName ?? "",
-    identificationType: d.identificationType ?? "CPF",
-    identificationNumber: d.identificationNumber ?? "",
+    identificationType: type,
+    identificationNumber: formattedNumber,
     cardholderName: "",
   };
 }
@@ -53,13 +61,44 @@ export default function IdentificationStep(props: IdentificationStepProps) {
   const {
     register,
     handleSubmit,
-    getValues,
+    reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<PayerFormInput>({
     resolver: zodResolver(payerFormSchema),
     mode: "onBlur",
     defaultValues: makeDefaults(props),
   });
+
+  // Re-popula o form quando os defaults mudam após o mount. O CheckoutFlow
+  // carrega o UserProfile assincronamente (fetch /api/users/{uid}) — sem este
+  // reset, useForm fica preso aos valores vazios do primeiro render.
+  useEffect(() => {
+    reset(makeDefaults(props));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    props.defaults.email,
+    props.defaults.firstName,
+    props.defaults.lastName,
+    props.defaults.identificationType,
+    props.defaults.identificationNumber,
+    reset,
+  ]);
+
+  const idType = watch("identificationType");
+
+  // Quando o usuário troca o tipo (CPF↔CNPJ), re-formata o número atual
+  // com a máscara correspondente. Ex.: "123.456.789-09" digitado em CPF
+  // → vira "12.345.678/9" se trocar pra CNPJ (preserva dígitos, máscara nova).
+  useEffect(() => {
+    const current = watch("identificationNumber") ?? "";
+    const reformatted = idType === "CNPJ" ? formatCnpj(current) : formatCpf(current);
+    if (reformatted !== current) {
+      setValue("identificationNumber", reformatted, { shouldValidate: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idType]);
 
   async function processSubmit(values: PayerFormInput) {
     setError(null);
@@ -192,18 +231,25 @@ export default function IdentificationStep(props: IdentificationStepProps) {
               id="ident-id-number"
               className={styles.input}
               inputMode="numeric"
-              pattern="\d*"
-              maxLength={14}
+              maxLength={idType === "CNPJ" ? 18 : 14}
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
               placeholder={
-                getValues("identificationType") === "CNPJ"
-                  ? "00000000000000"
-                  : "00000000000"
+                idType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"
               }
-              {...register("identificationNumber")}
+              {...register("identificationNumber", {
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const formatted =
+                    idType === "CNPJ"
+                      ? formatCnpj(e.target.value)
+                      : formatCpf(e.target.value);
+                  setValue("identificationNumber", formatted, {
+                    shouldValidate: false,
+                  });
+                },
+              })}
             />
             <span className={styles.muted}>
-              Apenas números — sem pontos ou traços.
+              Pontos e traço são preenchidos automaticamente.
             </span>
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>

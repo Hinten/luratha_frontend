@@ -386,10 +386,17 @@ export default function CheckoutFlow() {
       const result = (await intentRes.json()) as PaymentResultData;
 
       if (result.status === "paid") {
+        // Cartão aprovado: limpa o cart **antes** do redirect.
+        // O SuccessClient também tenta limpar no mount, mas em produção há
+        // race se o usuário sai da página de sucesso rapidamente (clica
+        // "Continuar comprando" antes do `void clearCart()` async terminar
+        // — o browser cancela o fetch in-flight). Bloquear aqui garante que
+        // quando a página de sucesso montar, o cart já está vazio no
+        // servidor e o snapshot Firestore chega zerado.
+        await clearCart();
         // `window.location.assign` em vez de `router.replace` por robustez:
         // o client router do Next pode ser interrompido por re-renders do
         // Brick após `onSubmit` resolver. Full reload garante navegação.
-        // SuccessClient limpa o cart no mount da página de sucesso.
         window.location.assign(`/checkout/sucesso/${created.id}`);
         return;
       }
