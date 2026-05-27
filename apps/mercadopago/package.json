@@ -13,6 +13,7 @@
     "test:cloud": "vitest run --config vitest.cloud.config.mts"
   },
   "dependencies": {
+    "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
     "@luratha/payments": "workspace:*",
     "@luratha/schemas": "workspace:*",

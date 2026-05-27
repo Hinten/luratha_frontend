@@ -2,6 +2,7 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
+import { logger } from "./logger";
 
 if (getApps().length === 0) {
   initializeApp();
@@ -67,7 +68,7 @@ async function deleteStockForProduct(productId: string): Promise<void> {
       console.log(`[onProductDeleted] No stock document found for product "${productId}" — nothing to delete`);
     }
   } catch (error) {
-    console.error(`[onProductDeleted] Error deleting stock for product "${productId}":`, error);
+    logger.error("[onProductDeleted] Error deleting stock", { productId, error });
   }
 }
 

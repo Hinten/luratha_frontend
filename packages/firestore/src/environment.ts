@@ -1,3 +1,5 @@
+import { logger } from "@luratha/core/logging/logger";
+
 export const DEFAULT_FIREBASE_PROJECT_ID = "luratha-96386";
 
 // `||` (rather than `??`) is intentional throughout this file: when env vars
@@ -75,7 +77,7 @@ function parseWebConfigJson(raw: string, source: string): RawFirebaseWebConfig |
   } catch (error) {
     if (error instanceof SyntaxError) {
       // Malformed JSON — fall back to the next config source.
-      console.warn(`Failed to parse ${source}. Expected a valid JSON object.`, error);
+      logger.warn(`Failed to parse ${source}. Expected a valid JSON object.`, { error });
       return undefined;
     }
     throw error;

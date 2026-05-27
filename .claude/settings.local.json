@@ -18,7 +18,8 @@
       "Bash(grep -nE \"Test Files|cloud\\\\.test\\\\.ts$\" \"C:\\\\Users\\\\Lucas\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Lucas-Documents-projetos-luratha-frontend--claude-worktrees-checkout\\\\405df549-8050-4631-bafd-2ed68ee49d16\\\\tasks\\\\by4dt6bpg.output\")",
       "Bash(NODE_OPTIONS=\"--use-system-ca\" pnpm --filter @luratha/store test:firestore)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Lucas\\\\Documents\\\\projetos\\\\luratha_frontend\" -Filter \"*checkout*\" -Recurse -Directory)",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(cd functions *)"
     ]
   },
   "enabledMcpjsonServers": [

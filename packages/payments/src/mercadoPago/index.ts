@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { logger } from "@luratha/core/logging/logger";
 import {
   MP_API_BASE_URL,
   resolveMercadoPagoConfig,
@@ -75,28 +76,6 @@ export function withSandboxEmail(input: CreatePaymentInput): CreatePaymentInput 
   };
 }
 
-/** Serializa payload em JSON compacto pra logging — uma linha por entry. */
-function serializeLogPayload(value: unknown): string {
-  try {
-    return JSON.stringify(value, (_key, val) => {
-      if (val instanceof Error) {
-        const out: Record<string, unknown> = { name: val.name, message: val.message };
-        for (const k of Object.getOwnPropertyNames(val)) {
-          if (k === "name" || k === "message" || k === "stack") continue;
-          out[k] = (val as unknown as Record<string, unknown>)[k];
-        }
-        return out;
-      }
-      return val;
-    });
-  } catch (err) {
-    if (err instanceof TypeError) {
-      return String(value);
-    }
-    throw err;
-  }
-}
-
 interface MpErrorShape {
   name: string;
   message: string;
@@ -167,14 +146,13 @@ function logAndRewrapMpError(
 ): PaymentProviderError {
   const { name, message, status } = describeMercadoPagoError(err);
 
-  const payload = serializeLogPayload({
+  logger.error(`[mercadoPago] order.${operation} failed`, {
     ...context,
     name,
     message,
     status,
     cause: err,
   });
-  console.error(`[mercadoPago] order.${operation} failed ${payload}`);
 
   if (name === "AbortError") {
     return new PaymentProviderError(
@@ -416,9 +394,9 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
     // efetivamente foi enviado ao MP. Útil pra diferenciar uso de
     // MERCADOPAGO_SANDBOX_PAYER_EMAIL (test user explícito) do fallback
     // de domínio (que ainda pode bater em `invalid_users_involved`).
-    console.info(
-      `[mercadoPago] sandbox detected — payer.email rewritten to ${effectiveInput.payer.email}`,
-    );
+    logger.info("[mercadoPago] sandbox detected — payer.email rewritten", {
+      payerEmail: effectiveInput.payer.email,
+    });
   }
   const body = buildOrderBody(effectiveInput);
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { logger } from "@luratha/core/logging/logger";
 
 /**
  * Busca o catálogo de serviços do Melhor Envio
@@ -68,7 +69,7 @@ export async function fetchMelhorEnvioServices(): Promise<
   } catch (err) {
     if (err instanceof DOMException || err instanceof TypeError) {
       // Timeout (AbortError) ou falha de rede — cai no editor manual.
-      console.warn("[melhorEnvioServices] chamada falhou:", err.message);
+      logger.warn("[melhorEnvioServices] chamada falhou", { message: err.message });
       return null;
     }
     throw err;
