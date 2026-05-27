@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /**
  * Faz sign-in do user fixture (criado pelo `playwrightCloudSetup.globalSetup.ts`)
@@ -18,10 +18,17 @@ export async function signInAsFixture(page: Page): Promise<void> {
       "[E2E] E2E_FIXTURE_EMAIL/PASSWORD ausentes — globalSetup não rodou.",
     );
   }
+
   await page.goto("/login");
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("Senha").fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
-  // Após o login bem-sucedido o app redireciona pra /.
-  await page.waitForURL("/", { timeout: 15_000 });
+
+  // Padrão canônico do auth.spec.ts: aguarda o redirect para `/` e o header
+  // re-renderizar com o user logado (botão "Sair da conta" aparece) — só aí o
+  // AuthContext já populou `user` via onIdTokenChanged + postSession.
+  await expect(page).toHaveURL("/", { timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible({
+    timeout: 10_000,
+  });
 }

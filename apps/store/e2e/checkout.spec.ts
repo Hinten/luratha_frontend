@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { signInAsFixture } from "./_authHelpers";
+import { seedFixtureCart } from "./_cartHelpers";
 
 /**
  * Checkout — fluxos PIX e Boleto.
@@ -16,24 +17,6 @@ import { signInAsFixture } from "./_authHelpers";
 const FIXTURE_UID = process.env.E2E_FIXTURE_UID ?? "";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
-
-type E2ECartItem = {
-  id: string;
-  userId: string;
-  productId: string;
-  variantSku: string;
-  productSlug: string;
-  name: string;
-  photoId: string;
-  imageUrl: string;
-  variantLabel?: string;
-  unitPrice: number;
-  quantity: number;
-  currency: "BRL";
-  dimensions: null;
-  addedAt: string;
-  updatedAt: string;
-};
 
 const FIXTURE_ADDRESS = {
   id: "addr-checkout-e2e",
@@ -95,35 +78,6 @@ const FIXTURE_PAYMENT_INTENT_BOLETO = {
     digitableLine: "03399.65327 65000.000124 12100.456789 1 12345678901234",
   },
 };
-
-function buildCartItem(over: Partial<E2ECartItem> = {}): E2ECartItem {
-  const now = new Date().toISOString();
-  return {
-    id: "prod-vest-1__var-m",
-    userId: "guestcart",
-    productId: "prod-vest-1",
-    variantSku: "VEST_MARINA_M",
-    productSlug: "vestido-marina",
-    name: "Vestido Marina",
-    photoId: "prod-vest-1-photo-1",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/luratha-test/o/vestido-marina.jpg?alt=media",
-    variantLabel: "M",
-    unitPrice: 250,
-    quantity: 1,
-    currency: "BRL",
-    dimensions: null,
-    addedAt: now,
-    updatedAt: now,
-    ...over,
-  };
-}
-
-async function seedCart(page: Page, items: E2ECartItem[]) {
-  await page.addInitScript((cartItems) => {
-    localStorage.setItem("luratha_cart_v2", JSON.stringify(cartItems));
-  }, items);
-}
 
 interface MockCheckoutOptions {
   /** Fixture devolvida em `POST /api/checkout/payment-intent`. */
@@ -247,7 +201,7 @@ test.describe("Checkout — happy paths", () => {
     await mockCheckoutApis(page, FIXTURE_UID, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_PIX,
     });
-    await seedCart(page, [buildCartItem({ userId: FIXTURE_UID })]);
+    await seedFixtureCart(FIXTURE_UID);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);
@@ -268,7 +222,7 @@ test.describe("Checkout — happy paths", () => {
     await mockCheckoutApis(page, FIXTURE_UID, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_BOLETO,
     });
-    await seedCart(page, [buildCartItem({ userId: FIXTURE_UID })]);
+    await seedFixtureCart(FIXTURE_UID);
 
     await page.goto("/checkout");
     await fillIdentificationAndAdvanceToPayment(page);

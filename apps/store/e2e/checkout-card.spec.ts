@@ -1,5 +1,6 @@
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Route } from "@playwright/test";
 import { signInAsFixture } from "./_authHelpers";
+import { seedFixtureCart } from "./_cartHelpers";
 
 /**
  * Checkout — fluxo de cartão (com mock do Brick).
@@ -22,54 +23,7 @@ const FIXTURE_PAYMENT_INTENT_CARD_PAID = {
   status: "paid",
 };
 
-type E2ECartItem = {
-  id: string;
-  userId: string;
-  productId: string;
-  variantSku: string;
-  productSlug: string;
-  name: string;
-  photoId: string;
-  imageUrl: string;
-  variantLabel?: string;
-  unitPrice: number;
-  quantity: number;
-  currency: "BRL";
-  dimensions: null;
-  addedAt: string;
-  updatedAt: string;
-};
-
-function buildCartItem(over: Partial<E2ECartItem> = {}): E2ECartItem {
-  const now = new Date().toISOString();
-  return {
-    id: "prod-vest-1__var-m",
-    userId: "guestcart",
-    productId: "prod-vest-1",
-    variantSku: "VEST_MARINA_M",
-    productSlug: "vestido-marina",
-    name: "Vestido Marina",
-    photoId: "prod-vest-1-photo-1",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/luratha-test/o/vestido-marina.jpg?alt=media",
-    variantLabel: "M",
-    unitPrice: 250,
-    quantity: 1,
-    currency: "BRL",
-    dimensions: null,
-    addedAt: now,
-    updatedAt: now,
-    ...over,
-  };
-}
-
-async function seedCart(page: Page, items: E2ECartItem[]) {
-  await page.addInitScript((cartItems) => {
-    localStorage.setItem("luratha_cart_v2", JSON.stringify(cartItems));
-  }, items);
-}
-
-async function mockCheckoutApis(page: Page, uid: string) {
+async function mockCheckoutApis(page: import("@playwright/test").Page, uid: string) {
   const address = {
     id: "addr-card-e2e",
     userId: uid,
@@ -168,7 +122,7 @@ test.describe("Checkout — cartão (Brick mockado)", () => {
     page,
   }) => {
     await mockCheckoutApis(page, FIXTURE_UID);
-    await seedCart(page, [buildCartItem({ userId: FIXTURE_UID })]);
+    await seedFixtureCart(FIXTURE_UID);
 
     // Intercepta payment-intent e captura o body submetido pra assertion.
     let capturedBody: Record<string, unknown> | null = null;
