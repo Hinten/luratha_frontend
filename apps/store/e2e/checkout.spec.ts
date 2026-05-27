@@ -1,6 +1,10 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { registerNewUser } from "./_authHelpers";
-import { seedFixtureCart, waitForCartHydrated } from "./_cartHelpers";
+import {
+  seedFixtureCart,
+  waitForCartHydrated,
+  goToCheckoutViaCart,
+} from "./_cartHelpers";
 
 /**
  * Checkout — fluxos PIX e Boleto.
@@ -205,7 +209,7 @@ test.describe("Checkout — happy paths", () => {
     await seedFixtureCart(uid);
     await waitForCartHydrated(page);
 
-    await page.goto("/checkout");
+    await goToCheckoutViaCart(page);
     await fillIdentificationAndAdvanceToPayment(page);
 
     // Tab PIX é o default.
@@ -228,7 +232,7 @@ test.describe("Checkout — happy paths", () => {
     await seedFixtureCart(uid);
     await waitForCartHydrated(page);
 
-    await page.goto("/checkout");
+    await goToCheckoutViaCart(page);
     await fillIdentificationAndAdvanceToPayment(page);
 
     // Troca para tab Boleto.

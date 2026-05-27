@@ -1,6 +1,10 @@
 import { test, expect, type Route } from "@playwright/test";
 import { registerNewUser } from "./_authHelpers";
-import { seedFixtureCart, waitForCartHydrated } from "./_cartHelpers";
+import {
+  seedFixtureCart,
+  waitForCartHydrated,
+  goToCheckoutViaCart,
+} from "./_cartHelpers";
 
 /**
  * Checkout — fluxo de cartão (com mock do Brick).
@@ -136,7 +140,7 @@ test.describe("Checkout — cartão (Brick mockado)", () => {
       });
     });
 
-    await page.goto("/checkout");
+    await goToCheckoutViaCart(page);
 
     // Step 1 — Seus dados.
     await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();

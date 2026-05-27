@@ -99,3 +99,20 @@ export async function waitForCartHydrated(page: Page): Promise<void> {
   await expect(cartLink.locator("span")).toBeVisible({ timeout: 15_000 });
 }
 
+/**
+ * Navega para `/checkout` via client-side push (em vez de full reload via
+ * `page.goto`) clicando em "Finalizar Compra" dentro de `/carrinho`.
+ * Isso preserva o estado do `CartContext` (que vive no root layout), evitando
+ * o ciclo "re-mount → re-subscribe Firestore → race com redirect /carrinho"
+ * que acontece num `page.goto("/checkout")` direto.
+ *
+ * Pré-requisito: cart já populado (use `waitForCartHydrated` antes).
+ */
+export async function goToCheckoutViaCart(page: Page): Promise<void> {
+  await page.goto("/carrinho");
+  const finalizar = page.getByRole("button", { name: /Finalizar Compra/i });
+  await expect(finalizar).toBeEnabled({ timeout: 15_000 });
+  await finalizar.click();
+  await expect(page).toHaveURL("/checkout", { timeout: 10_000 });
+}
+
