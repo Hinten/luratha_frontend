@@ -178,19 +178,21 @@ The ESLint rules (`no-empty`, `no-restricted-syntax`) enforce **(a)** that the c
 
 ### Logging conventions
 
-Single-line logs only. Firebase App Hosting forwards stdout/stderr to Cloud Logging, which splits `console.error("msg", obj)` into one entry per line of `util.inspect` — that makes errors uncopyable. Always serialize the payload into the message string with `serializeLogPayload` from `@luratha/core/logging/serializeLogPayload`:
+Use the structured logger from `@luratha/core/logging/logger`. It emits one JSON line per call with a `severity` field that Firebase App Hosting's Cloud Logging picks up automatically — letting operators filter `severity=WARNING` vs `severity=ERROR` in the Logs Explorer instead of having `console.warn` and `console.error` both collapse into the ERROR bucket via stderr mapping.
 
 ```ts
-// ❌ multi-entry — broken in Cloud Logging
-console.error("[scope] op failed", { context, err });
+import { logger } from "@luratha/core/logging/logger";
 
-// ✅ single entry — copy-paste-friendly
-console.error(`[scope] op failed ${serializeLogPayload({ context, err })}`);
+logger.info("[scope] starting…");
+logger.warn("[scope] retry triggered", { attempt: 2 });
+logger.error("[scope] op failed", { context, err });
 ```
 
-Applies to `console.error` and `console.warn` whenever a payload (object or `Error`) accompanies the message. Pure string messages without a payload (`console.log("starting…")`, `console.warn(\`product "${slug}" not found\`)`) are fine as-is.
+The `payload` (second arg, optional) is serialized through `serializeLogPayload`: `Error` instances become `{ name, message, ...customProps }` (stack omitted — Cloud Logging keeps stacks separately), and cycles/`BigInt` fall back to a `String(payload)` representation. Payload fields are queryable in Logs Explorer via `jsonPayload.payload.<path>`.
 
-The helper omits `error.stack` — Cloud Logging keeps the stack separately and inlining it defeats the single-line goal.
+Never call `console.error` / `console.warn` with a payload object — Cloud Logging splits `util.inspect` output across separate entries AND maps stderr to severity ERROR regardless of intent. Pure progress strings without a payload (`console.log("starting…")`) are still fine.
+
+For `functions/` (separate npm project outside the pnpm workspace), use the local `functions/src/logger.ts` copy — same shape, kept in sync by hand.
 
 ## Testing Conventions
 

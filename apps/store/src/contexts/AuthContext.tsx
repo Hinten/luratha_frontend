@@ -21,7 +21,7 @@ import {
 } from "firebase/auth";
 import { getClientAuth } from "@luratha/firestore/firebaseClient";
 import { AuthClientError } from "@/src/lib/errors";
-import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
+import { logger } from "@luratha/core/logging/logger";
 
 export interface AuthUser {
   uid: string;
@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Already signed out — non-fatal.
           }
           setUser(null);
-          console.warn("Falha ao estabelecer sessão server-side; usuário deslogado.", err);
+          logger.warn("Falha ao estabelecer sessão server-side; usuário deslogado.", { err });
         } finally {
           setIsLoading(false);
         }
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!(err instanceof FirebaseError)) {
         throw err;
       }
-      console.warn(`Firebase Auth indisponível — verifique a configuração. ${serializeLogPayload({ err })}`);
+      logger.warn("Firebase Auth indisponível — verifique a configuração.", { err });
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
     }

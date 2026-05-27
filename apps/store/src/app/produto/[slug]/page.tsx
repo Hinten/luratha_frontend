@@ -14,7 +14,7 @@ import { createStockRepository } from "@luratha/repositories/stockRepository";
 import ProductDetailPage from "@/src/components/produto/ProductDetailPage";
 import ViewTracker from "@/src/components/produto/ViewTracker";
 import { getProductPrimaryImage } from "@/src/lib/productImages";
-import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
+import { logger } from "@luratha/core/logging/logger";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -34,7 +34,7 @@ const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProdu
       return null;
     }
 
-    console.error(`[ProdutoPage] error fetching product ${serializeLogPayload({ slug, error })}`);
+    logger.error("[ProdutoPage] error fetching product", { slug, error });
 
     throw createHttpStatusError(500, "Erro ao carregar dados do produto.");
   }
@@ -46,7 +46,7 @@ const getCachedCategoryById = cache(async (categoryId: string): Promise<Firestor
     const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
     return await categoriesRepository.getById(categoryId);
   } catch (error) {
-    console.error(`[ProdutoPage] error fetching category ${serializeLogPayload({ categoryId, error })}`);
+    logger.error("[ProdutoPage] error fetching category", { categoryId, error });
     throw createHttpStatusError(500, "Erro ao carregar dados da categoria do produto.");
   }
 });
@@ -57,7 +57,7 @@ const getCachedStockByProductId = cache(async (productId: string): Promise<Stock
     const stockRepository = createStockRepository(authenticatedAppForUser.firestore);
     return await stockRepository.getByProductId(productId);
   } catch (error) {
-    console.error(`[ProdutoPage] error fetching stock ${serializeLogPayload({ productId, error })}`);
+    logger.error("[ProdutoPage] error fetching stock", { productId, error });
     throw createHttpStatusError(500, "Erro ao carregar dados de estoque do produto.");
   }
 });

@@ -11,7 +11,7 @@ import { getAuthenticatedAppForUser } from "@luratha/firestore/firebaseSsrApp";
 import { createCategoriesRepository } from "@luratha/repositories/categoriesRepository";
 import { createProductsSearchRepository } from "@luratha/repositories/productsSearchRepository";
 import type { ProductSearchFilters, ProductSort } from "@luratha/core/firestoreQueryStrategies";
-import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
+import { logger } from "@luratha/core/logging/logger";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -34,7 +34,7 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
   try {
     return await categoriesRepository.getBySlug(slug);
   } catch (error) {
-    console.error(`[CategoriaPage] error fetching category ${serializeLogPayload({ slug, error })}`);
+    logger.error("[CategoriaPage] error fetching category", { slug, error });
     throw createHttpStatusError(500, "Erro ao carregar dados da categoria no banco.");
   }
 });
@@ -51,7 +51,7 @@ const getCachedCategoryProducts = cache(
         categorySlug: category.slug,
       });
     } catch (error) {
-      console.error(`[CategoriaPage] error fetching products for category ${serializeLogPayload({ categorySlug: category.slug, error })}`);
+      logger.error("[CategoriaPage] error fetching products for category", { categorySlug: category.slug, error });
       throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
     }
   },

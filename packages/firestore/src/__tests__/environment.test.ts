@@ -95,7 +95,7 @@ describe("firebase environment", () => {
   });
 
   it("falls back to NEXT_PUBLIC_* when FIREBASE_WEBAPP_CONFIG is malformed", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     delete process.env.FIREBASE_WEB_APP_CONFIG_BASE64;
     process.env.FIREBASE_WEBAPP_CONFIG = "{not valid json";
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY = "fallback-api-key";
@@ -104,8 +104,10 @@ describe("firebase environment", () => {
     const config = getFirebaseWebConfig();
     expect(config.apiKey).toBe("fallback-api-key");
     expect(config.projectId).toBe("luratha-fallback");
-    expect(warnSpy).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalled();
+    const entry = JSON.parse(String(logSpy.mock.calls[0][0]));
+    expect(entry.severity).toBe("WARNING");
 
-    warnSpy.mockRestore();
+    logSpy.mockRestore();
   });
 });

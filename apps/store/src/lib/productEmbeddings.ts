@@ -1,6 +1,6 @@
 import type { Product } from "@luratha/schemas";
 import type { EmbeddingService } from "@luratha/core/embeddingService";
-import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
+import { logger } from "@luratha/core/logging/logger";
 
 /**
  * Builds the text used to generate the `vectorEmbedding` field.
@@ -68,7 +68,7 @@ export async function generateProductEmbeddings(
       vectorResult.reason instanceof Error
         ? vectorResult.reason.message
         : vectorResult.reason;
-    console.warn(`[generateProductEmbeddings] vectorEmbedding generation failed ${serializeLogPayload({ reason })}`);
+    logger.warn("[generateProductEmbeddings] vectorEmbedding generation failed", { reason });
   }
 
   if (searchResult.status === "rejected") {
@@ -76,7 +76,7 @@ export async function generateProductEmbeddings(
       searchResult.reason instanceof Error
         ? searchResult.reason.message
         : searchResult.reason;
-    console.warn(`[generateProductEmbeddings] searchEmbedding generation failed ${serializeLogPayload({ reason })}`);
+    logger.warn("[generateProductEmbeddings] searchEmbedding generation failed", { reason });
   }
 
   return {

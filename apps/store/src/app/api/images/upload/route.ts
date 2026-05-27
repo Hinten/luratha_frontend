@@ -3,7 +3,7 @@ import {
   ProductImageUploadError,
   uploadProductImage,
 } from "@luratha/repositories/productImageUpload";
-import { serializeLogPayload } from "@luratha/core/logging/serializeLogPayload";
+import { logger } from "@luratha/core/logging/logger";
 
 export const runtime = "nodejs";
 
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: error.message, code: error.code }, { status });
     }
 
-    console.error(`[POST /api/images/upload] unexpected error ${serializeLogPayload({ error })}`);
+    logger.error("[POST /api/images/upload] unexpected error", { error });
     return NextResponse.json(
       { message: "Falha ao processar upload da imagem.", code: "unknown" },
       { status: 500 },

@@ -30,6 +30,7 @@ import {
   type ProductSearchFilters,
   type ProductSort,
 } from "@luratha/core/firestoreQueryStrategies";
+import { logger } from "@luratha/core/logging/logger";
 import {
   ProductRepositoryError,
 } from "@luratha/repositories/productsRepository";
@@ -258,7 +259,7 @@ export function createProductsSearchRepository(
       try {
         const exactMatch = await findByIdOrSku(rawTerm);
         if (exactMatch) {
-          console.info("[productsSearchRepository] path=exact-match");
+          logger.info("[productsSearchRepository] path=exact-match");
           return [exactMatch];
         }
       } catch (error) {
@@ -267,7 +268,7 @@ export function createProductsSearchRepository(
         if (!(error instanceof FirebaseError)) {
           throw error;
         }
-        console.warn("[productsSearchRepository] exact-match lookup failed; falling back", error);
+        logger.warn("[productsSearchRepository] exact-match lookup failed; falling back", { error });
       }
     }
 
@@ -275,7 +276,7 @@ export function createProductsSearchRepository(
       try {
         const embedding = await embeddingService.embed(filters.term);
         const vectorResults = await executeVectorSearch(embedding, filters);
-        console.info("[productsSearchRepository] path=vector");
+        logger.info("[productsSearchRepository] path=vector");
         return vectorResults;
       } catch (error) {
         // Vector search relies on `findNearest` + the searchEmbedding field.
@@ -285,14 +286,14 @@ export function createProductsSearchRepository(
           throw error;
         }
         vectorError = error;
-        console.warn("[productsSearchRepository] vector fallback triggered", error);
+        logger.warn("[productsSearchRepository] vector fallback triggered", { error });
       }
     }
 
     if (shouldUsePipeline(filters)) {
       try {
         const pipelineResults = await executePipelineSearch(filters);
-        console.info("[productsSearchRepository] path=pipeline");
+        logger.info("[productsSearchRepository] path=pipeline");
         return pipelineResults;
       } catch (error) {
         // Pipeline queries require the Enterprise tier. Fall back to a Core
@@ -302,13 +303,13 @@ export function createProductsSearchRepository(
           throw error;
         }
         pipelineError = error;
-        console.warn("[productsSearchRepository] pipeline fallback triggered", error);
+        logger.warn("[productsSearchRepository] pipeline fallback triggered", { error });
       }
     }
 
     try {
       const coreResults = await executeCore(filters);
-      console.info("[productsSearchRepository] path=core");
+      logger.info("[productsSearchRepository] path=core");
       return coreResults;
     } catch (error) {
       throw normalizeSearchError(error, vectorError, pipelineError);
@@ -390,7 +391,7 @@ function normalizeSearchProduct(
       throw err;
     }
     if (process.env.NODE_ENV !== "production") {
-      console.warn("[productsSearchRepository] invalid search record, applying fallback mapping");
+      logger.warn("[productsSearchRepository] invalid search record, applying fallback mapping");
     }
 
     return createFallbackSearchProduct(record, fallbackId);

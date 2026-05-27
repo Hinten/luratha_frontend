@@ -14,7 +14,7 @@
  */
 export function serializeLogPayload(payload: unknown): string {
   try {
-    return JSON.stringify(payload, replacer);
+    return JSON.stringify(payload, errorReplacer);
   } catch (err) {
     if (err instanceof TypeError) {
       return String(payload);
@@ -23,7 +23,12 @@ export function serializeLogPayload(payload: unknown): string {
   }
 }
 
-function replacer(_key: string, value: unknown): unknown {
+/**
+ * `JSON.stringify` replacer used by both `serializeLogPayload` and the
+ * structured logger. Extracts `name`, `message`, and custom enumerable
+ * own-properties from `Error` instances; `stack` is intentionally omitted.
+ */
+export function errorReplacer(_key: string, value: unknown): unknown {
   if (value instanceof Error) {
     const err = value as Error & Record<string, unknown>;
     const out: Record<string, unknown> = {

@@ -246,6 +246,9 @@ importers:
 
   packages/firestore:
     dependencies:
+      '@luratha/core':
+        specifier: workspace:*
+        version: link:../core
       '@luratha/schemas':
         specifier: workspace:*
         version: link:../schemas
