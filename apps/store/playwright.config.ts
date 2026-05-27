@@ -79,13 +79,6 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
-    // Sessão logada do fixture user é gerada pelo globalSetup (gated em
-    // `hasCredentials`) e gravada nesse path. Caminho passado como string
-    // porque o arquivo só existe **depois** que o globalSetup roda. Tests que
-    // precisam ficar deslogados chamam `context.clearCookies()` no beforeEach.
-    ...(hasCredentials
-      ? { storageState: "./playwright/.auth/storageState.json" }
-      : {}),
   },
   projects: [
     {

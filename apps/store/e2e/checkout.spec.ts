@@ -1,12 +1,13 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
+import { signInAsFixture } from "./_authHelpers";
 
 /**
  * Checkout — fluxos PIX e Boleto.
  *
  * O usuário fixture é criado uma vez pelo `playwrightCloudSetup.globalSetup.ts`
- * (idempotente entre runs), e a sessão `__session` correspondente é gravada
- * em `playwright/.auth/storageState.json` — todo teste começa logado.
- * Sem credenciais Firebase no ambiente, os tests de happy-path pulam sozinhos.
+ * (idempotente entre runs); cada teste faz login via UI no beforeEach (popula
+ * o Firebase Auth client SDK que o `AuthContext` escuta). Sem credenciais
+ * Firebase no ambiente, os tests de happy-path pulam sozinhos.
  *
  * O fluxo de cartão vive em `checkout-card.spec.ts` porque depende do mock do
  * Brick (gated em `NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1`).
@@ -216,8 +217,6 @@ async function fillIdentificationAndAdvanceToPayment(page: Page) {
 // ── Tests sem auth (proxy + UI estática) ────────────────────────────────────
 
 test.describe("Checkout — guards e UI", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test("acesso sem sessão redireciona para /login?redirect=%2Fcheckout", async ({
     page,
   }) => {
@@ -233,14 +232,15 @@ test.describe("Checkout — guards e UI", () => {
   });
 });
 
-// ── Happy paths (storageState + APIs mockadas) ──────────────────────────────
+// ── Happy paths (login via UI + APIs mockadas) ──────────────────────────────
 
 test.describe("Checkout — happy paths", () => {
-  test.beforeEach(() => {
+  test.beforeEach(async ({ page }) => {
     test.skip(
       !FIXTURE_UID,
       "E2E_FIXTURE_UID ausente — globalSetup pulou (sem credenciais Firebase).",
     );
+    await signInAsFixture(page);
   });
 
   test("PIX: 5 steps → PaymentResult com QR Code", async ({ page }) => {

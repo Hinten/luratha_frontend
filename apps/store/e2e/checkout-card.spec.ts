@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
+import { signInAsFixture } from "./_authHelpers";
 
 /**
  * Checkout — fluxo de cartão (com mock do Brick).
@@ -151,7 +152,7 @@ async function mockCheckoutApis(page: Page, uid: string) {
 }
 
 test.describe("Checkout — cartão (Brick mockado)", () => {
-  test.beforeEach(() => {
+  test.beforeEach(async ({ page }) => {
     test.skip(
       !FIXTURE_UID,
       "E2E_FIXTURE_UID ausente — globalSetup pulou (sem credenciais Firebase).",
@@ -160,6 +161,7 @@ test.describe("Checkout — cartão (Brick mockado)", () => {
       !MOCK_ENABLED,
       "NEXT_PUBLIC_E2E_MOCK_MP_BRICK não está '1' — Brick real não funciona em localhost.",
     );
+    await signInAsFixture(page);
   });
 
   test("submit do cartão envia cardToken correto e PaymentResult mostra Aprovado", async ({
