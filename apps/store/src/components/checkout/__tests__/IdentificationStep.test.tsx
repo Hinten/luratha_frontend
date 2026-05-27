@@ -46,6 +46,42 @@ describe("IdentificationStep", () => {
     expect(screen.getByLabelText("Número do documento")).toHaveValue("123.456.789-09");
   });
 
+  it("NÃO clobba input em digitação quando defaults resolvem assincronamente", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{}}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    // User começa a digitar antes do profile carregar.
+    const cpfInput = screen.getByLabelText("Número do documento") as HTMLInputElement;
+    await user.type(cpfInput, "98765");
+    expect(cpfInput.value).toBe("987.65");
+
+    // Profile resolve mid-typing: rerender com defaults carregados.
+    rerender(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "12345678909",
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    // Input do user é preservado — defaults não sobrescrevem porque o form
+    // já está dirty.
+    expect(cpfInput.value).toBe("987.65");
+    expect(screen.getByLabelText("E-mail")).toHaveValue("");
+  });
+
   it("re-popula o form quando defaults mudam após o mount", () => {
     const { rerender } = render(
       <IdentificationStep
@@ -111,6 +147,35 @@ describe("IdentificationStep", () => {
 
     const input = screen.getByLabelText("Número do documento") as HTMLInputElement;
     await user.type(input, "12345678000190");
+    expect(input.value).toBe("12.345.678/0001-90");
+  });
+
+  it("preserva valor cru ao trocar de CNPJ pra CPF quando excede 11 dígitos", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{
+          email: "m@e.com",
+          firstName: "M",
+          lastName: "S",
+          identificationType: "CNPJ",
+          identificationNumber: "12345678000190",
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByLabelText("Número do documento") as HTMLInputElement;
+    expect(input.value).toBe("12.345.678/0001-90");
+
+    await act(async () => {
+      await user.selectOptions(screen.getByLabelText("Tipo de documento"), "CPF");
+    });
+
+    // CNPJ → CPF preserva os 14 dígitos (mascarados pelo formato CNPJ ainda)
+    // em vez de truncar pra 11. Zod no submit bloqueia o avanço se o user
+    // não corrigir, mas dados não são perdidos silenciosamente.
     expect(input.value).toBe("12.345.678/0001-90");
   });
 

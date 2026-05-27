@@ -112,7 +112,7 @@ Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` �
 - **API** `POST /api/checkout/payment-intent`: autenticada, recebe `orderId` + dados do método, cria o pagamento no MP (`external_reference = orderId`, idempotency key = `orderId`) e devolve `PaymentIntentResult` (QR PIX / URL do boleto / status do cartão).
 - **Webhook** `POST /api/webhooks/mercadopago`: público, validado por assinatura `x-signature` (HMAC-SHA256). Consulta o pagamento, mapeia o status MP→`Order` e atualiza `paymentStatus`/`status`/`paidAt`. Idempotente — reenvios não reescrevem.
 - **Order schema** estendido com `paymentIntentId` e `paidAt` (ambos opcionais, retro-compat).
-- **Env vars**: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `MERCADOPAGO_WEBHOOK_URL` (opcional), `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`. Template em `.env.example`; passo-a-passo em `docs/mercadopago-setup.md`. Skill: `.github/skills/mercadopago-payments/`.
+- **Env vars**: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `MERCADOPAGO_ENV` (sandbox/production), `MERCADOPAGO_SANDBOX_PAYER_EMAIL` (sandbox only), `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`. Template em `.env.example`; passo-a-passo em `docs/mercadopago-setup.md`. Skill: `.github/skills/mercadopago-payments/`.
 - **Fora de escopo desta entrega**: UI do Step 3 / tokenização de cartão no browser (issue #83), decremento de estoque e incremento de uso de cupom no `paid`.
 
 #### Resolvido (PR Frete — issue #78 + parte de #80)

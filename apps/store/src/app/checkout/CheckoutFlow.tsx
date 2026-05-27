@@ -401,12 +401,20 @@ export default function CheckoutFlow() {
         return;
       }
 
-      // PIX/Boleto pendentes: limpa cart antes de mostrar o PaymentResult. O
-      // guard de cart vazio (logo abaixo) bypassa o redirect enquanto
-      // `state.paymentResult` está presente, então o user permanece vendo o
-      // QR/boleto até clicar "Acompanhar pedido".
-      await clearCart();
+      // Dispatch SUBMIT_OK **antes** de qualquer clearCart pra garantir que
+      // `state.paymentResult` está populado quando o snapshot Firestore
+      // entregar `items=[]`. Sem isso, o cart-empty guard pode disparar
+      // `router.replace("/carrinho")` antes do PaymentResult renderizar
+      // (race entre o WebSocket do Firestore e o DELETE HTTP).
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result });
+
+      // Cartão **recusado/falhado** (status="failed") NÃO limpa o cart — o
+      // user precisa do cart preservado pra clicar "Tentar outro método" e
+      // tentar de novo. PIX/Boleto pending limpam (fire-and-forget — o
+      // PaymentResult já está visível, server limpa em paralelo).
+      if (draft.paymentMethod !== "credit_card") {
+        void clearCart();
+      }
     } catch (err) {
       if (err instanceof ApiResponseError) {
         dispatch({ type: "SUBMIT_FAIL", message: err.message });

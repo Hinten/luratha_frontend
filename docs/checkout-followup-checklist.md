@@ -134,7 +134,7 @@ Documentadas em código/PR mas sem owner. Cada uma é uma decisão técnica pend
 - [ ] **Secrets MercadoPago no App Hosting**: `apphosting.yaml` já referencia `mercadopago-access-token`, `mercadopago-webhook-secret`, `mercadopago-public-key`. Falta criar cada um: `firebase apphosting:secrets:set <nome> --project luratha-96386` (valores no `.env` da raiz).
 - [ ] **E2E na branch**: rodar `pnpm test:e2e` no CI (flaky local por causa do Turbopack cold start). Confirmar que `checkout.spec.ts` passa contra `luratha-96386`.
 - [x] **`pnpm build` local passa** com as deps novas (`react-hook-form`, `@hookform/resolvers`). Nesta máquina exige `NODE_OPTIONS=--use-system-ca` (interceptação TLS do Norton). Falta confirmar o build no ambiente do App Hosting com as env vars acima.
-- [ ] **Webhook URL em produção**: setar `MERCADOPAGO_WEBHOOK_URL` no env do backend Firebase apontando pra URL pública do App Hosting.
+- [ ] **Webhook URL em produção**: configurar no painel MP (Suas integrações → Webhooks) apontando pra URL pública do App Hosting. A Orders API não aceita `notification_url` por requisição — não há env var equivalente.
 
 ---
 

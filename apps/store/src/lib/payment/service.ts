@@ -40,19 +40,11 @@ function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<O
   if (status === "paid") {
     patch.status = "paid";
     patch.paidAt = approvedAt ?? new Date().toISOString();
-  } else if (status === "refunded" || status === "charged_back") {
-    // Reembolso voluntário e estorno involuntário compartilham o mesmo efeito
-    // no fluxo do pedido — dinheiro saiu, Order.status vira "refunded". A
-    // distinção entre os dois fica apenas em paymentStatus.
+  } else if (status === "refunded") {
     patch.status = "refunded";
   }
-  // "pending" / "authorized" / "failed" mantêm Order.status em "pending_payment"
-  // — o cliente ainda pode tentar pagar de novo.
-  // "in_dispute" não toca Order.status — o pedido continua "paid" (ou onde
-  // estiver na esteira) enquanto o MercadoPago arbitra a contestação. Quando
-  // a disputa fecha, MP envia um novo webhook (approved / charged_back /
-  // refunded) que aí sim atualiza o status do pedido. Ver issue de UI para
-  // refletir a contestação no Order.status.
+  // "pending" / "failed" mantêm Order.status em "pending_payment" — o cliente
+  // ainda pode tentar pagar de novo (ou aguardar PIX/boleto compensar).
   return patch;
 }
 

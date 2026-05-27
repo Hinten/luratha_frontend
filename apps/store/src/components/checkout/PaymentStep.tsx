@@ -291,9 +291,21 @@ export default function PaymentStep(props: PaymentStepProps) {
             aria-selected={method === tab.id}
             className={styles.tab}
             data-active={method === tab.id || undefined}
+            // Bloqueia troca de tab enquanto um submit está em voo. Sem isso, o
+            // PIX/Boleto pode resolver depois do user trocar pra Cartão e o
+            // CheckoutFlow dispatcha SUBMIT_OK → activeStep vira "result"
+            // mostrando o PaymentResult que o user nem queria.
+            disabled={submitting}
             onClick={() => {
               setMethod(tab.id);
               setError(null);
+              // Ao re-entrar no tab Cartão, o <CardPayment> desmonta+remonta
+              // (ternary swap). Sem reset, brickReady fica "true" stale do
+              // mount anterior e o overlay de "Carregando ambiente seguro"
+              // não renderiza durante os ~2s do segundo fetch dos iframes.
+              if (tab.id === "credit_card") {
+                setBrickReady(false);
+              }
             }}
           >
             {tab.label}

@@ -64,7 +64,7 @@ export default function IdentificationStep(props: IdentificationStepProps) {
     reset,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<PayerFormInput>({
     resolver: zodResolver(payerFormSchema),
     mode: "onBlur",
@@ -74,7 +74,14 @@ export default function IdentificationStep(props: IdentificationStepProps) {
   // Re-popula o form quando os defaults mudam após o mount. O CheckoutFlow
   // carrega o UserProfile assincronamente (fetch /api/users/{uid}) — sem este
   // reset, useForm fica preso aos valores vazios do primeiro render.
+  //
+  // Gate em !isDirty: se o usuário já começou a digitar (especialmente o CPF,
+  // que é o campo mais "vazio" no primeiro render), NÃO sobrescreve o input
+  // em andamento. Identificação é o primeiro step, então existe uma janela
+  // de ~200-1000ms entre o mount e o fetch resolver onde o user pode estar
+  // digitando — sem o gate, todo o input seria silenciosamente apagado.
   useEffect(() => {
+    if (isDirty) return;
     reset(makeDefaults(props));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -84,15 +91,27 @@ export default function IdentificationStep(props: IdentificationStepProps) {
     props.defaults.identificationType,
     props.defaults.identificationNumber,
     reset,
+    isDirty,
   ]);
 
   const idType = watch("identificationType");
 
-  // Quando o usuário troca o tipo (CPF↔CNPJ), re-formata o número atual
-  // com a máscara correspondente. Ex.: "123.456.789-09" digitado em CPF
-  // → vira "12.345.678/9" se trocar pra CNPJ (preserva dígitos, máscara nova).
+  // Quando o usuário troca o tipo (CPF↔CNPJ), re-formata o número atual com
+  // a máscara correspondente. Preservar os dígitos é importante: trocar CNPJ
+  // (14 dígitos) → CPF não pode truncar silenciosamente os 3 últimos via
+  // `formatCpf.slice(0,11)`. Quando o número atual excede o limite do novo
+  // tipo, mantemos o valor cru e exibimos uma mensagem de erro pro usuário
+  // editar — não destruímos dígitos pelas costas.
   useEffect(() => {
     const current = watch("identificationNumber") ?? "";
+    const digits = current.replace(/\D/g, "");
+    const maxDigits = idType === "CNPJ" ? 14 : 11;
+    if (digits.length > maxDigits) {
+      // Excede o novo formato — preserva o valor cru (mascarado pelo formato
+      // anterior) pra dar pro user a chance de remover dígitos manualmente.
+      // O Zod no submit já bloqueia caso ele tente avançar com tamanho errado.
+      return;
+    }
     const reformatted = idType === "CNPJ" ? formatCnpj(current) : formatCpf(current);
     if (reformatted !== current) {
       setValue("identificationNumber", reformatted, { shouldValidate: false });
