@@ -1,18 +1,18 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 
 /**
- * Checkout end-to-end.
+ * Checkout — fluxos PIX e Boleto.
  *
- * O caminho feliz exige login real (Firebase Auth) + cookie `__session`
- * válido, porque o `src/proxy.ts` faz presence-check antes da página rodar.
- * Por isso, o teste completo é gated em `E2E_LIVE_AUTH=1` — mesmo padrão de
- * `e2e/auth.spec.ts`.
+ * O usuário fixture é criado uma vez pelo `playwrightCloudSetup.globalSetup.ts`
+ * (idempotente entre runs), e a sessão `__session` correspondente é gravada
+ * em `playwright/.auth/storageState.json` — todo teste começa logado.
+ * Sem credenciais Firebase no ambiente, os tests de happy-path pulam sozinhos.
  *
- * As assertions de redirect (proxy) e UI estática rodam sempre — não exigem
- * Firebase.
+ * O fluxo de cartão vive em `checkout-card.spec.ts` porque depende do mock do
+ * Brick (gated em `NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1`).
  */
 
-const hasLiveAuth = process.env.E2E_LIVE_AUTH === "1";
+const FIXTURE_UID = process.env.E2E_FIXTURE_UID ?? "";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -75,13 +75,23 @@ const FIXTURE_QUOTES = {
 };
 
 const FIXTURE_PAYMENT_INTENT_PIX = {
-  paymentId: "mp-e2e-001",
+  paymentId: "mp-e2e-pix-001",
   paymentMethod: "pix",
   status: "pending",
   pix: {
     qrCode: "00020126580014BR.GOV.BCB.PIX0136fake-pix-e2e",
     qrCodeBase64:
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgAAIAAAUAAarVyFEAAAAASUVORK5CYII=",
+  },
+};
+
+const FIXTURE_PAYMENT_INTENT_BOLETO = {
+  paymentId: "mp-e2e-bol-001",
+  paymentMethod: "boleto",
+  status: "pending",
+  boleto: {
+    url: "https://www.mercadopago.com.br/payments/boleto-e2e.pdf",
+    digitableLine: "03399.65327 65000.000124 12100.456789 1 12345678901234",
   },
 };
 
@@ -114,7 +124,12 @@ async function seedCart(page: Page, items: E2ECartItem[]) {
   }, items);
 }
 
-async function mockCheckoutApis(page: Page, uid: string) {
+interface MockCheckoutOptions {
+  /** Fixture devolvida em `POST /api/checkout/payment-intent`. */
+  paymentIntentResponse: unknown;
+}
+
+async function mockCheckoutApis(page: Page, uid: string, options: MockCheckoutOptions) {
   const addressForUser = { ...FIXTURE_ADDRESS, userId: uid };
 
   // GET addresses
@@ -175,17 +190,33 @@ async function mockCheckoutApis(page: Page, uid: string) {
     await route.fulfill({
       status: 201,
       contentType: "application/json",
-      body: JSON.stringify(FIXTURE_PAYMENT_INTENT_PIX),
+      body: JSON.stringify(options.paymentIntentResponse),
     });
   });
+}
+
+async function fillIdentificationAndAdvanceToPayment(page: Page) {
+  await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
+  // Nome/email já vêm do user fixture; preenchemos CPF.
+  await page.getByLabel("Número do documento").fill("12345678909");
+  await page.getByRole("button", { name: /Continuar/ }).click();
+
+  await expect(page.getByRole("heading", { name: /Para onde enviamos/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page.getByRole("heading", { name: /Como você quer receber/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Revise antes de pagar" })).toBeVisible();
+  await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
+
+  await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
 }
 
 // ── Tests sem auth (proxy + UI estática) ────────────────────────────────────
 
 test.describe("Checkout — guards e UI", () => {
-  test.beforeEach(async ({ context }) => {
-    await context.clearCookies();
-  });
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test("acesso sem sessão redireciona para /login?redirect=%2Fcheckout", async ({
     page,
@@ -202,74 +233,55 @@ test.describe("Checkout — guards e UI", () => {
   });
 });
 
-// ── Happy path (live Firebase + cart mockado) ───────────────────────────────
+// ── Happy paths (storageState + APIs mockadas) ──────────────────────────────
 
-test.describe("Checkout — fluxo PIX mockado", () => {
-  test("login → cart → 5 steps → PaymentResult com QR PIX", async ({ page }) => {
+test.describe("Checkout — happy paths", () => {
+  test.beforeEach(() => {
     test.skip(
-      !hasLiveAuth,
-      "Set E2E_LIVE_AUTH=1 to run the live-Firebase checkout test",
+      !FIXTURE_UID,
+      "E2E_FIXTURE_UID ausente — globalSetup pulou (sem credenciais Firebase).",
     );
+  });
 
-    // 1. Registra novo usuário
-    await page.goto("/register");
-    const uniqueEmail = `__test_checkout_${Date.now()}@luratha.com`;
-    await page.getByLabel("Nome completo").fill("Marina Souza");
-    await page.getByLabel("E-mail").fill(uniqueEmail);
-    await page.getByLabel("Senha", { exact: true }).fill("senha123");
-    await page.getByLabel("Confirmar senha").fill("senha123");
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await page.waitForURL("/");
-
-    // 2. Captura o uid via API
-    const uid = await page.evaluate(async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.uid as string;
+  test("PIX: 5 steps → PaymentResult com QR Code", async ({ page }) => {
+    await mockCheckoutApis(page, FIXTURE_UID, {
+      paymentIntentResponse: FIXTURE_PAYMENT_INTENT_PIX,
     });
-    if (!uid) throw new Error("Não foi possível recuperar o uid após registro.");
+    await seedCart(page, [buildCartItem({ userId: FIXTURE_UID })]);
 
-    // 3. Mocka as APIs do checkout + popula carrinho
-    await mockCheckoutApis(page, uid);
-    await seedCart(page, [buildCartItem({ userId: uid })]);
-
-    // 4. Entra no checkout — primeiro step é "Seus dados"
     await page.goto("/checkout");
-    await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
+    await fillIdentificationAndAdvanceToPayment(page);
 
-    // Step 1 — Seus dados (email/nome pré-vêm do registro; preencher CPF)
-    await page.getByLabel("Número do documento").fill("12345678909");
-    await page.getByRole("button", { name: /Continuar/ }).click();
-
-    // Step 2 — Endereço (auto-seleciona o default, basta clicar Continuar)
-    await expect(page.getByRole("heading", { name: /Para onde enviamos/ })).toBeVisible();
-    await page.getByRole("button", { name: "Continuar" }).click();
-
-    // Step 3 — Frete
-    await expect(page.getByRole("heading", { name: /Como você quer receber/ })).toBeVisible();
-    await page.getByRole("button", { name: "Continuar" }).click();
-
-    // Step 4 — Revisão (3 cards: Seus dados, Endereço, Frete)
-    await expect(page.getByRole("heading", { name: "Revise antes de pagar" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
-    await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
-
-    // Step 5 — Pagamento (PIX por default, só clicar "Gerar PIX")
-    await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
+    // Tab PIX é o default.
     await page.getByRole("button", { name: "Gerar PIX" }).click();
 
-    // Result — QR PIX renderizado
     await expect(
       page.getByRole("img", { name: "QR Code para pagamento PIX" }),
     ).toBeVisible({ timeout: 10000 });
-
-    // Steps refletem na URL agora (?step=payment depois do submit, com a view
-    // de result derivada de paymentResult em memória).
     await expect(page).toHaveURL(/\/checkout\?step=payment/);
 
-    // "Acompanhar pedido" deve aterrissar em /checkout/sucesso/{id} —
-    // antes a race com clearCart mandava o user pro /carrinho.
+    await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
+  });
+
+  test("Boleto: 5 steps → PaymentResult com link do boleto", async ({ page }) => {
+    await mockCheckoutApis(page, FIXTURE_UID, {
+      paymentIntentResponse: FIXTURE_PAYMENT_INTENT_BOLETO,
+    });
+    await seedCart(page, [buildCartItem({ userId: FIXTURE_UID })]);
+
+    await page.goto("/checkout");
+    await fillIdentificationAndAdvanceToPayment(page);
+
+    // Troca para tab Boleto.
+    await page.getByRole("tab", { name: "Boleto" }).click();
+    await page.getByRole("button", { name: "Gerar boleto" }).click();
+
+    await expect(
+      page.getByRole("link", { name: "Abrir boleto em PDF" }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/checkout\?step=payment/);
+
     await page.getByRole("button", { name: "Acompanhar pedido" }).click();
     await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
   });

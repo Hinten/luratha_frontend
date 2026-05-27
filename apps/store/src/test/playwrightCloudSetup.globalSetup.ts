@@ -1,4 +1,5 @@
 import { seedE2eCloudFirestore } from "./seedE2eCloudFirestore";
+import { setupE2eAuthFixture } from "./e2eAuthFixture";
 
 export default async function playwrightCloudGlobalSetup(): Promise<void> {
   const hasServiceAccount =
@@ -16,4 +17,7 @@ export default async function playwrightCloudGlobalSetup(): Promise<void> {
   }
 
   await seedE2eCloudFirestore();
+
+  const uid = await setupE2eAuthFixture();
+  process.env.E2E_FIXTURE_UID = uid;
 }

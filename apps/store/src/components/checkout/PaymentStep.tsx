@@ -1,9 +1,22 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import Spinner from "@/src/components/Spinner";
 import styles from "./PaymentStep.module.css";
+
+/**
+ * Em CI o Card Payment Brick não renderiza (servidor MP rejeita CORS de
+ * `localhost`), então um form simples substitui o `<CardPayment>` quando
+ * `NEXT_PUBLIC_E2E_MOCK_MP_BRICK === "1"`. O form gera um cardToken fixo
+ * (`E2E_MOCK_CARD_TOKEN`) e dispara `processCardSubmit` igual ao Brick real,
+ * permitindo cobrir o handoff client → `/api/checkout/payment-intent` no E2E.
+ * Em prod a flag está ausente — `process.env.NEXT_PUBLIC_*` é inlinado em
+ * build time, então o branch some do bundle e o `<CardPayment>` real é o único
+ * caminho disponível.
+ */
+const E2E_MOCK_BRICK = process.env.NEXT_PUBLIC_E2E_MOCK_MP_BRICK === "1";
+const E2E_MOCK_CARD_TOKEN = "e2e-mock-card-token";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
@@ -206,6 +219,54 @@ interface CardBrickFormData {
   installments: number;
 }
 
+/**
+ * Substituto do `<CardPayment>` usado SOMENTE em E2E (gated por
+ * `NEXT_PUBLIC_E2E_MOCK_MP_BRICK`). Imita o contrato do Brick: chama `onReady`
+ * no mount e devolve `{ token, payment_method_id, installments }` no submit.
+ * Sem iframes, sem chamada a mercadopago.com — todo o resto do checkout (UI,
+ * handoff pra `/api/checkout/payment-intent`, PaymentResult) é exercitado
+ * normalmente.
+ */
+function E2EMockCardBrick({
+  onReady,
+  onSubmit,
+}: {
+  onReady: () => void;
+  onSubmit: (data: CardBrickFormData) => void | Promise<void>;
+}) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+
+  return (
+    <form
+      data-testid="mp-brick-mock"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        void onSubmit({
+          token: E2E_MOCK_CARD_TOKEN,
+          payment_method_id: String(formData.get("payment_method_id") || "master"),
+          installments: Number(formData.get("installments") || 1),
+        });
+      }}
+    >
+      <label>
+        Parcelas
+        <select name="installments" defaultValue="1" data-testid="mp-brick-mock-installments">
+          {[1, 2, 3, 6, 12].map((n) => (
+            <option key={n} value={n}>{`${n}x`}</option>
+          ))}
+        </select>
+      </label>
+      <input type="hidden" name="payment_method_id" value="master" />
+      <button type="submit" data-testid="mp-brick-mock-submit">
+        Pagar com cartão
+      </button>
+    </form>
+  );
+}
+
 export default function PaymentStep(props: PaymentStepProps) {
   const { cartTotal, shippingAddress, payer, onSubmit, onBack } = props;
 
@@ -331,34 +392,41 @@ export default function PaymentStep(props: PaymentStepProps) {
               className={styles.brickMount}
               style={{ visibility: brickReady ? "visible" : "hidden" }}
             >
-              <CardPayment
-                initialization={{
-                  amount: cartTotal,
-                  payer: {
-                    email: payer.email,
-                    ...(payer.firstName ? { firstName: payer.firstName } : {}),
-                    ...(payer.lastName ? { lastName: payer.lastName } : {}),
-                    identification: {
-                      type: payer.identification.type,
-                      number: payer.identification.number,
+              {E2E_MOCK_BRICK ? (
+                <E2EMockCardBrick
+                  onReady={() => setBrickReady(true)}
+                  onSubmit={(data) => processCardSubmit(data)}
+                />
+              ) : (
+                <CardPayment
+                  initialization={{
+                    amount: cartTotal,
+                    payer: {
+                      email: payer.email,
+                      ...(payer.firstName ? { firstName: payer.firstName } : {}),
+                      ...(payer.lastName ? { lastName: payer.lastName } : {}),
+                      identification: {
+                        type: payer.identification.type,
+                        number: payer.identification.number,
+                      },
                     },
-                  },
-                }}
-                customization={{
-                  paymentMethods: { maxInstallments: 12 },
-                }}
-                onReady={() => setBrickReady(true)}
-                onSubmit={async (param) => {
-                  await processCardSubmit(param as unknown as CardBrickFormData);
-                }}
-                onError={(err) => {
-                  const msg =
-                    err && typeof err === "object" && "message" in err
-                      ? String((err as { message?: unknown }).message)
-                      : "Erro ao processar pagamento com cartão.";
-                  setError(msg);
-                }}
-              />
+                  }}
+                  customization={{
+                    paymentMethods: { maxInstallments: 12 },
+                  }}
+                  onReady={() => setBrickReady(true)}
+                  onSubmit={async (param) => {
+                    await processCardSubmit(param as unknown as CardBrickFormData);
+                  }}
+                  onError={(err) => {
+                    const msg =
+                      err && typeof err === "object" && "message" in err
+                        ? String((err as { message?: unknown }).message)
+                        : "Erro ao processar pagamento com cartão.";
+                    setError(msg);
+                  }}
+                />
+              )}
             </div>
 
             {!brickReady && (

@@ -219,6 +219,17 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # MercadoPago: payment-intent é mockado no client via page.route nos specs,
+      # mas o dev server ainda precisa das vars de servidor pra não crashar ao
+      # importar `@/src/lib/payment/mercadoPago/client` durante /api/checkout/*.
+      MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+      MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+      MERCADOPAGO_ENV: sandbox
+      MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
+      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
+      # Substitui o `<CardPayment>` por um form mock em PaymentStep.tsx — o
+      # Brick real não tokeniza em localhost (CORS), ver SKILL.md.
+      NEXT_PUBLIC_E2E_MOCK_MP_BRICK: "1"
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets
