@@ -39,7 +39,10 @@ export function isMercadoPagoSandbox(accessToken: string): boolean {
   const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
   if (explicit === "sandbox") return true;
   if (explicit === "production") return false;
-  return accessToken.startsWith("TEST-");
+  throw new PaymentProviderError(
+    "MERCADOPAGO_ENV não configurado. Defina como 'sandbox' ou 'production' para garantir o comportamento correto.",
+    "config_missing",
+  );
 }
 
 /**
