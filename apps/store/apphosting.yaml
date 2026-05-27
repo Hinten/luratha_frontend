@@ -40,7 +40,7 @@ env:
   # 402) porque o email "qualquer @testuser.com" resolve pro mesmo usuario do
   # vendedor. Em producao a flag e ignorada.
   - variable: MERCADOPAGO_SANDBOX_PAYER_EMAIL
-    value: ""
+    value: "test_user_6882404001016965566@testuser.com"
     availability:
       - RUNTIME
 
