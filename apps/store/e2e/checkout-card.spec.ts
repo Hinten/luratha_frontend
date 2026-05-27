@@ -110,6 +110,10 @@ async function mockCheckoutApis(page: import("@playwright/test").Page, uid: stri
 }
 
 test.describe("Checkout — cartão (Brick mockado)", () => {
+  // Mesmo motivo do checkout.spec.ts: 30s default é apertado pra register
+  // + UI navigation + 5 steps + tokenize mock.
+  test.describe.configure({ timeout: 60_000 });
+
   test.beforeEach(() => {
     test.skip(
       SKIP_CLOUD,
@@ -160,8 +164,10 @@ test.describe("Checkout — cartão (Brick mockado)", () => {
     await page.getByTestId("mp-brick-mock-installments").selectOption("3");
     await page.getByTestId("mp-brick-mock-submit").click();
 
-    // Result — cartão pago, badge "Pagamento aprovado".
-    await expect(page.getByText("Pagamento aprovado")).toBeVisible({ timeout: 10000 });
+    // Cartão aprovado: CheckoutFlow faz `window.location.assign` direto pra
+    // /checkout/sucesso/{id} (ver linha 428 de CheckoutFlow.tsx), sem
+    // renderizar PaymentResult. Não há "Pagamento aprovado" intermediário.
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/, { timeout: 15_000 });
 
     // Confirma o handoff client → server.
     expect(capturedBody).not.toBeNull();

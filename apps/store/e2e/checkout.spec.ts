@@ -194,6 +194,11 @@ test.describe("Checkout — guards e UI", () => {
 // ── Happy paths (login via UI + APIs mockadas) ──────────────────────────────
 
 test.describe("Checkout — happy paths", () => {
+  // Cada teste registra um user via UI + /carrinho → /checkout + 5 steps.
+  // O default 30s da Playwright é apertado em CI; 60s dá folga sem mascarar
+  // travas reais.
+  test.describe.configure({ timeout: 60_000 });
+
   test.beforeEach(() => {
     test.skip(
       SKIP_CLOUD,
