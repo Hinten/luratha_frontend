@@ -2,23 +2,26 @@
 
 import type { ReactNode } from "react";
 import type { Address } from "@luratha/schemas";
+import { formatCnpj } from "@/src/lib/format/cnpj";
+import { formatCpf } from "@/src/lib/format/cpf";
+import type { PaymentPayer } from "./PaymentStep";
 import type { ShippingQuote } from "./ShippingStep";
-import type { PaymentSubmitPayload } from "./PaymentStep";
 import styles from "./ReviewSummary.module.css";
 
 /**
- * Cards de revisão do Step 4 (Revisão). Lê o `state` do CheckoutFlow e
- * resume o que o usuário escolheu nos steps anteriores, com botão "Editar"
+ * Cards de revisão do Step "Revisão" (4 de 5). Mostra o que o usuário escolheu
+ * nos steps anteriores (dados pessoais, endereço, frete) com botão "Editar"
  * em cada bloco que volta pro step correspondente. Apresentação pura — não
- * conhece API nem dispatch.
+ * conhece API nem dispatch. O método de pagamento é escolhido no step
+ * seguinte (Pagamento).
  */
 export interface ReviewSummaryProps {
+  payer: PaymentPayer;
   address: Address;
   quote: ShippingQuote;
-  paymentDraft: PaymentSubmitPayload;
+  onEditPayer: () => void;
   onEditAddress: () => void;
   onEditShipping: () => void;
-  onEditPayment: () => void;
 }
 
 const brl = new Intl.NumberFormat("pt-BR", {
@@ -26,30 +29,18 @@ const brl = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-const PAYMENT_METHOD_LABEL: Record<
-  PaymentSubmitPayload["paymentMethod"],
-  string
-> = {
-  pix: "PIX",
-  credit_card: "Cartão de crédito",
-  boleto: "Boleto bancário",
-};
-
-/** Mascara os 4 últimos dígitos: 12345678901 → 123.456.***-** */
-function maskIdentification(digits: string): string {
-  const clean = digits.replace(/\D/g, "");
-  if (clean.length === 11) {
-    return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.***-**`;
-  }
-  if (clean.length === 14) {
-    return `${clean.slice(0, 2)}.${clean.slice(2, 5)}.${clean.slice(5, 8)}/****-**`;
-  }
-  return clean;
-}
-
 function deliveryText(days: number): string {
   if (days <= 0) return "";
   return `em até ${days} ${days === 1 ? "dia útil" : "dias úteis"}`;
+}
+
+function formatIdentification(payer: PaymentPayer): string {
+  const { type, number } = payer.identification;
+  return type === "CPF" ? `CPF ${formatCpf(number)}` : `CNPJ ${formatCnpj(number)}`;
+}
+
+function fullName(payer: PaymentPayer): string {
+  return [payer.firstName, payer.lastName].filter(Boolean).join(" ").trim();
 }
 
 function ReviewCard({
@@ -80,15 +71,26 @@ function ReviewCard({
 }
 
 export default function ReviewSummary({
+  payer,
   address,
   quote,
-  paymentDraft,
+  onEditPayer,
   onEditAddress,
   onEditShipping,
-  onEditPayment,
 }: ReviewSummaryProps) {
+  const name = fullName(payer);
   return (
     <div className={styles.wrapper}>
+      <ReviewCard title="Seus dados" onEdit={onEditPayer}>
+        {name && (
+          <p className={styles.line}>
+            <strong>{name}</strong>
+          </p>
+        )}
+        <p className={styles.line}>{payer.email}</p>
+        <p className={styles.line}>{formatIdentification(payer)}</p>
+      </ReviewCard>
+
       <ReviewCard title="Endereço de entrega" onEdit={onEditAddress}>
         <p className={styles.line}>
           <strong>{address.recipientName}</strong>
@@ -117,25 +119,6 @@ export default function ReviewSummary({
             brl.format(quote.price)
           )}
         </p>
-      </ReviewCard>
-
-      <ReviewCard title="Pagamento" onEdit={onEditPayment}>
-        <p className={styles.line}>
-          <strong>{PAYMENT_METHOD_LABEL[paymentDraft.paymentMethod]}</strong>
-        </p>
-        <p className={styles.line}>{paymentDraft.payer.email}</p>
-        <p className={styles.line}>
-          {paymentDraft.payer.identification.type}:{" "}
-          {maskIdentification(paymentDraft.payer.identification.number)}
-        </p>
-        {paymentDraft.paymentMethod === "credit_card" && (
-          <p className={styles.line}>
-            {paymentDraft.installments}x ·{" "}
-            <span className={styles.brand}>
-              {paymentDraft.paymentMethodId}
-            </span>
-          </p>
-        )}
       </ReviewCard>
     </div>
   );

@@ -13,9 +13,9 @@ export const runtime = "nodejs";
 /**
  * POST /api/checkout/payment-intent
  *
- * Cria o pagamento no MercadoPago (Checkout Transparente) para uma Order já
- * existente em status `pending_payment`. A Order é criada antes via
- * `POST /api/orders`; aqui usamos `Order.id` como `external_reference` para
+ * Cria a order no MercadoPago (Checkout API via Orders, `POST /v1/orders`) para
+ * uma Order já existente em status `pending_payment`. A Order é criada antes
+ * via `POST /api/orders`; aqui usamos `Order.id` como `external_reference` para
  * correlacionar o webhook de confirmação.
  *
  * Body (discriminado por `paymentMethod`):

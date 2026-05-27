@@ -9,10 +9,14 @@ Transparente** (API `/v1/payments`): PIX, cartão de crédito e boleto.
 
 | Variável | Obrigatória | Descrição |
 |---|---|---|
-| `MERCADOPAGO_ACCESS_TOKEN` | sim | Access token do servidor. `TEST-...` para sandbox, `APP_USR-...` para produção. O ambiente é determinado pelo token — não há flag separada. |
+| `MERCADOPAGO_ACCESS_TOKEN` | sim | Access token do servidor. Pode começar com `TEST-` (sandbox) ou `APP_USR-` (produção), mas o painel atual nem sempre gera o prefixo. Use `MERCADOPAGO_ENV` como flag confiável. |
 | `MERCADOPAGO_WEBHOOK_SECRET` | sim | Secret de assinatura dos webhooks. Usado para validar o header `x-signature` das notificações. |
-| `MERCADOPAGO_WEBHOOK_URL` | não | URL pública do receiver (`.../api/webhooks/mercadopago`). Se vazio, o MP usa a URL configurada no painel. |
-| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | sim (para a UI) | Public key exposta ao browser para tokenizar o cartão com `@mercadopago/sdk-js`. Consumida pela UI de checkout (issue #83). |
+| `MERCADOPAGO_ENV` | sim | `sandbox` ou `production`. Determina se o adapter aplica o rewrite do `payer.email` pra `@testuser.com`. |
+| `MERCADOPAGO_SANDBOX_PAYER_EMAIL` | sandbox | Email do test user comprador criado no painel (`test_user_<N>@testuser.com`). Em sandbox, o adapter sobrescreve `payer.email` por esse valor antes de chamar a Orders API — evita `invalid_users_involved`. |
+| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | sim (UI) | Public key exposta ao browser para tokenizar o cartão via Card Payment Brick (`@mercadopago/sdk-react`). |
+
+> **Webhook URL**: configurada no painel MP (Suas integrações → Webhooks),
+> não por env var. A Orders API não aceita `notification_url` por requisição.
 
 > **Importante:** as credenciais são vinculadas ao ambiente. Um par de
 > sandbox **não** funciona em produção e vice-versa. Mantenha conjuntos
@@ -62,7 +66,8 @@ cp .env.example .env
 # Desenvolvimento / testes (credenciais de teste do painel MP)
 MERCADOPAGO_ACCESS_TOKEN="TEST-0000000000000000-000000-xxxxxxxx-000000000"
 MERCADOPAGO_WEBHOOK_SECRET="<secret-do-painel>"
-MERCADOPAGO_WEBHOOK_URL=""
+MERCADOPAGO_ENV="sandbox"
+MERCADOPAGO_SANDBOX_PAYER_EMAIL="test_user_0000000000000000@testuser.com"
 NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY="TEST-xxxxxxxx-0000-0000-0000-000000000000"
 ```
 

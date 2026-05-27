@@ -84,6 +84,76 @@
   padding: 1.25rem;
 }
 
+/* Method card — usado nas tabs PIX/Boleto pra dar uma apresentação
+   convidativa (ícone + título + bullets) em vez de só um helper text seco.
+   Fundo levemente diferenciado pra destacar do form container externo. */
+.methodCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background-color: color-mix(in srgb, var(--color-accent) 35%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-secondary) 22%, transparent);
+  border-radius: 12px;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.methodHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.methodHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.methodIcon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+}
+
+.methodTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-neutral-dark);
+}
+
+.methodSubtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
+}
+
+.benefits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--color-neutral-dark);
+}
+
+.benefitIcon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -127,20 +197,62 @@
   gap: 1rem;
 }
 
-.cardBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border-top: 1px solid var(--color-neutral-mid);
-  padding-top: 1rem;
+/* Container do Brick — relativo pra ancorar o overlay absoluto. */
+.brickContainer {
+  position: relative;
+  /* Altura mínima evita "pulo" de layout quando o overlay cobre o Brick
+     vazio (visibility:hidden) durante o mount. ~520px cobre o form típico
+     do Card Payment Brick. */
+  min-height: 520px;
 }
 
-.iframeMount {
+.brickMount {
+  /* Brick injetado pelo SDK; ele controla seu próprio layout interno. */
+  width: 100%;
+}
+
+/* Overlay com cadeado + spinner usado em dois estados:
+   1. Mount do Brick (brickReady=false): "Carregando ambiente seguro…"
+   2. Submit em andamento (submitting=true): "Processando pagamento…" */
+.brickOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background-color: var(--color-neutral-light);
-  border: 1.5px solid var(--color-neutral-mid);
   border-radius: 10px;
-  padding: 0.7rem 0.9rem;
-  min-height: 2.75rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-neutral-dark);
+  /* Camada acima do Brick (z-index baixo, evita conflito com overlays
+     globais como toasts/modais). */
+  z-index: 1;
+}
+
+.lockIcon {
+  color: color-mix(in srgb, var(--color-neutral-dark) 70%, transparent);
+  margin-bottom: 0.25rem;
+}
+
+.overlayTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.overlaySubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+.overlaySpinner {
+  margin-top: 0.5rem;
+  color: var(--color-secondary);
 }
 
 .actions {

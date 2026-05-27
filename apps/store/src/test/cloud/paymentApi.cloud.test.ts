@@ -50,8 +50,8 @@ vi.mock("@luratha/auth/requireUser", () => {
 
 // ── MercadoPago adapter mock (no real provider calls) ──────────────────────
 const mp = vi.hoisted(() => ({
-  createPayment: vi.fn(),
-  getPayment: vi.fn(),
+  createOrder: vi.fn(),
+  getOrder: vi.fn(),
   verifyWebhookSignature: vi.fn(() => true),
   mapMpStatus: vi.fn(),
 }));
@@ -130,7 +130,7 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
   it("payment-intent persists paymentIntentId on the order", async () => {
     const orderId = await seedOrder();
 
-    mp.createPayment.mockResolvedValueOnce({
+    mp.createOrder.mockResolvedValueOnce({
       paymentId: "mp-cloud-001",
       paymentMethod: "pix",
       status: "pending",
@@ -167,7 +167,7 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
   it("webhook advances the order to paid", async () => {
     const orderId = await seedOrder();
 
-    mp.getPayment.mockResolvedValueOnce({
+    mp.getOrder.mockResolvedValueOnce({
       paymentId: "mp-cloud-002",
       status: "paid",
       orderId,
@@ -182,7 +182,7 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
           "x-signature": "ts=1,v1=mocked",
           "x-request-id": "req-cloud-1",
         },
-        body: JSON.stringify({ type: "payment", data: { id: "mp-cloud-002" } }),
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-002" } }),
       }),
     );
 
@@ -205,8 +205,8 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
   it("webhook is idempotent on a repeated notification", async () => {
     const orderId = await seedOrder();
 
-    mp.getPayment.mockResolvedValue({
-      paymentId: "mp-cloud-003",
+    mp.getOrder.mockResolvedValue({
+      paymentId: "ORD-cloud-003",
       status: "paid",
       orderId,
       approvedAt: "2026-05-19T12:00:00.000Z",
@@ -220,7 +220,7 @@ describeCloud("/api/checkout payment endpoints (Cloud Firebase)", () => {
           "x-signature": "ts=1,v1=mocked",
           "x-request-id": "req-cloud-2",
         },
-        body: JSON.stringify({ type: "payment", data: { id: "mp-cloud-003" } }),
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-003" } }),
       });
 
     const first = await webhookPOST(makeRequest());

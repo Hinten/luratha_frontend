@@ -104,6 +104,11 @@
   transition: background-color 200ms ease;
   /* full-width quando dentro do OrderSummary footer (aside) */
   width: 100%;
+  /* inline-flex pra alinhar o Spinner inline com o texto durante submit */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .confirmBtn:hover:not(:disabled) {
@@ -114,4 +119,15 @@
 .confirmBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Indicador "Processando pagamento…" no rodapé do OrderSummary (aside) */
+/* durante o submit no step de Pagamento. */
+.processing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-neutral-dark);
 }

@@ -49,21 +49,65 @@ esses métodos não dependem do fingerprinting.
 **No CI**: o suite mocka todas as chamadas à MP, então não há dependência
 de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
+> ⚠️ **Cartão não funciona em localhost — nem HTTP nem HTTPS**: o servidor
+> MP rejeita CORS para `/v1/card_tokens` quando o referer é
+> `localhost`/`127.0.0.1`. Testes empíricos com `next dev --experimental-https`
+> (HTTPS local) confirmam que o bloqueio persiste — não é só sobre protocolo.
+> A doc oficial avisa: "Não utilize domínios locais com ou sem porta
+> especificada". **Único caminho para testar Cartão: deployment no App
+> Hosting** (HTTPS público).
+>
+> PIX/Boleto funcionam em HTTP local porque a tokenização não roda no client
+> — só `/api/checkout/payment-intent` chama MP server-to-server. **CORS é
+> política do servidor MP, não há configuração nossa.**
+
+## Onde cada chamada acontece (auditoria arquitetural)
+
+| Operação | Lado | Arquivo / por quê |
+|---|---|---|
+| Carregar SDK MP (`https://sdk.mercadopago.com/js/v2`) | Client | `apps/store/src/lib/mercadopago/loadSdk.ts` — `loadMercadoPago()` |
+| Inicializar `cardForm` (cria iframes MP) | Client | `apps/store/src/lib/mercadopago/cardForm.ts:143` — `sdk.cardForm({...})` |
+| `POST /v1/card_tokens` (PAN+CVV → token) | **Iframe MP** | PCI compliance — PAN/CVV ficam no domínio `mercadopago.com`, nosso JS nunca vê |
+| `GET /v1/payment_methods/search` (BIN → métodos) | **Iframe MP** | Idem |
+| `POST /v1/payments` (criar pagamento usando token) | **Nosso server** | `apps/store/src/lib/payment/mercadoPago/index.ts` via `/api/checkout/payment-intent` (runtime `nodejs`, usa `MERCADOPAGO_ACCESS_TOKEN`) |
+| Webhook (`POST /api/webhooks/mercadopago`) | **Nosso server** | MP chama nosso server; sem CORS |
+
+> A tokenização **tem** que ser client-side: se nosso JS tocasse o PAN ou CVV,
+> entraríamos em PCI scope D (certificação, audit anual). O iframe hospedado
+> existe pra terceirizar isso.
+
 ## Cartões de teste (Brasil — MLB)
 
-| Bandeira | Número | CVV | Validade | Comportamento |
-|---|---|---|---|---|
-| Mastercard | `5031 7557 3453 0604` | qualquer 3 dígitos | qualquer futura | **APRO** — aprovado |
-| Visa | `4235 6477 2802 5682` | qualquer 3 dígitos | qualquer futura | **APRO** — aprovado |
-| Mastercard | `5031 4332 1540 6351` | qualquer 3 dígitos | qualquer futura | **OTHE** — recusado (motivo genérico) |
-| Mastercard | `5031 4332 1540 6351` *(use nome `CONT`)* | qualquer | qualquer | **CONT** — pendente (pending) |
+> ⚠️ **Cartões de teste são por país (siteId)**. Use APENAS os números do
+> seu siteId. Cartão de outro país gera `No payment methods found` no
+> `onBinChange` (browser reporta como CORS error, mas a causa real é o
+> BIN não estar configurado na conta MP). Para Brasil (MLB) use a tabela
+> abaixo; para outros países, consulte a
+> [doc oficial MP](https://www.mercadopago.com.br/developers/pt/docs/checkout-bricks/additional-content/your-integrations/test/cards).
 
-> Para forçar status específicos, **mude o nome no cartão** (campo
-> "Nome impresso") para o status desejado: `APRO`, `OTHE`, `CONT`, `CALL`,
-> `FUND`, `SECU`, `EXPI`, `FORM`. Esse é o protocolo oficial da MP para
-> simular respostas em sandbox.
+| Bandeira | Número | CVV | Validade |
+|---|---|---|---|
+| Mastercard | `5031 4332 1540 6351` | `123` | `11/30` |
+| Visa | `4235 6477 2802 5682` | `123` | `11/30` |
+| Amex | `3753 651535 56885` | `1234` | `11/30` |
+| Elo (débito) | `5067 7667 8388 8311` | `123` | `11/30` |
 
-Documento: qualquer CPF válido (ex.: `12345678909`).
+O **número** identifica país + bandeira; o **nome impresso** controla o
+cenário de status. Use qualquer número MLB acima e **mude o nome** para
+forçar o resultado:
+
+| Nome impresso | Resultado |
+|---|---|
+| `APRO` | Aprovado |
+| `OTHE` | Recusado por erro geral |
+| `CONT` | Pendente |
+| `CALL` | Recusado, validação manual |
+| `FUND` | Saldo insuficiente |
+| `SECU` | CVV inválido |
+| `EXPI` | Validade inválida |
+| `FORM` | Erro de formulário |
+
+Documento (CPF) para APRO/OTHE: `12345678909`.
 
 ## Roteiro PIX
 
@@ -84,9 +128,9 @@ Documento: qualquer CPF válido (ex.: `12345678909`).
 
 1. Steps 1–2 como acima.
 2. Step 3: escolha **Cartão**, preencha:
-   - e-mail + CPF do pagador
+   - e-mail + CPF do pagador (dígitos puros, ex.: `12345678909`)
    - nome impresso = `APRO`
-   - número `5031 7557 3453 0604`, validade `12/30`, CVV `123`
+   - número `5031 4332 1540 6351` (Mastercard MLB), validade `11/30`, CVV `123`
    - parcelas: 1
 3. Confirmar pagamento → step 4 → confirmar pedido.
 4. **Esperado:** `router.replace` para `/checkout/sucesso/<orderId>` imediato
