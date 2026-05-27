@@ -24,6 +24,15 @@ env:
     availability:
       - RUNTIME
 
+  # Ambiente da API: "sandbox" ou "production". Necessário porque as credenciais
+  # TEST do painel MP nem sempre comecam com TEST-; sem essa flag, o rewrite do
+  # payer.email pra @testuser.com (exigido em sandbox) nao acontece e o cartao
+  # falha com `invalid_email_for_sandbox`. Lido em isMercadoPagoSandbox().
+  - variable: MERCADOPAGO_ENV
+    value: "sandbox"
+    availability:
+      - RUNTIME
+
   # Public key exposta ao browser para inicializar o Card Payment Brick
   # (@mercadopago/sdk-react) que tokeniza o cartao na origem MP.
   # NEXT_PUBLIC_* e inlinado no bundle em BUILD time -> precisa de BUILD,

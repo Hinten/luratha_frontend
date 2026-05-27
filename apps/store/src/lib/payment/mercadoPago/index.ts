@@ -26,10 +26,19 @@ function totalAmountString(amount: number): string {
 }
 
 /**
- * Sandbox detection — tokens TEST começam com `TEST-`, prod não tem prefixo.
- * Convenção MP, documentada em `mercadoPago/client.ts`.
+ * Resolve se estamos em modo sandbox.
+ *
+ * Prioridade:
+ *   1. `MERCADOPAGO_ENV` ("sandbox" | "production") — flag explícita, necessária
+ *      porque as credenciais TEST do painel MP nem sempre vêm com prefixo
+ *      `TEST-` (a detecção automática falha nesses casos).
+ *   2. Fallback: prefixo `TEST-` do access token — retrocompatibilidade com
+ *      ambientes em que o token ainda segue a convenção antiga.
  */
 export function isMercadoPagoSandbox(accessToken: string): boolean {
+  const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
+  if (explicit === "sandbox") return true;
+  if (explicit === "production") return false;
   return accessToken.startsWith("TEST-");
 }
 
@@ -386,7 +395,16 @@ interface OrderResponse {
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
   const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
-  const effectiveInput = isMercadoPagoSandbox(accessToken) ? withSandboxEmail(input) : input;
+  const sandbox = isMercadoPagoSandbox(accessToken);
+  const effectiveInput = sandbox ? withSandboxEmail(input) : input;
+  if (sandbox && effectiveInput.payer.email !== input.payer.email) {
+    // Log informativo pra confirmar nos logs do servidor que o rewrite
+    // efetivamente rodou. Útil em deploys onde o cartão ainda falhava com
+    // `invalid_email_for_sandbox` por ambiente mal detectado.
+    console.info(
+      "[mercadoPago] sandbox detected — payer.email rewritten to @testuser.com",
+    );
+  }
   const body = buildOrderBody(effectiveInput);
 
   let response: OrderResponse;
