@@ -29,24 +29,32 @@ export async function registerNewUser(page: Page): Promise<string> {
   await page.getByLabel("E-mail").fill(uniqueEmail);
   await page.getByLabel("Senha", { exact: true }).fill("senha123");
   await page.getByLabel("Confirmar senha").fill("senha123");
+
+  // Captura o uid da resposta de POST /api/auth/session — feito pelo
+  // AuthContext durante o register, retorna `{ uid, email, ... }`. Sem isso
+  // o spec não consegue mockar `/api/users/{uid}/...` nem chamar
+  // seedFixtureCart(uid). `/api/auth/me` não existe (a rota é `/session`).
+  const sessionResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    { timeout: 15_000 },
+  );
   await page.getByRole("button", { name: "Criar conta" }).click();
+  const response = await sessionResponse;
+  if (!response.ok()) {
+    throw new Error(
+      `[E2E] /api/auth/session falhou no register (${response.status()}).`,
+    );
+  }
+  const data = (await response.json()) as { uid?: string };
+  if (!data.uid) {
+    throw new Error("[E2E] /api/auth/session retornou sem uid.");
+  }
 
   await expect(page).toHaveURL("/", { timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible({
     timeout: 10_000,
   });
 
-  // Captura o uid via API — o body do /api/auth/me valida o cookie __session
-  // e devolve { uid, ... }. Sem isso o spec não consegue mockar
-  // `/api/users/{uid}/...` nem chamar seedFixtureCart(uid).
-  const uid = await page.evaluate(async () => {
-    const res = await fetch("/api/auth/me", { credentials: "include" });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { uid?: string };
-    return data.uid ?? null;
-  });
-  if (!uid) {
-    throw new Error("[E2E] Não foi possível recuperar o uid após register.");
-  }
-  return uid;
+  return data.uid;
 }
