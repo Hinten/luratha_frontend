@@ -6,13 +6,14 @@ import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
-import { formatCpf } from "@/src/lib/format/cpf";
 import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
+import IdentificationStep from "@/src/components/checkout/IdentificationStep";
 import ShippingStep, {
   type ShippingQuote,
 } from "@/src/components/checkout/ShippingStep";
 import PaymentStep, {
+  type PaymentPayer,
   type PaymentSubmitPayload,
 } from "@/src/components/checkout/PaymentStep";
 import PaymentResult, {
@@ -30,14 +31,20 @@ import styles from "./CheckoutFlow.module.css";
 
 /**
  * Steps visíveis na URL (`?step=...`) — refletidos no histórico do navegador,
- * permitindo back/forward natural entre as 4 etapas. O step "result" é uma
+ * permitindo back/forward natural entre as 5 etapas. O step "result" é uma
  * view transiente (pós-submit), derivada da presença de `state.paymentResult`
  * em memória; não tem URL própria.
  */
-type VisibleStepId = "address" | "shipping" | "payment" | "review";
+type VisibleStepId =
+  | "identification"
+  | "address"
+  | "shipping"
+  | "review"
+  | "payment";
 type StepId = VisibleStepId | "result";
 
 const VISIBLE_STEPS: CheckoutStep[] = [
+  { id: "identification", label: "Seus dados" },
   { id: "address", label: "Endereço" },
   { id: "shipping", label: "Frete" },
   { id: "review", label: "Revisão" },
@@ -46,6 +53,7 @@ const VISIBLE_STEPS: CheckoutStep[] = [
 
 function isVisibleStepId(value: string | null): value is VisibleStepId {
   return (
+    value === "identification" ||
     value === "address" ||
     value === "shipping" ||
     value === "payment" ||
@@ -54,6 +62,7 @@ function isVisibleStepId(value: string | null): value is VisibleStepId {
 }
 
 interface State {
+  payer: PaymentPayer | null;
   address: Address | null;
   quote: ShippingQuote | null;
   appliedCoupon: AppliedCoupon | null;
@@ -64,6 +73,7 @@ interface State {
 }
 
 type Action =
+  | { type: "SET_PAYER"; payer: PaymentPayer }
   | { type: "SET_ADDRESS"; address: Address }
   | { type: "SET_QUOTE"; quote: ShippingQuote }
   | { type: "APPLY_COUPON"; coupon: AppliedCoupon }
@@ -76,6 +86,8 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case "SET_PAYER":
+      return { ...state, payer: action.payer };
     case "SET_ADDRESS":
       return { ...state, address: action.address };
     case "SET_QUOTE":
@@ -104,6 +116,7 @@ function reducer(state: State, action: Action): State {
 
 function emptyInitial(): State {
   return {
+    payer: null,
     address: null,
     quote: null,
     appliedCoupon: null,
@@ -116,23 +129,26 @@ function emptyInitial(): State {
 
 /**
  * Garante que o step solicitado satisfaz os pré-requisitos de estado.
- * Deep link em `?step=payment` sem endereço/frete cai pra "address" — bloqueia
- * pular etapas via URL e mantém a navegação consistente com o reducer.
+ * Deep link em `?step=payment` sem ter passado pelos anteriores cai pro
+ * primeiro step pendente — bloqueia pular etapas via URL e mantém a
+ * navegação consistente com o reducer.
  *
- * Ordem: Endereço → Frete → Revisão → Pagamento. Review e Payment exigem os
- * mesmos pré-requisitos (address + quote); o que diferencia é que Payment é
- * onde o user finaliza o pagamento (chama `confirmOrder`).
+ * Ordem: Seus dados → Endereço → Frete → Revisão → Pagamento. Review e Payment
+ * exigem os mesmos pré-requisitos (payer + address + quote); o que diferencia
+ * é que Payment é onde o user finaliza o pagamento (chama `confirmOrder`).
  */
 function enforceStepPrereqs(
   requested: VisibleStepId,
   state: State,
 ): VisibleStepId {
-  if (requested === "shipping" && !state.address) return "address";
-  if (
-    (requested === "review" || requested === "payment") &&
-    (!state.address || !state.quote)
-  ) {
-    return "address";
+  if (requested === "address" && !state.payer) return "identification";
+  if (requested === "shipping" && (!state.payer || !state.address)) {
+    return !state.payer ? "identification" : "address";
+  }
+  if (requested === "review" || requested === "payment") {
+    if (!state.payer) return "identification";
+    if (!state.address) return "address";
+    if (!state.quote) return "shipping";
   }
   return requested;
 }
@@ -180,53 +196,6 @@ async function fetchWithTimeout(
   }
 }
 
-/**
- * Persiste lastName + taxIdentity (CPF) no UserProfile após a Order ser
- * criada, pra próxima compra pré-popular esses campos. Best-effort:
- * se falhar, NÃO bloqueia o pagamento — só loga. PJ fica fora porque o
- * form do checkout não coleta legalName/stateRegistration exigidos pelo
- * userProfileSchema PJ.
- */
-async function persistProfileFields(
-  userId: string,
-  payer: PaymentSubmitPayload["payer"],
-): Promise<void> {
-  const patchBody: Record<string, unknown> = { lastName: payer.lastName };
-  if (payer.identification.type === "CPF") {
-    patchBody.taxIdentity = {
-      type: "PF",
-      cpf: formatCpf(payer.identification.number),
-    };
-  }
-
-  try {
-    const res = await fetch(`/api/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patchBody),
-    });
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      throw new ApiResponseError(
-        body.message ?? "Falha ao salvar perfil.",
-        res.status,
-      );
-    }
-  } catch (err) {
-    if (err instanceof ApiResponseError) {
-      console.warn(
-        `[checkout] PATCH /api/users/${userId} falhou ${err.status}: ${err.message}`,
-      );
-      return;
-    }
-    if (err instanceof TypeError) {
-      console.warn(`[checkout] PATCH /api/users/${userId} rede falhou: ${err.message}`);
-      return;
-    }
-    throw err;
-  }
-}
-
 export default function CheckoutFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -240,11 +209,12 @@ export default function CheckoutFlow() {
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // URL → step (com fallback pra "address" se o param for inválido).
+  // URL → step (com fallback pra "identification" — primeiro step — se o
+  // param for inválido).
   const rawStepParam = searchParams.get("step");
   const requestedStep: VisibleStepId = isVisibleStepId(rawStepParam)
     ? rawStepParam
-    : "address";
+    : "identification";
   const urlStep: VisibleStepId = enforceStepPrereqs(requestedStep, state);
 
   // Se temos resultado de pagamento em memória, ele sobrepõe o urlStep —
@@ -394,11 +364,6 @@ export default function CheckoutFlow() {
       }
       const created = (await orderRes.json()) as { id: string };
 
-      // Fire-and-forget: persiste lastName + CPF no UserProfile em paralelo
-      // com a chamada ao MP, pra próxima compra trazer pré-preenchido. Se
-      // falhar, persistProfileFields apenas loga (não derruba o pagamento).
-      void persistProfileFields(user!.uid, draft.payer);
-
       const intentRes = await fetchWithTimeout(
         "/api/checkout/payment-intent",
         {
@@ -413,12 +378,6 @@ export default function CheckoutFlow() {
           message?: string;
           errors?: unknown;
         };
-        // TODO: remove after card flow validated — capturar o body de erro
-        // detalhado (Zod issues, código do MP, etc) pra diagnóstico.
-        console.error("[checkout] payment-intent failed:", {
-          status: intentRes.status,
-          body,
-        });
         throw new ApiResponseError(
           body.message ?? "Não foi possível processar o pagamento.",
           intentRes.status,
@@ -426,15 +385,7 @@ export default function CheckoutFlow() {
       }
       const result = (await intentRes.json()) as PaymentResultData;
 
-      // TODO: remove after card flow validated — pra diagnosticar caso o
-      // cartão volte pro step de pagamento em vez de redirecionar.
-      console.log("[checkout] payment-intent result:", result);
-
       if (result.status === "paid") {
-        // TODO: remove after card flow validated
-        console.log(
-          `[checkout] paid → navigating to /checkout/sucesso/${created.id}`,
-        );
         // `window.location.assign` em vez de `router.replace` por robustez:
         // o client router do Next pode ser interrompido por re-renders do
         // Brick após `onSubmit` resolver. Full reload garante navegação.
@@ -443,10 +394,6 @@ export default function CheckoutFlow() {
         return;
       }
 
-      // TODO: remove after card flow validated
-      console.log(
-        `[checkout] !paid (status=${result.status}) → dispatching SUBMIT_OK`,
-      );
       // PIX/Boleto pendentes: limpa cart antes de mostrar o PaymentResult. O
       // guard de cart vazio (logo abaixo) bypassa o redirect enquanto
       // `state.paymentResult` está presente, então o user permanece vendo o
@@ -484,6 +431,32 @@ export default function CheckoutFlow() {
 
       <div className={styles.grid}>
         <main className={styles.main}>
+          {activeStep === "identification" && (
+            <IdentificationStep
+              userId={user!.uid}
+              defaults={{
+                email: profile?.email ?? user!.email,
+                firstName:
+                  profile?.firstName ?? user!.name.split(/\s+/)[0],
+                lastName:
+                  profile?.lastName ??
+                  user!.name.split(/\s+/).slice(1).join(" "),
+                identificationType:
+                  profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF",
+                identificationNumber:
+                  profile?.taxIdentity?.type === "PF"
+                    ? profile.taxIdentity.cpf
+                    : profile?.taxIdentity?.type === "PJ"
+                      ? profile.taxIdentity.cnpj
+                      : undefined,
+              }}
+              onSubmit={(payer) => {
+                dispatch({ type: "SET_PAYER", payer });
+                goToStep("address");
+              }}
+            />
+          )}
+
           {activeStep === "address" && (
             <AddressStep
               userId={user!.uid}
@@ -510,12 +483,14 @@ export default function CheckoutFlow() {
             />
           )}
 
-          {activeStep === "review" && state.address && state.quote && (
+          {activeStep === "review" && state.payer && state.address && state.quote && (
             <section className={styles.reviewSection}>
               <h2 className={styles.heading}>Revise antes de pagar</h2>
               <ReviewSummary
+                payer={state.payer}
                 address={state.address}
                 quote={state.quote}
+                onEditPayer={() => goToStep("identification")}
                 onEditAddress={() => goToStep("address")}
                 onEditShipping={() => goToStep("shipping")}
               />
@@ -546,7 +521,7 @@ export default function CheckoutFlow() {
             </section>
           )}
 
-          {activeStep === "payment" && state.address && (
+          {activeStep === "payment" && state.payer && state.address && (
             <>
               {state.error && (
                 <p role="alert" className={styles.error}>
@@ -563,22 +538,7 @@ export default function CheckoutFlow() {
                   city: state.address.city,
                   state: state.address.state,
                 }}
-                defaultEmail={profile?.email ?? user!.email}
-                defaultFirstName={profile?.firstName ?? user!.name.split(/\s+/)[0]}
-                defaultLastName={
-                  profile?.lastName ??
-                  user!.name.split(/\s+/).slice(1).join(" ")
-                }
-                defaultIdentificationType={
-                  profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF"
-                }
-                defaultIdentificationNumber={
-                  profile?.taxIdentity?.type === "PF"
-                    ? profile.taxIdentity.cpf
-                    : profile?.taxIdentity?.type === "PJ"
-                      ? profile.taxIdentity.cnpj
-                      : undefined
-                }
+                payer={state.payer}
                 onBack={goBack}
                 onSubmit={confirmOrder}
               />

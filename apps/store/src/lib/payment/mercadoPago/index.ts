@@ -25,6 +25,33 @@ function totalAmountString(amount: number): string {
   return amount.toFixed(2);
 }
 
+/**
+ * Sandbox detection — tokens TEST começam com `TEST-`, prod não tem prefixo.
+ * Convenção MP, documentada em `mercadoPago/client.ts`.
+ */
+export function isMercadoPagoSandbox(accessToken: string): boolean {
+  return accessToken.startsWith("TEST-");
+}
+
+/**
+ * Em sandbox, o MP rejeita pagamentos cujo `payer.email` não termina em
+ * `@testuser.com` (erro `invalid_email_for_sandbox`, doc oficial da API de
+ * Orders). O rewrite é transparente: pegamos o local-part do email real,
+ * substituímos o domínio por `@testuser.com` e seguimos. A UI continua
+ * exibindo o email real do usuário — apenas o payload enviado pro MP muda.
+ *
+ * Idempotente: se já termina em `@testuser.com`, retorna o input inalterado.
+ */
+export function withSandboxEmail(input: CreatePaymentInput): CreatePaymentInput {
+  const email = input.payer.email;
+  if (email.endsWith("@testuser.com")) return input;
+  const localPart = email.split("@")[0] || "test";
+  return {
+    ...input,
+    payer: { ...input.payer, email: `${localPart}@testuser.com` },
+  };
+}
+
 /** Serializa payload em JSON compacto pra logging — uma linha por entry. */
 function serializeLogPayload(value: unknown): string {
   try {
@@ -359,7 +386,8 @@ interface OrderResponse {
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
   const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
-  const body = buildOrderBody(input);
+  const effectiveInput = isMercadoPagoSandbox(accessToken) ? withSandboxEmail(input) : input;
+  const body = buildOrderBody(effectiveInput);
 
   let response: OrderResponse;
   try {

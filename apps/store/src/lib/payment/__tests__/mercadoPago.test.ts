@@ -2,9 +2,12 @@ import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   describeMercadoPagoError,
+  isMercadoPagoSandbox,
   mapMpStatus,
   verifyWebhookSignature,
+  withSandboxEmail,
 } from "@/src/lib/payment/mercadoPago";
+import type { CreatePaymentInput } from "@/src/lib/payment/types";
 
 describe("mapMpStatus", () => {
   it("maps processed to paid (Orders API)", () => {
@@ -105,6 +108,64 @@ describe("describeMercadoPagoError", () => {
       message: "null",
       status: undefined,
     });
+  });
+});
+
+describe("isMercadoPagoSandbox", () => {
+  it("retorna true para tokens com prefixo TEST-", () => {
+    expect(isMercadoPagoSandbox("TEST-1234567890")).toBe(true);
+    expect(isMercadoPagoSandbox("TEST-abc-xyz-456")).toBe(true);
+  });
+
+  it("retorna false para tokens de produção (sem prefixo)", () => {
+    expect(isMercadoPagoSandbox("APP_USR-1234567890")).toBe(false);
+    expect(isMercadoPagoSandbox("PROD-abc")).toBe(false);
+    expect(isMercadoPagoSandbox("")).toBe(false);
+  });
+});
+
+describe("withSandboxEmail", () => {
+  function pixInput(email: string): CreatePaymentInput {
+    return {
+      paymentMethod: "pix",
+      orderId: "ord_test_123",
+      amount: 99.9,
+      description: "Pedido teste",
+      payer: {
+        email,
+        firstName: "Lucas",
+        lastName: "Francelino",
+        identification: { type: "CPF", number: "12345678909" },
+      },
+    };
+  }
+
+  it("reescreve o domínio mantendo o local-part quando não termina em @testuser.com", () => {
+    const result = withSandboxEmail(pixInput("francelino25lucas@gmail.com"));
+    expect(result.payer.email).toBe("francelino25lucas@testuser.com");
+  });
+
+  it("é idempotente quando o email já termina em @testuser.com", () => {
+    const input = pixInput("francelino25lucas@testuser.com");
+    const result = withSandboxEmail(input);
+    expect(result.payer.email).toBe("francelino25lucas@testuser.com");
+    // Mesma referência indica nenhum reprocessamento.
+    expect(result).toBe(input);
+  });
+
+  it("preserva os demais campos do payer e do input", () => {
+    const input = pixInput("user@example.com");
+    const result = withSandboxEmail(input);
+    expect(result.payer.firstName).toBe("Lucas");
+    expect(result.payer.lastName).toBe("Francelino");
+    expect(result.payer.identification).toEqual({ type: "CPF", number: "12345678909" });
+    expect(result.orderId).toBe("ord_test_123");
+    expect(result.amount).toBe(99.9);
+  });
+
+  it("usa 'test' como fallback de local-part quando o email começa com @", () => {
+    const result = withSandboxEmail(pixInput("@gmail.com"));
+    expect(result.payer.email).toBe("test@testuser.com");
   });
 });
 

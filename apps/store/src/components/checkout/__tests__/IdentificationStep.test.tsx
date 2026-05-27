@@ -1,0 +1,273 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import IdentificationStep from "@/src/components/checkout/IdentificationStep";
+import type { PaymentPayer } from "@/src/components/checkout/PaymentStep";
+
+function mockFetchResponse(init: { ok: boolean; status?: number; body?: unknown }) {
+  return {
+    ok: init.ok,
+    status: init.status ?? (init.ok ? 200 : 400),
+    json: async () => init.body ?? {},
+  } as unknown as Response;
+}
+
+describe("IdentificationStep", () => {
+  const fetchSpy = vi.fn<(input: RequestInfo, init?: RequestInit) => Promise<Response>>();
+
+  beforeEach(() => {
+    fetchSpy.mockReset();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renderiza os campos pré-preenchidos com os defaults", () => {
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "123.456.789-09",
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("E-mail")).toHaveValue("marina@example.com");
+    expect(screen.getByLabelText("Nome")).toHaveValue("Marina");
+    expect(screen.getByLabelText("Sobrenome")).toHaveValue("Souza");
+    expect(screen.getByLabelText("Tipo de documento")).toHaveValue("CPF");
+    expect(screen.getByLabelText("Número do documento")).toHaveValue("123.456.789-09");
+  });
+
+  it("bloqueia submit quando o CPF tem menos de 11 dígitos", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{ email: "marina@example.com", firstName: "Marina", lastName: "Souza" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Número do documento"), "123");
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/CPF deve ter 11 dígitos/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia submit quando o email é inválido", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{ firstName: "Marina", lastName: "Souza", identificationNumber: "12345678909" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("E-mail"), "not-an-email");
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/E-mail inválido/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submit OK: faz PATCH /api/users/{id} e chama onSubmit com payer normalizado", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payer: PaymentPayer) => void>();
+    fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "123.456.789-09",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe("/api/users/user_42");
+    expect(init?.method).toBe("PATCH");
+    const body = JSON.parse(String(init?.body)) as {
+      lastName: string;
+      taxIdentity: { type: string; cpf: string };
+    };
+    expect(body.lastName).toBe("Souza");
+    expect(body.taxIdentity).toEqual({ type: "PF", cpf: "123.456.789-09" });
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    const payer = onSubmit.mock.calls[0][0];
+    expect(payer.email).toBe("marina@example.com");
+    expect(payer.identification.number).toBe("12345678909");
+    expect(payer.identification.type).toBe("CPF");
+  });
+
+  it("submit com PATCH 404: faz fallback pra PUT criando o perfil completo", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payer: PaymentPayer) => void>();
+    fetchSpy
+      .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404, body: { message: "Perfil não encontrado." } }))
+      .mockResolvedValueOnce(mockFetchResponse({ ok: true, status: 201 }));
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "12345678909",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    const [, patchInit] = fetchSpy.mock.calls[0];
+    expect(patchInit?.method).toBe("PATCH");
+
+    const [putUrl, putInit] = fetchSpy.mock.calls[1];
+    expect(putUrl).toBe("/api/users/user_42");
+    expect(putInit?.method).toBe("PUT");
+    const putBody = JSON.parse(String(putInit?.body)) as {
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      taxIdentity: { type: string; cpf: string };
+    };
+    expect(putBody.email).toBe("marina@example.com");
+    expect(putBody.firstName).toBe("Marina");
+    expect(putBody.lastName).toBe("Souza");
+    expect(putBody.role).toBe("customer");
+    expect(putBody.taxIdentity).toEqual({ type: "PF", cpf: "123.456.789-09" });
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("submit com PATCH 404 + PUT 4xx: propaga erro do PUT pra UI", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    fetchSpy
+      .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404 }))
+      .mockResolvedValueOnce(
+        mockFetchResponse({ ok: false, status: 400, body: { message: "CPF inválido no perfil." } }),
+      );
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "12345678909",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("CPF inválido no perfil.")).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submit com PATCH 4xx (não-404): exibe mensagem do server, não chama onSubmit", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    fetchSpy.mockResolvedValue(
+      mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
+    );
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "12345678909",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("CPF já cadastrado em outra conta.")).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submit com falha de rede (TypeError): exibe mensagem amigável de conexão", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    fetchSpy.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CPF",
+          identificationNumber: "12345678909",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/conexão/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});

@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
+import { useState } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import Spinner from "@/src/components/Spinner";
 import styles from "./PaymentStep.module.css";
@@ -48,13 +45,8 @@ export interface PaymentStepProps {
     city: string;
     state: string;
   };
-  /** Defaults vindos do UserProfile carregado no CheckoutFlow. */
-  defaultEmail?: string;
-  defaultFirstName?: string;
-  defaultLastName?: string;
-  /** CPF mascarado (123.456.789-00) ou CNPJ mascarado. */
-  defaultIdentificationNumber?: string;
-  defaultIdentificationType?: "CPF" | "CNPJ";
+  /** Dados do pagador já confirmados no step "Seus dados". */
+  payer: PaymentPayer;
   onSubmit: (payload: PaymentSubmitPayload) => Promise<void>;
   onBack: () => void;
 }
@@ -64,17 +56,6 @@ const TABS: { id: PaymentMethod; label: string }[] = [
   { id: "credit_card", label: "Cartão" },
   { id: "boleto", label: "Boleto" },
 ];
-
-function makeDefaults(props: PaymentStepProps): PayerFormInput {
-  return {
-    email: props.defaultEmail ?? "",
-    firstName: props.defaultFirstName ?? "",
-    lastName: props.defaultLastName ?? "",
-    identificationType: props.defaultIdentificationType ?? "CPF",
-    identificationNumber: props.defaultIdentificationNumber ?? "",
-    cardholderName: "",
-  };
-}
 
 /**
  * `initMercadoPago` é idempotente — múltiplas chamadas com a mesma chave são
@@ -117,24 +98,10 @@ interface CardBrickFormData {
   token: string;
   payment_method_id: string;
   installments: number;
-  payer?: {
-    email?: string;
-    identification?: { type?: string; number?: string };
-  };
 }
 
 export default function PaymentStep(props: PaymentStepProps) {
-  const {
-    cartTotal,
-    shippingAddress,
-    defaultEmail,
-    defaultFirstName,
-    defaultLastName,
-    defaultIdentificationNumber,
-    defaultIdentificationType,
-    onSubmit,
-    onBack,
-  } = props;
+  const { cartTotal, shippingAddress, payer, onSubmit, onBack } = props;
 
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [submitting, setSubmitting] = useState(false);
@@ -147,58 +114,24 @@ export default function PaymentStep(props: PaymentStepProps) {
    */
   const [brickReady, setBrickReady] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-    formState: { errors },
-  } = useForm<PayerFormInput>({
-    resolver: zodResolver(payerFormSchema),
-    mode: "onBlur",
-    defaultValues: makeDefaults(props),
-  });
-
-  useEffect(() => {
-    reset(makeDefaults(props));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    defaultEmail,
-    defaultFirstName,
-    defaultLastName,
-    defaultIdentificationNumber,
-    defaultIdentificationType,
-    reset,
-  ]);
-
-  /**
-   * Submit do form de payer (PIX/Boleto). O tab Cartão tem seu próprio submit
-   * dentro do Brick — não passa por aqui.
-   */
-  async function processPayerSubmit(values: PayerFormInput) {
+  async function submitPix() {
     setError(null);
     setSubmitting(true);
-
-    const payer: PaymentPayer = {
-      email: values.email,
-      firstName: values.firstName,
-      lastName: values.lastName,
-      identification: {
-        type: values.identificationType,
-        number: values.identificationNumber.replace(/\D/g, ""),
-      },
-    };
-
     try {
-      if (method === "pix") {
-        await onSubmit({ paymentMethod: "pix", payer });
-        return;
-      }
-      // boleto
-      if (!shippingAddress) {
-        setError("Endereço de entrega obrigatório para gerar boleto.");
-        return;
-      }
+      await onSubmit({ paymentMethod: "pix", payer });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitBoleto() {
+    setError(null);
+    if (!shippingAddress) {
+      setError("Endereço de entrega obrigatório para gerar boleto.");
+      return;
+    }
+    setSubmitting(true);
+    try {
       await onSubmit({
         paymentMethod: "boleto",
         payer,
@@ -217,57 +150,19 @@ export default function PaymentStep(props: PaymentStepProps) {
   }
 
   /**
-   * Submit do Card Payment Brick. O Brick coleta os dados do cartão + payer
-   * dentro dos iframes hospedados em mercadopago.com e devolve o `formData`
-   * já com o token gerado — não há chamada do nosso domínio pra `card_tokens`.
+   * Submit do Card Payment Brick. O Brick coleta o cartão dentro dos iframes
+   * hospedados em mercadopago.com e devolve `token` + `payment_method_id` +
+   * `installments`. Os dados de payer **não** vêm daqui — usamos o `payer`
+   * prop (já validado no step "Seus dados" e pré-preenchido no Brick via
+   * `initialization.payer`).
    */
   async function processCardSubmit(formData: CardBrickFormData) {
     setError(null);
     setSubmitting(true);
-
-    // TODO: remove after card flow validated — log cru do Brick (com token
-    // mascarado pra não vazar PCI no console).
-    console.log("[checkout] Brick formData:", {
-      ...formData,
-      token: formData.token
-        ? `${formData.token.slice(0, 6)}…${formData.token.slice(-4)}`
-        : undefined,
-    });
-
-    const payerEmail = formData.payer?.email ?? defaultEmail ?? "";
-    const idType = (formData.payer?.identification?.type as "CPF" | "CNPJ" | undefined) ?? "CPF";
-    const brickIdNumber = (formData.payer?.identification?.number ?? "").replace(/\D/g, "");
-    // Fallback pro CPF que o usuário cadastrou no perfil — quando o Brick
-    // não inclui identification (perfil novo, Brick configurado sem o campo,
-    // ou Brick devolve em outro lugar), tentamos o default propagado pelo
-    // CheckoutFlow. Sem isso, o Zod do server rejeita com 400.
-    const defaultIdDigits = (defaultIdentificationNumber ?? "").replace(/\D/g, "");
-    const idNumber = brickIdNumber || defaultIdDigits;
-
-    if (idNumber.length !== 11 && idNumber.length !== 14) {
-      setSubmitting(false);
-      setError(
-        "Não recebemos seu CPF/CNPJ do formulário do Mercado Pago. Recarregue a página e preencha o documento antes de pagar.",
-      );
-      return;
-    }
-
-    // Sanitiza nome/sobrenome: strings vazias viram `undefined`, porque o
-    // schema do server tem `.string().min(1).optional()` — `.optional()`
-    // aceita undefined mas não aceita "". User sem sobrenome cadastrado
-    // (split de "Lucas" → ["Lucas"], slice(1) = [], join = "") batia 400.
-    const sanitizedFirstName = defaultFirstName?.trim() || undefined;
-    const sanitizedLastName = defaultLastName?.trim() || undefined;
-
     try {
       await onSubmit({
         paymentMethod: "credit_card",
-        payer: {
-          email: payerEmail,
-          firstName: sanitizedFirstName,
-          lastName: sanitizedLastName,
-          identification: { type: idType, number: idNumber },
-        },
+        payer,
         cardToken: formData.token,
         installments: formData.installments,
         paymentMethodId: formData.payment_method_id,
@@ -321,7 +216,15 @@ export default function PaymentStep(props: PaymentStepProps) {
               <CardPayment
                 initialization={{
                   amount: cartTotal,
-                  ...(defaultEmail ? { payer: { email: defaultEmail } } : {}),
+                  payer: {
+                    email: payer.email,
+                    ...(payer.firstName ? { firstName: payer.firstName } : {}),
+                    ...(payer.lastName ? { lastName: payer.lastName } : {}),
+                    identification: {
+                      type: payer.identification.type,
+                      number: payer.identification.number,
+                    },
+                  },
                 }}
                 customization={{
                   paymentMethods: { maxInstallments: 12 },
@@ -377,129 +280,18 @@ export default function PaymentStep(props: PaymentStepProps) {
           </div>
         </div>
       ) : (
-        <form
-          className={styles.form}
-          onSubmit={(e) => {
-            void handleSubmit(processPayerSubmit)(e);
-          }}
-          noValidate
-        >
-          <div className={styles.field}>
-            <label htmlFor="payer-email" className={styles.label}>
-              E-mail do pagador
-            </label>
-            <input
-              id="payer-email"
-              type="email"
-              className={styles.input}
-              autoComplete="email"
-              aria-invalid={Boolean(errors.email) || undefined}
-              {...register("email")}
-            />
-            {errors.email?.message && (
-              <span role="alert" className={styles.fieldError}>
-                {errors.email.message}
-              </span>
-            )}
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="payer-first" className={styles.label}>
-                Nome
-              </label>
-              <input
-                id="payer-first"
-                className={styles.input}
-                autoComplete="given-name"
-                aria-invalid={Boolean(errors.firstName) || undefined}
-                {...register("firstName")}
-              />
-              {errors.firstName?.message && (
-                <span role="alert" className={styles.fieldError}>
-                  {errors.firstName.message}
-                </span>
-              )}
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="payer-last" className={styles.label}>
-                Sobrenome
-              </label>
-              <input
-                id="payer-last"
-                className={styles.input}
-                autoComplete="family-name"
-                aria-invalid={Boolean(errors.lastName) || undefined}
-                {...register("lastName")}
-              />
-              {errors.lastName?.message && (
-                <span role="alert" className={styles.fieldError}>
-                  {errors.lastName.message}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="payer-id-type" className={styles.label}>
-                Tipo de documento
-              </label>
-              <select
-                id="payer-id-type"
-                className={styles.input}
-                aria-invalid={Boolean(errors.identificationType) || undefined}
-                {...register("identificationType")}
-              >
-                <option value="CPF">CPF</option>
-                <option value="CNPJ">CNPJ</option>
-              </select>
-              {errors.identificationType?.message && (
-                <span role="alert" className={styles.fieldError}>
-                  {errors.identificationType.message}
-                </span>
-              )}
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="payer-id-number" className={styles.label}>
-                Número do documento
-              </label>
-              <input
-                id="payer-id-number"
-                className={styles.input}
-                inputMode="numeric"
-                pattern="\d*"
-                maxLength={14}
-                aria-invalid={Boolean(errors.identificationNumber) || undefined}
-                placeholder={
-                  getValues("identificationType") === "CNPJ"
-                    ? "00000000000000"
-                    : "00000000000"
-                }
-                {...register("identificationNumber")}
-              />
-              <span className={styles.muted}>
-                Apenas números — sem pontos ou traços.
-              </span>
-              {errors.identificationNumber?.message && (
-                <span role="alert" className={styles.fieldError}>
-                  {errors.identificationNumber.message}
-                </span>
-              )}
-            </div>
-          </div>
+        <div className={styles.form}>
+          {method === "pix" && (
+            <p className={styles.muted}>
+              Você verá um QR Code para pagar com o app do seu banco. A confirmação
+              costuma chegar em poucos minutos.
+            </p>
+          )}
 
           {method === "boleto" && (
             <p className={styles.muted}>
               O boleto será emitido com o endereço de entrega já informado.
               Compensação em até 3 dias úteis.
-            </p>
-          )}
-
-          {method === "pix" && (
-            <p className={styles.muted}>
-              Você verá um QR Code para pagar com o app do seu banco. A confirmação
-              costuma chegar em poucos minutos.
             </p>
           )}
 
@@ -518,11 +310,26 @@ export default function PaymentStep(props: PaymentStepProps) {
             >
               Voltar
             </button>
-            <button type="submit" className={styles.submitBtn} disabled={submitting}>
-              {submitting ? "Processando…" : "Confirmar pagamento"}
+            <button
+              type="button"
+              className={styles.submitBtn}
+              disabled={submitting}
+              onClick={() => {
+                if (method === "pix") {
+                  void submitPix();
+                } else {
+                  void submitBoleto();
+                }
+              }}
+            >
+              {submitting
+                ? "Processando…"
+                : method === "pix"
+                  ? "Gerar PIX"
+                  : "Gerar boleto"}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </section>
   );

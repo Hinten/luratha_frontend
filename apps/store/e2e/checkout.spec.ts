@@ -130,6 +130,21 @@ async function mockCheckoutApis(page: Page, uid: string) {
     await route.continue();
   });
 
+  // PATCH UserProfile (persistência do step "Seus dados"). GET continua
+  // passando pro server real (CheckoutFlow tenta carregar perfil pra pré-popular
+  // o form e tolera 404 / erro silenciosamente).
+  await page.route(`**/api/users/${uid}`, async (route: Route) => {
+    if (route.request().method() === "PATCH") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
   await page.route("**/api/checkout/shipping", async (route: Route) => {
     await route.fulfill({
       status: 200,
@@ -190,7 +205,7 @@ test.describe("Checkout — guards e UI", () => {
 // ── Happy path (live Firebase + cart mockado) ───────────────────────────────
 
 test.describe("Checkout — fluxo PIX mockado", () => {
-  test("login → cart → 4 steps → PaymentResult com QR PIX", async ({ page }) => {
+  test("login → cart → 5 steps → PaymentResult com QR PIX", async ({ page }) => {
     test.skip(
       !hasLiveAuth,
       "Set E2E_LIVE_AUTH=1 to run the live-Firebase checkout test",
@@ -219,35 +234,39 @@ test.describe("Checkout — fluxo PIX mockado", () => {
     await mockCheckoutApis(page, uid);
     await seedCart(page, [buildCartItem({ userId: uid })]);
 
-    // 4. Entra no checkout
+    // 4. Entra no checkout — primeiro step é "Seus dados"
     await page.goto("/checkout");
-    await expect(page.getByRole("heading", { name: /Para onde enviamos/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
 
-    // Step 1 — Endereço (auto-seleciona o default, basta clicar Continuar)
+    // Step 1 — Seus dados (email/nome pré-vêm do registro; preencher CPF)
+    await page.getByLabel("Número do documento").fill("12345678909");
+    await page.getByRole("button", { name: /Continuar/ }).click();
+
+    // Step 2 — Endereço (auto-seleciona o default, basta clicar Continuar)
+    await expect(page.getByRole("heading", { name: /Para onde enviamos/ })).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
 
-    // Step 2 — Frete
+    // Step 3 — Frete
     await expect(page.getByRole("heading", { name: /Como você quer receber/ })).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
 
-    // Step 3 — Pagamento (PIX selecionado por padrão)
-    await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
-    await page.getByLabel("E-mail do pagador").fill(uniqueEmail);
-    await page.getByLabel("Número do documento").fill("12345678909");
-    await page.getByRole("button", { name: "Confirmar pagamento" }).click();
-
-    // Step 4 — Revisão
+    // Step 4 — Revisão (3 cards: Seus dados, Endereço, Frete)
     await expect(page.getByRole("heading", { name: "Revise antes de pagar" })).toBeVisible();
-    await page.getByRole("button", { name: "Confirmar pedido" }).click();
+    await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
+    await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
+
+    // Step 5 — Pagamento (PIX por default, só clicar "Gerar PIX")
+    await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
+    await page.getByRole("button", { name: "Gerar PIX" }).click();
 
     // Result — QR PIX renderizado
     await expect(
       page.getByRole("img", { name: "QR Code para pagamento PIX" }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Steps refletem na URL agora (?step=review depois do submit, com a view
+    // Steps refletem na URL agora (?step=payment depois do submit, com a view
     // de result derivada de paymentResult em memória).
-    await expect(page).toHaveURL(/\/checkout\?step=review/);
+    await expect(page).toHaveURL(/\/checkout\?step=payment/);
 
     // "Acompanhar pedido" deve aterrissar em /checkout/sucesso/{id} —
     // antes a race com clearCart mandava o user pro /carrinho.
