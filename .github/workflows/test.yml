@@ -219,6 +219,11 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Specs MP (checkout-card-real + checkout PIX/Boleto) vivem no workflow
+      # separado `e2e-checkout-mp.yml`. Aqui rodam apenas auth, cart, catalog,
+      # home, institutional, navigation, product, auth-middleware — nenhum
+      # importa @/src/lib/payment ou /api/checkout, então MP/TEST_USER envs
+      # não são necessárias.
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets
@@ -244,10 +249,24 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         working-directory: apps/store
         run: pnpm exec playwright install --with-deps chromium
-      - name: Run E2E tests
+      - name: Run E2E tests (non-MP)
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 6
-        run: pnpm run test:e2e
+        working-directory: apps/store
+        # Specs do MercadoPago (checkout-card{,-real}.spec.ts, checkout.spec.ts)
+        # rodam no workflow separado `e2e-checkout-mp.yml` quando arquivos
+        # do checkout/MP mudam. Aqui ficam só os specs que cobrem áreas
+        # independentes da integração de pagamento.
+        run: |
+          pnpm exec playwright test \
+            e2e/auth.spec.ts \
+            e2e/auth-middleware.spec.ts \
+            e2e/cart.spec.ts \
+            e2e/catalog.spec.ts \
+            e2e/home.spec.ts \
+            e2e/institutional.spec.ts \
+            e2e/navigation.spec.ts \
+            e2e/product.spec.ts
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4

@@ -1,0 +1,200 @@
+name: E2E Checkout (MercadoPago)
+
+# Workflow separado do `Test` pra rodar APENAS os 3 specs Playwright do
+# fluxo de checkout / MercadoPago (cartão real + cartão mock + PIX/Boleto).
+# Esses specs são os mais caros (dev server + Brick + tokenize MP + frete
+# real Melhor Envio) e dependem de credenciais sensíveis que outros tests
+# nem usam. Path filter abaixo garante que só dispara quando arquivos
+# relevantes mudam — PRs em áreas não-checkout não pagam o custo.
+#
+# NÃO é required em branch protection: quando o filter não casa, o
+# workflow nem aparece como check; PR segue mergeável.
+
+on:
+  pull_request:
+    branches: [master, production]
+    paths:
+      # Specs MP-relacionados + helpers que eles usam
+      - 'apps/store/e2e/checkout*.spec.ts'
+      - 'apps/store/e2e/_*.ts'
+      # UI do checkout exercitada nos specs
+      - 'apps/store/src/app/checkout/**'
+      - 'apps/store/src/components/checkout/**'
+      # API routes batidas ponta-a-ponta. NOTA: `users/[id]/addresses/**` em
+      # minimatch trata `[id]` como classe de caracteres `{i,d}` — nunca casa
+      # com a pasta literal `[id]` da rota dinâmica Next.js. Ampliamos pra
+      # `users/**` (essa pasta só hospeda a rota dinâmica de users).
+      - 'apps/store/src/app/api/checkout/**'
+      - 'apps/store/src/app/api/orders/**'
+      - 'apps/store/src/app/api/users/**'
+      - 'apps/store/src/app/api/auth/session/**'
+      # Server-side MP (adapter, service) + frete (provider real exercitado)
+      - 'apps/store/src/lib/payment/**'
+      - 'apps/store/src/lib/shipping/**'
+      # Contextos React envolvidos no flow
+      - 'apps/store/src/contexts/CartContext.tsx'
+      - 'apps/store/src/contexts/AuthContext.tsx'
+      # Schemas + converters Firestore de Order/Address
+      - 'packages/schemas/src/orders.ts'
+      - 'packages/schemas/src/addresses.ts'
+      - 'packages/firestore/src/admin*Order*'
+      - 'packages/firestore/src/admin*Address*'
+      - 'packages/firestore/src/client*Order*'
+      - 'packages/firestore/src/client*Address*'
+      # Config Playwright e o próprio workflow
+      - 'apps/store/playwright.config.ts'
+      - '.github/workflows/e2e-checkout-mp.yml'
+
+# Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
+# pela `concurrency` interna do job (luratha-96386-e2e), que serializa
+# com o `Test → e2e-cloud` no mesmo Firestore project.
+concurrency:
+  group: e2e-checkout-mp-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  e2e-mp:
+    name: E2E Checkout (MP)
+    runs-on: ubuntu-latest
+    # Mesma concurrency group do `Test → e2e-cloud` pra evitar 2 runs
+    # simultâneas contra o Firestore luratha-96386 entre os workflows
+    # quando o test user reaproveitado entre runs poderia colidir.
+    concurrency:
+      group: luratha-96386-e2e
+      cancel-in-progress: false
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Melhor Envio: o spec real (`checkout-card-real.spec.ts`) bate em
+      # `/api/checkout/shipping` que chama o provider. Sem `MELHOR_ENVIO_TOKEN`
+      # a rota retorna `alert: "MELHOR_ENVIO_TOKEN não configurado"` e o
+      # radiogroup de frete nem renderiza — Step 3 trava.
+      MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
+      MELHOR_ENVIO_ENV: ${{ secrets.MELHOR_ENVIO_ENV }}
+      MELHOR_ENVIO_USER_AGENT: ${{ secrets.MELHOR_ENVIO_USER_AGENT }}
+      MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+      MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+      MERCADOPAGO_ENV: sandbox
+      MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
+      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
+      # MP test user reaproveitado entre runs por `loginOrRegisterTestUser`
+      # (e2e/_authHelpers.ts). Sem essas vars, `checkout-card-real.spec.ts`
+      # faz throw no module-load com mensagem clara do que falta.
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          # Gate amplo: lista TODOS os secrets requeridos pelos specs MP e
+          # falha cedo (~segundos) em vez de gastar 5min de install + Playwright
+          # browser download pra só então estourar no module-load throw com a
+          # mesma informação. Cada secret unset/empty é listado no warning.
+          missing=()
+          [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] && missing+=("FIREBASE_SERVICE_ACCOUNT_BASE64")
+          [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] && missing+=("FIREBASE_WEB_APP_CONFIG_BASE64")
+          [ -z "$MERCADOPAGO_ACCESS_TOKEN" ] && missing+=("MERCADOPAGO_ACCESS_TOKEN")
+          [ -z "$MERCADOPAGO_SANDBOX_PAYER_EMAIL" ] && missing+=("MERCADOPAGO_SANDBOX_PAYER_EMAIL")
+          [ -z "$NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY" ] && missing+=("NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY")
+          [ -z "$TEST_USER_EMAIL" ] && missing+=("TEST_USER_EMAIL")
+          [ -z "$TEST_USER_PASSWORD" ] && missing+=("TEST_USER_PASSWORD")
+          [ -z "$MELHOR_ENVIO_TOKEN" ] && missing+=("MELHOR_ENVIO_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets ausentes — pulando e2e-mp. Configure: ${missing[*]}"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        if: steps.check_secrets.outputs.skip != 'true'
+        working-directory: apps/store
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run MP E2E specs
+        if: steps.check_secrets.outputs.skip != 'true'
+        timeout-minutes: 10
+        working-directory: apps/store
+        run: |
+          pnpm exec playwright test \
+            e2e/checkout-card-real.spec.ts \
+            e2e/checkout.spec.ts
+      - name: Upload Playwright report
+        if: always() && steps.check_secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-mp
+          path: apps/store/playwright-report
+          retention-days: 7
+
+  report-failure:
+    name: Post failure logs on PR
+    # Replica do `Test → report-failure`, limitado aos jobs deste workflow.
+    # Sem isso, falha em e2e-mp não vira comentário no PR — o report-failure
+    # do Test workflow só enxerga jobs do seu próprio run.
+    needs: [e2e-mp]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou (E2E Checkout MP)"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md

@@ -352,6 +352,27 @@ export default function PaymentStep(props: PaymentStepProps) {
                   await processCardSubmit(param as unknown as CardBrickFormData);
                 }}
                 onError={(err) => {
+                  // Loga o erro inteiro pra extrair `cause`/code da MP (ver
+                  // doc Bricks "Possíveis erros": fields_setup_failed,
+                  // card_token_creation_failed, get_payment_methods_failed,
+                  // etc.). O Brick passa objetos plain (não Error), então
+                  // `Object.getOwnPropertyNames` garante que enumerable
+                  // false-ish (como `cause`) também entram no JSON.
+                  //
+                  // Wrap em try/catch: `JSON.stringify` lança `TypeError` em
+                  // estruturas circulares (Brick erros podem referenciar DOM
+                  // via `cause`). Sem catch, o throw escapa do onError e
+                  // mascara o erro original do Brick com stack de logging.
+                  try {
+                    console.error(
+                      "[mp-brick-error]",
+                      JSON.stringify(err, Object.getOwnPropertyNames(err ?? {})),
+                    );
+                  } catch (loggingErr) {
+                    if (!(loggingErr instanceof TypeError)) throw loggingErr;
+                    // Fallback: serialização falhou (circular/Proxy). Loga raw.
+                    console.error("[mp-brick-error] (stringify failed)", err);
+                  }
                   const msg =
                     err && typeof err === "object" && "message" in err
                       ? String((err as { message?: unknown }).message)
