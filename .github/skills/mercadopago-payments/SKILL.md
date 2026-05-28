@@ -1,6 +1,6 @@
 ---
 name: mercadopago-payments
-description: Activate this skill whenever the user wants to implement, configure, extend, or debug payment processing in the Luratha frontend — MercadoPago integration, the payment-intent API, the payment webhook, PIX/credit-card/boleto flows, card tokenization, or order payment status. Covers the `src/lib/payment/` architecture introduced for issue #77 (MercadoPago Checkout Transparente), the payment lifecycle, webhook signature validation, the MP-status → Order-status mapping, where credentials live, and the test patterns. Use it so payment changes stay localized and low-risk.
+description: Activate this skill whenever the user wants to implement, configure, extend, or debug payment processing in the Luratha frontend — MercadoPago integration, the payment-intent API, the payment webhook, PIX/credit-card/boleto flows, card tokenization, or order payment status. Covers the `@luratha/payments` package architecture (split between the storefront's payment-intent endpoint and the dedicated `apps/mercadopago` webhook backend), the payment lifecycle, webhook signature validation, the MP-status → Order-status mapping, where credentials live, and the test patterns. Use it so payment changes stay localized and low-risk.
 compatibility: Next.js 16 App Router, firebase-admin v13, Zod v4, Vitest 4, TypeScript strict, Node.js 22, mercadopago SDK v2
 ---
 
@@ -19,21 +19,29 @@ customer never leaves the store. Three methods supported:
   synchronous.
 - **Boleto** — the API returns a printable boleto URL + barcode.
 
-All payment code lives under `apps/store/src/lib/payment/`:
+All payment code lives in the **`@luratha/payments`** workspace package
+(`packages/payments/`), shared between the storefront (creates the payment)
+and the dedicated `apps/mercadopago` webhook app (confirms it):
 
 | File / dir | Purpose |
 |---|---|
-| `types.ts` | I/O contracts, `PaymentIntentResult`, `PaymentProviderError` |
-| `mercadoPago/client.ts` | Reads credentials from env, builds `MercadoPagoConfig` |
-| `mercadoPago/index.ts` | Adapter — `createOrder`, `getOrder`, `verifyWebhookSignature`, `mapMpStatus`, `isMercadoPagoSandbox`, `withSandboxEmail` |
-| `service.ts` | `Order`-aware orchestration: load order, create payment, persist, apply webhook |
+| `packages/payments/src/types.ts` | I/O contracts, `PaymentIntentResult`, `PaymentProviderError` |
+| `packages/payments/src/mercadoPago/client.ts` | Reads credentials from env, builds `MercadoPagoConfig` |
+| `packages/payments/src/mercadoPago/index.ts` | Adapter — `createOrder`, `getOrder`, `verifyWebhookSignature`, `mapMpStatus`, `isMercadoPagoSandbox`, `withSandboxEmail` |
+| `packages/payments/src/orderService.ts` | `Order`-aware orchestration: load order, create payment, persist, apply webhook |
+| `packages/payments/src/index.ts` | Barrel re-export — consumers import from `@luratha/payments` |
+
+Consumers (both import via `@luratha/payments`):
+
+- `apps/store/src/app/api/checkout/payment-intent/` — calls `createPaymentIntent`
+- `apps/mercadopago/src/app/api/webhooks/mercadopago/` — calls `applyOrderWebhook` + `verifyWebhookSignature`
 
 API routes:
 
-| Route | Purpose |
-|---|---|
-| `POST /api/checkout/payment-intent` | Creates the MP payment for an existing Order; auth-protected |
-| `POST /api/webhooks/mercadopago` | Receives MP notifications; **public**, secured by signature |
+| Route | App | Purpose |
+|---|---|---|
+| `POST /api/checkout/payment-intent` | `@luratha/store` (storefront) | Creates the MP payment for an existing Order; auth-protected |
+| `POST /api/webhooks/mercadopago` | `@luratha/mercadopago` (dedicated webhook backend `luratha-app-mercadopago`) | Receives MP notifications; **public**, secured by signature |
 
 ## Payment lifecycle
 
@@ -149,17 +157,26 @@ mandatório no apphosting.yaml.
 
 ## Test patterns
 
-- **Pure adapter logic** (`src/lib/payment/__tests__/mercadoPago.test.ts`):
+- **Pure adapter logic** (`apps/mercadopago/src/__tests__/mercadoPago.test.ts`):
   `mapMpStatus` and `verifyWebhookSignature` are pure — test directly, set
-  `MERCADOPAGO_WEBHOOK_SECRET` and compute the HMAC in-test.
-- **Route handlers** (`__tests__/post.test.ts`): mock `@luratha/auth/requireUser`
-  and the `@/src/lib/payment/service` module — assert status codes and branching
-  without touching Firestore or MercadoPago.
-- **Cloud integration** (`src/test/cloud/paymentApi.cloud.test.ts`): mock the
-  whole `@/src/lib/payment/mercadoPago` module (so `createOrder`/`getOrder`/
-  `verifyWebhookSignature` never call MP), seed a real Order, run the handlers,
-  and assert the **real Firestore** write. Use `describeCloud` +
-  `createCloudTestPrefix()`; clean up seeded docs in `afterAll`.
+  `MERCADOPAGO_WEBHOOK_SECRET` and compute the HMAC in-test. The unit tests
+  live in the webhook app because that is where the adapter is exercised
+  end-to-end; they import from `@luratha/payments`.
+- **Route handlers** (`__tests__/post.test.ts`): mock the parts of
+  `@luratha/payments` the handler uses (`verifyWebhookSignature`,
+  `applyOrderWebhook` for the webhook; `createPaymentIntent`, `loadOrder` for
+  payment-intent) plus `@luratha/auth/requireUser` — assert status codes and
+  branching without touching Firestore or MercadoPago.
+- **Cloud integration**:
+  - Storefront `apps/store/src/test/cloud/paymentApi.cloud.test.ts` — covers
+    `payment-intent` persisting `paymentIntentId` (mocks
+    `@luratha/payments/mercadoPago`, real Firestore write).
+  - Webhook app `apps/mercadopago/src/test/cloud/webhook.cloud.test.ts` —
+    covers `applyOrderWebhook` advancing `paymentStatus` to `paid` +
+    idempotency (mocks `@luratha/payments/mercadoPago`, seeds real Order via
+    `adminDb`).
+  - Both use `describeCloud` + `createCloudTestPrefix()` and clean up seeded
+    docs in `afterAll`.
 - **E2E checkout** (`apps/store/e2e/checkout.spec.ts` PIX + Boleto;
   `apps/store/e2e/checkout-card.spec.ts` cartão): rodam contra `pnpm dev` no
   CI (`e2e-cloud` job). Cada teste **registra um user novo** via `/register`
@@ -210,11 +227,12 @@ CVV; o nosso JS nunca toca dados sensíveis do cartão.
 - **Iframe MP (client, fora do nosso controle)** chama `POST /v1/card_tokens`
   e `GET /v1/payment_methods/search` direto pra `api.mercadopago.com` —
   PAN+CVV nunca passam pelo nosso JS. Esse é o ponto do PCI scope.
-- **Nosso server** (`apps/store/src/lib/payment/mercadoPago/index.ts`, runtime
-  `nodejs`) chama `POST /v1/orders` server-to-server com o `token` opaco
-  recebido do client + `MERCADOPAGO_ACCESS_TOKEN`. Sem CORS.
-- **Webhook receiver** (`/api/webhooks/mercadopago`) é nosso server — MP é
-  quem chama.
+- **Nosso server da loja** (`packages/payments/src/mercadoPago/index.ts` via
+  `@luratha/payments`, runtime `nodejs`) chama `POST /v1/orders` server-to-server
+  com o `token` opaco recebido do client + `MERCADOPAGO_ACCESS_TOKEN`. Sem CORS.
+- **Webhook receiver** (`POST /api/webhooks/mercadopago` no app dedicado
+  `@luratha/mercadopago`, backend `luratha-app-mercadopago`) é nosso server —
+  MP é quem chama. Isolado da storefront pra facilitar inspeção de logs.
 
 Consequência arquitetural: a tokenização **não pode** ser movida pro server
 (entraria em PCI scope D). PIX/Boleto continuam funcionando local sem
@@ -296,7 +314,8 @@ pra APRO/OTHE: `12345678909`. A suíte automatizada nunca chama a MP real.
 ## References
 
 - Setup / credentials: `docs/mercadopago-setup.md`
-- Implementação backend: `apps/store/src/lib/payment/`
+- Implementação backend (adapter + service): `packages/payments/` (pacote `@luratha/payments`)
+- Webhook receiver isolado: `apps/mercadopago/` (backend `luratha-app-mercadopago`)
 - Implementação browser (Card Payment Brick): `apps/store/src/components/checkout/PaymentStep.tsx`
 - UI checkout: `apps/store/src/app/checkout/` e `apps/store/src/components/checkout/`
 - Checklist sandbox: `docs/mercadopago-sandbox-checklist.md`
