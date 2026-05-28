@@ -34,10 +34,8 @@ import {
  * (ver `mercadoPago/index.ts` mapMpStatus("processed") → "paid"). PIX/Boleto
  * ficam fora desse spec porque dependem de webhook (não chega em localhost).
  *
- * Env vars obrigatórios — em runs sem eles o spec pula com mensagem que
- * lista exatamente o que falta. Antes era um `throw` no module-load, mas
- * em CI sem secrets isso quebrava o runner inteiro antes de qualquer
- * `test.skip` rodar.
+ * Env vars são validadas no module-load com `throw` — quem rodar o spec
+ * sem configurar vê uma mensagem clara em vez do silêncio de `test.skip`.
  */
 
 const REQUIRED_ENVS = [
@@ -50,6 +48,12 @@ const REQUIRED_ENVS = [
 ] as const;
 
 const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
+if (missingEnvs.length > 0) {
+  throw new Error(
+    `[checkout-card-real] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
+      `Configure no .env do repo root antes de rodar este spec.`,
+  );
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -61,11 +65,6 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
   let uid: string | null = null;
 
   test.beforeEach(async ({ page }) => {
-    test.skip(
-      missingEnvs.length > 0,
-      `[checkout-card-real] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
-        `Configure no .env do repo root pra rodar.`,
-    );
     // Log do código de erro do Brick (caso `onError` dispare) — ver
     // `PaymentStep.tsx` que loga `[mp-brick-error] {...}` com cause/code.
     page.on("console", (msg) => {
