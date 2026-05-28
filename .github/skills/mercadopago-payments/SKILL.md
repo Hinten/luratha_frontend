@@ -216,11 +216,9 @@ CVV; o nosso JS nunca toca dados sensíveis do cartão.
 - **Webhook receiver** (`/api/webhooks/mercadopago`) é nosso server — MP é
   quem chama.
 
-Consequência: a tokenização **não pode** ser movida pro server (entraria em
-PCI scope D). Por isso o Brick não funciona em `localhost` (HTTP ou HTTPS):
-o servidor MP rejeita CORS pra domínios locais. Pra testar Cartão de verdade,
-**deploy no App Hosting é obrigatório**. PIX/Boleto continuam funcionando
-local porque tokenização não acontece no client (só nosso
+Consequência arquitetural: a tokenização **não pode** ser movida pro server
+(entraria em PCI scope D). PIX/Boleto continuam funcionando local sem
+peculiaridades porque tokenização não acontece no client (só nosso
 `/api/checkout/payment-intent` chama o MP).
 
 **Sandbox quirk** (importante): em sandbox, o MP exige que o `payer.email`
@@ -230,35 +228,44 @@ transparente via `withSandboxEmail()` (em `mercadoPago/index.ts`), usando
 `MERCADOPAGO_SANDBOX_PAYER_EMAIL` quando setado, ou caindo num rewrite de
 domínio como fallback. UI sempre mostra o email real do user.
 
-### Por que `next dev --experimental-https` não resolve
+### Brick em localhost: funciona
 
-Existe o script `pnpm --filter @luratha/store dev:https` (Next.js 16 boota
-em `https://localhost:3000` com cert auto-assinado via mkcert), mas **isso
-não desbloqueia o Brick** — a rejeição é por CORS no servidor do MP contra
-qualquer domínio local, independente do protocolo. HTTPS local serve só
-pra debugar cookies `secure: true` ou outros recursos que exigem origem
-segura. Para validar empiricamente: rode `pnpm --filter @luratha/store
-dev:https` com `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` setada, abra
-`https://localhost:3000/checkout`, vá pro tab Cartão, preencha um cartão
-APRO e inspecione `POST https://api.mercadopago.com/v1/card_tokens` no
-Network — deve falhar com CORS. Se um dia parar de falhar, atualize esta
-seção e remova o branch de mock.
+Versões anteriores deste doc afirmavam que o Brick "não funciona em localhost
+por CORS". **Não é verdade** — refutado empiricamente em 2026-05 com logs do
+`apps/store/e2e/checkout-card.spec.ts`:
 
-### Como testamos o cartão em CI (mock do Brick)
+- `POST https://api.mercadopago.com/v1/card_tokens?...&referer=http%3A%2F%2Flocalhost%3A3000` → **201**
+  com cardToken válido
+- O MP **não rejeita** `referer=http://localhost:3000` em nenhuma das chamadas
+  do Brick (devices/widgets, payment_methods/search, installments,
+  card_tokens)
+- A cadeia falhava antes só por dois motivos derivados, ambos arrumáveis:
+  1. **Race no spec entre fills**: preencher cardholder name antes do fetch
+     `installments?bin=...` settlar resetava o input por causa do re-render
+     do Brick. Solução: aguardar a resposta do `installments` antes de
+     preencher os demais campos.
+  2. **Race no checkout flow**: clicar `Continuar` rapidamente entre steps
+     antes da URL transitar (`?step=address` → `?step=shipping` → ...).
+     Solução: `await page.waitForURL(/step=.../)` entre cliques.
 
-`PaymentStep.tsx` tem um branch gated por `NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1`
-que substitui o `<CardPayment>` pelo `E2EMockCardBrick` — um form simples
-com `data-testid="mp-brick-mock"` que devolve `{ token: "e2e-mock-card-token",
-payment_method_id, installments }`. Em prod a flag está ausente e o branch
-some do bundle (inlining de `NEXT_PUBLIC_*` em build time).
+### Como testamos o cartão (Brick real)
 
-`apps/store/e2e/checkout-card.spec.ts` exercita: tab Cartão → form mockado
-→ submit → assert `POST /api/checkout/payment-intent` recebeu o body
-correto (`cardToken`, `installments`, `paymentMethodId`) → `PaymentResult`
-mostra "Pagamento aprovado" via `page.route`. A tokenização real do MP
-**não é exercitada** — quando precisar, criar um cloud test server-side
-que chame `POST /v1/card_tokens` direto via `fetch` (sem browser, sem CORS)
-usando um cartão APRO + `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` sandbox.
+`apps/store/e2e/checkout-card.spec.ts` exercita o fluxo end-to-end client:
+login com MP test user (`TEST_USER_EMAIL`/`TEST_USER_PASSWORD` no `.env`,
+formato `*@testuser.com`) → checkout → tab Cartão → preencher iframes do
+Brick (`iframe[name="cardNumber"|"expirationDate"|"securityCode"]`) →
+tokenização **real** contra `api.mercadopago.com` → `POST
+/api/checkout/payment-intent` (mockado pra retornar `paid` porque a Order
+é mockada e não existe no Firestore real) → redirect pra `/checkout/sucesso/`.
+
+`PaymentStep.tsx` ainda mantém um branch `E2EMockCardBrick` gated por
+`NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1` — usado em CI no GitHub Actions onde os
+secrets `TEST_USER_*` podem não estar disponíveis. Localmente (com env vars
+setados) o spec roda o Brick real e prova a integração de verdade.
+
+Para cobrir o caminho server-side da Order (criação real no Firestore +
+`POST /v1/orders` ao MP), use `paymentApi.cloud.test.ts` (cloud integration
+Vitest sem browser).
 
 ## Sandbox / teste manual
 

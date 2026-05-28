@@ -419,6 +419,16 @@ export default function PaymentStep(props: PaymentStepProps) {
                     await processCardSubmit(param as unknown as CardBrickFormData);
                   }}
                   onError={(err) => {
+                    // Loga o erro inteiro pra extrair `cause`/code da MP (ver
+                    // doc Bricks "Possíveis erros": fields_setup_failed,
+                    // card_token_creation_failed, get_payment_methods_failed,
+                    // etc.). O Brick passa objetos plain (não Error), então
+                    // `Object.getOwnPropertyNames` garante que enumerable
+                    // false-ish (como `cause`) também entram no JSON.
+                    console.error(
+                      "[mp-brick-error]",
+                      JSON.stringify(err, Object.getOwnPropertyNames(err ?? {})),
+                    );
                     const msg =
                       err && typeof err === "object" && "message" in err
                         ? String((err as { message?: unknown }).message)

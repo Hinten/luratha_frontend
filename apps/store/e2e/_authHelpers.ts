@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { errors, expect, type Page, type Response } from "@playwright/test";
 
 /**
  * Registra um novo user via `/register` (UI) e retorna o uid.
@@ -57,4 +57,96 @@ export async function registerNewUser(page: Page): Promise<string> {
   });
 
   return data.uid;
+}
+
+/**
+ * Reaproveita um único MP test user (`TEST_USER_EMAIL` / `TEST_USER_PASSWORD`)
+ * pra checkout-card. Em sandbox o MP exige que `payer.email` corresponda a um
+ * test user criado no painel (`@testuser.com`); usar um email aleatório por
+ * teste quebra a tokenização com erros disfarçados de CORS. Estratégia:
+ *
+ * 1. Tenta login. Se o `POST /api/auth/session` chegar com 200, captura o uid
+ *    e segue.
+ * 2. Se o login não emite a request em ~10s (login falha localmente sem hit no
+ *    backend quando o email não existe — `signInWithEmailAndPassword` rejeita
+ *    antes do `postSession`) **ou** responde com erro, cai pro `/register` com
+ *    os mesmos creds. Em runs subsequentes o login passa direto.
+ *
+ * Mesmo path do `registerNewUser` pra estabelecer cookie `__session` + Firebase
+ * IndexedDB + UserProfile consistentes antes de qualquer interação com checkout.
+ */
+export async function loginOrRegisterTestUser(page: Page): Promise<string> {
+  const email = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
+  if (!email || !password) {
+    throw new Error(
+      "[E2E] TEST_USER_EMAIL e TEST_USER_PASSWORD são obrigatórios para reaproveitar o MP test user.",
+    );
+  }
+
+  await page.goto("/login");
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Senha").fill(password);
+
+  const loginSessionWait = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    { timeout: 10_000 },
+  );
+  await page.getByRole("button", { name: "Entrar" }).click();
+
+  let loginResponse: Response | null = null;
+  try {
+    loginResponse = await loginSessionWait;
+  } catch (err) {
+    // Playwright `waitForResponse` lança `errors.TimeoutError` quando o timeout
+    // estoura. Capturamos só timeout (sinal de "request nunca aconteceu" — login
+    // falhou client-side em signInWithEmailAndPassword antes do postSession);
+    // outras exceções propagam.
+    if (!(err instanceof errors.TimeoutError)) {
+      throw err;
+    }
+  }
+
+  if (loginResponse?.ok()) {
+    const data = (await loginResponse.json()) as { uid?: string };
+    if (!data.uid) {
+      throw new Error("[E2E] /api/auth/session retornou sem uid (login).");
+    }
+    await expect(page).toHaveURL("/", { timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible({
+      timeout: 10_000,
+    });
+    return data.uid;
+  }
+
+  // Login falhou (user inexistente, senha errada, etc.) — register.
+  await page.goto("/register");
+  await page.getByLabel("Nome completo").fill("MP Test User");
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(password);
+  await page.getByLabel("Confirmar senha").fill(password);
+
+  const registerSessionWait = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    { timeout: 15_000 },
+  );
+  await page.getByRole("button", { name: "Criar conta" }).click();
+  const registerResponse = await registerSessionWait;
+  if (!registerResponse.ok()) {
+    throw new Error(
+      `[E2E] /api/auth/session falhou no register do test user (${registerResponse.status()}).`,
+    );
+  }
+  const registerData = (await registerResponse.json()) as { uid?: string };
+  if (!registerData.uid) {
+    throw new Error("[E2E] /api/auth/session retornou sem uid (register).");
+  }
+
+  await expect(page).toHaveURL("/", { timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible({
+    timeout: 10_000,
+  });
+  return registerData.uid;
 }
