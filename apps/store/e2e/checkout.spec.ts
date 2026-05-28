@@ -38,8 +38,10 @@ import {
  * completo no beforeEach/afterEach: cart, endereços e orders pendentes
  * do test user são apagados pra runs idempotentes.
  *
- * Env vars validados no module-load com `throw` (sem `test.skip`) — sem
- * mensagem clara do que falta configurar.
+ * Env vars validados no `beforeAll` do describe PIX/Boleto com `throw` — sem
+ * `test.skip`, mensagem clara do que falta. Escopo no describe pra não
+ * abortar o describe orthogonal `Checkout — guards e UI` abaixo que não
+ * depende de envs MP.
  */
 
 const REQUIRED_ENVS = [
@@ -48,15 +50,9 @@ const REQUIRED_ENVS = [
   "MERCADOPAGO_ACCESS_TOKEN",
   "MERCADOPAGO_ENV",
   "MERCADOPAGO_SANDBOX_PAYER_EMAIL",
+  // Step 3 (Frete) bate em /api/checkout/shipping → provider Melhor Envio.
+  "MELHOR_ENVIO_TOKEN",
 ] as const;
-
-const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
-if (missingEnvs.length > 0) {
-  throw new Error(
-    `[checkout pix/boleto] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
-      `Configure no .env do repo root antes de rodar este spec.`,
-  );
-}
 
 // ── Tests sem auth (proxy + UI estática) ────────────────────────────────────
 
@@ -78,12 +74,22 @@ test.describe("Checkout — guards e UI", () => {
 
 // ── Happy paths real (end-to-end sem mocks, para em pending) ────────────────
 
-test.describe.configure({ mode: "serial" });
-
 test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
   // Login + UI + frete real + Order real + payment-intent real.
   // 120s pra cobrir provider de frete eventualmente lento + MP API.
-  test.describe.configure({ timeout: 120_000 });
+  // `mode: 'serial'` dentro do describe pra não vazar pros guards tests do
+  // describe orthogonal anterior — eles podem rodar em paralelo.
+  test.describe.configure({ timeout: 120_000, mode: "serial" });
+
+  test.beforeAll(() => {
+    const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
+    if (missingEnvs.length > 0) {
+      throw new Error(
+        `[checkout pix/boleto] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
+          `Configure no .env do repo root antes de rodar este spec.`,
+      );
+    }
+  });
 
   let uid: string | null = null;
 
@@ -209,7 +215,10 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     const order = orderDoc.data();
     expect(order?.paymentStatus).toBe("pending");
     expect(order?.paymentMethod).toBe(expected.paymentMethod);
-    expect(order?.paymentIntentId).toMatch(/.+/);
+    // MP Orders API retorna `paymentIntentId` no formato `ORDTST01...` (sandbox)
+    // ou `ORD01...` (prod). `/.+/` aceitaria qualquer placeholder; o prefixo
+    // `^ORD` valida que veio do MP de verdade.
+    expect(order?.paymentIntentId).toMatch(/^ORD/i);
     console.log(
       `[${expected.paymentMethod} order] final: paymentStatus=${order?.paymentStatus} paymentIntentId=${order?.paymentIntentId}`,
     );
@@ -245,7 +254,18 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
       page.getByRole("button", { name: /Copiar código/ }),
     ).toBeVisible();
 
+    // URL não bouncing durante PaymentResult — CheckoutFlow renderiza o
+    // overlay sem mexer na query string. Sem esse assert, regressão futura
+    // que faça router.replace(`/checkout/sucesso/${id}`) prematuro (antes
+    // do user clicar Acompanhar pedido) passa silente.
+    await expect(page).toHaveURL(/\/checkout\?step=payment/);
+
     await assertOrderPersisted(orderId, { paymentMethod: "pix" });
+
+    // Navegação pra success page via "Acompanhar pedido". Cobre o flow que
+    // antes era assertado e foi dropado na refatoração end-to-end.
+    await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
   });
 
   test("Boleto: order pending + link do boleto real", async ({ page }) => {
@@ -275,6 +295,13 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
       page.getByRole("link", { name: "Abrir boleto em PDF" }),
     ).toBeVisible({ timeout: 30_000 });
 
+    // URL não bouncing durante PaymentResult (ver justificativa no PIX test).
+    await expect(page).toHaveURL(/\/checkout\?step=payment/);
+
     await assertOrderPersisted(orderId, { paymentMethod: "boleto" });
+
+    // Navegação pra success page via "Acompanhar pedido".
+    await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
   });
 });

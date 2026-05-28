@@ -29,8 +29,10 @@ const DEFAULT_ITEM: Omit<CartItem, "userId" | "addedAt" | "updatedAt"> = {
   productSlug: "conjunto-saia-e-blusa-crochet-luratha-e2e-002",
   name: "Conjunto Saia e Blusa Crochet",
   photoId: "img-e2e-002",
+  // Data URL 1x1 PNG transparente — evita 404 no console (o bucket
+  // `luratha-test` não existe; antes pollui logs E2E com [browser:error]).
   imageUrl:
-    "https://firebasestorage.googleapis.com/v0/b/luratha-test/o/conjunto-crochet.jpg?alt=media",
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   unitPrice: 419,
   quantity: 1,
   currency: "BRL",

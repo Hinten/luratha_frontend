@@ -219,20 +219,11 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      # MercadoPago: payment-intent é mockado no client via page.route nos specs,
-      # mas o dev server ainda precisa das vars de servidor pra não crashar ao
-      # importar `@/src/lib/payment/mercadoPago/client` durante /api/checkout/*.
-      MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-      MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
-      MERCADOPAGO_ENV: sandbox
-      MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
-      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
-      # MP test user reaproveitado entre runs por `loginOrRegisterTestUser`
-      # (e2e/_authHelpers.ts). Os specs non-MP que rodam aqui usam o user
-      # só pra ter sessão; sem o checkout-card-real/checkout que valida o
-      # throw no module-load. Mantemos por consistência com o workflow MP.
-      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      # Specs MP (checkout-card-real + checkout PIX/Boleto) vivem no workflow
+      # separado `e2e-checkout-mp.yml`. Aqui rodam apenas auth, cart, catalog,
+      # home, institutional, navigation, product, auth-middleware — nenhum
+      # importa @/src/lib/payment ou /api/checkout, então MP/TEST_USER envs
+      # não são necessárias.
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets

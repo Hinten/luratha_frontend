@@ -86,7 +86,10 @@ export async function loginOrRegisterTestUser(page: Page): Promise<string> {
 
   await page.goto("/login");
   await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  // `exact: true` evita strict-mode multi-match se a UI vier a expor toggles
+  // tipo "Mostrar senha" ou "Senha forte". Alinha com o register flow abaixo
+  // (linha equivalente em `Confirmar senha`).
+  await page.getByLabel("Senha", { exact: true }).fill(password);
 
   const loginSessionWait = page.waitForResponse(
     (res) =>
@@ -120,7 +123,19 @@ export async function loginOrRegisterTestUser(page: Page): Promise<string> {
     return data.uid;
   }
 
-  // Login falhou (user inexistente, senha errada, etc.) — register.
+  // Login retornou response com erro (não-OK) → user existe mas password/conta
+  // estão errados. Falhar EXPLICITAMENTE em vez de cair pro register (que ia
+  // dar timeout em 15s porque Firebase rejeita `auth/email-already-in-use`
+  // antes do postSession). Mensagem clara > timeout opaco.
+  if (loginResponse) {
+    throw new Error(
+      `[E2E] Login falhou (${loginResponse.status()}). Verifique TEST_USER_PASSWORD ou se o user existe no Firebase Auth.`,
+    );
+  }
+
+  // loginResponse === null ⇒ TimeoutError no waitForResponse ⇒ request nunca
+  // disparou (signInWithEmailAndPassword rejeitou client-side antes do
+  // postSession) ⇒ user provavelmente não existe. Cai pro register.
   await page.goto("/register");
   await page.getByLabel("Nome completo").fill("MP Test User");
   await page.getByLabel("E-mail").fill(email);

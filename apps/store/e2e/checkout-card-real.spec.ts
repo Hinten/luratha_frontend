@@ -34,8 +34,10 @@ import {
  * (ver `mercadoPago/index.ts` mapMpStatus("processed") → "paid"). PIX/Boleto
  * ficam fora desse spec porque dependem de webhook (não chega em localhost).
  *
- * Env vars são validadas no module-load com `throw` — quem rodar o spec
- * sem configurar vê uma mensagem clara em vez do silêncio de `test.skip`.
+ * Env vars são validadas no `beforeAll` do describe principal com `throw` —
+ * quem rodar o spec sem configurar vê uma mensagem clara. Escopo no
+ * describe pra não abortar outros specs do mesmo `playwright test` run
+ * (e.g. guards orthogonais em outros arquivos) por module-load throw.
  */
 
 const REQUIRED_ENVS = [
@@ -45,22 +47,28 @@ const REQUIRED_ENVS = [
   "MERCADOPAGO_ACCESS_TOKEN",
   "MERCADOPAGO_ENV",
   "MERCADOPAGO_SANDBOX_PAYER_EMAIL",
+  // Step 3 (Frete) bate em /api/checkout/shipping → provider Melhor Envio
+  // real. Sem token, response retorna alert "MELHOR_ENVIO_TOKEN não
+  // configurado" e o radiogroup nunca renderiza.
+  "MELHOR_ENVIO_TOKEN",
 ] as const;
-
-const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
-if (missingEnvs.length > 0) {
-  throw new Error(
-    `[checkout-card-real] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
-      `Configure no .env do repo root antes de rodar este spec.`,
-  );
-}
-
-test.describe.configure({ mode: "serial" });
 
 test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
   // login + UI + Brick mount + tokenize + payment-intent real + frete real.
   // 120s pra cobrir provider de frete eventualmente lento.
-  test.describe.configure({ timeout: 120_000 });
+  // `mode: 'serial'` no describe (não no file scope) pra não vazar pra
+  // outros describes/files que rodem na mesma invocação do Playwright.
+  test.describe.configure({ timeout: 120_000, mode: "serial" });
+
+  test.beforeAll(() => {
+    const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
+    if (missingEnvs.length > 0) {
+      throw new Error(
+        `[checkout-card-real] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
+          `Configure no .env do repo root antes de rodar este spec.`,
+      );
+    }
+  });
 
   let uid: string | null = null;
 
@@ -204,9 +212,15 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
 
     await page.getByPlaceholder("Maria Santos Pereira").fill("APRO");
 
+    // Installments select: escopado pela heading "Selecione o número de
+    // parcelas" pra não colidir com outro <select> (doc-type CPF/CNPJ tem
+    // role combobox e usar `filter({ hasText: "À Vista" })` seria landmine
+    // caso o Brick adicione outro select com options contendo "À Vista").
     const installmentsSelect = page
-      .locator("select")
-      .filter({ hasText: "À Vista" });
+      .locator(
+        'h2:has-text("Selecione o número de parcelas") ~ * select, h2:has-text("Selecione o número de parcelas") + * select',
+      )
+      .first();
     await expect(installmentsSelect).toBeVisible({ timeout: 5_000 });
     await installmentsSelect.selectOption({ index: 1 });
 
@@ -248,7 +262,10 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     expect(orderDoc.exists).toBe(true);
     const order = orderDoc.data();
     expect(order?.paymentStatus).toBe("paid");
-    expect(order?.paymentIntentId).toMatch(/.+/);
+    // MP Orders API retorna `paymentIntentId` no formato `ORDTST01...` (sandbox)
+    // ou `ORD01...` (prod). `/.+/` aceitaria qualquer placeholder; o prefixo
+    // `^ORD` valida que veio do MP de verdade.
+    expect(order?.paymentIntentId).toMatch(/^ORD/i);
     console.log(
       `[order] final: paymentStatus=${order?.paymentStatus} paymentIntentId=${order?.paymentIntentId}`,
     );

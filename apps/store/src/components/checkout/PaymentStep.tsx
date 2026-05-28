@@ -358,10 +358,21 @@ export default function PaymentStep(props: PaymentStepProps) {
                   // etc.). O Brick passa objetos plain (não Error), então
                   // `Object.getOwnPropertyNames` garante que enumerable
                   // false-ish (como `cause`) também entram no JSON.
-                  console.error(
-                    "[mp-brick-error]",
-                    JSON.stringify(err, Object.getOwnPropertyNames(err ?? {})),
-                  );
+                  //
+                  // Wrap em try/catch: `JSON.stringify` lança `TypeError` em
+                  // estruturas circulares (Brick erros podem referenciar DOM
+                  // via `cause`). Sem catch, o throw escapa do onError e
+                  // mascara o erro original do Brick com stack de logging.
+                  try {
+                    console.error(
+                      "[mp-brick-error]",
+                      JSON.stringify(err, Object.getOwnPropertyNames(err ?? {})),
+                    );
+                  } catch (loggingErr) {
+                    if (!(loggingErr instanceof TypeError)) throw loggingErr;
+                    // Fallback: serialização falhou (circular/Proxy). Loga raw.
+                    console.error("[mp-brick-error] (stringify failed)", err);
+                  }
                   const msg =
                     err && typeof err === "object" && "message" in err
                       ? String((err as { message?: unknown }).message)

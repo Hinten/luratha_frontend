@@ -20,12 +20,17 @@ on:
       # UI do checkout exercitada nos specs
       - 'apps/store/src/app/checkout/**'
       - 'apps/store/src/components/checkout/**'
-      # API routes batidas ponta-a-ponta
+      # API routes batidas ponta-a-ponta. NOTA: `users/[id]/addresses/**` em
+      # minimatch trata `[id]` como classe de caracteres `{i,d}` — nunca casa
+      # com a pasta literal `[id]` da rota dinâmica Next.js. Ampliamos pra
+      # `users/**` (essa pasta só hospeda a rota dinâmica de users).
       - 'apps/store/src/app/api/checkout/**'
       - 'apps/store/src/app/api/orders/**'
-      - 'apps/store/src/app/api/users/[id]/addresses/**'
-      # Server-side MP (adapter, service)
+      - 'apps/store/src/app/api/users/**'
+      - 'apps/store/src/app/api/auth/session/**'
+      # Server-side MP (adapter, service) + frete (provider real exercitado)
       - 'apps/store/src/lib/payment/**'
+      - 'apps/store/src/lib/shipping/**'
       # Contextos React envolvidos no flow
       - 'apps/store/src/contexts/CartContext.tsx'
       - 'apps/store/src/contexts/AuthContext.tsx'
@@ -91,9 +96,22 @@ jobs:
       - name: Verify cloud test secrets are configured
         id: check_secrets
         run: |
-          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+          # Gate amplo: lista TODOS os secrets requeridos pelos specs MP e
+          # falha cedo (~segundos) em vez de gastar 5min de install + Playwright
+          # browser download pra só então estourar no module-load throw com a
+          # mesma informação. Cada secret unset/empty é listado no warning.
+          missing=()
+          [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] && missing+=("FIREBASE_SERVICE_ACCOUNT_BASE64")
+          [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] && missing+=("FIREBASE_WEB_APP_CONFIG_BASE64")
+          [ -z "$MERCADOPAGO_ACCESS_TOKEN" ] && missing+=("MERCADOPAGO_ACCESS_TOKEN")
+          [ -z "$MERCADOPAGO_SANDBOX_PAYER_EMAIL" ] && missing+=("MERCADOPAGO_SANDBOX_PAYER_EMAIL")
+          [ -z "$NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY" ] && missing+=("NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY")
+          [ -z "$TEST_USER_EMAIL" ] && missing+=("TEST_USER_EMAIL")
+          [ -z "$TEST_USER_PASSWORD" ] && missing+=("TEST_USER_PASSWORD")
+          [ -z "$MELHOR_ENVIO_TOKEN" ] && missing+=("MELHOR_ENVIO_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando e2e-mp. Configure os secrets para habilitar."
+            echo "::warning::Secrets ausentes — pulando e2e-mp. Configure: ${missing[*]}"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
