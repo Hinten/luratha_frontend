@@ -353,11 +353,28 @@ export default function PaymentStep(props: PaymentStepProps) {
                   await processCardSubmit(param as unknown as CardBrickFormData);
                 }}
                 onError={(err) => {
+                  // O Brick passa objetos plain (não Error) e props
+                  // diagnósticas úteis (`cause`, `code`) podem ser
+                  // não-enumeráveis — capturamos via Object.getOwnPropertyNames
+                  // pra não perder sinal no log. Ver doc Bricks "Possíveis
+                  // erros": fields_setup_failed, card_token_creation_failed,
+                  // get_payment_methods_failed, etc. Estruturas circulares
+                  // (cause → DOM) são tratadas pelo logger, que faz fallback
+                  // pra String() quando JSON.stringify lança.
+                  const brickPayload =
+                    err && typeof err === "object"
+                      ? Object.fromEntries(
+                          Object.getOwnPropertyNames(err).map((k) => [
+                            k,
+                            (err as unknown as Record<string, unknown>)[k],
+                          ]),
+                        )
+                      : err;
                   setError(
                     reportCheckoutError({
                       error: err,
                       step: "payment_card",
-                      metadata: { brickPayload: err },
+                      metadata: { brickPayload },
                     }),
                   );
                 }}
