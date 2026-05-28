@@ -80,11 +80,11 @@ jobs:
       # faz throw no module-load com mensagem clara do que falta.
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      # Substitui `<CardPayment>` por form mock em PaymentStep.tsx — usado
-      # apenas pelo `checkout-card.spec.ts` (que roda em paralelo ao
-      # `checkout-card-real.spec.ts` que NÃO depende dessa flag e testa o
-      # Brick real). Remover aqui = `checkout-card.spec.ts` falha.
-      NEXT_PUBLIC_E2E_MOCK_MP_BRICK: "1"
+      # NÃO setar `NEXT_PUBLIC_E2E_MOCK_MP_BRICK` aqui — os dois specs de
+      # cartão (checkout-card.spec.ts e checkout-card-real.spec.ts) esperam
+      # o Brick REAL (iframe[name="cardNumber"], waitForResponse de
+      # /payment_methods/installments). A flag substituiria por
+      # E2EMockCardBrick (form sem iframes) e quebraria ambos.
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets
