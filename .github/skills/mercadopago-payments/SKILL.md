@@ -231,8 +231,8 @@ domínio como fallback. UI sempre mostra o email real do user.
 ### Brick em localhost: funciona
 
 Versões anteriores deste doc afirmavam que o Brick "não funciona em localhost
-por CORS". **Não é verdade** — refutado empiricamente em 2026-05 com logs do
-`apps/store/e2e/checkout-card.spec.ts`:
+por CORS". **Não é verdade** — refutado empiricamente em 2026-05 com logs dos
+specs E2E:
 
 - `POST https://api.mercadopago.com/v1/card_tokens?...&referer=http%3A%2F%2Flocalhost%3A3000` → **201**
   com cardToken válido
@@ -248,24 +248,38 @@ por CORS". **Não é verdade** — refutado empiricamente em 2026-05 com logs do
      antes da URL transitar (`?step=address` → `?step=shipping` → ...).
      Solução: `await page.waitForURL(/step=.../)` entre cliques.
 
-### Como testamos o cartão (Brick real)
+### Como testamos o checkout (E2E end-to-end real)
 
-`apps/store/e2e/checkout-card.spec.ts` exercita o fluxo end-to-end client:
-login com MP test user (`TEST_USER_EMAIL`/`TEST_USER_PASSWORD` no `.env`,
-formato `*@testuser.com`) → checkout → tab Cartão → preencher iframes do
-Brick (`iframe[name="cardNumber"|"expirationDate"|"securityCode"]`) →
-tokenização **real** contra `api.mercadopago.com` → `POST
-/api/checkout/payment-intent` (mockado pra retornar `paid` porque a Order
-é mockada e não existe no Firestore real) → redirect pra `/checkout/sucesso/`.
+Dois specs cobrem o fluxo completo, ambos no workflow
+`.github/workflows/e2e-checkout-mp.yml` (gated por `paths:` filter pra
+arquivos do checkout/MP):
 
-`PaymentStep.tsx` ainda mantém um branch `E2EMockCardBrick` gated por
-`NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1` — usado em CI no GitHub Actions onde os
-secrets `TEST_USER_*` podem não estar disponíveis. Localmente (com env vars
-setados) o spec roda o Brick real e prova a integração de verdade.
+- **`apps/store/e2e/checkout-card-real.spec.ts`** — Cartão APRO ponta-a-ponta
+  sem mocks: login com MP test user (`TEST_USER_EMAIL`/`TEST_USER_PASSWORD`)
+  → checkout → address criado via UI → frete real (Melhor Envio) → Order
+  real (`POST /api/orders` cria no Firestore) → tab Cartão → Brick tokeniza
+  contra `api.mercadopago.com` → `POST /api/checkout/payment-intent` dispara
+  adapter MP server (`POST /v1/orders`) → `mapMpStatus("processed") → "paid"`
+  síncrono → redirect `/checkout/sucesso/{orderId}`. Asserta Firestore
+  `Order.paymentStatus === "paid"` + `paymentIntentId` do MP.
 
-Para cobrir o caminho server-side da Order (criação real no Firestore +
-`POST /v1/orders` ao MP), use `paymentApi.cloud.test.ts` (cloud integration
-Vitest sem browser).
+- **`apps/store/e2e/checkout.spec.ts`** — PIX e Boleto ponta-a-ponta sem
+  mocks: mesmo fluxo até `POST /api/checkout/payment-intent`, MP devolve
+  `status: "action_required"` (mapeado pra `"pending"`) + `qrCode` (PIX)
+  ou `boleto.url` (Boleto). Spec **para em pending** com PaymentResult
+  mostrando QR Code real ou link do boleto. Asserta Firestore
+  `Order.paymentStatus === "pending"` + `paymentIntentId`. O flow
+  `webhook → paid` NÃO é exercitado aqui (webhook não chega em localhost
+  nem em runner do GitHub).
+
+Reuso do MP test user entre runs evita lixo no Firestore. Cleanup completo
+no `beforeEach`/`afterEach` (`clearFixtureCart` + `clearUserAddresses` +
+`clearPendingOrdersFor`) garante runs idempotentes.
+
+Para cobrir o caminho `webhook → paid` (PIX/Boleto/cartão em análise) use
+`apps/store/src/test/cloud/paymentApi.cloud.test.ts` — Vitest cloud que
+mocka `getOrder` do adapter MP pra simular status atualizado, sem precisar
+de browser nem de webhook real.
 
 ## Sandbox / teste manual
 
