@@ -227,6 +227,11 @@ jobs:
       MERCADOPAGO_ENV: sandbox
       MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
       NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
+      # MP test user reaproveitado entre runs por `loginOrRegisterTestUser`
+      # (e2e/_authHelpers.ts). Sem essas vars, `checkout-card-real.spec.ts`
+      # faz throw no module-load com mensagem clara do que falta.
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       # Substitui o `<CardPayment>` por um form mock em PaymentStep.tsx — o
       # Brick real não tokeniza em localhost (CORS), ver SKILL.md.
       NEXT_PUBLIC_E2E_MOCK_MP_BRICK: "1"
