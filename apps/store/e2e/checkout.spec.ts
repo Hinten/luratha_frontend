@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { registerNewUser } from "./_authHelpers";
+import { loginOrRegisterTestUser } from "./_authHelpers";
 import {
   seedFixtureCart,
   waitForCartHydrated,
@@ -9,14 +9,15 @@ import {
 /**
  * Checkout — fluxos PIX e Boleto.
  *
- * Cada teste registra um usuário novo via `/register` (UI) no beforeEach —
- * isso popula cookie `__session` + Firebase Auth client SDK (IndexedDB) +
- * UserProfile de forma consistente, sem race entre snapshot inicial do
- * `CartContext` e o `seedFixtureCart`. Sem credenciais Firebase, os tests
- * pulam sozinhos via `E2E_CLOUD_SKIP`.
+ * Cada teste loga (ou registra na primeira run) o MP test user reaproveitado
+ * via `loginOrRegisterTestUser` — economiza users descartáveis no Firestore.
+ * Endereços e orders são mockados via `page.route` aqui, então não vaza state
+ * entre runs nem entre specs que compartilham o mesmo user. Sem credenciais
+ * Firebase, os tests pulam sozinhos via `E2E_CLOUD_SKIP`.
  *
- * O fluxo de cartão vive em `checkout-card.spec.ts` porque depende do mock do
- * Brick (gated em `NEXT_PUBLIC_E2E_MOCK_MP_BRICK=1`).
+ * Cartão tem dois specs separados: `checkout-card.spec.ts` (mocks tudo, usado
+ * pra CI sem credenciais MP) e `checkout-card-real.spec.ts` (sem mocks, exige
+ * MP test user + sandbox credentials no .env).
  */
 
 const SKIP_CLOUD = process.env.E2E_CLOUD_SKIP === "1";
@@ -207,7 +208,7 @@ test.describe("Checkout — happy paths", () => {
   });
 
   test("PIX: 5 steps → PaymentResult com QR Code", async ({ page }) => {
-    const uid = await registerNewUser(page);
+    const uid = await loginOrRegisterTestUser(page);
     await mockCheckoutApis(page, uid, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_PIX,
     });
@@ -230,7 +231,7 @@ test.describe("Checkout — happy paths", () => {
   });
 
   test("Boleto: 5 steps → PaymentResult com link do boleto", async ({ page }) => {
-    const uid = await registerNewUser(page);
+    const uid = await loginOrRegisterTestUser(page);
     await mockCheckoutApis(page, uid, {
       paymentIntentResponse: FIXTURE_PAYMENT_INTENT_BOLETO,
     });
