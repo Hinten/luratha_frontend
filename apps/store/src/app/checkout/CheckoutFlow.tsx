@@ -6,6 +6,7 @@ import type { Address, CartItem, UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
@@ -384,10 +385,15 @@ export default function CheckoutFlow() {
         CONFIRM_TIMEOUT_MS,
       );
       if (!orderRes.ok) {
-        const body = (await orderRes.json().catch(() => ({}))) as { message?: string };
+        const body = (await orderRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
         throw new ApiResponseError(
           body.message ?? "Não foi possível criar o pedido.",
           orderRes.status,
+          [],
+          body.code,
         );
       }
       const created = (await orderRes.json()) as { id: string };
@@ -405,10 +411,13 @@ export default function CheckoutFlow() {
         const body = (await intentRes.json().catch(() => ({}))) as {
           message?: string;
           errors?: unknown;
+          code?: string;
         };
         throw new ApiResponseError(
           body.message ?? "Não foi possível processar o pagamento.",
           intentRes.status,
+          [],
+          body.code,
         );
       }
       const result = (await intentRes.json()) as PaymentResultData;
@@ -456,22 +465,16 @@ export default function CheckoutFlow() {
         void clearCart();
       }
     } catch (err) {
-      if (err instanceof ApiResponseError) {
-        dispatch({ type: "SUBMIT_FAIL", message: err.message });
-      } else if (err instanceof DOMException && err.name === "AbortError") {
-        dispatch({
-          type: "SUBMIT_FAIL",
-          message: "Tempo limite excedido. Verifique sua conexão e tente novamente.",
-        });
-      } else if (err instanceof TypeError) {
-        dispatch({
-          type: "SUBMIT_FAIL",
-          message:
-            "Sua conexão caiu ou está instável. Verifique a internet e tente novamente.",
-        });
-      } else {
-        throw err;
+      if (
+        err instanceof ApiResponseError ||
+        err instanceof TypeError ||
+        (err instanceof DOMException && err.name === "AbortError")
+      ) {
+        const message = reportCheckoutError({ error: err, step: "submit_order" });
+        dispatch({ type: "SUBMIT_FAIL", message });
+        return;
       }
+      throw err;
     }
   }
 

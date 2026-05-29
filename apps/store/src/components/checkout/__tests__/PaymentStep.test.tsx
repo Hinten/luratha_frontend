@@ -1,25 +1,40 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { logger } from "@luratha/core/logging/logger";
 import PaymentStep, {
   type PaymentPayer,
   type PaymentSubmitPayload,
 } from "@/src/components/checkout/PaymentStep";
 
+vi.mock("@luratha/core/logging/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 // `@mercadopago/sdk-react` carrega o Brick num iframe em mercadopago.com —
 // em jsdom isso explode. Mocamos `CardPayment` por um botão de teste que
 // dispara `onSubmit` com payload fake; mocamos `initMercadoPago` por no-op.
 // Capturamos também o `initialization` recebido pra inspecionar o prefill
-// do payer.
+// do payer e o `onError` pra exercitar o caminho de erro do Brick.
 const brickInit = vi.fn();
+const brickCallbacks: {
+  onError: ((err: unknown) => void) | undefined;
+} = { onError: undefined };
 vi.mock("@mercadopago/sdk-react", () => ({
   initMercadoPago: vi.fn(),
   CardPayment: (props: {
     initialization: unknown;
     onSubmit: (formData: unknown) => Promise<void> | void;
+    onError?: (err: unknown) => void;
   }) => {
     brickInit.mockImplementation(() => props.initialization);
     brickInit();
+    brickCallbacks.onError = props.onError;
     return (
       <button
         type="button"
@@ -200,6 +215,95 @@ describe("PaymentStep", () => {
       expect(init.payer.firstName).toBe("Marina");
       expect(init.payer.lastName).toBe("Souza");
       expect(init.payer.identification).toEqual({ type: "CPF", number: "12345678909" });
+    });
+  });
+
+  describe("tab Cartão (Brick) — onError", () => {
+    async function selectCardTab() {
+      const user = userEvent.setup();
+      render(
+        <PaymentStep
+          cartTotal={250}
+          payer={PAYER}
+          onSubmit={vi.fn()}
+          onBack={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "Cartão" }));
+      return user;
+    }
+
+    it("brickCause=fields_setup_failed mostra copy de 'recarregue a página'", async () => {
+      await selectCardTab();
+      vi.mocked(logger.warn).mockClear();
+
+      brickCallbacks.onError?.({
+        type: "non_critical",
+        message: "fields setup failed",
+        cause: "fields_setup_failed",
+      });
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não conseguimos carregar o formulário de cartão. Recarregue a página ou escolha PIX/Boleto.",
+      );
+      // Brick errors são objetos plain (não Error) → caem em "unknown" para o
+      // mapper de severidade → severity=ERROR (não warn).
+      expect(logger.error).toHaveBeenCalledWith(
+        "[checkout:payment_card]",
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            brickCause: "fields_setup_failed",
+          }),
+        }),
+      );
+    });
+
+    it("brickCause=card_token_creation_failed mostra copy de 'revisar dados do cartão'", async () => {
+      await selectCardTab();
+
+      brickCallbacks.onError?.({
+        type: "non_critical",
+        message: "tokenize failed",
+        cause: "card_token_creation_failed",
+      });
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não conseguimos validar os dados do cartão. Confira número, validade e CVV e tente novamente.",
+      );
+    });
+
+    it("não crasha quando o erro tem getter throwing — banner ainda aparece", async () => {
+      await selectCardTab();
+
+      // Brick poderia entregar um erro com `cause` definido via accessor que
+      // lança (por exemplo, referenciando DOM removido). Sem try/catch no
+      // onError, o throw escaparia e o usuário não veria notificação alguma.
+      const malicious: Record<string, unknown> = {
+        type: "critical",
+        message: "boom",
+      };
+      Object.defineProperty(malicious, "cause", {
+        enumerable: true,
+        configurable: true,
+        get() {
+          throw new Error("getter throws");
+        },
+      });
+
+      expect(() => brickCallbacks.onError?.(malicious)).not.toThrow();
+      // Como `cause` falhou de ler, vai pra copy genérica.
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não foi possível processar o cartão. Confira os dados ou tente outro método de pagamento.",
+      );
+      // Log estruturado ainda foi emitido — brickPayload caiu no fallback.
+      expect(logger.error).toHaveBeenCalledWith(
+        "[checkout:payment_card]",
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            brickPayload: expect.objectContaining({ unflattenable: true }),
+          }),
+        }),
+      );
     });
   });
 });

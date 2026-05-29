@@ -29,17 +29,29 @@ export function serializeLogPayload(payload: unknown): string {
  * own-properties from `Error` instances; `stack` is intentionally omitted.
  */
 export function errorReplacer(_key: string, value: unknown): unknown {
-  if (value instanceof Error) {
-    const err = value as Error & Record<string, unknown>;
-    const out: Record<string, unknown> = {
-      name: err.name,
-      message: err.message,
-    };
-    for (const k of Object.keys(err)) {
-      if (k === "stack") continue;
-      out[k] = err[k];
-    }
-    return out;
+  return flattenError(value) ?? value;
+}
+
+/**
+ * Achata um `Error` (e subclasses) em um objeto plano com `name`, `message`
+ * e props enumeráveis customizadas. `stack` é intencionalmente omitido —
+ * Cloud Logging mantém stacks em um campo separado.
+ *
+ * Retorna `undefined` para valores que não são instâncias de `Error`, para
+ * que callers possam compor com fallbacks (`flattenError(x) ?? x`).
+ */
+export function flattenError(
+  value: unknown,
+): { name: string; message: string; [k: string]: unknown } | undefined {
+  if (!(value instanceof Error)) return undefined;
+  const err = value as Error & Record<string, unknown>;
+  const out: Record<string, unknown> = {
+    name: err.name,
+    message: err.message,
+  };
+  for (const k of Object.keys(err)) {
+    if (k === "stack") continue;
+    out[k] = err[k];
   }
-  return value;
+  return out as { name: string; message: string; [k: string]: unknown };
 }

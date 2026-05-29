@@ -24,12 +24,25 @@ export class ApiResponseError extends Error {
    * via `setError(path, { message })`. Vazio para outros tipos de erro.
    */
   readonly issues: readonly z.core.$ZodIssue[];
+  /**
+   * Código de erro estruturado opcional vindo do backend (ex.: `config_missing`,
+   * `provider_unavailable`, `invalid_input`). Usado pelo mapper de mensagens
+   * amigáveis do checkout para discriminar erros que compartilham o mesmo
+   * status HTTP mas têm copy diferente pro cliente.
+   */
+  readonly code: string | undefined;
 
-  constructor(message: string, status: number, issues: readonly z.core.$ZodIssue[] = []) {
+  constructor(
+    message: string,
+    status: number,
+    issues: readonly z.core.$ZodIssue[] = [],
+    code?: string,
+  ) {
     super(message);
     this.name = "ApiResponseError";
     this.status = status;
     this.issues = issues;
+    this.code = code;
   }
 }
 
@@ -75,5 +88,10 @@ export async function throwIfNotOk(response: Response, fallbackMessage: string):
     Array.isArray((payload as { errors: unknown }).errors)
       ? ((payload as { errors: z.core.$ZodIssue[] }).errors)
       : [];
-  throw new ApiResponseError(message, response.status, issues);
+  const code =
+    payload && typeof payload === "object" && "code" in payload &&
+    typeof (payload as { code: unknown }).code === "string"
+      ? (payload as { code: string }).code
+      : undefined;
+  throw new ApiResponseError(message, response.status, issues, code);
 }
