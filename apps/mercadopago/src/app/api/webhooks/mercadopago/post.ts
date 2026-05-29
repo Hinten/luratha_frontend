@@ -1,11 +1,9 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   applyOrderWebhook,
   PaymentProviderError,
   verifyWebhookSignature,
 } from "@luratha/payments";
-import { logger } from "@luratha/core/logging/logger";
 
 // `runtime = "nodejs"` mora em route.ts — Next.js só lê route segment config
 // do entry. Duplicar aqui seria dead code.
@@ -76,37 +74,6 @@ export async function POST(request: Request) {
     }
     throw error;
   }
-
-  // TEMPORÁRIO — diagnóstico do 401. Loga o RESULTADO da verificação, isolado do
-  // processamento da order downstream. x-request-id é OPCIONAL (o MP só envia em
-  // notificações reais de Order, não no botão genérico "Testar URL"). REMOVER após validar.
-  // Fingerprint do secret em runtime — NÃO vaza o valor. SHA256(secret)[:12] +
-  // tamanho. Esperado p/ o painel: eafc1166… -> fp 68fb2ed42a33, len 64.
-  // Se o fp logado for diferente, o App Hosting está servindo outro secret
-  // (Secret Manager desatualizado / variável errada).
-  const runtimeSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim() ?? "";
-  const secretFp = runtimeSecret
-    ? createHash("sha256").update(runtimeSecret).digest("hex").slice(0, 12)
-    : "(ausente)";
-
-  logger.warn("[webhook][debug] verificação de assinatura", {
-    signatureValid,
-    hasSignature: Boolean(signatureHeader),
-    hasRequestId: Boolean(requestId),
-    // x-signature é PÚBLICO (não é o secret) — logar permite reproduzir o HMAC
-    // offline e descobrir qual secret/manifesto o MP usou. dataIdSource ajuda a
-    // ver se o id veio da query (o que o MP assina) ou do fallback do body.
-    signature: signatureHeader,
-    requestId,
-    dataId,
-    dataIdSource: queryDataId ? "query" : bodyDataId ? "body" : "none",
-    type,
-    secretFp,
-    secretLen: runtimeSecret.length,
-    // Dump completo dos headers recebidos (inspeção manual). Nenhum secret aqui —
-    // x-signature é público. REMOVER junto com o resto do logging temporário.
-    headers: Object.fromEntries(request.headers),
-  });
 
   if (!signatureValid) {
     return NextResponse.json({ message: "Assinatura do webhook inválida." }, { status: 401 });
