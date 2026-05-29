@@ -537,10 +537,12 @@ export function verifyWebhookSignature(params: {
   if (!ts || !v1) return false;
 
   const normalizedId = /[a-z]/i.test(dataId) ? dataId.toLowerCase() : dataId;
-  const segments = [`id:${normalizedId};`];
-  if (requestId) segments.push(`request-id:${requestId};`);
-  segments.push(`ts:${ts};`);
-  const manifest = segments.join("");
+  // O MercadoPago monta o manifesto SEMPRE com o segmento `request-id:`, mesmo
+  // quando o header x-request-id está ausente — aí fica `request-id:;` (vazio).
+  // Ver SDK oficial: `id:$dataID;request-id:$xRequestId;ts:$ts;`. Omitir o segmento
+  // quando ausente divergia do que o MP assina e quebrava o HMAC sempre que o
+  // x-request-id não vinha (ex.: simulador/teste do painel, que não envia o header).
+  const manifest = `id:${normalizedId};request-id:${requestId ?? ""};ts:${ts};`;
 
   const expected = createHmac("sha256", resolveWebhookSecret())
     .update(manifest)

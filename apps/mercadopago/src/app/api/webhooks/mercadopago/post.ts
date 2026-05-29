@@ -61,17 +61,6 @@ export async function POST(request: Request) {
   const signatureHeader = request.headers.get("x-signature");
   const requestId = request.headers.get("x-request-id");
 
-  // TEMPORÁRIO — diagnóstico dos headers que o MercadoPago envia. REMOVER após validar.
-  if (!signatureHeader || !requestId) {
-    logger.warn("[webhook][debug] headers de assinatura ausentes", {
-      hasSignature: Boolean(signatureHeader),
-      hasRequestId: Boolean(requestId),
-      dataId,
-      type,
-      headers: Object.fromEntries(request.headers),
-    });
-  }
-
   let signatureValid: boolean;
   try {
     signatureValid = verifyWebhookSignature({
@@ -87,14 +76,18 @@ export async function POST(request: Request) {
     throw error;
   }
 
+  // TEMPORÁRIO — diagnóstico do 401. Loga o RESULTADO da verificação, isolado do
+  // processamento da order downstream. x-request-id é OPCIONAL (o MP só envia em
+  // notificações reais de Order, não no botão genérico "Testar URL"). REMOVER após validar.
+  logger.warn("[webhook][debug] verificação de assinatura", {
+    signatureValid,
+    hasSignature: Boolean(signatureHeader),
+    hasRequestId: Boolean(requestId),
+    dataId,
+    type,
+  });
+
   if (!signatureValid) {
-    // TEMPORÁRIO — REMOVER após validar. Cobre o caso "headers presentes mas HMAC
-    // divergente" (ex.: MERCADOPAGO_WEBHOOK_SECRET ≠ assinatura secreta do painel).
-    logger.warn("[webhook][debug] assinatura inválida", {
-      dataId,
-      type,
-      headers: Object.fromEntries(request.headers),
-    });
     return NextResponse.json({ message: "Assinatura do webhook inválida." }, { status: 401 });
   }
 
