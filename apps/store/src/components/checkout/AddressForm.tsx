@@ -146,6 +146,7 @@ export default function AddressForm({
     handleSubmit,
     setError,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(addressFormSchema),
@@ -195,12 +196,11 @@ export default function AddressForm({
     void postalReg.onChange(e);
   };
 
-  // Ao sair do campo CEP, consulta o ViaCEP: autocompleta logradouro/bairro/
-  // cidade/UF e guarda o `ibge`. "not_found"/"error" só viram aviso — a base do
-  // ViaCEP não é exaustiva, então nunca bloqueamos o cadastro por isso.
-  const onPostalBlur = async (e: FocusEvent<HTMLInputElement>) => {
-    void postalReg.onBlur(e); // preserva a validação de formato do RHF
-    const digits = e.target.value.replace(/\D/g, "");
+  // Consulta o ViaCEP e autocompleta logradouro/bairro/cidade/UF + guarda o `ibge`.
+  // "not_found"/"error" só viram aviso — a base do ViaCEP não é exaustiva, então
+  // nunca bloqueamos o cadastro por isso. Reutilizada pelo blur e pelo botão "Buscar".
+  const runCepLookup = async (rawCep: string) => {
+    const digits = rawCep.replace(/\D/g, "");
     if (digits.length !== 8) {
       setCepStatus("idle");
       return;
@@ -219,6 +219,18 @@ export default function AddressForm({
       setIbgeCode(null);
       setCepStatus(result.status);
     }
+  };
+
+  // Ao sair do campo CEP, dispara a consulta automaticamente.
+  const onPostalBlur = (e: FocusEvent<HTMLInputElement>) => {
+    void postalReg.onBlur(e); // preserva a validação de formato do RHF
+    void runCepLookup(e.target.value);
+  };
+
+  // Gatilho manual (botão "Buscar") — fallback caso o blur não dispare (ex.: o
+  // usuário cola o CEP e clica direto no botão).
+  const onPostalLookupClick = () => {
+    void runCepLookup(getValues("postalCode"));
   };
 
   return (
@@ -267,24 +279,31 @@ export default function AddressForm({
           <label htmlFor="address-postal" className={styles.label}>
             CEP
           </label>
-          <input
-            id="address-postal"
-            className={styles.input}
-            inputMode="numeric"
-            autoComplete="postal-code"
-            placeholder="00000-000"
-            aria-invalid={Boolean(errors.postalCode) || undefined}
-            {...postalReg}
-            onChange={onPostalChange}
-            onBlur={onPostalBlur}
-          />
+          <div className={styles.cepRow}>
+            <input
+              id="address-postal"
+              className={styles.input}
+              inputMode="numeric"
+              autoComplete="postal-code"
+              placeholder="00000-000"
+              aria-invalid={Boolean(errors.postalCode) || undefined}
+              {...postalReg}
+              onChange={onPostalChange}
+              onBlur={onPostalBlur}
+            />
+            <button
+              type="button"
+              className={styles.cepBtn}
+              onClick={onPostalLookupClick}
+              disabled={cepStatus === "loading"}
+            >
+              {cepStatus === "loading" ? "Buscando…" : "Buscar CEP"}
+            </button>
+          </div>
           {errors.postalCode?.message && (
             <span role="alert" className={styles.fieldError}>
               {errors.postalCode.message}
             </span>
-          )}
-          {!errors.postalCode && cepStatus === "loading" && (
-            <span className={styles.fieldHint}>Buscando CEP…</span>
           )}
           {!errors.postalCode && cepStatus === "not_found" && (
             <span role="status" className={styles.fieldHint}>
