@@ -4,6 +4,7 @@ import {
   PaymentProviderError,
   verifyWebhookSignature,
 } from "@luratha/payments";
+import { logger } from "@luratha/core/logging/logger";
 
 // `runtime = "nodejs"` mora em route.ts — Next.js só lê route segment config
 // do entry. Duplicar aqui seria dead code.
@@ -57,11 +58,25 @@ export async function POST(request: Request) {
     (typeof bodyObj.type === "string" ? bodyObj.type : url.searchParams.get("type")) ??
     url.searchParams.get("topic");
 
+  const signatureHeader = request.headers.get("x-signature");
+  const requestId = request.headers.get("x-request-id");
+
+  // TEMPORÁRIO — diagnóstico dos headers que o MercadoPago envia. REMOVER após validar.
+  if (!signatureHeader || !requestId) {
+    logger.warn("[webhook][debug] headers de assinatura ausentes", {
+      hasSignature: Boolean(signatureHeader),
+      hasRequestId: Boolean(requestId),
+      dataId,
+      type,
+      headers: Object.fromEntries(request.headers),
+    });
+  }
+
   let signatureValid: boolean;
   try {
     signatureValid = verifyWebhookSignature({
-      signatureHeader: request.headers.get("x-signature"),
-      requestId: request.headers.get("x-request-id"),
+      signatureHeader,
+      requestId,
       dataId,
     });
   } catch (error) {
@@ -73,6 +88,13 @@ export async function POST(request: Request) {
   }
 
   if (!signatureValid) {
+    // TEMPORÁRIO — REMOVER após validar. Cobre o caso "headers presentes mas HMAC
+    // divergente" (ex.: MERCADOPAGO_WEBHOOK_SECRET ≠ assinatura secreta do painel).
+    logger.warn("[webhook][debug] assinatura inválida", {
+      dataId,
+      type,
+      headers: Object.fromEntries(request.headers),
+    });
     return NextResponse.json({ message: "Assinatura do webhook inválida." }, { status: 401 });
   }
 
