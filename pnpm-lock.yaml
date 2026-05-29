@@ -102,9 +102,6 @@ importers:
       '@luratha/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
-      firebase:
-        specifier: ^12.13.0
-        version: 12.13.0
       firebase-admin:
         specifier: ^13.10.0
         version: 13.10.0

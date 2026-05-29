@@ -13,7 +13,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { afterAll, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, expect, it, vi } from "vitest";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, validateOrder } from "@luratha/schemas";
@@ -26,7 +26,17 @@ const mp = vi.hoisted(() => ({
   verifyWebhookSignature: vi.fn(() => true),
   mapMpStatus: vi.fn(),
 }));
-vi.mock("@luratha/payments/mercadoPago", () => mp);
+// importActual preserva o restante das exports do módulo (`isMercadoPagoSandbox`,
+// `withSandboxEmail`, `describeMercadoPagoError`) que o barrel `@luratha/payments`
+// re-exporta — sem isso elas viram `undefined` em qualquer code path futuro
+// que as toque, escondendo a causa real do erro.
+vi.mock("@luratha/payments/mercadoPago", async () => {
+  const actual =
+    await vi.importActual<typeof import("@luratha/payments/mercadoPago")>(
+      "@luratha/payments/mercadoPago",
+    );
+  return { ...actual, ...mp };
+});
 
 import { POST as webhookPOST } from "@/src/app/api/webhooks/mercadopago/route";
 
@@ -77,6 +87,14 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const userId = `${prefix}-user`;
   const seededDocs: SeedDocument[] = [];
+
+  beforeEach(() => {
+    // Reset por teste — `mockResolvedValueOnce` + `retry: 1` do vitest cloud
+    // config interagiriam mal sem isso (queue esvazia entre attempts e o
+    // segundo retry recebe `undefined`).
+    mp.getOrder.mockReset();
+    mp.verifyWebhookSignature.mockReset().mockReturnValue(true);
+  });
 
   afterAll(async () => {
     await cleanupDocuments(seededDocs);
@@ -129,6 +147,45 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     expect(order?.paymentStatus).toBe("paid");
     expect(order?.status).toBe("paid");
     expect(order?.paidAt).toBe("2026-05-19T12:00:00.000Z");
+  });
+
+  it("webhook persists paymentIntentId even when status did not change", async () => {
+    // Caso real: primeira notificação chega com `action_required` (mapeia pra
+    // status "pending", igual ao seed). O status não muda, mas o
+    // `paymentIntentId` do MP ainda precisa ser gravado pra correlacionar
+    // eventos futuros. Antes do fix, a função retornava cedo sem escrever.
+    const orderId = await seedOrder();
+
+    mp.getOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-pending-001",
+      status: "pending",
+      orderId,
+    });
+
+    const res = await webhookPOST(
+      new Request("http://localhost/api/webhooks/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-signature": "ts=1,v1=mocked",
+          "x-request-id": "req-cloud-pending-1",
+        },
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-pending-1" } }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const outcome = (await res.json()) as { changed: boolean };
+    expect(outcome.changed).toBe(true);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    const order = persisted.data();
+    expect(order?.paymentIntentId).toBe("mp-cloud-pending-001");
+    expect(order?.paymentStatus).toBe("pending");
   });
 
   it("webhook is idempotent on a repeated notification", async () => {

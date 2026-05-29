@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "@luratha/core/logging/logger";
 import {
@@ -29,12 +31,13 @@ function totalAmountString(amount: number): string {
 /**
  * Resolve se estamos em modo sandbox.
  *
- * Prioridade:
- *   1. `MERCADOPAGO_ENV` ("sandbox" | "production") — flag explícita, necessária
- *      porque as credenciais TEST do painel MP nem sempre vêm com prefixo
- *      `TEST-` (a detecção automática falha nesses casos).
- *   2. Fallback: prefixo `TEST-` do access token — retrocompatibilidade com
- *      ambientes em que o token ainda segue a convenção antiga.
+ * Exige `MERCADOPAGO_ENV` explícito ("sandbox" | "production") — as
+ * credenciais TEST do painel MP nem sempre vêm com prefixo `TEST-`, então
+ * inferir do token é ambíguo. Quando a env não está setada (ou está fora
+ * desse vocabulário), joga `PaymentProviderError("config_missing")` para
+ * forçar o operador a decidir explicitamente em vez de seguir um default
+ * silencioso. O parâmetro `accessToken` fica reservado para um futuro
+ * fallback baseado no formato do token; hoje é ignorado de propósito.
  */
 export function isMercadoPagoSandbox(accessToken: string): boolean {
   const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
@@ -314,25 +317,22 @@ function buildOrderBody(input: CreatePaymentInput): OrderRequestBody {
 /**
  * Wrapper sobre `fetch` que aplica timeout + parse de body + propaga 4xx/5xx
  * como objetos plain pra serem tratados por `logAndRewrapMpError`.
+ *
+ * Usa `AbortSignal.timeout` (Node 18+) para que o budget cubra TANTO a
+ * resolução de headers QUANTO a leitura do body — um `setTimeout` manual
+ * derrubado num `finally` após o `fetch()` resolver deixaria um body
+ * stall passar batido pelo limite de 10s.
  */
 async function mpFetch(
   path: string,
   init: { method: "GET" | "POST"; headers: HeadersInit; body?: string; timeoutMs: number },
 ): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
-
-  let response: Response;
-  try {
-    response = await fetch(`${MP_API_BASE_URL}${path}`, {
-      method: init.method,
-      headers: init.headers,
-      body: init.body,
-      signal: ctrl.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  const response = await fetch(`${MP_API_BASE_URL}${path}`, {
+    method: init.method,
+    headers: init.headers,
+    body: init.body,
+    signal: AbortSignal.timeout(init.timeoutMs),
+  });
 
   const text = await response.text();
   let parsed: unknown = null;

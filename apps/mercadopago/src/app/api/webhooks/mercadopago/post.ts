@@ -5,7 +5,8 @@ import {
   verifyWebhookSignature,
 } from "@luratha/payments";
 
-export const runtime = "nodejs";
+// `runtime = "nodejs"` mora em route.ts — Next.js só lê route segment config
+// do entry. Duplicar aqui seria dead code.
 
 /**
  * POST /api/webhooks/mercadopago

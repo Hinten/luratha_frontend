@@ -17,7 +17,6 @@
     "@luratha/firestore": "workspace:*",
     "@luratha/payments": "workspace:*",
     "@luratha/schemas": "workspace:*",
-    "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
     "next": "16.2.6",
     "react": "19.2.6",
