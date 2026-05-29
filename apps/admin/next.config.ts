@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
-import { loadRootEnv } from "./loadRootEnv";
+import { loadRootEnv } from "@luratha/devtools/loadRootEnv";
 
 /**
  * Backfill NEXT_PUBLIC_FIREBASE_* into process.env BEFORE Next.js inlines them
