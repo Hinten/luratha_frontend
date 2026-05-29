@@ -358,23 +358,45 @@ export default function PaymentStep(props: PaymentStepProps) {
                   // não-enumeráveis — capturamos via Object.getOwnPropertyNames
                   // pra não perder sinal no log. Ver doc Bricks "Possíveis
                   // erros": fields_setup_failed, card_token_creation_failed,
-                  // get_payment_methods_failed, etc. Estruturas circulares
-                  // (cause → DOM) são tratadas pelo logger, que faz fallback
-                  // pra String() quando JSON.stringify lança.
-                  const brickPayload =
-                    err && typeof err === "object"
-                      ? Object.fromEntries(
-                          Object.getOwnPropertyNames(err).map((k) => [
-                            k,
-                            (err as unknown as Record<string, unknown>)[k],
-                          ]),
-                        )
-                      : err;
+                  // get_payment_methods_failed.
+                  //
+                  // Try/catch protege contra getters que lançam (ex.: `cause`
+                  // referenciando DOM que já foi removido). Sem o guard, o
+                  // throw escaparia do onError e o usuário não veria
+                  // notificação alguma — falha completamente silenciosa.
+                  let brickPayload: unknown = err;
+                  if (err && typeof err === "object") {
+                    try {
+                      brickPayload = Object.fromEntries(
+                        Object.getOwnPropertyNames(err).map((k) => [
+                          k,
+                          (err as unknown as Record<string, unknown>)[k],
+                        ]),
+                      );
+                    } catch (flattenErr) {
+                      if (!(flattenErr instanceof Error)) throw flattenErr;
+                      brickPayload = { unflattenable: true, repr: String(err) };
+                    }
+                  }
+                  // `brickCause` é o discriminador de copy amigável (mapeado
+                  // no `pickFriendlyMessage` do `checkoutErrors`). Lido com
+                  // try/catch também: se `err.cause` for getter que lança,
+                  // tratamos como ausente em vez de propagar.
+                  let brickCause: string | undefined;
+                  if (err && typeof err === "object" && "cause" in err) {
+                    try {
+                      const raw = (err as { cause?: unknown }).cause;
+                      brickCause = typeof raw === "string" ? raw : String(raw);
+                    } catch (causeErr) {
+                      if (!(causeErr instanceof Error)) throw causeErr;
+                      brickCause = undefined;
+                    }
+                  }
                   setError(
                     reportCheckoutError({
                       error: err,
                       step: "payment_card",
-                      metadata: { brickPayload },
+                      metadata: { brickPayload, brickCause },
                     }),
                   );
                 }}

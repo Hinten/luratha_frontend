@@ -17,9 +17,11 @@ vi.mock("@luratha/core/logging/logger", () => ({
 }));
 
 const loggerErrorMock = vi.mocked(logger.error);
+const loggerWarnMock = vi.mocked(logger.warn);
 
 beforeEach(() => {
   loggerErrorMock.mockClear();
+  loggerWarnMock.mockClear();
 });
 
 function callWith(
@@ -52,15 +54,16 @@ describe("reportCheckoutError — logging", () => {
     );
   });
 
-  it("loga TypeError como erro de rede", () => {
+  it("loga TypeError (rede do cliente) como WARN", () => {
     callWith("identification", new TypeError("Failed to fetch"));
-    expect(loggerErrorMock).toHaveBeenCalledWith(
+    expect(loggerWarnMock).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({
         errorName: "TypeError",
         message: "Failed to fetch",
       }),
     );
+    expect(loggerErrorMock).not.toHaveBeenCalled();
   });
 
   it("loga AbortError preservando o nome", () => {
@@ -110,6 +113,44 @@ describe("reportCheckoutError — logging", () => {
     callWith("coupon", new Error("x"));
     const payload = loggerErrorMock.mock.calls[0][1] as { timestamp: string };
     expect(payload.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("reportCheckoutError — severidade", () => {
+  it("4xx (ApiResponseError) vira WARN", () => {
+    callWith("coupon", new ApiResponseError("not found", 404));
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1);
+    expect(loggerErrorMock).not.toHaveBeenCalled();
+  });
+
+  it("400 com Zod issues vira WARN", () => {
+    callWith("identification", new ApiResponseError("invalid", 400));
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1);
+    expect(loggerErrorMock).not.toHaveBeenCalled();
+  });
+
+  it("5xx (ApiResponseError) vira ERROR", () => {
+    callWith("submit_order", new ApiResponseError("down", 502, [], "provider_unavailable"));
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    expect(loggerWarnMock).not.toHaveBeenCalled();
+  });
+
+  it("AbortError vira ERROR", () => {
+    callWith("submit_order", abortError());
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    expect(loggerWarnMock).not.toHaveBeenCalled();
+  });
+
+  it("step boundary vira ERROR mesmo para erros não-Api", () => {
+    callWith("boundary", new Error("render bug"));
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    expect(loggerWarnMock).not.toHaveBeenCalled();
+  });
+
+  it("erro desconhecido (string) vira ERROR", () => {
+    callWith("submit_order", "oops");
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    expect(loggerWarnMock).not.toHaveBeenCalled();
   });
 });
 
@@ -304,8 +345,48 @@ describe("reportCheckoutError — shipping step", () => {
 });
 
 describe("reportCheckoutError — payment_card step", () => {
-  it("qualquer erro vira a copy unificada de cartão", () => {
+  it("sem brickCause cai na copy genérica", () => {
     expect(callWith("payment_card", new Error("Invalid card number"))).toBe(
+      "Não foi possível processar o cartão. Confira os dados ou tente outro método de pagamento.",
+    );
+  });
+
+  it("brickCause=fields_setup_failed pede pra recarregar a página", () => {
+    expect(
+      callWith("payment_card", new Error("x"), {
+        brickCause: "fields_setup_failed",
+      }),
+    ).toBe(
+      "Não conseguimos carregar o formulário de cartão. Recarregue a página ou escolha PIX/Boleto.",
+    );
+  });
+
+  it("brickCause=get_payment_methods_failed reaproveita a copy de setup", () => {
+    expect(
+      callWith("payment_card", new Error("x"), {
+        brickCause: "get_payment_methods_failed",
+      }),
+    ).toBe(
+      "Não conseguimos carregar o formulário de cartão. Recarregue a página ou escolha PIX/Boleto.",
+    );
+  });
+
+  it("brickCause=card_token_creation_failed pede pra revisar dados do cartão", () => {
+    expect(
+      callWith("payment_card", new Error("x"), {
+        brickCause: "card_token_creation_failed",
+      }),
+    ).toBe(
+      "Não conseguimos validar os dados do cartão. Confira número, validade e CVV e tente novamente.",
+    );
+  });
+
+  it("brickCause desconhecido cai na copy genérica", () => {
+    expect(
+      callWith("payment_card", new Error("x"), {
+        brickCause: "something_new",
+      }),
+    ).toBe(
       "Não foi possível processar o cartão. Confira os dados ou tente outro método de pagamento.",
     );
   });

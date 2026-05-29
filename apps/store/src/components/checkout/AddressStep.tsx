@@ -49,9 +49,7 @@ export default function AddressStep({
       try {
         const res = await fetch(`/api/users/${userId}/addresses`);
         if (cancelled) return;
-        if (!res.ok) {
-          await throwIfNotOk(res, "Não foi possível carregar seus endereços.");
-        }
+        await throwIfNotOk(res, "Não foi possível carregar seus endereços.");
         const addresses = (await res.json()) as Address[];
         if (cancelled) return;
         if (addresses.length === 0) {
@@ -99,10 +97,9 @@ export default function AddressStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        // throwIfNotOk extrai `message` + `errors` (ZodIssue[]) do body 400.
-        await throwIfNotOk(res, "Falha ao salvar endereço.");
-      }
+      // throwIfNotOk extrai `message` + `errors` (ZodIssue[]) do body 400; no-op
+      // se res.ok.
+      await throwIfNotOk(res, "Falha ao salvar endereço.");
       const created = (await res.json()) as Address;
       onSelect(created);
       // 1º endereço (wasInitiallyEmpty): avança direto pro Frete sem mostrar lista.

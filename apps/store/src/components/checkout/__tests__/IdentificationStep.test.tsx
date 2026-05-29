@@ -354,10 +354,10 @@ describe("IdentificationStep", () => {
     });
   });
 
-  it("submit com PATCH 404 + PUT 4xx: exibe mensagem amigável e loga erro técnico", async () => {
+  it("submit com PATCH 404 + PUT 4xx: exibe mensagem amigável e loga 400 como WARN", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    vi.mocked(logger.error).mockClear();
+    vi.mocked(logger.warn).mockClear();
     fetchSpy
       .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404 }))
       .mockResolvedValueOnce(
@@ -385,17 +385,18 @@ describe("IdentificationStep", () => {
         screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
       ).toBeInTheDocument();
     });
-    expect(logger.error).toHaveBeenCalledWith(
+    // 4xx do cliente vira severity WARN (CartContext convention).
+    expect(logger.warn).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({ status: 400, message: "CPF inválido no perfil." }),
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("submit com PATCH 4xx (não-404): exibe mensagem amigável e loga erro original", async () => {
+  it("submit com PATCH 4xx (não-404): exibe mensagem amigável e loga 400 como WARN", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    vi.mocked(logger.error).mockClear();
+    vi.mocked(logger.warn).mockClear();
     fetchSpy.mockResolvedValue(
       mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
     );
@@ -421,7 +422,7 @@ describe("IdentificationStep", () => {
         screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
       ).toBeInTheDocument();
     });
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       "[checkout:identification]",
       expect.objectContaining({
         status: 400,

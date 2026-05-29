@@ -1,4 +1,5 @@
 import { logger } from "@luratha/core/logging/logger";
+import { flattenError } from "@luratha/core/logging/serializeLogPayload";
 import { ApiResponseError } from "@/src/lib/errors";
 
 /**
@@ -37,7 +38,7 @@ interface LogPayload {
   status?: number;
   code?: string;
   metadata?: Record<string, unknown>;
-  stack?: string;
+  [k: string]: unknown;
 }
 
 function buildLogPayload({ error, step, metadata }: ReportCheckoutErrorArgs): LogPayload {
@@ -49,25 +50,24 @@ function buildLogPayload({ error, step, metadata }: ReportCheckoutErrorArgs): Lo
   };
   if (metadata) payload.metadata = metadata;
 
-  if (error instanceof ApiResponseError) {
-    payload.errorName = error.name;
-    payload.message = error.message;
-    payload.status = error.status;
-    if (error.code) payload.code = error.code;
-    if (error.stack) payload.stack = error.stack;
+  // `flattenError` cobre `Error` e subclasses (`ApiResponseError`, `TypeError`).
+  // Props enumeráveis customizadas (`status`, `code`, `issues`) entram
+  // automaticamente. `stack` é intencionalmente omitido — Cloud Logging
+  // mantém stacks separadamente.
+  const flat = flattenError(error);
+  if (flat) {
+    const { name, message, ...rest } = flat;
+    payload.errorName = name;
+    payload.message = message;
+    Object.assign(payload, rest);
     return payload;
   }
 
+  // `DOMException` não estende `Error` em jsdom (estende em browsers reais);
+  // tratamos explicitamente pra preservar o `name` (ex.: "AbortError").
   if (error instanceof DOMException) {
     payload.errorName = error.name;
     payload.message = error.message;
-    return payload;
-  }
-
-  if (error instanceof Error) {
-    payload.errorName = error.name || error.constructor.name;
-    payload.message = error.message;
-    if (error.stack) payload.stack = error.stack;
     return payload;
   }
 
@@ -239,10 +239,23 @@ function pickFriendlyMessage(args: ReportCheckoutErrorArgs): string {
       return "Não foi possível carregar seus endereços.";
     case "address_save":
       return "Não foi possível salvar o endereço. Tente novamente.";
+    case "payment_card": {
+      // O `onError` do Brick dispara em falhas de setup/tokenização — NÃO em
+      // recusas de cartão (essas vêm pela API do payment-intent, step
+      // `submit_order`). Discriminamos `metadata.brickCause` pra dar copy
+      // específica nas falhas conhecidas.
+      const cause =
+        typeof metadata?.brickCause === "string" ? metadata.brickCause : "";
+      if (cause === "fields_setup_failed" || cause === "get_payment_methods_failed") {
+        return "Não conseguimos carregar o formulário de cartão. Recarregue a página ou escolha PIX/Boleto.";
+      }
+      if (cause === "card_token_creation_failed") {
+        return "Não conseguimos validar os dados do cartão. Confira número, validade e CVV e tente novamente.";
+      }
+      return "Não foi possível processar o cartão. Confira os dados ou tente outro método de pagamento.";
+    }
     case "shipping":
       return "Não foi possível calcular o frete. Tente novamente.";
-    case "payment_card":
-      return "Não foi possível processar o cartão. Confira os dados ou tente outro método de pagamento.";
     case "payment_pix":
     case "payment_boleto":
     case "submit_order":
@@ -255,16 +268,42 @@ function pickFriendlyMessage(args: ReportCheckoutErrorArgs): string {
 }
 
 /**
- * Centraliza o tratamento de erros do checkout: emite um log estruturado via
- * `@luratha/core/logging/logger` (severity ERROR → Cloud Logging classifica
- * automaticamente em produção) e devolve uma mensagem amigável em PT-BR para
- * o cliente.
+ * Decide entre `severity=WARNING` (erro esperado do cliente) e
+ * `severity=ERROR` (falha de infraestrutura / erro inesperado), seguindo
+ * o padrão estabelecido em `CartContext` (401 transitório vai como warn).
  *
- * O payload (`step`, `errorName`, `status`, `code`, `message`, `metadata`,
- * `stack`) é queryável no Logs Explorer via `jsonPayload.payload.<path>`.
+ * - 4xx (validação, sessão expirada, recurso não encontrado) → WARNING
+ * - TypeError (queda de conexão do lado do cliente) → WARNING
+ * - 5xx, AbortError, boundary, desconhecido → ERROR
+ *
+ * Cloud Logging filtra `severity=ERROR` pra identificar outages reais; sem
+ * essa separação, typos de cupom (404) e CPFs inválidos (400) poluem o
+ * bucket e enterram falhas reais do MercadoPago.
+ */
+function pickSeverity({ error, step }: ReportCheckoutErrorArgs): "warn" | "error" {
+  if (step === "boundary") return "error";
+  if (error instanceof DOMException && error.name === "AbortError") return "error";
+  if (error instanceof TypeError) return "warn";
+  if (error instanceof ApiResponseError) {
+    if (error.status >= 400 && error.status < 500) return "warn";
+    return "error";
+  }
+  return "error";
+}
+
+/**
+ * Centraliza o tratamento de erros do checkout: emite um log estruturado via
+ * `@luratha/core/logging/logger` e devolve uma mensagem amigável em PT-BR
+ * para o cliente.
+ *
+ * Severidade é roteada por `pickSeverity` (4xx/TypeError → WARN, demais →
+ * ERROR) pra alinhar com o uso do Cloud Logging em produção. O payload
+ * (`step`, `errorName`, `status`, `code`, `message`, `metadata`, props
+ * customizadas do erro) é queryável via `jsonPayload.payload.<path>`.
  */
 export function reportCheckoutError(args: ReportCheckoutErrorArgs): string {
   const payload = buildLogPayload(args);
-  logger.error(`[checkout:${args.step}]`, payload);
+  const severity = pickSeverity(args);
+  logger[severity](`[checkout:${args.step}]`, payload);
   return pickFriendlyMessage(args);
 }
