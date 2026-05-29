@@ -103,6 +103,9 @@ export async function POST(request: Request) {
     type,
     secretFp,
     secretLen: runtimeSecret.length,
+    // Dump completo dos headers recebidos (inspeção manual). Nenhum secret aqui —
+    // x-signature é público. REMOVER junto com o resto do logging temporário.
+    headers: Object.fromEntries(request.headers),
   });
 
   if (!signatureValid) {
