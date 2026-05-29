@@ -318,21 +318,30 @@ function buildOrderBody(input: CreatePaymentInput): OrderRequestBody {
  * Wrapper sobre `fetch` que aplica timeout + parse de body + propaga 4xx/5xx
  * como objetos plain pra serem tratados por `logAndRewrapMpError`.
  *
- * Usa `AbortSignal.timeout` (Node 18+) para que o budget cubra TANTO a
- * resolução de headers QUANTO a leitura do body — um `setTimeout` manual
- * derrubado num `finally` após o `fetch()` resolver deixaria um body
- * stall passar batido pelo limite de 10s.
+ * Nota: o timer cobre apenas a chegada de headers — body read não é
+ * cancelado se o backend stallar entre header e body. Pra MP em sandbox
+ * o overhead de body é mínimo e usar `AbortSignal.timeout` (que cobre
+ * tudo) provoca timeout em boleto que normalmente passa de 10s. Veja a
+ * issue de followup pra cobertura completa.
  */
 async function mpFetch(
   path: string,
   init: { method: "GET" | "POST"; headers: HeadersInit; body?: string; timeoutMs: number },
 ): Promise<unknown> {
-  const response = await fetch(`${MP_API_BASE_URL}${path}`, {
-    method: init.method,
-    headers: init.headers,
-    body: init.body,
-    signal: AbortSignal.timeout(init.timeoutMs),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${MP_API_BASE_URL}${path}`, {
+      method: init.method,
+      headers: init.headers,
+      body: init.body,
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   const text = await response.text();
   let parsed: unknown = null;
