@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FocusEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import {
   UF_LABELS,
 } from "@luratha/schemas";
 import { formatCep } from "@/src/lib/format/cep";
+import { lookupCep } from "@/src/lib/cep/viaCep";
 import styles from "./AddressForm.module.css";
 
 /**
@@ -52,6 +53,8 @@ export interface AddressFormPayload {
   label?: string;
   complement?: string;
   reference?: string;
+  /** Código IBGE do município, preenchido pela consulta de CEP quando disponível. */
+  ibgeCode?: string;
 }
 
 export interface AddressFormProps {
@@ -142,12 +145,21 @@ export default function AddressForm({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(addressFormSchema),
     mode: "onBlur",
     defaultValues: toFormDefaults(initialValues),
   });
+
+  // Estado da consulta de CEP (ViaCEP): "loading" enquanto busca; "not_found" e
+  // "error" só mostram AVISO (não bloqueiam o submit). O `ibgeCode` resolvido
+  // entra no payload quando o CEP é encontrado.
+  const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "not_found" | "error">(
+    "idle",
+  );
+  const [ibgeCode, setIbgeCode] = useState<string | null>(null);
 
   // Mapeia issues do servidor (ZodIssue[]) para erros por campo.
   useEffect(() => {
@@ -163,7 +175,12 @@ export default function AddressForm({
     }
   }, [serverIssues, setError]);
 
-  const submit = handleSubmit((values) => onSubmit(valuesToPayload(values)));
+  const submit = handleSubmit((values) =>
+    onSubmit({
+      ...valuesToPayload(values),
+      ...(ibgeCode ? { ibgeCode } : {}),
+    }),
+  );
 
   // CEP: mascara enquanto digita. Mutamos `e.target.value` antes do onChange
   // do RHF para que o estado do form receba o valor já formatado. Spread do
@@ -172,7 +189,36 @@ export default function AddressForm({
   const postalReg = register("postalCode");
   const onPostalChange = (e: ChangeEvent<HTMLInputElement>) => {
     e.target.value = formatCep(e.target.value);
+    // CEP mudou → invalida a consulta anterior (aviso some, ibge zera).
+    setCepStatus("idle");
+    setIbgeCode(null);
     void postalReg.onChange(e);
+  };
+
+  // Ao sair do campo CEP, consulta o ViaCEP: autocompleta logradouro/bairro/
+  // cidade/UF e guarda o `ibge`. "not_found"/"error" só viram aviso — a base do
+  // ViaCEP não é exaustiva, então nunca bloqueamos o cadastro por isso.
+  const onPostalBlur = async (e: FocusEvent<HTMLInputElement>) => {
+    void postalReg.onBlur(e); // preserva a validação de formato do RHF
+    const digits = e.target.value.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      setCepStatus("idle");
+      return;
+    }
+    setCepStatus("loading");
+    const result = await lookupCep(digits);
+    if (result.status === "found") {
+      setCepStatus("idle");
+      setIbgeCode(/^\d{7}$/.test(result.ibge) ? result.ibge : null);
+      // Só sobrescreve quando o ViaCEP traz o dado (alguns CEPs vêm sem logradouro).
+      if (result.logradouro) setValue("line1", result.logradouro, { shouldValidate: true });
+      if (result.bairro) setValue("neighborhood", result.bairro, { shouldValidate: true });
+      setValue("city", result.localidade, { shouldValidate: true });
+      setValue("state", result.uf as FormValues["state"], { shouldValidate: true });
+    } else {
+      setIbgeCode(null);
+      setCepStatus(result.status);
+    }
   };
 
   return (
@@ -230,10 +276,24 @@ export default function AddressForm({
             aria-invalid={Boolean(errors.postalCode) || undefined}
             {...postalReg}
             onChange={onPostalChange}
+            onBlur={onPostalBlur}
           />
           {errors.postalCode?.message && (
             <span role="alert" className={styles.fieldError}>
               {errors.postalCode.message}
+            </span>
+          )}
+          {!errors.postalCode && cepStatus === "loading" && (
+            <span className={styles.fieldHint}>Buscando CEP…</span>
+          )}
+          {!errors.postalCode && cepStatus === "not_found" && (
+            <span role="status" className={styles.fieldHint}>
+              Não encontramos esse CEP na base dos Correios. Confira se está correto.
+            </span>
+          )}
+          {!errors.postalCode && cepStatus === "error" && (
+            <span role="status" className={styles.fieldHint}>
+              Não foi possível verificar o CEP agora. Confira os dados do endereço.
             </span>
           )}
         </div>

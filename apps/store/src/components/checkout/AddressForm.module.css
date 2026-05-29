@@ -131,6 +131,14 @@ select.input {
   line-height: 1.3;
 }
 
+/* Aviso não-bloqueante (ex.: CEP não encontrado no ViaCEP). Âmbar de cautela —
+   distinto do vermelho de erro, porque não impede o envio do formulário. */
+.fieldHint {
+  color: var(--color-warning);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
 /* Banner geral de erro do servidor — fica acima do botão de submit, perto
    da ação, em vez de no topo do form (onde o usuário não enxerga). */
 .submitError {
