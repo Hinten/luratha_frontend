@@ -319,14 +319,25 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
-  it("accepts a signature when x-request-id is absent (request-id segment is empty)", () => {
-    // O MP monta o manifesto sempre com `request-id:` — vazio quando o header não
-    // vem (simulador/teste do painel). Antes do fix, o verificador omitia o segmento
-    // e o HMAC nunca batia, devolvendo 401 mesmo com o secret correto.
+  // A doc do MP é contraditória sobre o segmento request-id quando x-request-id
+  // está ausente (WARNING manda remover; exemplos de SDK mantêm vazio). O
+  // verificador aceita AMBAS as variantes — uma destas reflete o que o MP assina.
+  it("accepts the SDK-style empty segment when x-request-id is absent (id;request-id:;ts;)", () => {
     const dataId = "123456";
     const ts = "1780065655";
-    const manifest = `id:${dataId};request-id:;ts:${ts};`;
-    const v1 = createHmac("sha256", SECRET).update(manifest).digest("hex");
+    const v1 = createHmac("sha256", SECRET)
+      .update(`id:${dataId};request-id:;ts:${ts};`)
+      .digest("hex");
+
+    expect(
+      verifyWebhookSignature({ signatureHeader: `ts=${ts},v1=${v1}`, requestId: null, dataId }),
+    ).toBe(true);
+  });
+
+  it("accepts the WARNING-style omitted segment when x-request-id is absent (id;ts;)", () => {
+    const dataId = "123456";
+    const ts = "1780065655";
+    const v1 = createHmac("sha256", SECRET).update(`id:${dataId};ts:${ts};`).digest("hex");
 
     expect(
       verifyWebhookSignature({ signatureHeader: `ts=${ts},v1=${v1}`, requestId: null, dataId }),
