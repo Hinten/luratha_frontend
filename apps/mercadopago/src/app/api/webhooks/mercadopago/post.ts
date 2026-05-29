@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   applyOrderWebhook,
@@ -79,6 +80,15 @@ export async function POST(request: Request) {
   // TEMPORÁRIO — diagnóstico do 401. Loga o RESULTADO da verificação, isolado do
   // processamento da order downstream. x-request-id é OPCIONAL (o MP só envia em
   // notificações reais de Order, não no botão genérico "Testar URL"). REMOVER após validar.
+  // Fingerprint do secret em runtime — NÃO vaza o valor. SHA256(secret)[:12] +
+  // tamanho. Esperado p/ o painel: eafc1166… -> fp 68fb2ed42a33, len 64.
+  // Se o fp logado for diferente, o App Hosting está servindo outro secret
+  // (Secret Manager desatualizado / variável errada).
+  const runtimeSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim() ?? "";
+  const secretFp = runtimeSecret
+    ? createHash("sha256").update(runtimeSecret).digest("hex").slice(0, 12)
+    : "(ausente)";
+
   logger.warn("[webhook][debug] verificação de assinatura", {
     signatureValid,
     hasSignature: Boolean(signatureHeader),
@@ -91,6 +101,8 @@ export async function POST(request: Request) {
     dataId,
     dataIdSource: queryDataId ? "query" : bodyDataId ? "body" : "none",
     type,
+    secretFp,
+    secretLen: runtimeSecret.length,
   });
 
   if (!signatureValid) {
