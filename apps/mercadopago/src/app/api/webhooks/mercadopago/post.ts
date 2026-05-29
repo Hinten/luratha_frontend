@@ -83,7 +83,13 @@ export async function POST(request: Request) {
     signatureValid,
     hasSignature: Boolean(signatureHeader),
     hasRequestId: Boolean(requestId),
+    // x-signature é PÚBLICO (não é o secret) — logar permite reproduzir o HMAC
+    // offline e descobrir qual secret/manifesto o MP usou. dataIdSource ajuda a
+    // ver se o id veio da query (o que o MP assina) ou do fallback do body.
+    signature: signatureHeader,
+    requestId,
     dataId,
+    dataIdSource: queryDataId ? "query" : bodyDataId ? "body" : "none",
     type,
   });
 
