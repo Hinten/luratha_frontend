@@ -19,7 +19,8 @@
       "Bash(NODE_OPTIONS=\"--use-system-ca\" pnpm --filter @luratha/store test:firestore)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Lucas\\\\Documents\\\\projetos\\\\luratha_frontend\" -Filter \"*checkout*\" -Recurse -Directory)",
       "Bash(Select-Object -First 20)",
-      "Bash(cd functions *)"
+      "Bash(cd functions *)",
+      "Bash(pnpm test *)"
     ]
   },
   "enabledMcpjsonServers": [
