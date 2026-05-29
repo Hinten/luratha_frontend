@@ -57,11 +57,14 @@ export async function POST(request: Request) {
     (typeof bodyObj.type === "string" ? bodyObj.type : url.searchParams.get("type")) ??
     url.searchParams.get("topic");
 
+  const signatureHeader = request.headers.get("x-signature");
+  const requestId = request.headers.get("x-request-id");
+
   let signatureValid: boolean;
   try {
     signatureValid = verifyWebhookSignature({
-      signatureHeader: request.headers.get("x-signature"),
-      requestId: request.headers.get("x-request-id"),
+      signatureHeader,
+      requestId,
       dataId,
     });
   } catch (error) {

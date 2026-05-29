@@ -537,17 +537,28 @@ export function verifyWebhookSignature(params: {
   if (!ts || !v1) return false;
 
   const normalizedId = /[a-z]/i.test(dataId) ? dataId.toLowerCase() : dataId;
-  const segments = [`id:${normalizedId};`];
-  if (requestId) segments.push(`request-id:${requestId};`);
-  segments.push(`ts:${ts};`);
-  const manifest = segments.join("");
 
-  const expected = createHmac("sha256", resolveWebhookSecret())
-    .update(manifest)
-    .digest("hex");
+  // A doc do MP é internamente contraditória sobre o segmento `request-id` quando
+  // o header x-request-id está AUSENTE: o WARNING manda REMOVER o segmento
+  // (`id:..;ts:..;`), mas os exemplos de SDK montam `request-id:$xRequestId;`
+  // (vazio). Como o lado que ASSINA (servidores do MP) não está documentado de
+  // forma inequívoca — e o simulador/teste do painel não envia x-request-id —
+  // testamos as duas variantes e aceitamos se QUALQUER uma casar. Quando o header
+  // existe (notificações reais de Order), só há uma variante, sem ambiguidade.
+  const candidates = requestId
+    ? [`id:${normalizedId};request-id:${requestId};ts:${ts};`]
+    : [
+        `id:${normalizedId};ts:${ts};`, // WARNING da doc: remover segmento ausente
+        `id:${normalizedId};request-id:;ts:${ts};`, // exemplos de SDK: segmento vazio
+      ];
 
-  const expectedBuf = Buffer.from(expected, "hex");
+  const secret = resolveWebhookSecret();
   const receivedBuf = Buffer.from(v1, "hex");
-  if (expectedBuf.length !== receivedBuf.length) return false;
-  return timingSafeEqual(expectedBuf, receivedBuf);
+  return candidates.some((manifest) => {
+    const expectedBuf = Buffer.from(
+      createHmac("sha256", secret).update(manifest).digest("hex"),
+      "hex",
+    );
+    return expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf);
+  });
 }

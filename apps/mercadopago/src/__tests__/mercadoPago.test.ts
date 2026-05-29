@@ -319,6 +319,31 @@ describe("verifyWebhookSignature", () => {
     ).toBe(false);
   });
 
+  // A doc do MP é contraditória sobre o segmento request-id quando x-request-id
+  // está ausente (WARNING manda remover; exemplos de SDK mantêm vazio). O
+  // verificador aceita AMBAS as variantes — uma destas reflete o que o MP assina.
+  it("accepts the SDK-style empty segment when x-request-id is absent (id;request-id:;ts;)", () => {
+    const dataId = "123456";
+    const ts = "1780065655";
+    const v1 = createHmac("sha256", SECRET)
+      .update(`id:${dataId};request-id:;ts:${ts};`)
+      .digest("hex");
+
+    expect(
+      verifyWebhookSignature({ signatureHeader: `ts=${ts},v1=${v1}`, requestId: null, dataId }),
+    ).toBe(true);
+  });
+
+  it("accepts the WARNING-style omitted segment when x-request-id is absent (id;ts;)", () => {
+    const dataId = "123456";
+    const ts = "1780065655";
+    const v1 = createHmac("sha256", SECRET).update(`id:${dataId};ts:${ts};`).digest("hex");
+
+    expect(
+      verifyWebhookSignature({ signatureHeader: `ts=${ts},v1=${v1}`, requestId: null, dataId }),
+    ).toBe(true);
+  });
+
   it("lowercases an alphanumeric dataId (Order IDs arrive uppercase)", () => {
     const requestId = "req-1";
     const ts = "1700000001";
