@@ -4,9 +4,9 @@ import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   createPaymentIntent,
   loadOrder,
+  PaymentProviderError,
   type PaymentIntentMethodInput,
-} from "@/src/lib/payment/service";
-import { PaymentProviderError } from "@/src/lib/payment/types";
+} from "@luratha/payments";
 
 export const runtime = "nodejs";
 

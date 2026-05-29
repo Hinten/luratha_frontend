@@ -1,4 +1,6 @@
-import { PaymentProviderError } from "@/src/lib/payment/types";
+import "server-only";
+
+import { PaymentProviderError } from "../types";
 
 /**
  * Configuração isolada do MercadoPago. Lê credenciais do ambiente:

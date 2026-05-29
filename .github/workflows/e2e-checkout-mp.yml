@@ -28,8 +28,10 @@ on:
       - 'apps/store/src/app/api/orders/**'
       - 'apps/store/src/app/api/users/**'
       - 'apps/store/src/app/api/auth/session/**'
-      # Server-side MP (adapter, service) + frete (provider real exercitado)
-      - 'apps/store/src/lib/payment/**'
+      # Server-side MP (adapter, service) + frete (provider real exercitado).
+      # `packages/payments` é a nova localização do adapter MP/orderService
+      # consumido pelo `POST /api/checkout/payment-intent` da storefront.
+      - 'packages/payments/**'
       - 'apps/store/src/lib/shipping/**'
       # Contextos React envolvidos no flow
       - 'apps/store/src/contexts/CartContext.tsx'

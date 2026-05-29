@@ -1,0 +1,35 @@
+# Firebase App Hosting backend config for the MercadoPago webhook app
+# (luratha-app-mercadopago). See https://firebase.google.com/docs/app-hosting/configure
+runConfig:
+  minInstances: 0
+  maxInstances: 5
+
+env:
+  # Access token do servidor — usado em GET /v1/orders/{id} pelo webhook.
+  - variable: MERCADOPAGO_ACCESS_TOKEN
+    secret: mercadopago-access-token
+    availability:
+      - RUNTIME
+
+  # Secret de assinatura dos webhooks (painel MP -> Webhooks). Valida o header
+  # x-signature em POST /api/webhooks/mercadopago.
+  - variable: MERCADOPAGO_WEBHOOK_SECRET
+    secret: mercadopago-webhook-secret
+    availability:
+      - RUNTIME
+
+  # Ambiente da API: "sandbox" ou "production". Mesma flag explícita usada
+  # pela storefront — necessária porque credenciais TEST do painel MP nem
+  # sempre vêm com prefixo `TEST-`.
+  - variable: MERCADOPAGO_ENV
+    value: "sandbox"
+    availability:
+      - RUNTIME
+
+  # Email do test user comprador criado no painel MP. Não é estritamente
+  # necessário pelo webhook (que só lê orders existentes), mas mantido para
+  # paridade com o resolveMercadoPagoConfig/isMercadoPagoSandbox compartilhado.
+  - variable: MERCADOPAGO_SANDBOX_PAYER_EMAIL
+    value: "test_user_6882404001016965566@testuser.com"
+    availability:
+      - RUNTIME

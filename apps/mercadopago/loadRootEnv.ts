@@ -5,9 +5,6 @@ import path from "node:path";
  * Walks up from `process.cwd()` looking for the monorepo root, identified by
  * `pnpm-workspace.yaml`. Returns `null` when no marker is found (e.g. a
  * standalone production build) — callers treat that as "no local `.env`".
- *
- * Deliberately avoids `import.meta`/`__dirname` so the loader behaves the same
- * whether a config imports it as ESM (Next.js, Vitest) or CJS (Playwright).
  */
 function findRepoRoot(): string | null {
   let dir = process.cwd();
@@ -22,19 +19,13 @@ function findRepoRoot(): string | null {
 /**
  * Loads the single repo-root `.env` into `process.env`.
  *
- * The storefront lives in `apps/store/`, but its env file is kept at the
- * monorepo root so there is one file to manage and one `.gitignore` rule.
- * Next.js, Vitest and Playwright all run with cwd = `apps/store/` and would
- * otherwise never see it — every config in this app calls this loader first.
+ * The webhook app lives in `apps/mercadopago/`, but the env file is kept at
+ * the monorepo root so there is one file to manage. Next.js runs with
+ * cwd = `apps/mercadopago/` and would otherwise never see it.
  *
- * Behaviour:
- * - Never overrides a var already in `process.env` (CI secrets / Firebase App
- *   Hosting env win over the local file).
- * - No-ops cleanly when the file is absent (CI, App Hosting — env comes from
- *   the platform).
- * - Rewrites a relative `FIREBASE_SERVICE_ACCOUNT_PATH` to an absolute path
- *   resolved against the repo root, so `firebaseAdmin.ts` `existsSync()` finds
- *   the service account file no matter the process cwd.
+ * - Never overrides a var already in `process.env` (platform env wins).
+ * - No-ops cleanly when the file is absent (CI, App Hosting).
+ * - Rewrites a relative `FIREBASE_SERVICE_ACCOUNT_PATH` to an absolute path.
  */
 export function loadRootEnv(): void {
   const repoRoot = findRepoRoot();
@@ -48,8 +39,9 @@ export function loadRootEnv(): void {
     const match = line.match(/^([^#=\s][^=]*)=(.*)$/);
     if (!match) continue;
     const key = match[1].trim();
-    // never override already-set vars — but treat empty string as unset, since
-    // CI/shells often export placeholder `KEY=` before populating the secret.
+    // Sobrescreve quando a env veio vazia do shell/CI (ex.: `KEY=` exportado
+    // como placeholder antes do secret ser populado). `in` retorna true pra
+    // string vazia também, então tratamos vazio como ausente.
     const existing = process.env[key];
     if (existing !== undefined && existing !== "") continue;
     let value = match[2].trim();
@@ -63,8 +55,6 @@ export function loadRootEnv(): void {
     if (key === "FIREBASE_SERVICE_ACCOUNT_PATH") loadedServiceAccountPath = true;
   }
 
-  // The service account path in `.env` is written relative to the repo root;
-  // make it absolute so it resolves no matter where the process was started.
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   if (loadedServiceAccountPath && serviceAccountPath && !path.isAbsolute(serviceAccountPath)) {
     process.env.FIREBASE_SERVICE_ACCOUNT_PATH = path.resolve(repoRoot, serviceAccountPath);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import type { Order } from "@luratha/schemas";
-import { PaymentProviderError } from "@/src/lib/payment/types";
+import { PaymentProviderError } from "@luratha/payments";
 
 const auth = vi.hoisted(() => ({
   state: { current: null as { uid: string; email: string | null; isAdmin: boolean } | null },
@@ -39,10 +39,14 @@ const service = vi.hoisted(() => ({
   createPaymentIntent: vi.fn(),
 }));
 
-vi.mock("@/src/lib/payment/service", () => ({
-  loadOrder: service.loadOrder,
-  createPaymentIntent: service.createPaymentIntent,
-}));
+vi.mock("@luratha/payments", async () => {
+  const actual = await vi.importActual<typeof import("@luratha/payments")>("@luratha/payments");
+  return {
+    ...actual,
+    loadOrder: service.loadOrder,
+    createPaymentIntent: service.createPaymentIntent,
+  };
+});
 
 import { POST } from "@/src/app/api/checkout/payment-intent/route";
 

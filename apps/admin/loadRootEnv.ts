@@ -39,7 +39,11 @@ export function loadRootEnv(): void {
     const match = line.match(/^([^#=\s][^=]*)=(.*)$/);
     if (!match) continue;
     const key = match[1].trim();
-    if (key in process.env) continue;
+    // Sobrescreve quando a env veio vazia do shell/CI (ex.: `KEY=` exportado
+    // como placeholder antes do secret ser populado). `in` retorna true pra
+    // string vazia também, então tratamos vazio como ausente.
+    const existing = process.env[key];
+    if (existing !== undefined && existing !== "") continue;
     let value = match[2].trim();
     if (
       (value.startsWith('"') && value.endsWith('"')) ||

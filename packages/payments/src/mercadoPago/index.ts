@@ -1,17 +1,19 @@
+import "server-only";
+
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { logger } from "@luratha/core/logging/logger";
 import {
   MP_API_BASE_URL,
   resolveMercadoPagoConfig,
   resolveWebhookSecret,
-} from "@/src/lib/payment/mercadoPago/client";
+} from "./client";
 import {
   type CreatePaymentInput,
   type PaymentIntentResult,
   type PaymentStatus,
   PaymentProviderError,
   type ProviderPaymentSummary,
-} from "@/src/lib/payment/types";
-import { logger } from "@luratha/core/logging/logger";
+} from "../types";
 
 /**
  * Adapter do MercadoPago — Checkout API via Orders (`POST /v1/orders`).
@@ -29,12 +31,13 @@ function totalAmountString(amount: number): string {
 /**
  * Resolve se estamos em modo sandbox.
  *
- * Prioridade:
- *   1. `MERCADOPAGO_ENV` ("sandbox" | "production") — flag explícita, necessária
- *      porque as credenciais TEST do painel MP nem sempre vêm com prefixo
- *      `TEST-` (a detecção automática falha nesses casos).
- *   2. Fallback: prefixo `TEST-` do access token — retrocompatibilidade com
- *      ambientes em que o token ainda segue a convenção antiga.
+ * Exige `MERCADOPAGO_ENV` explícito ("sandbox" | "production") — as
+ * credenciais TEST do painel MP nem sempre vêm com prefixo `TEST-`, então
+ * inferir do token é ambíguo. Quando a env não está setada (ou está fora
+ * desse vocabulário), joga `PaymentProviderError("config_missing")` para
+ * forçar o operador a decidir explicitamente em vez de seguir um default
+ * silencioso. O parâmetro `accessToken` fica reservado para um futuro
+ * fallback baseado no formato do token; hoje é ignorado de propósito.
  */
 export function isMercadoPagoSandbox(accessToken: string): boolean {
   const explicit = process.env.MERCADOPAGO_ENV?.trim().toLowerCase();
@@ -314,6 +317,12 @@ function buildOrderBody(input: CreatePaymentInput): OrderRequestBody {
 /**
  * Wrapper sobre `fetch` que aplica timeout + parse de body + propaga 4xx/5xx
  * como objetos plain pra serem tratados por `logAndRewrapMpError`.
+ *
+ * Nota: o timer cobre apenas a chegada de headers — body read não é
+ * cancelado se o backend stallar entre header e body. Pra MP em sandbox
+ * o overhead de body é mínimo e usar `AbortSignal.timeout` (que cobre
+ * tudo) provoca timeout em boleto que normalmente passa de 10s. Veja a
+ * issue de followup pra cobertura completa.
  */
 async function mpFetch(
   path: string,

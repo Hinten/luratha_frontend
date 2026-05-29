@@ -1,14 +1,16 @@
+import "server-only";
+
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
-import { createOrder, getOrder } from "@/src/lib/payment/mercadoPago";
+import { createOrder, getOrder } from "./mercadoPago";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
   type PaymentPayerAddress,
   type PaymentStatus,
   PaymentProviderError,
-} from "@/src/lib/payment/types";
+} from "./types";
 
 /**
  * Orquestração de pagamento: carrega/atualiza a Order via Admin SDK e delega
@@ -48,15 +50,9 @@ function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<O
   return patch;
 }
 
-async function persistOrderPatch(orderId: string, patch: Partial<Order>): Promise<Order> {
-  const ref = orderRef(orderId);
-  const snapshot = await ref.get();
-  if (!snapshot.exists) {
-    throw new PaymentProviderError(`Pedido "${orderId}" não encontrado.`, "invalid_input");
-  }
-  const current = snapshot.data() as Order;
+function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {
   // Merge order: existente < patch < campos imutáveis controlados pelo servidor.
-  const merged = validateOrder({
+  return validateOrder({
     ...current,
     ...patch,
     id: current.id,
@@ -64,8 +60,24 @@ async function persistOrderPatch(orderId: string, patch: Partial<Order>): Promis
     createdAt: current.createdAt,
     updatedAt: new Date().toISOString(),
   });
-  await ref.set(merged);
-  return merged;
+}
+
+/**
+ * Aplica um patch em uma Order dentro de uma transação Firestore — garante
+ * que reads/writes concorrentes (dois webhooks ou webhook + payment-intent
+ * disparados simultaneamente) não se sobrescrevam.
+ */
+async function persistOrderPatch(orderId: string, patch: Partial<Order>): Promise<Order> {
+  return adminDb.runTransaction(async (tx) => {
+    const ref = orderRef(orderId);
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists) {
+      throw new PaymentProviderError(`Pedido "${orderId}" não encontrado.`, "invalid_input");
+    }
+    const merged = mergeOrderPatch(snapshot.data() as Order, patch);
+    tx.set(ref, merged);
+    return merged;
+  });
 }
 
 /** Carrega uma Order pelo id (Admin SDK). Retorna `null` quando não existe. */
@@ -121,28 +133,42 @@ export async function createPaymentIntent(
 
 /**
  * Aplica a um pedido a confirmação assíncrona vinda de um webhook da API de
- * Orders. Idempotente: se o pedido já está no status-alvo, não reescreve.
+ * Orders.
+ *
+ * Idempotente em duas dimensões: se o status já está no alvo E o
+ * `paymentIntentId` já bate com o `summary.paymentId`, não reescreve;
+ * caso contrário, persiste o que mudou dentro de uma única transação
+ * (read+write no mesmo `tx`), prevenindo perda de updates quando dois
+ * webhooks chegam ao mesmo tempo.
  */
 export async function applyOrderWebhook(
   mpOrderId: string,
 ): Promise<{ changed: boolean; orderId: string; status: PaymentStatus }> {
   const summary = await getOrder(mpOrderId);
-  const order = await loadOrder(summary.orderId);
-  if (!order) {
-    throw new PaymentProviderError(
-      `Pedido "${summary.orderId}" referenciado pela order ${mpOrderId} não existe.`,
-      "invalid_input",
-    );
-  }
 
-  if (order.paymentStatus === summary.status) {
-    return { changed: false, orderId: order.id, status: summary.status };
-  }
+  return adminDb.runTransaction(async (tx) => {
+    const ref = orderRef(summary.orderId);
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists) {
+      throw new PaymentProviderError(
+        `Pedido "${summary.orderId}" referenciado pela order ${mpOrderId} não existe.`,
+        "invalid_input",
+      );
+    }
+    const order = snapshot.data() as Order;
 
-  await persistOrderPatch(order.id, {
-    paymentIntentId: summary.paymentId,
-    ...buildStatusPatch(summary.status, summary.approvedAt),
+    const statusChanged = order.paymentStatus !== summary.status;
+    const intentIdChanged = order.paymentIntentId !== summary.paymentId;
+    if (!statusChanged && !intentIdChanged) {
+      return { changed: false, orderId: order.id, status: summary.status };
+    }
+
+    const patch: Partial<Order> = {
+      paymentIntentId: summary.paymentId,
+      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt) : {}),
+    };
+    tx.set(ref, mergeOrderPatch(order, patch));
+
+    return { changed: true, orderId: order.id, status: summary.status };
   });
-
-  return { changed: true, orderId: order.id, status: summary.status };
 }

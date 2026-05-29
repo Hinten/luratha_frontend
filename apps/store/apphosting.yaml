@@ -11,16 +11,9 @@ runConfig:
 env:
   # ── MercadoPago ────────────────────────────────────────────────────────────
   # Access token do servidor. TEST-... = sandbox, APP_USR-... = produção.
-  # Lido em apps/store/src/lib/payment/mercadoPago/client.ts.
+  # Lido em packages/payments/src/mercadoPago/client.ts.
   - variable: MERCADOPAGO_ACCESS_TOKEN
     secret: mercadopago-access-token
-    availability:
-      - RUNTIME
-
-  # Secret de assinatura dos webhooks (painel MP -> Webhooks). Valida o header
-  # x-signature em POST /api/webhooks/mercadopago.
-  - variable: MERCADOPAGO_WEBHOOK_SECRET
-    secret: mercadopago-webhook-secret
     availability:
       - RUNTIME
 
