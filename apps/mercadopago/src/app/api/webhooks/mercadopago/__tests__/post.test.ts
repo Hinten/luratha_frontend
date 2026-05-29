@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PaymentProviderError } from "@/src/lib/payment/types";
+import { PaymentProviderError } from "@luratha/payments";
 
-const mp = vi.hoisted(() => ({ verifyWebhookSignature: vi.fn() }));
-vi.mock("@/src/lib/payment/mercadoPago", () => ({
-  verifyWebhookSignature: mp.verifyWebhookSignature,
+const mocked = vi.hoisted(() => ({
+  verifyWebhookSignature: vi.fn(),
+  applyOrderWebhook: vi.fn(),
 }));
 
-const service = vi.hoisted(() => ({ applyOrderWebhook: vi.fn() }));
-vi.mock("@/src/lib/payment/service", () => ({
-  applyOrderWebhook: service.applyOrderWebhook,
-}));
+vi.mock("@luratha/payments", async () => {
+  const actual = await vi.importActual<typeof import("@luratha/payments")>("@luratha/payments");
+  return {
+    ...actual,
+    verifyWebhookSignature: mocked.verifyWebhookSignature,
+    applyOrderWebhook: mocked.applyOrderWebhook,
+  };
+});
 
 import { POST } from "@/src/app/api/webhooks/mercadopago/route";
 
@@ -32,28 +36,28 @@ const orderEvent = {
 };
 
 beforeEach(() => {
-  mp.verifyWebhookSignature.mockReset();
-  service.applyOrderWebhook.mockReset();
+  mocked.verifyWebhookSignature.mockReset();
+  mocked.applyOrderWebhook.mockReset();
 });
 
 describe("POST /api/webhooks/mercadopago", () => {
   it("returns 401 when the signature is invalid", async () => {
-    mp.verifyWebhookSignature.mockReturnValue(false);
+    mocked.verifyWebhookSignature.mockReturnValue(false);
     const res = await POST(webhookRequest(orderEvent));
     expect(res.status).toBe(401);
-    expect(service.applyOrderWebhook).not.toHaveBeenCalled();
+    expect(mocked.applyOrderWebhook).not.toHaveBeenCalled();
   });
 
   it("returns 200 without acting on non-order notifications", async () => {
-    mp.verifyWebhookSignature.mockReturnValue(true);
+    mocked.verifyWebhookSignature.mockReturnValue(true);
     const res = await POST(webhookRequest({ type: "payment", data: { id: "1" } }));
     expect(res.status).toBe(200);
-    expect(service.applyOrderWebhook).not.toHaveBeenCalled();
+    expect(mocked.applyOrderWebhook).not.toHaveBeenCalled();
   });
 
   it("applies the order and returns 200 on a valid order event", async () => {
-    mp.verifyWebhookSignature.mockReturnValue(true);
-    service.applyOrderWebhook.mockResolvedValueOnce({
+    mocked.verifyWebhookSignature.mockReturnValue(true);
+    mocked.applyOrderWebhook.mockResolvedValueOnce({
       changed: true,
       orderId: "order-1",
       status: "paid",
@@ -61,15 +65,15 @@ describe("POST /api/webhooks/mercadopago", () => {
 
     const res = await POST(webhookRequest(orderEvent));
     expect(res.status).toBe(200);
-    expect(service.applyOrderWebhook).toHaveBeenCalledWith("ORD01JQ4S4KY8HWQ6NA5PXB65B3D3");
+    expect(mocked.applyOrderWebhook).toHaveBeenCalledWith("ORD01JQ4S4KY8HWQ6NA5PXB65B3D3");
     const data = (await res.json()) as { received: boolean; status: string };
     expect(data.received).toBe(true);
     expect(data.status).toBe("paid");
   });
 
   it("returns 200 (ignored) when the order has no matching pedido", async () => {
-    mp.verifyWebhookSignature.mockReturnValue(true);
-    service.applyOrderWebhook.mockRejectedValueOnce(
+    mocked.verifyWebhookSignature.mockReturnValue(true);
+    mocked.applyOrderWebhook.mockRejectedValueOnce(
       new PaymentProviderError("pedido inexistente", "invalid_input"),
     );
 
@@ -80,8 +84,8 @@ describe("POST /api/webhooks/mercadopago", () => {
   });
 
   it("returns 500 so MercadoPago retries when the provider is unavailable", async () => {
-    mp.verifyWebhookSignature.mockReturnValue(true);
-    service.applyOrderWebhook.mockRejectedValueOnce(
+    mocked.verifyWebhookSignature.mockReturnValue(true);
+    mocked.applyOrderWebhook.mockRejectedValueOnce(
       new PaymentProviderError("MercadoPago fora do ar", "provider_unavailable"),
     );
 
@@ -90,7 +94,7 @@ describe("POST /api/webhooks/mercadopago", () => {
   });
 
   it("returns 500 when the webhook secret is not configured", async () => {
-    mp.verifyWebhookSignature.mockImplementation(() => {
+    mocked.verifyWebhookSignature.mockImplementation(() => {
       throw new PaymentProviderError("MERCADOPAGO_WEBHOOK_SECRET não configurado.", "config_missing");
     });
 

@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { logger } from "@luratha/core/logging/logger";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
 import type { PaymentPayer } from "@/src/components/checkout/PaymentStep";
+
+vi.mock("@luratha/core/logging/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 function mockFetchResponse(init: { ok: boolean; status?: number; body?: unknown }) {
   return {
@@ -344,9 +354,10 @@ describe("IdentificationStep", () => {
     });
   });
 
-  it("submit com PATCH 404 + PUT 4xx: propaga erro do PUT pra UI", async () => {
+  it("submit com PATCH 404 + PUT 4xx: exibe mensagem amigável e loga 400 como WARN", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
+    vi.mocked(logger.warn).mockClear();
     fetchSpy
       .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404 }))
       .mockResolvedValueOnce(
@@ -370,14 +381,22 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("CPF inválido no perfil.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
+      ).toBeInTheDocument();
     });
+    // 4xx do cliente vira severity WARN (CartContext convention).
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[checkout:identification]",
+      expect.objectContaining({ status: 400, message: "CPF inválido no perfil." }),
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("submit com PATCH 4xx (não-404): exibe mensagem do server, não chama onSubmit", async () => {
+  it("submit com PATCH 4xx (não-404): exibe mensagem amigável e loga 400 como WARN", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
+    vi.mocked(logger.warn).mockClear();
     fetchSpy.mockResolvedValue(
       mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
     );
@@ -399,8 +418,17 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("CPF já cadastrado em outra conta.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
+      ).toBeInTheDocument();
     });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[checkout:identification]",
+      expect.objectContaining({
+        status: 400,
+        message: "CPF já cadastrado em outra conta.",
+      }),
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

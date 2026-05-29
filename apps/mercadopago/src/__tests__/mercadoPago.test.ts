@@ -6,8 +6,8 @@ import {
   mapMpStatus,
   verifyWebhookSignature,
   withSandboxEmail,
-} from "@/src/lib/payment/mercadoPago";
-import type { CreatePaymentInput } from "@/src/lib/payment/types";
+  type CreatePaymentInput,
+} from "@luratha/payments";
 
 describe("mapMpStatus", () => {
   it("maps processed to paid (Orders API)", () => {

@@ -37,6 +37,28 @@ export interface PaymentResultProps {
   onTryAgain?: () => void;
 }
 
+/** Ícone de ampulheta — usado no bloco de cartão em análise. */
+function HourglassIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M6 2h12" />
+      <path d="M6 22h12" />
+      <path d="M6 2v4a6 6 0 0 0 6 6 6 6 0 0 1 6 6v4" />
+      <path d="M18 2v4a6 6 0 0 1-6 6 6 6 0 0 0-6 6v4" />
+    </svg>
+  );
+}
+
 const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | "error" }> = {
   paid: { label: "Pagamento aprovado", tone: "ok" },
   authorized: { label: "Pagamento autorizado", tone: "ok" },
@@ -122,10 +144,35 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
         </div>
       )}
 
-      {result.paymentMethod === "credit_card" && copy.tone === "error" && onTryAgain && (
-        <button type="button" className={styles.retryBtn} onClick={onTryAgain}>
-          Tentar outro método
-        </button>
+      {result.paymentMethod === "credit_card" && result.status === "pending" && (
+        <div className={styles.pendingBlock}>
+          <HourglassIcon className={styles.pendingIcon} />
+          <h3 className={styles.pendingTitle}>Seu pagamento está em análise</h3>
+          <p className={styles.pendingDescription}>
+            Recebemos seu pagamento e a operadora do cartão está validando a
+            transação. Isso costuma levar alguns minutos, mas em alguns casos
+            pode demorar até <strong>2 dias úteis</strong>.
+          </p>
+          <p className={styles.pendingDescription}>
+            Você receberá um e-mail assim que a aprovação for confirmada — não
+            é preciso fazer nada agora. Você também pode acompanhar o status
+            na sua conta a qualquer momento.
+          </p>
+        </div>
+      )}
+
+      {result.paymentMethod === "credit_card" && copy.tone === "error" && (
+        <div className={styles.failedBlock}>
+          <p className={styles.failedDescription}>
+            Não foi possível processar seu cartão. Verifique os dados ou tente
+            outra forma de pagamento — você não foi cobrado.
+          </p>
+          {onTryAgain && (
+            <button type="button" className={styles.retryBtn} onClick={onTryAgain}>
+              Tentar outro método
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

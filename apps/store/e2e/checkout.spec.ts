@@ -1,192 +1,62 @@
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { firestoreCollections } from "@luratha/schemas";
+import { loginOrRegisterTestUser } from "./_authHelpers";
+import {
+  seedFixtureCart,
+  clearFixtureCart,
+  waitForCartHydrated,
+  goToCheckoutViaCart,
+} from "./_cartHelpers";
+import {
+  clearUserAddresses,
+  clearPendingOrdersFor,
+} from "./_userStateHelpers";
 
 /**
- * Checkout end-to-end.
+ * Checkout PIX e Boleto — fluxo end-to-end SEM mocks.
  *
- * O caminho feliz exige login real (Firebase Auth) + cookie `__session`
- * válido, porque o `src/proxy.ts` faz presence-check antes da página rodar.
- * Por isso, o teste completo é gated em `E2E_LIVE_AUTH=1` — mesmo padrão de
- * `e2e/auth.spec.ts`.
+ * Cobre o caminho real ponta-a-ponta até o status `pending` (com QR Code do
+ * PIX ou link do boleto renderizados). Cartão APRO volta `processed → paid`
+ * síncrono e tem spec próprio (`checkout-card-real.spec.ts`); PIX/Boleto
+ * dependem de webhook do MP pra confirmar pagamento, e o webhook não chega
+ * em `localhost` nem em runner do GitHub. Portanto:
  *
- * As assertions de redirect (proxy) e UI estática rodam sempre — não exigem
- * Firebase.
+ * - Este spec PARA em `pending`: valida que /api/orders criou Order real
+ *   no Firestore, que /api/checkout/payment-intent disparou o adapter MP
+ *   (POST /v1/orders), que MP retornou `qrCode`/`boleto.url` e que a UI
+ *   mostra PaymentResult com QR Code visível / link do boleto clicável.
+ *   Asserta `Order.paymentStatus === "pending"` + `paymentIntentId` setado
+ *   no Firestore (MP order id como ORDTST01...).
+ *
+ * - A cobertura do flow `webhook → paid` fica em
+ *   `src/test/cloud/paymentApi.cloud.test.ts` (Vitest cloud, mocka
+ *   `getOrder` do MP server-side pra simular o status atualizado).
+ *
+ * Reusa o MP test user (`loginOrRegisterTestUser`) — mesmo user em todos
+ * os specs E2E que rodam em CI, sem criar lixo no Firestore. Cleanup
+ * completo no beforeEach/afterEach: cart, endereços e orders pendentes
+ * do test user são apagados pra runs idempotentes.
+ *
+ * Env vars validados no `beforeAll` do describe PIX/Boleto com `throw` — sem
+ * `test.skip`, mensagem clara do que falta. Escopo no describe pra não
+ * abortar o describe orthogonal `Checkout — guards e UI` abaixo que não
+ * depende de envs MP.
  */
 
-const hasLiveAuth = process.env.E2E_LIVE_AUTH === "1";
-
-// ── Fixtures ────────────────────────────────────────────────────────────────
-
-type E2ECartItem = {
-  id: string;
-  userId: string;
-  productId: string;
-  variantSku: string;
-  productSlug: string;
-  name: string;
-  photoId: string;
-  imageUrl: string;
-  variantLabel?: string;
-  unitPrice: number;
-  quantity: number;
-  currency: "BRL";
-  dimensions: null;
-  addedAt: string;
-  updatedAt: string;
-};
-
-const FIXTURE_ADDRESS = {
-  id: "addr-checkout-e2e",
-  userId: "REPLACE_UID",
-  label: "Casa",
-  recipientName: "Marina Souza",
-  postalCode: "01310-100",
-  line1: "Av. Paulista",
-  number: "1578",
-  neighborhood: "Bela Vista",
-  city: "São Paulo",
-  state: "SP",
-  country: "BR",
-  isDefault: true,
-};
-
-const FIXTURE_QUOTES = {
-  quotes: [
-    {
-      providerId: "melhor-envio",
-      serviceCode: "1",
-      carrier: "Correios",
-      service: "PAC",
-      price: 22,
-      estimatedDays: 7,
-    },
-    {
-      providerId: "melhor-envio",
-      serviceCode: "2",
-      carrier: "Correios",
-      service: "SEDEX",
-      price: 38,
-      estimatedDays: 3,
-    },
-  ],
-  freeShippingThreshold: 500,
-  referenceShippingCost: 22,
-  resolvedProviderId: "melhor-envio",
-  usedFallback: false,
-};
-
-const FIXTURE_PAYMENT_INTENT_PIX = {
-  paymentId: "mp-e2e-001",
-  paymentMethod: "pix",
-  status: "pending",
-  pix: {
-    qrCode: "00020126580014BR.GOV.BCB.PIX0136fake-pix-e2e",
-    qrCodeBase64:
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgAAIAAAUAAarVyFEAAAAASUVORK5CYII=",
-  },
-};
-
-function buildCartItem(over: Partial<E2ECartItem> = {}): E2ECartItem {
-  const now = new Date().toISOString();
-  return {
-    id: "prod-vest-1__var-m",
-    userId: "guestcart",
-    productId: "prod-vest-1",
-    variantSku: "VEST_MARINA_M",
-    productSlug: "vestido-marina",
-    name: "Vestido Marina",
-    photoId: "prod-vest-1-photo-1",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/luratha-test/o/vestido-marina.jpg?alt=media",
-    variantLabel: "M",
-    unitPrice: 250,
-    quantity: 1,
-    currency: "BRL",
-    dimensions: null,
-    addedAt: now,
-    updatedAt: now,
-    ...over,
-  };
-}
-
-async function seedCart(page: Page, items: E2ECartItem[]) {
-  await page.addInitScript((cartItems) => {
-    localStorage.setItem("luratha_cart_v2", JSON.stringify(cartItems));
-  }, items);
-}
-
-async function mockCheckoutApis(page: Page, uid: string) {
-  const addressForUser = { ...FIXTURE_ADDRESS, userId: uid };
-
-  // GET addresses
-  await page.route(`**/api/users/${uid}/addresses`, async (route: Route) => {
-    if (route.request().method() === "GET") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([addressForUser]),
-      });
-      return;
-    }
-    await route.continue();
-  });
-
-  // PATCH UserProfile (persistência do step "Seus dados"). GET continua
-  // passando pro server real (CheckoutFlow tenta carregar perfil pra pré-popular
-  // o form e tolera 404 / erro silenciosamente).
-  await page.route(`**/api/users/${uid}`, async (route: Route) => {
-    if (route.request().method() === "PATCH") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: true }),
-      });
-      return;
-    }
-    await route.continue();
-  });
-
-  await page.route("**/api/checkout/shipping", async (route: Route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(FIXTURE_QUOTES),
-    });
-  });
-
-  await page.route("**/api/orders", async (route: Route) => {
-    if (route.request().method() === "POST") {
-      const body = JSON.parse(route.request().postData() ?? "{}");
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ...body,
-          id: "order-e2e-001",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-      return;
-    }
-    await route.continue();
-  });
-
-  await page.route("**/api/checkout/payment-intent", async (route: Route) => {
-    await route.fulfill({
-      status: 201,
-      contentType: "application/json",
-      body: JSON.stringify(FIXTURE_PAYMENT_INTENT_PIX),
-    });
-  });
-}
+const REQUIRED_ENVS = [
+  "TEST_USER_EMAIL",
+  "TEST_USER_PASSWORD",
+  "MERCADOPAGO_ACCESS_TOKEN",
+  "MERCADOPAGO_ENV",
+  "MERCADOPAGO_SANDBOX_PAYER_EMAIL",
+  // Step 3 (Frete) bate em /api/checkout/shipping → provider Melhor Envio.
+  "MELHOR_ENVIO_TOKEN",
+] as const;
 
 // ── Tests sem auth (proxy + UI estática) ────────────────────────────────────
 
 test.describe("Checkout — guards e UI", () => {
-  test.beforeEach(async ({ context }) => {
-    await context.clearCookies();
-  });
-
   test("acesso sem sessão redireciona para /login?redirect=%2Fcheckout", async ({
     page,
   }) => {
@@ -202,74 +72,235 @@ test.describe("Checkout — guards e UI", () => {
   });
 });
 
-// ── Happy path (live Firebase + cart mockado) ───────────────────────────────
+// ── Happy paths real (end-to-end sem mocks, para em pending) ────────────────
 
-test.describe("Checkout — fluxo PIX mockado", () => {
-  test("login → cart → 5 steps → PaymentResult com QR PIX", async ({ page }) => {
-    test.skip(
-      !hasLiveAuth,
-      "Set E2E_LIVE_AUTH=1 to run the live-Firebase checkout test",
-    );
+test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
+  // Login + UI + frete real + Order real + payment-intent real.
+  // 120s pra cobrir provider de frete eventualmente lento + MP API.
+  // `mode: 'serial'` dentro do describe pra não vazar pros guards tests do
+  // describe orthogonal anterior — eles podem rodar em paralelo.
+  test.describe.configure({ timeout: 120_000, mode: "serial" });
 
-    // 1. Registra novo usuário
-    await page.goto("/register");
-    const uniqueEmail = `__test_checkout_${Date.now()}@luratha.com`;
-    await page.getByLabel("Nome completo").fill("Marina Souza");
-    await page.getByLabel("E-mail").fill(uniqueEmail);
-    await page.getByLabel("Senha", { exact: true }).fill("senha123");
-    await page.getByLabel("Confirmar senha").fill("senha123");
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await page.waitForURL("/");
+  test.beforeAll(() => {
+    const missingEnvs = REQUIRED_ENVS.filter((k) => !process.env[k]);
+    if (missingEnvs.length > 0) {
+      throw new Error(
+        `[checkout pix/boleto] env vars obrigatórios ausentes: ${missingEnvs.join(", ")}. ` +
+          `Configure no .env do repo root antes de rodar este spec.`,
+      );
+    }
+  });
 
-    // 2. Captura o uid via API
-    const uid = await page.evaluate(async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.uid as string;
+  let uid: string | null = null;
+
+  test.beforeEach(async ({ page }) => {
+    // Surface console errors pra debug (ex.: `[mp-brick-error]` futuro).
+    page.on("console", (msg) => {
+      if (msg.type() === "error" || msg.type() === "warning") {
+        console.log(`[browser:${msg.type()}] ${msg.text()}`);
+      }
     });
-    if (!uid) throw new Error("Não foi possível recuperar o uid após registro.");
+    // Log apenas 4xx/5xx em rotas relevantes — sem ruído em sucesso.
+    page.on("response", (res) => {
+      const url = res.url();
+      const relevant =
+        url.includes("mercadopago.com") ||
+        url.includes("/api/checkout/") ||
+        url.includes("/api/orders") ||
+        url.includes("/api/users/");
+      if (res.status() >= 400 && relevant) {
+        res.text().then(
+          (body) =>
+            console.log(
+              `[network:error] ${res.status()} ${res.request().method()} ${url} :: ${body.slice(0, 400)}`,
+            ),
+          () =>
+            console.log(
+              `[network:error] ${res.status()} ${res.request().method()} ${url} :: <body unavailable>`,
+            ),
+        );
+      }
+    });
 
-    // 3. Mocka as APIs do checkout + popula carrinho
-    await mockCheckoutApis(page, uid);
-    await seedCart(page, [buildCartItem({ userId: uid })]);
+    uid = await loginOrRegisterTestUser(page);
 
-    // 4. Entra no checkout — primeiro step é "Seus dados"
-    await page.goto("/checkout");
+    // Cleanup pré-test: state residual do MP test user (reaproveitado entre
+    // runs) precisa ser limpo pra a UI renderizar o formulário de novo
+    // endereço (não a lista) e pra não acumular orders pending.
+    await clearFixtureCart(uid);
+    await clearUserAddresses(uid);
+    await clearPendingOrdersFor(uid);
+  });
+
+  test.afterEach(async () => {
+    if (!uid) return;
+    // Cleanup pós-test: garante limpeza mesmo após falha. Preserva orders
+    // pagas (paymentStatus !== "pending") como histórico real do test user.
+    await clearFixtureCart(uid);
+    await clearUserAddresses(uid);
+    await clearPendingOrdersFor(uid);
+  });
+
+  /**
+   * Roda steps 1-4 (CPF → novo endereço via UI → frete real → revisão) e
+   * deixa o user no Step 5 (Pagamento) com a tab default (PIX) ativa.
+   * Cada test escolhe o método e dispara o submit.
+   */
+  async function navigateToPaymentStep(page: Page): Promise<void> {
+    if (!uid) throw new Error("uid não capturado no beforeEach");
+
+    await seedFixtureCart(uid);
+    await waitForCartHydrated(page);
+    await goToCheckoutViaCart(page);
+
+    // Step 1 — Seus dados (CPF padrão APRO).
     await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
-
-    // Step 1 — Seus dados (email/nome pré-vêm do registro; preencher CPF)
     await page.getByLabel("Número do documento").fill("12345678909");
     await page.getByRole("button", { name: /Continuar/ }).click();
+    await page.waitForURL(/[?&]step=address/, { timeout: 10_000 });
 
-    // Step 2 — Endereço (auto-seleciona o default, basta clicar Continuar)
-    await expect(page.getByRole("heading", { name: /Para onde enviamos/ })).toBeVisible();
+    // Step 2 — Endereço novo via UI (`AddressStep` renderiza form quando o
+    // user não tem endereços; o `clearUserAddresses` no beforeEach garante).
+    await expect(
+      page.getByRole("heading", { name: /Para onde enviamos/i }),
+    ).toBeVisible();
+    await page.getByLabel("Nome do destinatário").fill("MP Test User");
+    await page.getByLabel("CEP").fill("01310100");
+    await page.getByLabel("UF").selectOption("SP");
+    await page.getByLabel("Logradouro").fill("Av. Paulista");
+    await page.getByLabel("Número").fill("1578");
+    await page.getByLabel("Bairro").fill("Bela Vista");
+    await page.getByLabel("Cidade").fill("São Paulo");
+    await page.getByRole("button", { name: "Salvar endereço" }).click();
+    await page.waitForURL(/[?&]step=shipping/, { timeout: 15_000 });
+
+    // Step 3 — Frete real (provider Melhor Envio).
+    await expect(
+      page.getByRole("heading", { name: /Como você quer receber/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("radiogroup", { name: /frete/i })).toBeVisible({
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: "Continuar" }).click();
+    await page.waitForURL(/[?&]step=review/, { timeout: 10_000 });
 
-    // Step 3 — Frete
-    await expect(page.getByRole("heading", { name: /Como você quer receber/ })).toBeVisible();
-    await page.getByRole("button", { name: "Continuar" }).click();
-
-    // Step 4 — Revisão (3 cards: Seus dados, Endereço, Frete)
-    await expect(page.getByRole("heading", { name: "Revise antes de pagar" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Seus dados" })).toBeVisible();
+    // Step 4 — Revisão.
+    await expect(
+      page.getByRole("heading", { name: /Revise antes de pagar/i }),
+    ).toBeVisible();
     await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
+    await page.waitForURL(/[?&]step=payment/, { timeout: 10_000 });
 
-    // Step 5 — Pagamento (PIX por default, só clicar "Gerar PIX")
-    await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
+    // Step 5 — Pagamento (caller escolhe método).
+    await expect(
+      page.getByRole("heading", { name: /Como você quer pagar/ }),
+    ).toBeVisible();
+  }
+
+  /**
+   * Asserções comuns no Firestore após `confirmOrder()` em CheckoutFlow.tsx:
+   * Order criada via POST /api/orders + payment-intent atualizou
+   * `paymentStatus`/`paymentIntentId` via service real (handler em
+   * `app/api/checkout/payment-intent/post.ts` chama `createPaymentIntent`).
+   */
+  async function assertOrderPersisted(
+    orderId: string,
+    expected: { paymentMethod: "pix" | "boleto" },
+  ) {
+    const orderDoc = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .get();
+    expect(orderDoc.exists).toBe(true);
+    const order = orderDoc.data();
+    expect(order?.paymentStatus).toBe("pending");
+    expect(order?.paymentMethod).toBe(expected.paymentMethod);
+    // MP Orders API retorna `paymentIntentId` no formato `ORDTST01...` (sandbox)
+    // ou `ORD01...` (prod). `/.+/` aceitaria qualquer placeholder; o prefixo
+    // `^ORD` valida que veio do MP de verdade.
+    expect(order?.paymentIntentId).toMatch(/^ORD/i);
+    console.log(
+      `[${expected.paymentMethod} order] final: paymentStatus=${order?.paymentStatus} paymentIntentId=${order?.paymentIntentId}`,
+    );
+  }
+
+  test("PIX: order pending + QR Code real", async ({ page }) => {
+    if (!uid) throw new Error("uid não capturado");
+
+    await navigateToPaymentStep(page);
+
+    // PIX é a tab default — só clica "Gerar PIX". Configurar wait do POST
+    // /api/orders ANTES do click pra não perder a response (confirmOrder
+    // executa: POST /api/orders → POST /api/checkout/payment-intent → MP).
+    const orderResponse = page.waitForResponse(
+      (res) =>
+        res.url().endsWith("/api/orders") &&
+        res.request().method() === "POST",
+      { timeout: 30_000 },
+    );
     await page.getByRole("button", { name: "Gerar PIX" }).click();
 
-    // Result — QR PIX renderizado
+    const orderResp = await orderResponse;
+    expect(orderResp.status()).toBe(201);
+    const { id: orderId } = (await orderResp.json()) as { id: string };
+    expect(orderId).toMatch(/.+/);
+    console.log(`[pix order] criado: ${orderId}`);
+
+    // PaymentResult: QR Code img (base64 real do MP) + botão "Copiar código".
     await expect(
       page.getByRole("img", { name: "QR Code para pagamento PIX" }),
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("button", { name: /Copiar código/ }),
+    ).toBeVisible();
 
-    // Steps refletem na URL agora (?step=payment depois do submit, com a view
-    // de result derivada de paymentResult em memória).
+    // URL não bouncing durante PaymentResult — CheckoutFlow renderiza o
+    // overlay sem mexer na query string. Sem esse assert, regressão futura
+    // que faça router.replace(`/checkout/sucesso/${id}`) prematuro (antes
+    // do user clicar Acompanhar pedido) passa silente.
     await expect(page).toHaveURL(/\/checkout\?step=payment/);
 
-    // "Acompanhar pedido" deve aterrissar em /checkout/sucesso/{id} —
-    // antes a race com clearCart mandava o user pro /carrinho.
+    await assertOrderPersisted(orderId, { paymentMethod: "pix" });
+
+    // Navegação pra success page via "Acompanhar pedido". Cobre o flow que
+    // antes era assertado e foi dropado na refatoração end-to-end.
+    await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+    await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
+  });
+
+  test("Boleto: order pending + link do boleto real", async ({ page }) => {
+    if (!uid) throw new Error("uid não capturado");
+
+    await navigateToPaymentStep(page);
+
+    // Troca pra tab Boleto.
+    await page.getByRole("tab", { name: "Boleto" }).click();
+
+    const orderResponse = page.waitForResponse(
+      (res) =>
+        res.url().endsWith("/api/orders") &&
+        res.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: "Gerar boleto" }).click();
+
+    const orderResp = await orderResponse;
+    expect(orderResp.status()).toBe(201);
+    const { id: orderId } = (await orderResp.json()) as { id: string };
+    expect(orderId).toMatch(/.+/);
+    console.log(`[boleto order] criado: ${orderId}`);
+
+    // PaymentResult: link "Abrir boleto em PDF" com URL real do MP.
+    await expect(
+      page.getByRole("link", { name: "Abrir boleto em PDF" }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // URL não bouncing durante PaymentResult (ver justificativa no PIX test).
+    await expect(page).toHaveURL(/\/checkout\?step=payment/);
+
+    await assertOrderPersisted(orderId, { paymentMethod: "boleto" });
+
+    // Navegação pra success page via "Acompanhar pedido".
     await page.getByRole("button", { name: "Acompanhar pedido" }).click();
     await expect(page).toHaveURL(/\/checkout\/sucesso\/[^/?]+$/);
   });

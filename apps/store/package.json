@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -22,6 +23,7 @@
     "@luratha/auth": "workspace:*",
     "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
+    "@luratha/payments": "workspace:*",
     "@luratha/repositories": "workspace:*",
     "@luratha/schemas": "workspace:*",
     "@mercadopago/sdk-react": "^1.0.3",

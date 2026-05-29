@@ -7,6 +7,7 @@ import AddressForm, {
   type AddressFormPayload,
 } from "@/src/components/checkout/AddressForm";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import styles from "./AddressStep.module.css";
 
 export interface AddressStepProps {
@@ -45,27 +46,33 @@ export default function AddressStep({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/users/${userId}/addresses`);
-      if (cancelled) return;
-      if (!res.ok) {
-        setState({
-          kind: "error",
-          message: "Não foi possível carregar seus endereços.",
-        });
-        return;
-      }
-      const addresses = (await res.json()) as Address[];
-      if (cancelled) return;
-      if (addresses.length === 0) {
-        // 1ª compra do usuário — sem tela de seleção, vai direto pro form
-        // e ao salvar pula pro Frete.
-        setState({ kind: "creating", addresses, wasInitiallyEmpty: true });
-      } else {
-        setState({ kind: "list", addresses });
-        if (!selectedAddressId) {
-          const preferred = addresses.find((a) => a.isDefault) ?? addresses[0];
-          onSelect(preferred);
+      try {
+        const res = await fetch(`/api/users/${userId}/addresses`);
+        if (cancelled) return;
+        await throwIfNotOk(res, "Não foi possível carregar seus endereços.");
+        const addresses = (await res.json()) as Address[];
+        if (cancelled) return;
+        if (addresses.length === 0) {
+          // 1ª compra do usuário — sem tela de seleção, vai direto pro form
+          // e ao salvar pula pro Frete.
+          setState({ kind: "creating", addresses, wasInitiallyEmpty: true });
+        } else {
+          setState({ kind: "list", addresses });
+          if (!selectedAddressId) {
+            const preferred = addresses.find((a) => a.isDefault) ?? addresses[0];
+            onSelect(preferred);
+          }
         }
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiResponseError || err instanceof TypeError) {
+          setState({
+            kind: "error",
+            message: reportCheckoutError({ error: err, step: "address_load" }),
+          });
+          return;
+        }
+        throw err;
       }
     })();
     return () => {
@@ -90,10 +97,9 @@ export default function AddressStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        // throwIfNotOk extrai `message` + `errors` (ZodIssue[]) do body 400.
-        await throwIfNotOk(res, "Falha ao salvar endereço.");
-      }
+      // throwIfNotOk extrai `message` + `errors` (ZodIssue[]) do body 400; no-op
+      // se res.ok.
+      await throwIfNotOk(res, "Falha ao salvar endereço.");
       const created = (await res.json()) as Address;
       onSelect(created);
       // 1º endereço (wasInitiallyEmpty): avança direto pro Frete sem mostrar lista.
@@ -106,11 +112,22 @@ export default function AddressStep({
       setState({ kind: "list", addresses });
     } catch (err) {
       if (err instanceof ApiResponseError) {
-        setFormError(err.message);
+        const hasFieldIssues = err.issues.length > 0;
+        setFormError(
+          reportCheckoutError({
+            error: err,
+            step: "address_save",
+            metadata: { hasFieldIssues },
+          }),
+        );
         setServerIssues(err.issues.slice());
-      } else {
-        throw err;
+        return;
       }
+      if (err instanceof TypeError) {
+        setFormError(reportCheckoutError({ error: err, step: "address_save" }));
+        return;
+      }
+      throw err;
     } finally {
       setSaving(false);
     }

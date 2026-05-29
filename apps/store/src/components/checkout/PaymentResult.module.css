@@ -137,10 +137,46 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   cursor: pointer;
-  align-self: flex-start;
+  margin-top: 0.25rem;
   transition: background-color 200ms ease;
 }
 
 .retryBtn:hover {
   background-color: var(--color-accent);
+}
+
+/* Bloco "Aguardando análise" usado quando o pagamento por cartão cai em
+   review antifraude (status pending). Sem este bloco, o card mostraria só
+   a badge amarela do header e nenhum conteúdo, parecendo bug. */
+.pendingBlock,
+.failedBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  align-items: center;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.pendingIcon {
+  color: var(--color-primary);
+  width: 56px;
+  height: 56px;
+}
+
+.pendingTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+}
+
+.pendingDescription,
+.failedDescription {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 32rem;
+  color: var(--color-neutral-dark);
 }

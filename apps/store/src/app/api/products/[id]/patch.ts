@@ -5,6 +5,7 @@ import { adminDb, adminApp } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
 import { firestoreCollections, validateProduct } from "@luratha/schemas";
 import { createEmbeddingService, EmbeddingGenerationError } from "@luratha/core/embeddingService";
+import { logger } from "@luratha/core/logging/logger";
 import { generateProductEmbeddings } from "@/src/lib/productEmbeddings";
 
 export const runtime = "nodejs";
@@ -118,7 +119,7 @@ export async function PATCH(
       product = { ...product, ...embeddings };
     } catch (embeddingError) {
       if (embeddingError instanceof EmbeddingGenerationError) {
-        console.warn("[PATCH /api/products] Embedding generation skipped:", embeddingError.message);
+        logger.warn("[PATCH /api/products] Embedding generation skipped", { message: embeddingError.message });
       } else {
         throw embeddingError;
       }

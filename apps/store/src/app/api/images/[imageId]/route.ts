@@ -3,6 +3,7 @@ import {
   ProductImageDeleteError,
   deleteProductImage,
 } from "@luratha/repositories/productImageDelete";
+import { logger } from "@luratha/core/logging/logger";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,7 @@ export async function DELETE(
       return NextResponse.json({ message: error.message, code: error.code }, { status });
     }
 
-    console.error("[DELETE /api/images/:imageId] unexpected error", error);
+    logger.error("[DELETE /api/images/:imageId] unexpected error", { imageId, error });
     return NextResponse.json(
       { message: "Falha ao excluir a imagem.", code: "unknown" },
       { status: 500 },

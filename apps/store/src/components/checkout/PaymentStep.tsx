@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import Spinner from "@/src/components/Spinner";
+import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import styles from "./PaymentStep.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -352,11 +353,52 @@ export default function PaymentStep(props: PaymentStepProps) {
                   await processCardSubmit(param as unknown as CardBrickFormData);
                 }}
                 onError={(err) => {
-                  const msg =
-                    err && typeof err === "object" && "message" in err
-                      ? String((err as { message?: unknown }).message)
-                      : "Erro ao processar pagamento com cartão.";
-                  setError(msg);
+                  // O Brick passa objetos plain (não Error) e props
+                  // diagnósticas úteis (`cause`, `code`) podem ser
+                  // não-enumeráveis — capturamos via Object.getOwnPropertyNames
+                  // pra não perder sinal no log. Ver doc Bricks "Possíveis
+                  // erros": fields_setup_failed, card_token_creation_failed,
+                  // get_payment_methods_failed.
+                  //
+                  // Try/catch protege contra getters que lançam (ex.: `cause`
+                  // referenciando DOM que já foi removido). Sem o guard, o
+                  // throw escaparia do onError e o usuário não veria
+                  // notificação alguma — falha completamente silenciosa.
+                  let brickPayload: unknown = err;
+                  if (err && typeof err === "object") {
+                    try {
+                      brickPayload = Object.fromEntries(
+                        Object.getOwnPropertyNames(err).map((k) => [
+                          k,
+                          (err as unknown as Record<string, unknown>)[k],
+                        ]),
+                      );
+                    } catch (flattenErr) {
+                      if (!(flattenErr instanceof Error)) throw flattenErr;
+                      brickPayload = { unflattenable: true, repr: String(err) };
+                    }
+                  }
+                  // `brickCause` é o discriminador de copy amigável (mapeado
+                  // no `pickFriendlyMessage` do `checkoutErrors`). Lido com
+                  // try/catch também: se `err.cause` for getter que lança,
+                  // tratamos como ausente em vez de propagar.
+                  let brickCause: string | undefined;
+                  if (err && typeof err === "object" && "cause" in err) {
+                    try {
+                      const raw = (err as { cause?: unknown }).cause;
+                      brickCause = typeof raw === "string" ? raw : String(raw);
+                    } catch (causeErr) {
+                      if (!(causeErr instanceof Error)) throw causeErr;
+                      brickCause = undefined;
+                    }
+                  }
+                  setError(
+                    reportCheckoutError({
+                      error: err,
+                      step: "payment_card",
+                      metadata: { brickPayload, brickCause },
+                    }),
+                  );
                 }}
               />
             </div>
