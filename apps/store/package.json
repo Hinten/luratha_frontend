@@ -19,22 +19,22 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^5.4.0",
     "@luratha/auth": "workspace:*",
     "@luratha/core": "workspace:*",
     "@luratha/firestore": "workspace:*",
     "@luratha/payments": "workspace:*",
     "@luratha/repositories": "workspace:*",
     "@luratha/schemas": "workspace:*",
-    "@mercadopago/sdk-react": "^1.0.3",
-    "firebase": "^12.13.0",
+    "@mercadopago/sdk-react": "^1.0.7",
+    "firebase": "^12.14.0",
     "firebase-admin": "^13.10.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-hook-form": "^7.76.0",
+    "react-hook-form": "^7.76.1",
     "sharp": "^0.34.5",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -52,10 +52,10 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.1",
+    "tsx": "^4.22.3",
     "typescript": "^5",
-    "vite": "^8.0.10",
+    "vite": "^8.0.14",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }
