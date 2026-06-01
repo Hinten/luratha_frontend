@@ -27,7 +27,7 @@ const mp = vi.hoisted(() => ({
   mapMpStatus: vi.fn(),
 }));
 // importActual preserva o restante das exports do módulo (`isMercadoPagoSandbox`,
-// `withSandboxEmail`, `describeMercadoPagoError`) que o barrel `@luratha/payments`
+// `withSandboxPayer`, `describeMercadoPagoError`) que o barrel `@luratha/payments`
 // re-exporta — sem isso elas viram `undefined` em qualquer code path futuro
 // que as toque, escondendo a causa real do erro.
 vi.mock("@luratha/payments/mercadoPago", async () => {

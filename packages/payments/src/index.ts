@@ -15,7 +15,7 @@ export {
   isMercadoPagoSandbox,
   mapMpStatus,
   verifyWebhookSignature,
-  withSandboxEmail,
+  withSandboxPayer,
 } from "./mercadoPago";
 
 export {

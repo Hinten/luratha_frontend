@@ -99,6 +99,13 @@ export interface PaymentIntentResult {
    * deve consultar `GET /api/checkout/payment-intent` até o boleto chegar.
    */
   boletoPending?: boolean;
+  /**
+   * Pagamento em **análise antifraude** no MP (`status: processing` /
+   * `status_detail: in_process`). O artefato ainda não saiu porque a transação
+   * está sendo validada; o client mostra "pagamento em análise" em vez de
+   * "gerando…". Continua pendente (poll) — a análise pode liberar e gerar o QR.
+   */
+  underReview?: boolean;
 }
 
 export interface PixArtifact {
@@ -122,6 +129,8 @@ export interface OrderArtifacts {
   status: PaymentStatus;
   pix?: PixArtifact;
   boleto?: BoletoArtifact;
+  /** Pagamento em análise antifraude (vide `PaymentIntentResult.underReview`). */
+  underReview?: boolean;
 }
 
 /** Resumo de um pagamento consultado no provider (usado pelo webhook). */

@@ -38,6 +38,8 @@ export interface PaymentResultData {
   boleto?: BoletoArtifact;
   /** Boleto criado mas os dados ainda não foram gerados — client deve pollar. */
   boletoPending?: boolean;
+  /** Pagamento em análise antifraude no MP — UI mostra "em análise" em vez de "gerando…". */
+  underReview?: boolean;
 }
 
 export interface PaymentResultProps {
@@ -55,6 +57,7 @@ interface OrderArtifactsResponse {
   status?: PaymentStatus;
   pix?: PixArtifact;
   boleto?: BoletoArtifact;
+  underReview?: boolean;
 }
 
 /** Ícone de ampulheta — usado no bloco de cartão em análise e no "gerando…". */
@@ -101,6 +104,9 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
   const awaitingPix = result.paymentMethod === "pix" && Boolean(result.pixPending) && !pix;
   const awaitingBoleto =
     result.paymentMethod === "boleto" && Boolean(result.boletoPending) && !boleto;
+  // Em análise antifraude? Usa o dado mais recente do polling; antes do 1º poll,
+  // o valor da criação. Decide entre "pagamento em análise" e "gerando…".
+  const underReview = polled ? Boolean(polled.underReview) : Boolean(result.underReview);
 
   // Polling do artefato pendente: relê a order no MP a cada 15s até ele chegar
   // (ou desistir após ~2min). A criação não recria nada — só consulta. Contamos
@@ -142,10 +148,10 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
           window.location.assign(`/checkout/sucesso/${orderId}`);
           return;
         }
-        if (data.pix || data.boleto) {
-          setPolled(data); // artefato chegou — para de pollar
-          return;
-        }
+        // Guarda o snapshot mais recente (status/underReview) mesmo sem artefato,
+        // pra UI refletir "em análise" enquanto polla.
+        setPolled(data);
+        if (data.pix || data.boleto) return; // artefato chegou — para de pollar
         scheduleNext();
       } catch (err) {
         // Rede instável (TypeError) ou request abortado — segue tentando até o
@@ -184,25 +190,38 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
             técnico; mantemos no tipo pra logs/debug mas não exibimos. */}
       </header>
 
-      {/* Artefato (QR/boleto) ainda sendo gerado pelo MP: mostra progresso e
-          faz polling; se estourar 2min, pede pra atualizar a página. */}
+      {/* Artefato (QR/boleto) ainda não disponível. Duas situações distintas:
+          (1) em análise antifraude (`underReview`) → "pagamento em análise";
+          (2) geração assíncrona normal → "gerando…". Ambas pollam por baixo. No
+          timeout (2min), a mensagem difere: análise não se resolve com refresh. */}
       {(awaitingPix || awaitingBoleto) &&
         (pollTimedOut ? (
           <div className={styles.failedBlock} role="alert">
             <p className={styles.failedDescription}>
-              Não conseguimos gerar {artifactLabel} a tempo. Atualize a página e tente
-              novamente — você não foi cobrado.
+              {underReview
+                ? "Seu pagamento segue em análise. Avisaremos por e-mail quando concluir — você pode acompanhar na sua conta."
+                : `Não conseguimos gerar ${artifactLabel} a tempo. Atualize a página e tente novamente — você não foi cobrado.`}
             </p>
           </div>
         ) : (
           <div className={styles.pendingBlock}>
             <HourglassIcon className={styles.pendingIcon} />
-            <h3 className={styles.pendingTitle}>
-              Gerando {artifactLabel}…
-            </h3>
-            <p className={styles.pendingDescription}>
-              Isso costuma levar alguns segundos. Mantenha esta página aberta.
-            </p>
+            {underReview ? (
+              <>
+                <h3 className={styles.pendingTitle}>Pagamento em análise</h3>
+                <p className={styles.pendingDescription}>
+                  Estamos confirmando a segurança do seu pagamento. Assim que for
+                  aprovado, {artifactLabel} aparece aqui. Mantenha esta página aberta.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className={styles.pendingTitle}>Gerando {artifactLabel}…</h3>
+                <p className={styles.pendingDescription}>
+                  Isso costuma levar alguns segundos. Mantenha esta página aberta.
+                </p>
+              </>
+            )}
           </div>
         ))}
 

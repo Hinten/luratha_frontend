@@ -88,6 +88,22 @@ describe("createOrder — artefato de pagamento", () => {
     );
   });
 
+  it("PIX em análise antifraude (in_process) sem QR → pixPending + underReview, não lança", async () => {
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    mockFetch({
+      id: "ORD1",
+      status: "processing",
+      status_detail: "in_process",
+      ...pixPaymentMethod(),
+    });
+
+    const result = await createOrder(PIX_INPUT);
+
+    expect(result.pixPending).toBe(true);
+    expect(result.underReview).toBe(true);
+    expect(result.pix).toBeUndefined();
+  });
+
   it("PIX sem QR mas com status de recusa → lança PaymentProviderError (não fica pendente)", async () => {
     vi.spyOn(logger, "warn").mockImplementation(() => {});
     mockFetch({
@@ -150,6 +166,17 @@ describe("getOrderArtifacts — releitura para polling", () => {
     expect(artifacts.status).toBe("pending");
     expect(artifacts.pix).toBeUndefined();
     expect(artifacts.boleto).toBeUndefined();
+    expect(artifacts.underReview).toBeUndefined();
+  });
+
+  it("propaga underReview quando a order está em análise (in_process)", async () => {
+    mockFetch({ id: "ORD1", status: "processing", status_detail: "in_process", ...pixPaymentMethod() });
+
+    const artifacts = await getOrderArtifacts("ORD1");
+
+    expect(artifacts.status).toBe("pending");
+    expect(artifacts.underReview).toBe(true);
+    expect(artifacts.pix).toBeUndefined();
   });
 
   it("lança quando o pagamento já falhou e não há artefato", async () => {

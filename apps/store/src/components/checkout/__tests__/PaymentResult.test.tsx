@@ -175,6 +175,60 @@ describe("PaymentResult", () => {
       expect(screen.queryByText(/Gerando o boleto/)).toBeNull();
     });
 
+    it("em análise antifraude mostra 'Pagamento em análise' (não 'Gerando')", () => {
+      vi.useFakeTimers();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(jsonResponse({ status: "pending", underReview: true })),
+      );
+
+      render(
+        <PaymentResult
+          result={{
+            paymentId: "mp-12",
+            paymentMethod: "pix",
+            status: "pending",
+            pixPending: true,
+            underReview: true,
+          }}
+          orderId={ORDER_ID}
+        />,
+      );
+
+      expect(screen.getByText("Pagamento em análise")).toBeInTheDocument();
+      expect(screen.queryByText(/Gerando o QR Code do PIX/)).toBeNull();
+    });
+
+    it("timeout em análise mostra 'segue em análise' (sem pedir pra atualizar)", async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal(
+        "fetch",
+        // Permanece em análise, sem artefato → estoura o teto.
+        vi.fn().mockResolvedValue(jsonResponse({ status: "pending", underReview: true })),
+      );
+
+      render(
+        <PaymentResult
+          result={{
+            paymentId: "mp-13",
+            paymentMethod: "pix",
+            status: "pending",
+            pixPending: true,
+            underReview: true,
+          }}
+          orderId={ORDER_ID}
+        />,
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PAYMENT_POLL_TIMEOUT_MS);
+      });
+
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(/Seu pagamento segue em análise/);
+      expect(alert).not.toHaveTextContent(/Atualize a página/);
+    });
+
     it("mostra aviso de timeout quando o artefato não vem em 2min", async () => {
       vi.useFakeTimers();
       vi.stubGlobal(

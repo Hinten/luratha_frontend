@@ -143,6 +143,15 @@ describe("GET /api/checkout/payment-intent", () => {
     expect(data.pix).toBeUndefined();
   });
 
+  it("passa underReview adiante quando a order está em análise", async () => {
+    service.loadOrder.mockResolvedValueOnce(fakeOrder());
+    service.getOrderArtifacts.mockResolvedValueOnce({ status: "pending", underReview: true });
+    const res = await GET(getRequest("order-001"));
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { underReview?: boolean };
+    expect(data.underReview).toBe(true);
+  });
+
   it("returns 502 when the provider rejects the payment", async () => {
     service.loadOrder.mockResolvedValueOnce(fakeOrder());
     service.getOrderArtifacts.mockRejectedValueOnce(
