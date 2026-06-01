@@ -83,6 +83,39 @@ export const orderSchema = z
      * Opcional para retro-compatibilidade com pedidos anteriores à integração.
      */
     paymentIntentId: nonEmptyStringSchema.max(64).optional(),
+    /**
+     * Artefatos do PIX persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o QR Code em `/conta/pedidos/{id}` caso saia da
+     * tela de sucesso antes de pagar. Limpos pelo webhook quando o pagamento
+     * deixa de estar `pending` (privacidade + tamanho do doc).
+     */
+    paymentPix: z
+      .object({
+        /** Copia-cola (EMV) do PIX. */
+        qrCode: nonEmptyStringSchema,
+        /** Imagem PNG do QR em base64 (sem o prefixo `data:`). */
+        qrCodeBase64: nonEmptyStringSchema,
+        /** ISO-8601 do vencimento do QR, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
+    /**
+     * Artefatos do boleto persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o boleto em `/conta/pedidos/{id}`. Limpos pelo
+     * webhook quando o pagamento deixa de estar `pending`.
+     */
+    paymentBoleto: z
+      .object({
+        /** URL do boleto em PDF (hospedado pelo MercadoPago). */
+        url: z.url(),
+        /** Linha digitável para pagamento manual. */
+        digitableLine: nonEmptyStringSchema.optional(),
+        /** Código de barras (FEBRABAN). */
+        barcode: nonEmptyStringSchema.optional(),
+        /** ISO-8601 do vencimento do boleto, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
     items: z.array(orderItemSchema).min(1),
     itemCount: quantitySchema,
     subtotal: moneySchema,

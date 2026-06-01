@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import styles from "./PaymentResult.module.css";
+import PixDisplay from "./PixDisplay";
+import BoletoDisplay from "./BoletoDisplay";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
@@ -70,15 +71,7 @@ const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | 
 };
 
 export default function PaymentResult({ result, onTryAgain }: PaymentResultProps) {
-  const [copied, setCopied] = useState(false);
   const copy = STATUS_COPY[result.status];
-
-  async function copyPixCode() {
-    if (!result.pix) return;
-    await navigator.clipboard.writeText(result.pix.qrCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2500);
-  }
 
   return (
     <section className={styles.section} aria-live="polite">
@@ -91,57 +84,19 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
       </header>
 
       {result.paymentMethod === "pix" && result.pix && (
-        <div className={styles.pixBlock}>
-          {/* next/image não otimiza data: URLs (PIX QR vem em base64 da MP), então usamos <img> nativo. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`data:image/png;base64,${result.pix.qrCodeBase64}`}
-            alt="QR Code para pagamento PIX"
-            className={styles.qr}
-          />
-          <p className={styles.pixHelp}>
-            Abra o app do seu banco, escolha pagar com PIX, escaneie o QR Code
-            ou cole o código abaixo.
-          </p>
-          <div className={styles.copyBlock}>
-            <code className={styles.copyText}>{result.pix.qrCode}</code>
-            <button type="button" className={styles.copyBtn} onClick={copyPixCode}>
-              {copied ? "Copiado!" : "Copiar código"}
-            </button>
-          </div>
-          {result.pix.expiresAt && (
-            <p className={styles.muted}>
-              Válido até{" "}
-              {new Date(result.pix.expiresAt).toLocaleString("pt-BR", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })}
-              .
-            </p>
-          )}
-        </div>
+        <PixDisplay
+          qrCode={result.pix.qrCode}
+          qrCodeBase64={result.pix.qrCodeBase64}
+          expiresAt={result.pix.expiresAt}
+        />
       )}
 
       {result.paymentMethod === "boleto" && result.boleto && (
-        <div className={styles.boletoBlock}>
-          <p className={styles.boletoHelp}>
-            Seu boleto foi gerado. Você pode pagar em qualquer banco ou
-            internet banking.
-          </p>
-          <a
-            href={result.boleto.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.boletoBtn}
-          >
-            Abrir boleto em PDF
-          </a>
-          {result.boleto.digitableLine && (
-            <div className={styles.copyBlock}>
-              <code className={styles.copyText}>{result.boleto.digitableLine}</code>
-            </div>
-          )}
-        </div>
+        <BoletoDisplay
+          url={result.boleto.url}
+          digitableLine={result.boleto.digitableLine}
+          barcode={result.boleto.barcode}
+        />
       )}
 
       {result.paymentMethod === "credit_card" && result.status === "pending" && (

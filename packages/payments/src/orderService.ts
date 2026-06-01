@@ -50,16 +50,30 @@ function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<O
   return patch;
 }
 
-function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {
+/**
+ * Opções de merge. `clearPaymentArtifacts` remove `paymentPix`/`paymentBoleto`
+ * do documento — necessário porque o Admin SDK aqui não usa
+ * `ignoreUndefinedProperties` (escrever `undefined` lança) e `tx.set` faz
+ * overwrite total: a única forma de apagar um campo é a chave estar AUSENTE
+ * no objeto persistido. Por isso deletamos as chaves antes do `validateOrder`.
+ */
+type MergeOptions = { clearPaymentArtifacts?: boolean };
+
+function mergeOrderPatch(current: Order, patch: Partial<Order>, opts?: MergeOptions): Order {
   // Merge order: existente < patch < campos imutáveis controlados pelo servidor.
-  return validateOrder({
+  const draft: Order = {
     ...current,
     ...patch,
     id: current.id,
     userId: current.userId,
     createdAt: current.createdAt,
     updatedAt: new Date().toISOString(),
-  });
+  };
+  if (opts?.clearPaymentArtifacts) {
+    delete draft.paymentPix;
+    delete draft.paymentBoleto;
+  }
+  return validateOrder(draft);
 }
 
 /**
@@ -67,14 +81,18 @@ function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {
  * que reads/writes concorrentes (dois webhooks ou webhook + payment-intent
  * disparados simultaneamente) não se sobrescrevam.
  */
-async function persistOrderPatch(orderId: string, patch: Partial<Order>): Promise<Order> {
+async function persistOrderPatch(
+  orderId: string,
+  patch: Partial<Order>,
+  opts?: MergeOptions,
+): Promise<Order> {
   return adminDb.runTransaction(async (tx) => {
     const ref = orderRef(orderId);
     const snapshot = await tx.get(ref);
     if (!snapshot.exists) {
       throw new PaymentProviderError(`Pedido "${orderId}" não encontrado.`, "invalid_input");
     }
-    const merged = mergeOrderPatch(snapshot.data() as Order, patch);
+    const merged = mergeOrderPatch(snapshot.data() as Order, patch, opts);
     tx.set(ref, merged);
     return merged;
   });
@@ -123,8 +141,31 @@ export async function createPaymentIntent(
         : { ...base, paymentMethod: "pix", payer: methodInput.payer },
   );
 
+  // Persistimos os artefatos de PIX/boleto na Order para que o cliente possa
+  // reabri-los em `/conta/pedidos/{id}` caso saia da tela de sucesso. Spreads
+  // condicionais garantem chaves AUSENTES (nunca `undefined`) — o Admin SDK
+  // aqui não usa `ignoreUndefinedProperties` e escrever `undefined` lança.
   const updatedOrder = await persistOrderPatch(order.id, {
     paymentIntentId: result.paymentId,
+    ...(result.pix
+      ? {
+          paymentPix: {
+            qrCode: result.pix.qrCode,
+            qrCodeBase64: result.pix.qrCodeBase64,
+            ...(result.pix.expiresAt ? { expiresAt: result.pix.expiresAt } : {}),
+          },
+        }
+      : {}),
+    ...(result.boleto
+      ? {
+          paymentBoleto: {
+            url: result.boleto.url,
+            ...(result.boleto.digitableLine ? { digitableLine: result.boleto.digitableLine } : {}),
+            ...(result.boleto.barcode ? { barcode: result.boleto.barcode } : {}),
+            ...(result.boleto.expiresAt ? { expiresAt: result.boleto.expiresAt } : {}),
+          },
+        }
+      : {}),
     ...buildStatusPatch(result.status),
   });
 
@@ -167,7 +208,12 @@ export async function applyOrderWebhook(
       paymentIntentId: summary.paymentId,
       ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt) : {}),
     };
-    tx.set(ref, mergeOrderPatch(order, patch));
+    // Quando o pagamento deixa de estar `pending` (paid/failed/refunded — PIX e
+    // boleto expirados chegam como `failed`), apagamos os artefatos: QR/boleto
+    // vencidos não devem persistir (privacidade + tamanho do doc). Enquanto
+    // `pending` (action_required), preservamos para reexibição na conta.
+    const clearPaymentArtifacts = summary.status !== "pending";
+    tx.set(ref, mergeOrderPatch(order, patch, { clearPaymentArtifacts }));
 
     return { changed: true, orderId: order.id, status: summary.status };
   });

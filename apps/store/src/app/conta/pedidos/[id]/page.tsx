@@ -4,7 +4,16 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Address, Order } from "@luratha/schemas";
 import OrderStatusBadge from "@/src/components/conta/OrderStatusBadge";
+import PixDisplay from "@/src/components/checkout/PixDisplay";
+import BoletoDisplay from "@/src/components/checkout/BoletoDisplay";
 import styles from "./page.module.css";
+
+/** Vencimento no passado? `false` quando a data é ausente/inválida. */
+function isExpired(expiresAt: string | undefined): boolean {
+  if (!expiresAt) return false;
+  const time = new Date(expiresAt).getTime();
+  return !Number.isNaN(time) && time < Date.now();
+}
 
 export default function PedidoDetailPage({
   params,
@@ -73,6 +82,14 @@ export default function PedidoDetailPage({
     year: "numeric",
   });
 
+  // Reexibimos o artefato de pagamento enquanto o pedido aguarda pagamento.
+  // Os dados de PIX/boleto são persistidos na Order pela criação do
+  // payment-intent e limpos pelo webhook quando o status deixa de ser pending.
+  const awaitingPayment = order.paymentStatus === "pending";
+  const showPix = awaitingPayment && order.paymentMethod === "pix" && !!order.paymentPix;
+  const showBoleto =
+    awaitingPayment && order.paymentMethod === "boleto" && !!order.paymentBoleto;
+
   return (
     <div className={styles.container}>
       <Link href="/conta/pedidos" className={styles.backLink}>
@@ -86,6 +103,40 @@ export default function PedidoDetailPage({
         </div>
         <OrderStatusBadge status={order.status} />
       </header>
+
+      {showPix && order.paymentPix && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading}>Pagamento via PIX</h3>
+          {isExpired(order.paymentPix.expiresAt) ? (
+            <p className={styles.muted}>
+              O QR Code do PIX expirou. Refaça o pedido para gerar um novo pagamento.
+            </p>
+          ) : (
+            <PixDisplay
+              qrCode={order.paymentPix.qrCode}
+              qrCodeBase64={order.paymentPix.qrCodeBase64}
+              expiresAt={order.paymentPix.expiresAt}
+            />
+          )}
+        </section>
+      )}
+
+      {showBoleto && order.paymentBoleto && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading}>Pagamento via boleto</h3>
+          {isExpired(order.paymentBoleto.expiresAt) ? (
+            <p className={styles.muted}>
+              O boleto expirou. Refaça o pedido para gerar um novo pagamento.
+            </p>
+          ) : (
+            <BoletoDisplay
+              url={order.paymentBoleto.url}
+              digitableLine={order.paymentBoleto.digitableLine}
+              barcode={order.paymentBoleto.barcode}
+            />
+          )}
+        </section>
+      )}
 
       <section className={styles.section}>
         <h3 className={styles.sectionHeading}>Itens</h3>

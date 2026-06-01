@@ -48,7 +48,7 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   );
 }
 
-function buildOrderPayload(userId: string) {
+function buildOrderPayload(userId: string, overrides: Record<string, unknown> = {}) {
   const id = randomUUID();
   const now = new Date().toISOString();
   return {
@@ -80,6 +80,7 @@ function buildOrderPayload(userId: string) {
     shippingAddressPath: `userProfiles/${userId}/addresses/addr-pay-001`,
     createdAt: now,
     updatedAt: now,
+    ...overrides,
   };
 }
 
@@ -100,8 +101,8 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     await cleanupDocuments(seededDocs);
   });
 
-  async function seedOrder(): Promise<string> {
-    const order = validateOrder(buildOrderPayload(userId));
+  async function seedOrder(overrides: Record<string, unknown> = {}): Promise<string> {
+    const order = validateOrder(buildOrderPayload(userId, overrides));
     const ref = adminDb
       .collection(firestoreCollections.orders)
       .doc(order.id)
@@ -147,6 +148,49 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     expect(order?.paymentStatus).toBe("paid");
     expect(order?.status).toBe("paid");
     expect(order?.paidAt).toBe("2026-05-19T12:00:00.000Z");
+  });
+
+  it("webhook clears persisted PIX artifacts when the payment becomes paid", async () => {
+    // O pedido foi semeado com o QR do PIX (reexibido em /conta/pedidos enquanto
+    // pending). Ao compensar, o webhook deve apagar `paymentPix` — QR vencido
+    // não deve persistir (privacidade + tamanho do doc).
+    const orderId = await seedOrder({
+      paymentPix: {
+        qrCode: "00020126-PIX-cloud",
+        qrCodeBase64: "QR-CLOUD-BASE64",
+        expiresAt: "2026-05-29T12:00:00.000Z",
+      },
+    });
+
+    mp.getOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-clear-001",
+      status: "paid",
+      orderId,
+      approvedAt: "2026-05-19T12:00:00.000Z",
+    });
+
+    const res = await webhookPOST(
+      new Request("http://localhost/api/webhooks/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-signature": "ts=1,v1=mocked",
+          "x-request-id": "req-cloud-clear-1",
+        },
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-clear-1" } }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    const order = persisted.data();
+    expect(order?.paymentStatus).toBe("paid");
+    expect(order?.paymentPix).toBeUndefined();
   });
 
   it("webhook persists paymentIntentId even when status did not change", async () => {
