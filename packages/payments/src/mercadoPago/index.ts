@@ -8,10 +8,13 @@ import {
   resolveWebhookSecret,
 } from "./client";
 import {
+  type BoletoArtifact,
   type CreatePaymentInput,
+  type OrderArtifacts,
   type PaymentIntentResult,
   type PaymentStatus,
   PaymentProviderError,
+  type PixArtifact,
   type ProviderPaymentSummary,
 } from "../types";
 
@@ -420,6 +423,71 @@ interface OrderResponse {
   transactions?: { payments?: OrderPaymentResponse[] };
 }
 
+/**
+ * Extrai o QR Code do PIX de uma order. Retorna `null` quando o MP ainda não
+ * gerou o artefato (geração assíncrona) — o chamador trata como "pendente".
+ */
+function extractPixPayment(response: OrderResponse): PixArtifact | null {
+  const pm = response.transactions?.payments?.[0]?.payment_method;
+  if (!pm?.qr_code || !pm?.qr_code_base64) return null;
+  return {
+    qrCode: pm.qr_code,
+    qrCodeBase64: pm.qr_code_base64,
+    ticketUrl: pm.ticket_url ?? undefined,
+  };
+}
+
+/**
+ * Extrai os dados do boleto de uma order. Retorna `null` quando o MP ainda não
+ * gerou o `ticket_url`.
+ */
+function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
+  const pm = response.transactions?.payments?.[0]?.payment_method;
+  if (!pm?.ticket_url) return null;
+  return {
+    url: pm.ticket_url,
+    barcode: pm.barcode_content ?? undefined,
+    digitableLine: pm.digitable_line ?? undefined,
+  };
+}
+
+/**
+ * Quando uma order vem 2xx mas SEM o artefato (QR/boleto), distingue dois casos:
+ *
+ *  - **falha real** — o pagamento já veio recusado/cancelado (`mapMpStatus` →
+ *    `failed`). Não adianta pollar; lança `PaymentProviderError` com o detalhe do
+ *    MP. Retorna `"failed"`.
+ *  - **ausência assíncrona** — status ainda pendente; o artefato deve aparecer ao
+ *    reler a order. Retorna `"pending"` e o chamador marca `*Pending`.
+ *
+ * Em AMBOS os casos loga o **body cru** (a `OrderResponse` inteira) — o HTTP é
+ * 2xx, então o erro não passa por `logAndRewrapMpError`; sem este log não há como
+ * diagnosticar o que o MP devolveu.
+ */
+function classifyMissingArtifact(
+  operation: "create" | "get",
+  context: { orderId: string; paymentMethod: string },
+  response: OrderResponse,
+): "pending" | "failed" {
+  const status = mapMpStatus(response.status);
+  logger.warn("[mercadoPago] order sem artefato de pagamento", {
+    operation,
+    ...context,
+    status: response.status,
+    statusDetail: response.status_detail,
+    rawResponse: response,
+  });
+
+  if (status === "failed") {
+    const detail = response.status_detail ?? response.status ?? "sem detalhe";
+    throw new PaymentProviderError(
+      `MercadoPago recusou o pagamento (${detail}).`,
+      "provider_unavailable",
+    );
+  }
+  return "pending";
+}
+
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
   const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
@@ -461,7 +529,6 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
     );
   }
 
-  const firstPayment = response.transactions?.payments?.[0];
   const result: PaymentIntentResult = {
     paymentId: response.id,
     paymentMethod: input.paymentMethod,
@@ -469,37 +536,70 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
     statusDetail: response.status_detail ?? undefined,
   };
 
+  // PIX/boleto: o artefato (QR / dados do boleto) pode vir de forma assíncrona —
+  // o MP responde 2xx sem ele e o gera logo depois. Em vez de falhar, marcamos
+  // `*Pending` e o client faz polling via `getOrderArtifacts`. Só uma falha real
+  // (pagamento recusado) interrompe — ver `classifyMissingArtifact`.
   if (input.paymentMethod === "pix") {
-    const pm = firstPayment?.payment_method;
-    if (!pm?.qr_code || !pm?.qr_code_base64) {
-      throw new PaymentProviderError(
-        "MercadoPago não retornou o QR Code do PIX.",
-        "provider_unavailable",
-      );
+    const pix = extractPixPayment(response);
+    if (pix) {
+      result.pix = pix;
+    } else {
+      classifyMissingArtifact("create", { orderId: input.orderId, paymentMethod: "pix" }, response);
+      result.pixPending = true;
     }
-    result.pix = {
-      qrCode: pm.qr_code,
-      qrCodeBase64: pm.qr_code_base64,
-      ticketUrl: pm.ticket_url ?? undefined,
-    };
   }
 
   if (input.paymentMethod === "boleto") {
-    const pm = firstPayment?.payment_method;
-    if (!pm?.ticket_url) {
-      throw new PaymentProviderError(
-        "MercadoPago não retornou a URL do boleto.",
-        "provider_unavailable",
+    const boleto = extractBoletoPayment(response);
+    if (boleto) {
+      result.boleto = boleto;
+    } else {
+      classifyMissingArtifact(
+        "create",
+        { orderId: input.orderId, paymentMethod: "boleto" },
+        response,
       );
+      result.boletoPending = true;
     }
-    result.boleto = {
-      url: pm.ticket_url,
-      barcode: pm.barcode_content ?? undefined,
-      digitableLine: pm.digitable_line ?? undefined,
-    };
   }
 
   return result;
+}
+
+/**
+ * Relê uma order no MercadoPago e extrai o artefato de pagamento (QR do PIX /
+ * dados do boleto) quando já disponível. Usado pelo polling client-side enquanto
+ * `pixPending`/`boletoPending`. Não persiste nada — só consulta.
+ */
+export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifacts> {
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
+
+  let response: OrderResponse;
+  try {
+    response = (await mpFetch(`/v1/orders/${encodeURIComponent(mpOrderId)}`, {
+      method: "GET",
+      headers: buildHeaders(accessToken),
+      timeoutMs,
+      bodyTimeoutMs,
+    })) as OrderResponse;
+  } catch (err) {
+    if (err instanceof PaymentProviderError) throw err;
+    throw logAndRewrapMpError("get", { mpOrderId }, err);
+  }
+
+  const status = mapMpStatus(response.status);
+  const pix = extractPixPayment(response) ?? undefined;
+  const boleto = extractBoletoPayment(response) ?? undefined;
+
+  // Sem artefato ainda: loga o body cru e, se o pagamento já falhou, lança (o
+  // client para de pollar). Caso pendente, devolve só o status — o client segue
+  // tentando.
+  if (!pix && !boleto && status === "failed") {
+    classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: response.transactions?.payments?.[0]?.payment_method?.type ?? "unknown" }, response);
+  }
+
+  return { status, pix, boleto };
 }
 
 /** Consulta uma order no MercadoPago — usado pelo webhook para confirmar. */

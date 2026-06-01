@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./PaymentResult.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -14,30 +14,50 @@ export type PaymentStatus =
   | "refunded"
   | "charged_back";
 
+export interface PixArtifact {
+  qrCode: string;
+  qrCodeBase64: string;
+  ticketUrl?: string;
+  expiresAt?: string;
+}
+
+export interface BoletoArtifact {
+  url: string;
+  barcode?: string;
+  digitableLine?: string;
+}
+
 export interface PaymentResultData {
   paymentId: string;
   paymentMethod: PaymentMethod;
   status: PaymentStatus;
   statusDetail?: string;
-  pix?: {
-    qrCode: string;
-    qrCodeBase64: string;
-    ticketUrl?: string;
-    expiresAt?: string;
-  };
-  boleto?: {
-    url: string;
-    barcode?: string;
-    digitableLine?: string;
-  };
+  pix?: PixArtifact;
+  /** PIX criado mas o QR ainda não foi gerado pelo MP — client deve pollar. */
+  pixPending?: boolean;
+  boleto?: BoletoArtifact;
+  /** Boleto criado mas os dados ainda não foram gerados — client deve pollar. */
+  boletoPending?: boolean;
 }
 
 export interface PaymentResultProps {
   result: PaymentResultData;
+  /** Id do pedido (`Order.id`) — usado no polling do artefato pendente. */
+  orderId: string;
   onTryAgain?: () => void;
 }
 
-/** Ícone de ampulheta — usado no bloco de cartão em análise. */
+/** Intervalo e teto do polling do artefato (QR do PIX / boleto) ainda não gerado. */
+export const PAYMENT_POLL_INTERVAL_MS = 15_000;
+export const PAYMENT_POLL_TIMEOUT_MS = 120_000;
+
+interface OrderArtifactsResponse {
+  status?: PaymentStatus;
+  pix?: PixArtifact;
+  boleto?: BoletoArtifact;
+}
+
+/** Ícone de ampulheta — usado no bloco de cartão em análise e no "gerando…". */
 function HourglassIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -69,16 +89,90 @@ const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | 
   charged_back: { label: "Estornado", tone: "error" },
 };
 
-export default function PaymentResult({ result, onTryAgain }: PaymentResultProps) {
+export default function PaymentResult({ result, orderId, onTryAgain }: PaymentResultProps) {
   const [copied, setCopied] = useState(false);
+  // Artefato obtido via polling quando a criação veio sem ele.
+  const [polled, setPolled] = useState<OrderArtifactsResponse | null>(null);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
   const copy = STATUS_COPY[result.status];
 
+  const pix = result.pix ?? polled?.pix;
+  const boleto = result.boleto ?? polled?.boleto;
+  const awaitingPix = result.paymentMethod === "pix" && Boolean(result.pixPending) && !pix;
+  const awaitingBoleto =
+    result.paymentMethod === "boleto" && Boolean(result.boletoPending) && !boleto;
+
+  // Polling do artefato pendente: relê a order no MP a cada 15s até ele chegar
+  // (ou desistir após ~2min). A criação não recria nada — só consulta. Contamos
+  // tentativas (em vez de relógio) pra ser determinístico — teto = 2min/15s.
+  useEffect(() => {
+    if (!awaitingPix && !awaitingBoleto) return;
+    if (pollTimedOut) return;
+
+    const maxAttempts = Math.max(1, Math.floor(PAYMENT_POLL_TIMEOUT_MS / PAYMENT_POLL_INTERVAL_MS));
+    let attempts = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      if (attempts >= maxAttempts) {
+        setPollTimedOut(true);
+        return;
+      }
+      timer = setTimeout(runPoll, PAYMENT_POLL_INTERVAL_MS);
+    };
+
+    const runPoll = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const res = await fetch(
+          `/api/checkout/payment-intent?orderId=${encodeURIComponent(orderId)}`,
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          // Erro transitório do servidor/MP — tenta de novo até o deadline.
+          scheduleNext();
+          return;
+        }
+        const data = (await res.json()) as OrderArtifactsResponse;
+        if (cancelled) return;
+        if (data.status === "paid") {
+          window.location.assign(`/checkout/sucesso/${orderId}`);
+          return;
+        }
+        if (data.pix || data.boleto) {
+          setPolled(data); // artefato chegou — para de pollar
+          return;
+        }
+        scheduleNext();
+      } catch (err) {
+        // Rede instável (TypeError) ou request abortado — segue tentando até o
+        // deadline. Qualquer outro erro sobe (sem fallback silencioso).
+        if (err instanceof TypeError || (err instanceof DOMException && err.name === "AbortError")) {
+          scheduleNext();
+          return;
+        }
+        throw err;
+      }
+    };
+
+    timer = setTimeout(runPoll, PAYMENT_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [orderId, awaitingPix, awaitingBoleto, pollTimedOut]);
+
   async function copyPixCode() {
-    if (!result.pix) return;
-    await navigator.clipboard.writeText(result.pix.qrCode);
+    if (!pix) return;
+    await navigator.clipboard.writeText(pix.qrCode);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2500);
   }
+
+  const artifactLabel = result.paymentMethod === "pix" ? "o QR Code do PIX" : "o boleto";
 
   return (
     <section className={styles.section} aria-live="polite">
@@ -90,12 +184,34 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
             técnico; mantemos no tipo pra logs/debug mas não exibimos. */}
       </header>
 
-      {result.paymentMethod === "pix" && result.pix && (
+      {/* Artefato (QR/boleto) ainda sendo gerado pelo MP: mostra progresso e
+          faz polling; se estourar 2min, pede pra atualizar a página. */}
+      {(awaitingPix || awaitingBoleto) &&
+        (pollTimedOut ? (
+          <div className={styles.failedBlock} role="alert">
+            <p className={styles.failedDescription}>
+              Não conseguimos gerar {artifactLabel} a tempo. Atualize a página e tente
+              novamente — você não foi cobrado.
+            </p>
+          </div>
+        ) : (
+          <div className={styles.pendingBlock}>
+            <HourglassIcon className={styles.pendingIcon} />
+            <h3 className={styles.pendingTitle}>
+              Gerando {artifactLabel}…
+            </h3>
+            <p className={styles.pendingDescription}>
+              Isso costuma levar alguns segundos. Mantenha esta página aberta.
+            </p>
+          </div>
+        ))}
+
+      {result.paymentMethod === "pix" && pix && (
         <div className={styles.pixBlock}>
           {/* next/image não otimiza data: URLs (PIX QR vem em base64 da MP), então usamos <img> nativo. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`data:image/png;base64,${result.pix.qrCodeBase64}`}
+            src={`data:image/png;base64,${pix.qrCodeBase64}`}
             alt="QR Code para pagamento PIX"
             className={styles.qr}
           />
@@ -104,15 +220,15 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
             ou cole o código abaixo.
           </p>
           <div className={styles.copyBlock}>
-            <code className={styles.copyText}>{result.pix.qrCode}</code>
+            <code className={styles.copyText}>{pix.qrCode}</code>
             <button type="button" className={styles.copyBtn} onClick={copyPixCode}>
               {copied ? "Copiado!" : "Copiar código"}
             </button>
           </div>
-          {result.pix.expiresAt && (
+          {pix.expiresAt && (
             <p className={styles.muted}>
               Válido até{" "}
-              {new Date(result.pix.expiresAt).toLocaleString("pt-BR", {
+              {new Date(pix.expiresAt).toLocaleString("pt-BR", {
                 dateStyle: "short",
                 timeStyle: "short",
               })}
@@ -122,23 +238,23 @@ export default function PaymentResult({ result, onTryAgain }: PaymentResultProps
         </div>
       )}
 
-      {result.paymentMethod === "boleto" && result.boleto && (
+      {result.paymentMethod === "boleto" && boleto && (
         <div className={styles.boletoBlock}>
           <p className={styles.boletoHelp}>
             Seu boleto foi gerado. Você pode pagar em qualquer banco ou
             internet banking.
           </p>
           <a
-            href={result.boleto.url}
+            href={boleto.url}
             target="_blank"
             rel="noopener noreferrer"
             className={styles.boletoBtn}
           >
             Abrir boleto em PDF
           </a>
-          {result.boleto.digitableLine && (
+          {boleto.digitableLine && (
             <div className={styles.copyBlock}>
-              <code className={styles.copyText}>{result.boleto.digitableLine}</code>
+              <code className={styles.copyText}>{boleto.digitableLine}</code>
             </div>
           )}
         </div>

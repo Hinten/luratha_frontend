@@ -85,19 +85,43 @@ export interface PaymentIntentResult {
   status: PaymentStatus;
   /** Detalhe textual do provider (motivo de recusa de cartão, etc.). */
   statusDetail?: string;
-  /** Presente quando `paymentMethod === "pix"`. */
-  pix?: {
-    qrCode: string;
-    qrCodeBase64: string;
-    ticketUrl?: string;
-    expiresAt?: string;
-  };
-  /** Presente quando `paymentMethod === "boleto"`. */
-  boleto?: {
-    url: string;
-    barcode?: string;
-    digitableLine?: string;
-  };
+  /** Presente quando `paymentMethod === "pix"` e o QR já foi gerado. */
+  pix?: PixArtifact;
+  /**
+   * PIX criado, mas o MP ainda não devolveu o QR Code (geração assíncrona).
+   * O client deve consultar `GET /api/checkout/payment-intent` até o QR chegar.
+   */
+  pixPending?: boolean;
+  /** Presente quando `paymentMethod === "boleto"` e o boleto já foi gerado. */
+  boleto?: BoletoArtifact;
+  /**
+   * Boleto criado, mas o MP ainda não devolveu os dados (`ticket_url`). O client
+   * deve consultar `GET /api/checkout/payment-intent` até o boleto chegar.
+   */
+  boletoPending?: boolean;
+}
+
+export interface PixArtifact {
+  qrCode: string;
+  qrCodeBase64: string;
+  ticketUrl?: string;
+  expiresAt?: string;
+}
+
+export interface BoletoArtifact {
+  url: string;
+  barcode?: string;
+  digitableLine?: string;
+}
+
+/**
+ * Resultado da releitura de uma order no provider durante o polling do artefato
+ * (PIX QR / boleto). Devolvido pelo `GET /api/checkout/payment-intent`.
+ */
+export interface OrderArtifacts {
+  status: PaymentStatus;
+  pix?: PixArtifact;
+  boleto?: BoletoArtifact;
 }
 
 /** Resumo de um pagamento consultado no provider (usado pelo webhook). */
