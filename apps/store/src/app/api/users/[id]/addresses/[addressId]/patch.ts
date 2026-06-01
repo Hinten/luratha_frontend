@@ -5,6 +5,7 @@ import { adminAddressConverter } from "@luratha/firestore/adminAddressConverter"
 import { firestoreCollections, validateAddress } from "@luratha/schemas";
 import { unsetOtherDefaults } from "@/src/app/api/users/[id]/addresses/post";
 import { authErrorResponse, requireOwnerOrAdmin } from "@luratha/auth/requireUser";
+import { lookupCep } from "@/src/lib/cep/viaCep";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,13 @@ export async function PATCH(
     updatedAt: now,
   };
 
+  // Se o CEP faz parte deste update, o servidor é autoritativo sobre o `ibgeCode`:
+  // descarta o valor herdado do `existingData` (seria de outra cidade) para
+  // recomputá-lo via ViaCEP mais abaixo. PATCHs que não tocam o CEP preservam o
+  // `ibgeCode` atual pelo merge.
+  const cepInPayload = "postalCode" in payload;
+  if (cepInPayload) delete merged.ibgeCode;
+
   let address;
   try {
     address = validateAddress(merged);
@@ -91,6 +99,17 @@ export async function PATCH(
 
   if (address.isDefault && !existingData.isDefault) {
     await unsetOtherDefaults(userId, addressId);
+  }
+
+  // Enriquecimento best-effort do `ibgeCode` via ViaCEP (necessário p/ NF-e), só
+  // quando o CEP foi (re)enviado. NÃO bloqueia: a base do ViaCEP não é exaustiva e o
+  // formato já foi validado. `not_found`/`error` → grava sem `ibgeCode` (o `merged`
+  // já teve a chave removida acima, então nada a fazer). Espelha o POST.
+  if (cepInPayload) {
+    const cepLookup = await lookupCep(address.postalCode);
+    if (cepLookup.status === "found" && /^\d{7}$/.test(cepLookup.ibge)) {
+      address = { ...address, ibgeCode: cepLookup.ibge };
+    }
   }
 
   await ref.set(address);

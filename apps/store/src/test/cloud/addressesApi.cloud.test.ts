@@ -304,6 +304,104 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
     expect(updated.createdAt).toBe(created.createdAt);
   });
 
+  // ── PATCH re-enriquece ibgeCode quando o CEP muda ──────────────────────
+
+  it("PATCH com novo CEP re-enriquece o ibgeCode (servidor autoritativo)", async () => {
+    const create = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    const created = (await create.json()) as { id: string; ibgeCode?: string };
+    expect(created.ibgeCode).toBe("3550308"); // do mock `found` padrão
+
+    // CEP novo (Curitiba) — `mockResolvedValueOnce` só vale para o lookup do PATCH;
+    // o POST acima já consumiu o mock padrão.
+    cep.lookupCep.mockResolvedValueOnce({
+      status: "found",
+      logradouro: "Rua XV de Novembro",
+      bairro: "Centro",
+      localidade: "Curitiba",
+      uf: "PR",
+      ibge: "4106902",
+    });
+
+    const response = await patchAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses/${created.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postalCode: "80020-310" }),
+      }),
+      { params: Promise.resolve({ id: userId, addressId: created.id }) },
+    );
+
+    expect(response.status).toBe(200);
+    const updated = (await response.json()) as { ibgeCode?: string };
+    expect(updated.ibgeCode).toBe("4106902");
+  });
+
+  it("PATCH com CEP fora do ViaCEP limpa o ibgeCode antigo (não herda)", async () => {
+    const create = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    const created = (await create.json()) as { id: string; ibgeCode?: string };
+    expect(created.ibgeCode).toBe("3550308");
+
+    cep.lookupCep.mockResolvedValueOnce({ status: "not_found" });
+
+    const response = await patchAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses/${created.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postalCode: "99999-999" }),
+      }),
+      { params: Promise.resolve({ id: userId, addressId: created.id }) },
+    );
+
+    expect(response.status).toBe(200);
+    const updated = (await response.json()) as { ibgeCode?: string };
+    // O ibgeCode antigo (São Paulo) NÃO sobrevive a uma troca de CEP que o ViaCEP
+    // não resolve — seria de outra cidade.
+    expect(updated.ibgeCode).toBeUndefined();
+  });
+
+  it("PATCH sem postalCode não consulta o ViaCEP e preserva o ibgeCode", async () => {
+    const create = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload()),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+    const created = (await create.json()) as { id: string; ibgeCode?: string };
+    expect(created.ibgeCode).toBe("3550308");
+
+    cep.lookupCep.mockClear();
+
+    const response = await patchAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses/${created.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "Apelido novo" }),
+      }),
+      { params: Promise.resolve({ id: userId, addressId: created.id }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(cep.lookupCep).not.toHaveBeenCalled();
+    const updated = (await response.json()) as { ibgeCode?: string };
+    expect(updated.ibgeCode).toBe("3550308");
+  });
+
   // ── PATCH default mutua-exclusivo ──────────────────────────────────────
 
   it("PATCH isDefault=true desmarca os outros defaults do mesmo usuário", async () => {
