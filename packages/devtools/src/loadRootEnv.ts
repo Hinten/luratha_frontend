@@ -22,14 +22,16 @@ function findRepoRoot(): string | null {
 /**
  * Loads the single repo-root `.env` into `process.env`.
  *
- * The storefront lives in `apps/store/`, but its env file is kept at the
- * monorepo root so there is one file to manage and one `.gitignore` rule.
- * Next.js, Vitest and Playwright all run with cwd = `apps/store/` and would
- * otherwise never see it — every config in this app calls this loader first.
+ * Each app lives in `apps/<app>/`, but its env file is kept at the monorepo
+ * root so there is one file to manage and one `.gitignore` rule. Next.js,
+ * Vitest and Playwright all run with cwd = `apps/<app>/` and would otherwise
+ * never see it — every config in each app calls this loader first.
  *
  * Behaviour:
  * - Never overrides a var already in `process.env` (CI secrets / Firebase App
- *   Hosting env win over the local file).
+ *   Hosting env win over the local file) — but treats an empty string as unset,
+ *   since CI/shells often export a placeholder `KEY=` before populating the
+ *   secret.
  * - No-ops cleanly when the file is absent (CI, App Hosting — env comes from
  *   the platform).
  * - Rewrites a relative `FIREBASE_SERVICE_ACCOUNT_PATH` to an absolute path

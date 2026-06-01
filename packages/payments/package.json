@@ -10,7 +10,8 @@
   },
   "scripts": {
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@luratha/core": "workspace:*",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^20.19.41",
     "eslint": "^9.39.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }
