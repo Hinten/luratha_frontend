@@ -25,6 +25,21 @@ describe("PixDisplay", () => {
     expect(await screen.findByRole("button", { name: "Copiado!" })).toBeInTheDocument();
   });
 
+  it("shows a manual-copy hint when the clipboard write is denied", async () => {
+    const writeText = vi.fn().mockRejectedValue(
+      new DOMException("denied", "NotAllowedError"),
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    render(<PixDisplay qrCode={QR_CODE} qrCodeBase64="BASE64DATA" />);
+    fireEvent.click(screen.getByRole("button", { name: "Copiar código" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /Não foi possível copiar automaticamente/,
+    );
+  });
+
   it("shows a 'Válido até' line when expiresAt is provided", () => {
     render(
       <PixDisplay

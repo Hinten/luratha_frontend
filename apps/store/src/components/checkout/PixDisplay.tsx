@@ -22,11 +22,29 @@ export interface PixDisplayProps {
  */
 export default function PixDisplay({ qrCode, qrCodeBase64, expiresAt }: PixDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   async function copyPixCode() {
-    await navigator.clipboard.writeText(qrCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2500);
+    if (!navigator.clipboard) {
+      // Clipboard API ausente (contexto não-seguro / navegador antigo):
+      // orientamos a cópia manual — o copia-cola já está visível na tela.
+      setCopyFailed(true);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(qrCode);
+      setCopied(true);
+      setCopyFailed(false);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      if (err instanceof DOMException) {
+        // Permissão de clipboard negada — caímos no mesmo aviso de cópia
+        // manual. Qualquer outro erro (bug real) continua subindo.
+        setCopyFailed(true);
+        return;
+      }
+      throw err;
+    }
   }
 
   return (
@@ -47,6 +65,12 @@ export default function PixDisplay({ qrCode, qrCodeBase64, expiresAt }: PixDispl
         <button type="button" className={styles.copyBtn} onClick={copyPixCode}>
           {copied ? "Copiado!" : "Copiar código"}
         </button>
+        {copyFailed && (
+          <p className={styles.copyError} role="alert">
+            Não foi possível copiar automaticamente. Selecione o código acima e
+            copie manualmente.
+          </p>
+        )}
       </div>
       {expiresAt && (
         <p className={styles.muted}>

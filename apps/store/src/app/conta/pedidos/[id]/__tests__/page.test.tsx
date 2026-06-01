@@ -39,7 +39,8 @@ function baseOrder(overrides: Partial<Order> = {}): Order {
     shippingTotal: 20,
     grandTotal: 220,
     currency: "BRL",
-    // 2 segmentos só (não 4) → a página não tenta buscar o endereço.
+    // Path de 4 segmentos (userProfiles/{uid}/addresses/{addressId}) → a página
+    // busca o endereço; o stubFetch devolve 404, exercitando "endereço removido".
     shippingAddressPath: "userProfiles/uid-1/addresses/addr-1",
     createdAt: now,
     updatedAt: now,
