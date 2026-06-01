@@ -620,6 +620,7 @@ export default function CheckoutFlow() {
             <section className={styles.reviewSection}>
               <PaymentResult
                 result={state.paymentResult}
+                orderId={state.orderId}
                 onTryAgain={() => {
                   dispatch({ type: "TRY_AGAIN" });
                   startTransition(() => {

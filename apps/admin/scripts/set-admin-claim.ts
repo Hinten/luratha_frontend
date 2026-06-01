@@ -12,7 +12,7 @@
  * O usuário precisa sair e entrar de novo para a claim passar a valer.
  */
 import { FirebaseAuthError } from "firebase-admin/auth";
-import { loadRootEnv } from "../loadRootEnv";
+import { loadRootEnv } from "@luratha/devtools/loadRootEnv";
 
 async function main(): Promise<void> {
   const email = process.argv[2];

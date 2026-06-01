@@ -8,10 +8,13 @@ import {
   resolveWebhookSecret,
 } from "./client";
 import {
+  type BoletoArtifact,
   type CreatePaymentInput,
+  type OrderArtifacts,
   type PaymentIntentResult,
   type PaymentStatus,
   PaymentProviderError,
+  type PixArtifact,
   type ProviderPaymentSummary,
 } from "../types";
 
@@ -50,32 +53,39 @@ export function isMercadoPagoSandbox(accessToken: string): boolean {
 }
 
 /**
- * Em sandbox, o MP rejeita pagamentos cujo `payer.email` não termina em
- * `@testuser.com` (`invalid_email_for_sandbox`) e ainda exige que o email
- * resolva pra um **test user comprador** distinto do vendedor — sem isso, o
- * pagamento volta com `invalid_users_involved` (HTTP 402). A UI sempre exibe
- * o email real do usuário; apenas o payload enviado pro MP muda.
+ * Normaliza o `payer` para o ambiente de **sandbox** do MercadoPago. Duas coisas:
  *
- * Resolução do email enviado:
- *   1. `MERCADOPAGO_SANDBOX_PAYER_EMAIL` setado → usa esse valor exato. É o
- *      caminho confiável: deve ser o email do test user comprador criado no
- *      painel MP (formato `test_user_<NN>@testuser.com`).
- *   2. Caso contrário, fallback: troca o domínio pra `@testuser.com`
- *      preservando o local-part. Resolve o `invalid_email_for_sandbox` mas
- *      pode bater em `invalid_users_involved` se o email gerado coincidir
- *      com o vendedor.
+ * 1. **Email** — o MP rejeita pagamentos cujo `payer.email` não termina em
+ *    `@testuser.com` (`invalid_email_for_sandbox`) e ainda exige que o email
+ *    resolva pra um **test user comprador** distinto do vendedor (senão volta
+ *    `invalid_users_involved`, HTTP 402). Resolução:
+ *      a. `MERCADOPAGO_SANDBOX_PAYER_EMAIL` setado → usa esse valor exato
+ *         (deve ser o test user comprador do painel, `test_user_<NN>@testuser.com`).
+ *      b. Caso contrário, fallback: troca o domínio pra `@testuser.com`.
  *
- * Idempotente: se o email do input já bate com o destino, retorna inalterado.
+ * 2. **first_name** — no sandbox o MP usa o `payer.first_name` como gatilho do
+ *    **status simulado** da order (doc Checkout API Orders / test / pix): `"APRO"`
+ *    devolve `action_required` com o QR/boleto na hora (e aprova em seguida); o
+ *    nome real do cliente cai em análise antifraude (`in_process`, sem artefato).
+ *    Lido de `MERCADOPAGO_SANDBOX_PAYER_FIRST_NAME` (default `"APRO"`) — dá pra
+ *    setar outro keyword (ex.: forçar `in_process`) sem mexer no código.
+ *
+ * A UI sempre exibe os dados reais do usuário; só o payload enviado ao MP muda.
+ * Idempotente: se email e first_name já batem com o alvo, retorna inalterado.
  */
-export function withSandboxEmail(input: CreatePaymentInput): CreatePaymentInput {
-  const configured = process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL?.trim();
-  const target = configured && configured.length > 0
-    ? configured
+export function withSandboxPayer(input: CreatePaymentInput): CreatePaymentInput {
+  const configuredEmail = process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL?.trim();
+  const email = configuredEmail && configuredEmail.length > 0
+    ? configuredEmail
     : `${input.payer.email.split("@")[0] || "test"}@testuser.com`;
-  if (input.payer.email === target) return input;
+
+  const configuredName = process.env.MERCADOPAGO_SANDBOX_PAYER_FIRST_NAME?.trim();
+  const firstName = configuredName && configuredName.length > 0 ? configuredName : "APRO";
+
+  if (input.payer.email === email && input.payer.firstName === firstName) return input;
   return {
     ...input,
-    payer: { ...input.payer, email: target },
+    payer: { ...input.payer, email, firstName },
   };
 }
 
@@ -158,8 +168,11 @@ function logAndRewrapMpError(
   });
 
   if (name === "AbortError") {
+    // Aborto por timeout — pode ser da fase de headers ou de body read
+    // (mpFetch re-arma o mesmo signal entre as duas fases), por isso a
+    // mensagem não fixa um valor de segundos.
     return new PaymentProviderError(
-      "Tempo limite ao contatar o MercadoPago (10s).",
+      "Tempo limite ao contatar o MercadoPago.",
       "provider_unavailable",
       err,
     );
@@ -318,49 +331,73 @@ function buildOrderBody(input: CreatePaymentInput): OrderRequestBody {
  * Wrapper sobre `fetch` que aplica timeout + parse de body + propaga 4xx/5xx
  * como objetos plain pra serem tratados por `logAndRewrapMpError`.
  *
- * Nota: o timer cobre apenas a chegada de headers — body read não é
- * cancelado se o backend stallar entre header e body. Pra MP em sandbox
- * o overhead de body é mínimo e usar `AbortSignal.timeout` (que cobre
- * tudo) provoca timeout em boleto que normalmente passa de 10s. Veja a
- * issue de followup pra cobertura completa.
+ * Timeout por fase, sobre um único `AbortController`:
+ *  - `timeoutMs` cobre a chegada de headers (circuit-breaker rápido);
+ *  - depois o timer é re-armado com `bodyTimeoutMs` para a leitura do body.
+ *    Abortar o signal após o `fetch()` resolver cancela `response.text()` —
+ *    o body stream está atado ao signal — fechando o gap em que um body
+ *    stalled bypassava o budget. Mantemos budgets separados porque o boleto
+ *    sandbox stalla no body bem além dos 10s de headers (ver issue #162).
+ *
+ * Ambas as fases abortam via `ctrl.abort()`, que produz um `AbortError`
+ * (tratado por `logAndRewrapMpError`) — não o `TimeoutError` de
+ * `AbortSignal.timeout`.
  */
 async function mpFetch(
   path: string,
-  init: { method: "GET" | "POST"; headers: HeadersInit; body?: string; timeoutMs: number },
+  init: {
+    method: "GET" | "POST";
+    headers: HeadersInit;
+    body?: string;
+    timeoutMs: number;
+    bodyTimeoutMs: number;
+  },
 ): Promise<unknown> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
+  let timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
+  const startedAt = performance.now();
 
-  let response: Response;
+  let parsed: unknown = null;
   try {
-    response = await fetch(`${MP_API_BASE_URL}${path}`, {
+    const response = await fetch(`${MP_API_BASE_URL}${path}`, {
       method: init.method,
       headers: init.headers,
       body: init.body,
       signal: ctrl.signal,
     });
+    const headerMs = Math.round(performance.now() - startedAt);
+
+    // Re-arma o mesmo signal para a fase de body read.
+    clearTimeout(timer);
+    timer = setTimeout(() => ctrl.abort(), init.bodyTimeoutMs);
+
+    const bodyStartedAt = performance.now();
+    const text = await response.text();
+    logger.info("[mercadoPago] mpFetch timing", {
+      path,
+      headerMs,
+      bodyMs: Math.round(performance.now() - bodyStartedAt),
+    });
+
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        // Resposta sem JSON (raro — geralmente 5xx ou HTML de erro de proxy).
+        parsed = { message: text.slice(0, 240) };
+      }
+    }
+
+    if (!response.ok) {
+      const errObj =
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? { ...(parsed as Record<string, unknown>), status: response.status }
+          : { message: text || response.statusText, status: response.status };
+      throw errObj;
+    }
   } finally {
     clearTimeout(timer);
-  }
-
-  const text = await response.text();
-  let parsed: unknown = null;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      // Resposta sem JSON (raro — geralmente 5xx ou HTML de erro de proxy).
-      parsed = { message: text.slice(0, 240) };
-    }
-  }
-
-  if (!response.ok) {
-    const errObj =
-      parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? { ...(parsed as Record<string, unknown>), status: response.status }
-        : { message: text || response.statusText, status: response.status };
-    throw errObj;
   }
 
   return parsed;
@@ -408,18 +445,100 @@ interface OrderResponse {
   transactions?: { payments?: OrderPaymentResponse[] };
 }
 
+/**
+ * Extrai o QR Code do PIX de uma order. Retorna `null` quando o MP ainda não
+ * gerou o artefato (geração assíncrona) — o chamador trata como "pendente".
+ */
+function extractPixPayment(response: OrderResponse): PixArtifact | null {
+  const payment = response.transactions?.payments?.[0];
+  const pm = payment?.payment_method;
+  if (!pm?.qr_code || !pm?.qr_code_base64) return null;
+  const expiresAt = normalizeExpiration(payment?.date_of_expiration);
+  return {
+    qrCode: pm.qr_code,
+    qrCodeBase64: pm.qr_code_base64,
+    ticketUrl: pm.ticket_url ?? undefined,
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+}
+
+/**
+ * Extrai os dados do boleto de uma order. Retorna `null` quando o MP ainda não
+ * gerou o `ticket_url`.
+ */
+function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
+  const payment = response.transactions?.payments?.[0];
+  const pm = payment?.payment_method;
+  if (!pm?.ticket_url) return null;
+  const expiresAt = normalizeExpiration(payment?.date_of_expiration);
+  return {
+    url: pm.ticket_url,
+    barcode: pm.barcode_content ?? undefined,
+    digitableLine: pm.digitable_line ?? undefined,
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+}
+
+/**
+ * Quando uma order vem 2xx mas SEM o artefato (QR/boleto), distingue dois casos:
+ *
+ *  - **falha real** — o pagamento já veio recusado/cancelado (`mapMpStatus` →
+ *    `failed`). Não adianta pollar; lança `PaymentProviderError` com o detalhe do
+ *    MP. Retorna `"failed"`.
+ *  - **ausência assíncrona** — status ainda pendente; o artefato deve aparecer ao
+ *    reler a order. Retorna `"pending"` e o chamador marca `*Pending`.
+ *
+ * Em AMBOS os casos loga o **body cru** (a `OrderResponse` inteira) — o HTTP é
+ * 2xx, então o erro não passa por `logAndRewrapMpError`; sem este log não há como
+ * diagnosticar o que o MP devolveu.
+ */
+function classifyMissingArtifact(
+  operation: "create" | "get",
+  context: { orderId: string; paymentMethod: string },
+  response: OrderResponse,
+): "pending" | "failed" {
+  const status = mapMpStatus(response.status);
+  logger.warn("[mercadoPago] order sem artefato de pagamento", {
+    operation,
+    ...context,
+    status: response.status,
+    statusDetail: response.status_detail,
+    rawResponse: response,
+  });
+
+  if (status === "failed") {
+    const detail = response.status_detail ?? response.status ?? "sem detalhe";
+    throw new PaymentProviderError(
+      `MercadoPago recusou o pagamento (${detail}).`,
+      "provider_unavailable",
+    );
+  }
+  return "pending";
+}
+
+/**
+ * `true` quando a order está em **análise antifraude** no MP: `status` cru
+ * `processing` ou `status_detail` `in_process`. Olhamos o status CRU (não o
+ * `mapMpStatus`, que colapsa tudo em `pending`) porque o client precisa
+ * distinguir "em análise" de "gerando o artefato".
+ */
+function isUnderReview(response: OrderResponse): boolean {
+  return response.status === "processing" || response.status_detail === "in_process";
+}
+
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
-  const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
   const sandbox = isMercadoPagoSandbox(accessToken);
-  const effectiveInput = sandbox ? withSandboxEmail(input) : input;
-  if (sandbox && effectiveInput.payer.email !== input.payer.email) {
-    // Log informativo pra confirmar nos logs do servidor qual email
-    // efetivamente foi enviado ao MP. Útil pra diferenciar uso de
-    // MERCADOPAGO_SANDBOX_PAYER_EMAIL (test user explícito) do fallback
-    // de domínio (que ainda pode bater em `invalid_users_involved`).
-    logger.info("[mercadoPago] sandbox detected — payer.email rewritten", {
+  const effectiveInput = sandbox ? withSandboxPayer(input) : input;
+  if (sandbox) {
+    // Log informativo pra confirmar nos logs qual email/first_name foram enviados
+    // ao MP no sandbox. O first_name dispara o status simulado (ex.: "APRO" →
+    // action_required com QR); útil pra diferenciar uso explícito das env vars
+    // (MERCADOPAGO_SANDBOX_PAYER_*) do default.
+    logger.info("[mercadoPago] sandbox detected — payer rewritten", {
       payerEmail: effectiveInput.payer.email,
+      payerFirstName: effectiveInput.payer.firstName,
     });
   }
   const body = buildOrderBody(effectiveInput);
@@ -431,6 +550,7 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
       headers: buildHeaders(accessToken, input.orderId),
       body: JSON.stringify(body),
       timeoutMs,
+      bodyTimeoutMs,
     })) as OrderResponse;
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
@@ -448,54 +568,83 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
     );
   }
 
-  const firstPayment = response.transactions?.payments?.[0];
   const result: PaymentIntentResult = {
     paymentId: response.id,
     paymentMethod: input.paymentMethod,
     status: mapMpStatus(response.status),
     statusDetail: response.status_detail ?? undefined,
   };
+  if (isUnderReview(response)) result.underReview = true;
 
+  // PIX/boleto: o artefato (QR / dados do boleto) pode vir de forma assíncrona —
+  // o MP responde 2xx sem ele e o gera logo depois. Em vez de falhar, marcamos
+  // `*Pending` e o client faz polling via `getOrderArtifacts`. Só uma falha real
+  // (pagamento recusado) interrompe — ver `classifyMissingArtifact`.
   if (input.paymentMethod === "pix") {
-    const pm = firstPayment?.payment_method;
-    if (!pm?.qr_code || !pm?.qr_code_base64) {
-      throw new PaymentProviderError(
-        "MercadoPago não retornou o QR Code do PIX.",
-        "provider_unavailable",
-      );
+    const pix = extractPixPayment(response);
+    if (pix) {
+      result.pix = pix;
+    } else {
+      classifyMissingArtifact("create", { orderId: input.orderId, paymentMethod: "pix" }, response);
+      result.pixPending = true;
     }
-    const expiresAt = normalizeExpiration(firstPayment?.date_of_expiration);
-    result.pix = {
-      qrCode: pm.qr_code,
-      qrCodeBase64: pm.qr_code_base64,
-      ticketUrl: pm.ticket_url ?? undefined,
-      ...(expiresAt ? { expiresAt } : {}),
-    };
   }
 
   if (input.paymentMethod === "boleto") {
-    const pm = firstPayment?.payment_method;
-    if (!pm?.ticket_url) {
-      throw new PaymentProviderError(
-        "MercadoPago não retornou a URL do boleto.",
-        "provider_unavailable",
+    const boleto = extractBoletoPayment(response);
+    if (boleto) {
+      result.boleto = boleto;
+    } else {
+      classifyMissingArtifact(
+        "create",
+        { orderId: input.orderId, paymentMethod: "boleto" },
+        response,
       );
+      result.boletoPending = true;
     }
-    const expiresAt = normalizeExpiration(firstPayment?.date_of_expiration);
-    result.boleto = {
-      url: pm.ticket_url,
-      barcode: pm.barcode_content ?? undefined,
-      digitableLine: pm.digitable_line ?? undefined,
-      ...(expiresAt ? { expiresAt } : {}),
-    };
   }
 
   return result;
 }
 
+/**
+ * Relê uma order no MercadoPago e extrai o artefato de pagamento (QR do PIX /
+ * dados do boleto) quando já disponível. Usado pelo polling client-side enquanto
+ * `pixPending`/`boletoPending`. Não persiste nada — só consulta.
+ */
+export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifacts> {
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
+
+  let response: OrderResponse;
+  try {
+    response = (await mpFetch(`/v1/orders/${encodeURIComponent(mpOrderId)}`, {
+      method: "GET",
+      headers: buildHeaders(accessToken),
+      timeoutMs,
+      bodyTimeoutMs,
+    })) as OrderResponse;
+  } catch (err) {
+    if (err instanceof PaymentProviderError) throw err;
+    throw logAndRewrapMpError("get", { mpOrderId }, err);
+  }
+
+  const status = mapMpStatus(response.status);
+  const pix = extractPixPayment(response) ?? undefined;
+  const boleto = extractBoletoPayment(response) ?? undefined;
+
+  // Sem artefato ainda: loga o body cru e, se o pagamento já falhou, lança (o
+  // client para de pollar). Caso pendente, devolve só o status — o client segue
+  // tentando.
+  if (!pix && !boleto && status === "failed") {
+    classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: response.transactions?.payments?.[0]?.payment_method?.type ?? "unknown" }, response);
+  }
+
+  return { status, pix, boleto, underReview: isUnderReview(response) || undefined };
+}
+
 /** Consulta uma order no MercadoPago — usado pelo webhook para confirmar. */
 export async function getOrder(orderId: string): Promise<ProviderPaymentSummary> {
-  const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
 
   let response: OrderResponse;
   try {
@@ -503,6 +652,7 @@ export async function getOrder(orderId: string): Promise<ProviderPaymentSummary>
       method: "GET",
       headers: buildHeaders(accessToken),
       timeoutMs,
+      bodyTimeoutMs,
     })) as OrderResponse;
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;

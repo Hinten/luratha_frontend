@@ -55,7 +55,7 @@ vi.mock("@luratha/auth/requireUser", () => {
 // The orderService uses createOrder/getOrder internally — by mocking the
 // adapter subpath we let the real createPaymentIntent run against Firestore.
 // importActual preserves the rest of the module's exports (isMercadoPagoSandbox,
-// withSandboxEmail, describeMercadoPagoError) so any future caller that lands
+// withSandboxPayer, describeMercadoPagoError) so any future caller that lands
 // in the import graph doesn't get `undefined` silently.
 const mp = vi.hoisted(() => ({
   createOrder: vi.fn(),

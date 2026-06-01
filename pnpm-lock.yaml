@@ -57,6 +57,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@luratha/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@tailwindcss/postcss':
         specifier: ^4.3.0
         version: 4.3.0
@@ -121,6 +124,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@luratha/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@types/node':
         specifier: ^20.19.41
         version: 20.19.41
@@ -200,6 +206,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@luratha/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
@@ -308,6 +317,18 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
 
+  packages/devtools:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.41
+        version: 20.19.41
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.7.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/firestore:
     dependencies:
       '@luratha/core':
@@ -369,6 +390,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@20.19.41)(jsdom@29.1.1)(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.2))
 
   packages/repositories:
     dependencies:

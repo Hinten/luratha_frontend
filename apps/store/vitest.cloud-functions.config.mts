@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
-import { loadRootEnv } from "./loadRootEnv";
+import { loadRootEnv } from "@luratha/devtools/loadRootEnv";
 
 export default defineConfig(() => {
   loadRootEnv();

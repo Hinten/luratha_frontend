@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { loadRootEnv } from "./loadRootEnv";
+import { loadRootEnv } from "@luratha/devtools/loadRootEnv";
 
 /**
  * Playwright E2E config — runs against the dedicated test Firebase project
