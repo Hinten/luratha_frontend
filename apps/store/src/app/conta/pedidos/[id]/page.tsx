@@ -15,6 +15,13 @@ function isExpired(expiresAt: string | undefined): boolean {
   return !Number.isNaN(time) && time < Date.now();
 }
 
+/** Rótulos amigáveis para o método de pagamento exibido ao cliente. */
+const PAYMENT_METHOD_LABELS: Record<Order["paymentMethod"], string> = {
+  pix: "PIX",
+  credit_card: "Cartão de crédito",
+  boleto: "Boleto bancário",
+};
+
 export default function PedidoDetailPage({
   params,
 }: {
@@ -100,6 +107,9 @@ export default function PedidoDetailPage({
         <div>
           <h2 className={styles.heading}>Pedido #{order.orderNumber}</h2>
           <p className={styles.muted}>Realizado em {created}</p>
+          <p className={styles.muted}>
+            Forma de pagamento: {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+          </p>
         </div>
         <OrderStatusBadge status={order.status} />
       </header>

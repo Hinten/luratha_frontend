@@ -133,4 +133,10 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
     const link = await screen.findByRole("link", { name: "Abrir boleto em PDF" });
     expect(link.getAttribute("href")).toBe("https://mp.example.com/boleto.pdf");
   });
+
+  it("exibe o método de pagamento escolhido no pedido", async () => {
+    stubFetch(baseOrder({ paymentMethod: "credit_card", paymentStatus: "paid", status: "paid" }));
+    await renderPage();
+    expect(await screen.findByText("Forma de pagamento: Cartão de crédito")).toBeInTheDocument();
+  });
 });
