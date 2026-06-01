@@ -6,6 +6,7 @@ import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminAddressConverter } from "@luratha/firestore/adminAddressConverter";
 import { firestoreCollections, validateAddress } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin } from "@luratha/auth/requireUser";
+import { lookupCep } from "@/src/lib/cep/viaCep";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,14 @@ export async function POST(
       );
     }
     throw error;
+  }
+
+  // Enriquecimento best-effort do `ibgeCode` via ViaCEP (necessário p/ NF-e).
+  // NÃO bloqueia: a base do ViaCEP não é exaustiva (CEP válido pode não constar)
+  // e o formato já foi validado. CEP inexistente/serviço fora → grava sem ibgeCode.
+  const cepLookup = await lookupCep(address.postalCode);
+  if (cepLookup.status === "found" && /^\d{7}$/.test(cepLookup.ibge)) {
+    address = { ...address, ibgeCode: cepLookup.ibge };
   }
 
   const collectionRef = adminDb

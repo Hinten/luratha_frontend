@@ -26,6 +26,10 @@ function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string |
     : null;
 }
 
+// Consulta de CEP mockada — a suíte cloud não deve depender do ViaCEP real.
+const cep = vi.hoisted(() => ({ lookupCep: vi.fn() }));
+vi.mock("@/src/lib/cep/viaCep", () => ({ lookupCep: cep.lookupCep }));
+
 vi.mock("@luratha/auth/requireUser", () => {
   class AuthError extends Error {
     constructor(public readonly status: 401 | 403, message: string) {
@@ -108,6 +112,14 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
 
   beforeAll(() => {
     mockAuthedUser({ uid: userId });
+    cep.lookupCep.mockResolvedValue({
+      status: "found",
+      logradouro: "Av. Paulista",
+      bairro: "Bela Vista",
+      localidade: "São Paulo",
+      uf: "SP",
+      ibge: "3550308",
+    });
   });
 
   afterAll(async () => {
@@ -134,12 +146,32 @@ describeCloud("/api/users/[id]/addresses (Cloud Firebase)", () => {
       number: string;
       complement?: string;
       isDefault: boolean;
+      ibgeCode?: string;
     };
 
     expect(created.id).toBeTruthy();
     expect(created.number).toBe("1578");
     expect(created.complement).toBe("Apto 42");
     expect(created.isDefault).toBe(false);
+    // Enriquecido pelo lookup de CEP (mockado como found).
+    expect(created.ibgeCode).toBe("3550308");
+  });
+
+  it("POST cria endereço mesmo quando o CEP não está no ViaCEP (aviso, não bloqueia)", async () => {
+    cep.lookupCep.mockResolvedValueOnce({ status: "not_found" });
+
+    const response = await createAddress(
+      new Request(`http://localhost/api/users/${userId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAddressPayload({ postalCode: "99999-999" })),
+      }),
+      { params: Promise.resolve({ id: userId }) },
+    );
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { ibgeCode?: string };
+    expect(created.ibgeCode).toBeUndefined();
   });
 
   it("POST retorna 400 quando number está ausente", async () => {
