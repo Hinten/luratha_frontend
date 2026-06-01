@@ -105,7 +105,7 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
     expect(screen.queryByRole("img", { name: "QR Code para pagamento PIX" })).toBeNull();
   });
 
-  it("mostra mensagem de expirado quando o QR do PIX venceu", async () => {
+  it("mostra aviso de expirado quando o QR do PIX venceu", async () => {
     stubFetch(
       baseOrder({
         paymentStatus: "pending",
@@ -117,8 +117,31 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
       }),
     );
     await renderPage();
-    expect(await screen.findByText(/QR Code do PIX expirou/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/código PIX deste pedido expirou ou não está mais disponível/),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "QR Code para pagamento PIX" })).toBeNull();
+  });
+
+  it("mostra aviso quando o pedido PIX está pendente mas sem QR salvo", async () => {
+    // paymentPix ausente (pedido antigo ou limpo pelo webhook) — ainda assim o
+    // cliente vê uma orientação clara, não uma tela em branco.
+    stubFetch(baseOrder({ paymentStatus: "pending", paymentPix: undefined }));
+    await renderPage();
+    expect(
+      await screen.findByText(/código PIX deste pedido expirou ou não está mais disponível/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "QR Code para pagamento PIX" })).toBeNull();
+  });
+
+  it("mostra aviso quando o PIX falhou/expirou (paymentStatus failed, sem QR)", async () => {
+    // PIX expirado → webhook marca failed e limpa paymentPix; status segue
+    // pending_payment, então a seção de pagamento ainda renderiza o aviso.
+    stubFetch(baseOrder({ paymentStatus: "failed", paymentPix: undefined }));
+    await renderPage();
+    expect(
+      await screen.findByText(/código PIX deste pedido expirou ou não está mais disponível/),
+    ).toBeInTheDocument();
   });
 
   it("reexibe o botão do boleto quando o pedido aguarda pagamento", async () => {
@@ -134,9 +157,19 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
     expect(link.getAttribute("href")).toBe("https://mp.example.com/boleto.pdf");
   });
 
-  it("exibe o método de pagamento escolhido no pedido", async () => {
+  it("mostra aviso quando o boleto não está mais disponível", async () => {
+    stubFetch(
+      baseOrder({ paymentMethod: "boleto", paymentStatus: "failed", paymentBoleto: undefined }),
+    );
+    await renderPage();
+    expect(
+      await screen.findByText(/boleto deste pedido expirou ou não está mais disponível/),
+    ).toBeInTheDocument();
+  });
+
+  it("exibe o badge da forma de pagamento escolhida no pedido", async () => {
     stubFetch(baseOrder({ paymentMethod: "credit_card", paymentStatus: "paid", status: "paid" }));
     await renderPage();
-    expect(await screen.findByText("Forma de pagamento: Cartão de crédito")).toBeInTheDocument();
+    expect(await screen.findByText("Cartão de crédito")).toBeInTheDocument();
   });
 });
