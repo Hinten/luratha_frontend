@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/contexts/AuthContext";
 import type { Order, UserProfile } from "@luratha/schemas";
+import { getOrderDisplayStatus } from "@/src/lib/orders/orderDisplayStatus";
 import styles from "./page.module.css";
 
 export default function ContaDashboardPage() {
@@ -91,7 +92,7 @@ export default function ContaDashboardPage() {
         ) : lastOrder ? (
           <Link href={`/conta/pedidos/${lastOrder.id}`} className={styles.lastOrderCard}>
             <span className={styles.orderNumber}>#{lastOrder.orderNumber}</span>
-            <span className={styles.orderStatus}>{statusLabel(lastOrder.status)}</span>
+            <span className={styles.orderStatus}>{getOrderDisplayStatus(lastOrder).label}</span>
             <span className={styles.orderTotal}>
               {formatBRL(lastOrder.grandTotal)}
             </span>
@@ -108,15 +109,3 @@ function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function statusLabel(status: Order["status"]): string {
-  const map: Record<Order["status"], string> = {
-    pending_payment: "Aguardando pagamento",
-    paid: "Pago",
-    processing: "Em preparação",
-    shipped: "Enviado",
-    delivered: "Entregue",
-    cancelled: "Cancelado",
-    refunded: "Reembolsado",
-  };
-  return map[status];
-}

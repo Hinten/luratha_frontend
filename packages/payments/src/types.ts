@@ -11,17 +11,25 @@
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 /**
- * Status de pagamento normalizado — espelha `Order.paymentStatus`.
- *
- * O adapter MercadoPago (API de Orders) só produz quatro estados terminais:
- * `paid`, `refunded`, `failed`, `pending`. Estados intermediários do antigo
- * Payments API (`authorized` pra cartão pré-autorizado, `in_dispute` /
- * `charged_back` pra fluxo de contestação) não têm equivalente direto na
- * Orders API e foram removidos do union. Se a Orders API expor essas
- * semânticas no futuro, basta adicionar o mapeamento em `mapMpStatus`
- * (`mercadoPago/index.ts`) e reintroduzir o membro aqui.
+ * Status de pagamento normalizado — espelha `Order.paymentStatus`. A API de
+ * Orders do MP usa `status` (grosso) + `status_detail` (substatus); `mapMpStatus`
+ * (`mercadoPago/index.ts`) combina os dois (e o método) pra produzir estes
+ * valores. `unknown` é o fail-safe pra qualquer status que não reconheçamos —
+ * persistido (não silenciado) pra forçar revisão manual, nunca despachar um
+ * pedido sob status incerto.
  */
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "awaiting_pix"
+  | "awaiting_boleto"
+  | "authorized"
+  | "paid"
+  | "partially_refunded"
+  | "in_dispute"
+  | "failed"
+  | "refunded"
+  | "charged_back"
+  | "unknown";
 
 /** Dados do pagador exigidos pelo MercadoPago. */
 export interface PaymentPayer {

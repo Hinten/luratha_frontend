@@ -14,37 +14,14 @@ on:
   pull_request:
     branches: [master, production]
     paths:
-      # Specs MP-relacionados + helpers que eles usam
-      - 'apps/store/e2e/checkout*.spec.ts'
-      - 'apps/store/e2e/_*.ts'
-      # UI do checkout exercitada nos specs
-      - 'apps/store/src/app/checkout/**'
-      - 'apps/store/src/components/checkout/**'
-      # API routes batidas ponta-a-ponta. NOTA: `users/[id]/addresses/**` em
-      # minimatch trata `[id]` como classe de caracteres `{i,d}` — nunca casa
-      # com a pasta literal `[id]` da rota dinâmica Next.js. Ampliamos pra
-      # `users/**` (essa pasta só hospeda a rota dinâmica de users).
-      - 'apps/store/src/app/api/checkout/**'
-      - 'apps/store/src/app/api/orders/**'
-      - 'apps/store/src/app/api/users/**'
-      - 'apps/store/src/app/api/auth/session/**'
-      # Server-side MP (adapter, service) + frete (provider real exercitado).
-      # `packages/payments` é a nova localização do adapter MP/orderService
-      # consumido pelo `POST /api/checkout/payment-intent` da storefront.
-      - 'packages/payments/**'
-      - 'apps/store/src/lib/shipping/**'
-      # Contextos React envolvidos no flow
-      - 'apps/store/src/contexts/CartContext.tsx'
-      - 'apps/store/src/contexts/AuthContext.tsx'
-      # Schemas + converters Firestore de Order/Address
-      - 'packages/schemas/src/orders.ts'
-      - 'packages/schemas/src/addresses.ts'
-      - 'packages/firestore/src/admin*Order*'
-      - 'packages/firestore/src/admin*Address*'
-      - 'packages/firestore/src/client*Order*'
-      - 'packages/firestore/src/client*Address*'
-      # Config Playwright e o próprio workflow
-      - 'apps/store/playwright.config.ts'
+      # Coarse-grain (issue #161). O filtro folha anterior não seguia o grafo de
+      # dependências: código consumido transitivamente pelo checkout — ex.
+      # `@luratha/firestore/firebaseAdmin` ou `@luratha/core/logging/logger` —
+      # não disparava o workflow, deixando regressões passarem sem cobertura.
+      # Cobrimos a storefront inteira + todos os packages. Custo aceito: alguns
+      # runs falso-positivos (ex.: mudança só em produtos roda o E2E-MP à toa).
+      - 'apps/store/**'
+      - 'packages/**'
       - '.github/workflows/e2e-checkout-mp.yml'
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto

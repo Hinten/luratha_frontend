@@ -4,6 +4,7 @@ import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
 import { createOrder, getOrder } from "./mercadoPago";
+import { buildStatusPatch } from "./orderStatusPatch";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
@@ -34,20 +35,6 @@ function orderRef(orderId: string) {
     .collection(firestoreCollections.orders)
     .doc(orderId)
     .withConverter(adminOrderConverter);
-}
-
-/** Calcula o patch de uma Order a partir de um status de pagamento. */
-function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<Order> {
-  const patch: Partial<Order> = { paymentStatus: status };
-  if (status === "paid") {
-    patch.status = "paid";
-    patch.paidAt = approvedAt ?? new Date().toISOString();
-  } else if (status === "refunded") {
-    patch.status = "refunded";
-  }
-  // "pending" / "failed" mantêm Order.status em "pending_payment" — o cliente
-  // ainda pode tentar pagar de novo (ou aguardar PIX/boleto compensar).
-  return patch;
 }
 
 function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {

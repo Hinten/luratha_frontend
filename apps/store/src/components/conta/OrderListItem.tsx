@@ -26,7 +26,7 @@ export default function OrderListItem({ order }: { order: Order }) {
       </div>
       <div className={styles.col}>
         <span className={styles.label}>Status</span>
-        <OrderStatusBadge status={order.status} />
+        <OrderStatusBadge order={order} />
       </div>
       <div className={styles.col}>
         <span className={styles.label}>Total</span>

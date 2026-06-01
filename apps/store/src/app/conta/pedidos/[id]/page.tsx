@@ -84,7 +84,7 @@ export default function PedidoDetailPage({
           <h2 className={styles.heading}>Pedido #{order.orderNumber}</h2>
           <p className={styles.muted}>Realizado em {created}</p>
         </div>
-        <OrderStatusBadge status={order.status} />
+        <OrderStatusBadge order={order} />
       </header>
 
       <section className={styles.section}>

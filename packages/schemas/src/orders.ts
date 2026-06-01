@@ -64,18 +64,30 @@ export const orderSchema = z
       "delivered",
       "cancelled",
       "refunded",
+      // Fail-safe: o pagamento veio com um status do MP que não reconhecemos.
+      // Trava o fulfillment (não aparece "pago") até revisão manual. Ver `mapMpStatus`.
+      "unknown",
     ]),
     paymentMethod: z.enum(["pix", "credit_card", "boleto"]),
     paymentStatus: z.enum([
       "pending",
+      // Aguardando o pagador pagar, por método — MP `action_required`
+      // (`waiting_transfer` p/ PIX, `waiting_payment` p/ boleto).
+      "awaiting_pix",
+      "awaiting_boleto",
+      // Cartão autorizado, ainda não capturado — MP `action_required/waiting_capture`.
       "authorized",
       "paid",
-      // Pagamento aprovado e depois contestado pelo comprador — MP `in_mediation`.
+      // Pago com reembolso parcial — MP `processed/partially_refunded`.
+      "partially_refunded",
+      // Pagamento aprovado e depois contestado pelo comprador — MP `charged_back/in_process`.
       "in_dispute",
       "failed",
       "refunded",
-      // Estorno involuntário emitido pelo banco/emissor após disputa — MP `charged_back`.
+      // Estorno involuntário emitido pelo banco/emissor após disputa — MP `charged_back/{settled,reimbursed}`.
       "charged_back",
+      // Fail-safe: status do MP não reconhecido. Persistido (não silenciado) pra forçar revisão.
+      "unknown",
     ]),
     /**
      * Id do pagamento no provider (MercadoPago). Preenchido por

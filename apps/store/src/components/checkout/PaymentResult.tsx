@@ -7,12 +7,16 @@ export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 export type PaymentStatus =
   | "pending"
+  | "awaiting_pix"
+  | "awaiting_boleto"
   | "authorized"
   | "paid"
+  | "partially_refunded"
   | "in_dispute"
   | "failed"
   | "refunded"
-  | "charged_back";
+  | "charged_back"
+  | "unknown";
 
 export interface PixArtifact {
   qrCode: string;
@@ -86,10 +90,14 @@ const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | 
   paid: { label: "Pagamento aprovado", tone: "ok" },
   authorized: { label: "Pagamento autorizado", tone: "ok" },
   pending: { label: "Aguardando pagamento", tone: "warn" },
+  awaiting_pix: { label: "Aguardando pagamento", tone: "warn" },
+  awaiting_boleto: { label: "Aguardando pagamento", tone: "warn" },
+  partially_refunded: { label: "Reembolsado parcialmente", tone: "warn" },
   failed: { label: "Pagamento recusado", tone: "error" },
   in_dispute: { label: "Em contestação", tone: "warn" },
   refunded: { label: "Reembolsado", tone: "warn" },
   charged_back: { label: "Estornado", tone: "error" },
+  unknown: { label: "Em análise pela equipe técnica", tone: "warn" },
 };
 
 export default function PaymentResult({ result, orderId, onTryAgain }: PaymentResultProps) {

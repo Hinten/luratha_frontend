@@ -458,10 +458,14 @@ export default function CheckoutFlow() {
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result, snapshot });
 
       // Limpa o cart quando o pagamento foi efetivamente iniciado: PIX/Boleto
-      // gerados, ou cartão em análise antifraude (CONT/in_process → "pending").
-      // Cartão **recusado** (status="failed") preserva o cart porque o user
-      // pode clicar "Tentar outro método" pra retentar com método diferente.
-      if (result.status === "pending") {
+      // gerados (`awaiting_pix`/`awaiting_boleto`) ou cartão em análise antifraude
+      // (`in_process` → "pending"). Cartão **recusado** (status="failed") preserva
+      // o cart porque o user pode clicar "Tentar outro método" e retentar.
+      if (
+        result.status === "pending" ||
+        result.status === "awaiting_pix" ||
+        result.status === "awaiting_boleto"
+      ) {
         void clearCart();
       }
     } catch (err) {
