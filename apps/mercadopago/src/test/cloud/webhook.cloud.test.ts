@@ -16,7 +16,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, expect, it, vi } from "vitest";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
-import { firestoreCollections, validateOrder } from "@luratha/schemas";
+import { firestoreCollections, type Order } from "@luratha/schemas";
+import { buildPendingOrderFixture } from "@luratha/schemas/__fixtures__/orders";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 
 // ── MercadoPago adapter mock (no real provider calls) ──────────────────────
@@ -48,42 +49,6 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   );
 }
 
-function buildOrderPayload(userId: string, overrides: Record<string, unknown> = {}) {
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  return {
-    id,
-    userId,
-    orderNumber: `ORD-${Date.now().toString().slice(-10)}`,
-    status: "pending_payment" as const,
-    paymentMethod: "pix" as const,
-    paymentStatus: "pending" as const,
-    items: [
-      {
-        id: "item-1",
-        productId: "prod-pay-001",
-        itemSku: "SKU-PAY-AB",
-        name: "Vestido Linho",
-        photoId: "img-pay-001",
-        quantity: 1,
-        unitPrice: 200,
-        lineTotal: 200,
-        currency: "BRL" as const,
-      },
-    ],
-    itemCount: 1,
-    subtotal: 200,
-    discountTotal: 0,
-    shippingTotal: 20,
-    grandTotal: 220,
-    currency: "BRL" as const,
-    shippingAddressPath: `userProfiles/${userId}/addresses/addr-pay-001`,
-    createdAt: now,
-    updatedAt: now,
-    ...overrides,
-  };
-}
-
 describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const userId = `${prefix}-user`;
@@ -101,8 +66,8 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     await cleanupDocuments(seededDocs);
   });
 
-  async function seedOrder(overrides: Record<string, unknown> = {}): Promise<string> {
-    const order = validateOrder(buildOrderPayload(userId, overrides));
+  async function seedOrder(overrides: Partial<Order> = {}): Promise<string> {
+    const order = buildPendingOrderFixture({ id: randomUUID(), userId, ...overrides });
     const ref = adminDb
       .collection(firestoreCollections.orders)
       .doc(order.id)

@@ -19,6 +19,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
 import { firestoreCollections } from "@luratha/schemas";
+import { buildPendingOrderFixture } from "@luratha/schemas/__fixtures__/orders";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ── Auth mock ──────────────────────────────────────────────────────────────
@@ -82,36 +83,6 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   );
 }
 
-function buildOrderPayload(userId: string) {
-  return {
-    userId,
-    orderNumber: `ORD-${Date.now().toString().slice(-10)}`,
-    status: "pending_payment" as const,
-    paymentMethod: "pix" as const,
-    paymentStatus: "pending" as const,
-    items: [
-      {
-        id: "item-1",
-        productId: "prod-pay-001",
-        itemSku: "SKU-PAY-AB",
-        name: "Vestido Linho",
-        photoId: "img-pay-001",
-        quantity: 1,
-        unitPrice: 200,
-        lineTotal: 200,
-        currency: "BRL" as const,
-      },
-    ],
-    itemCount: 1,
-    subtotal: 200,
-    discountTotal: 0,
-    shippingTotal: 20,
-    grandTotal: 220,
-    currency: "BRL" as const,
-    shippingAddressPath: `userProfiles/${userId}/addresses/addr-pay-001`,
-  };
-}
-
 describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const userId = `${prefix}-user`;
@@ -131,7 +102,7 @@ describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
       new Request("http://localhost/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOrderPayload(userId)),
+        body: JSON.stringify(buildPendingOrderFixture({ userId })),
       }),
     );
     expect(res.status).toBe(201);
