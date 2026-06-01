@@ -158,8 +158,11 @@ function logAndRewrapMpError(
   });
 
   if (name === "AbortError") {
+    // Aborto por timeout — pode ser da fase de headers ou de body read
+    // (mpFetch re-arma o mesmo signal entre as duas fases), por isso a
+    // mensagem não fixa um valor de segundos.
     return new PaymentProviderError(
-      "Tempo limite ao contatar o MercadoPago (10s).",
+      "Tempo limite ao contatar o MercadoPago.",
       "provider_unavailable",
       err,
     );
@@ -318,49 +321,73 @@ function buildOrderBody(input: CreatePaymentInput): OrderRequestBody {
  * Wrapper sobre `fetch` que aplica timeout + parse de body + propaga 4xx/5xx
  * como objetos plain pra serem tratados por `logAndRewrapMpError`.
  *
- * Nota: o timer cobre apenas a chegada de headers — body read não é
- * cancelado se o backend stallar entre header e body. Pra MP em sandbox
- * o overhead de body é mínimo e usar `AbortSignal.timeout` (que cobre
- * tudo) provoca timeout em boleto que normalmente passa de 10s. Veja a
- * issue de followup pra cobertura completa.
+ * Timeout por fase, sobre um único `AbortController`:
+ *  - `timeoutMs` cobre a chegada de headers (circuit-breaker rápido);
+ *  - depois o timer é re-armado com `bodyTimeoutMs` para a leitura do body.
+ *    Abortar o signal após o `fetch()` resolver cancela `response.text()` —
+ *    o body stream está atado ao signal — fechando o gap em que um body
+ *    stalled bypassava o budget. Mantemos budgets separados porque o boleto
+ *    sandbox stalla no body bem além dos 10s de headers (ver issue #162).
+ *
+ * Ambas as fases abortam via `ctrl.abort()`, que produz um `AbortError`
+ * (tratado por `logAndRewrapMpError`) — não o `TimeoutError` de
+ * `AbortSignal.timeout`.
  */
 async function mpFetch(
   path: string,
-  init: { method: "GET" | "POST"; headers: HeadersInit; body?: string; timeoutMs: number },
+  init: {
+    method: "GET" | "POST";
+    headers: HeadersInit;
+    body?: string;
+    timeoutMs: number;
+    bodyTimeoutMs: number;
+  },
 ): Promise<unknown> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
+  let timer = setTimeout(() => ctrl.abort(), init.timeoutMs);
+  const startedAt = performance.now();
 
-  let response: Response;
+  let parsed: unknown = null;
   try {
-    response = await fetch(`${MP_API_BASE_URL}${path}`, {
+    const response = await fetch(`${MP_API_BASE_URL}${path}`, {
       method: init.method,
       headers: init.headers,
       body: init.body,
       signal: ctrl.signal,
     });
+    const headerMs = Math.round(performance.now() - startedAt);
+
+    // Re-arma o mesmo signal para a fase de body read.
+    clearTimeout(timer);
+    timer = setTimeout(() => ctrl.abort(), init.bodyTimeoutMs);
+
+    const bodyStartedAt = performance.now();
+    const text = await response.text();
+    logger.info("[mercadoPago] mpFetch timing", {
+      path,
+      headerMs,
+      bodyMs: Math.round(performance.now() - bodyStartedAt),
+    });
+
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        // Resposta sem JSON (raro — geralmente 5xx ou HTML de erro de proxy).
+        parsed = { message: text.slice(0, 240) };
+      }
+    }
+
+    if (!response.ok) {
+      const errObj =
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? { ...(parsed as Record<string, unknown>), status: response.status }
+          : { message: text || response.statusText, status: response.status };
+      throw errObj;
+    }
   } finally {
     clearTimeout(timer);
-  }
-
-  const text = await response.text();
-  let parsed: unknown = null;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      // Resposta sem JSON (raro — geralmente 5xx ou HTML de erro de proxy).
-      parsed = { message: text.slice(0, 240) };
-    }
-  }
-
-  if (!response.ok) {
-    const errObj =
-      parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? { ...(parsed as Record<string, unknown>), status: response.status }
-        : { message: text || response.statusText, status: response.status };
-    throw errObj;
   }
 
   return parsed;
@@ -395,7 +422,7 @@ interface OrderResponse {
 
 /** Cria a order no MercadoPago e devolve o necessário para o client concluir. */
 export async function createOrder(input: CreatePaymentInput): Promise<PaymentIntentResult> {
-  const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
   const sandbox = isMercadoPagoSandbox(accessToken);
   const effectiveInput = sandbox ? withSandboxEmail(input) : input;
   if (sandbox && effectiveInput.payer.email !== input.payer.email) {
@@ -416,6 +443,7 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
       headers: buildHeaders(accessToken, input.orderId),
       body: JSON.stringify(body),
       timeoutMs,
+      bodyTimeoutMs,
     })) as OrderResponse;
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
@@ -476,7 +504,7 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
 
 /** Consulta uma order no MercadoPago — usado pelo webhook para confirmar. */
 export async function getOrder(orderId: string): Promise<ProviderPaymentSummary> {
-  const { accessToken, timeoutMs } = resolveMercadoPagoConfig();
+  const { accessToken, timeoutMs, bodyTimeoutMs } = resolveMercadoPagoConfig();
 
   let response: OrderResponse;
   try {
@@ -484,6 +512,7 @@ export async function getOrder(orderId: string): Promise<ProviderPaymentSummary>
       method: "GET",
       headers: buildHeaders(accessToken),
       timeoutMs,
+      bodyTimeoutMs,
     })) as OrderResponse;
   } catch (err) {
     if (err instanceof PaymentProviderError) throw err;
