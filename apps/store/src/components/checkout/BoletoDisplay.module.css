@@ -47,3 +47,36 @@
   word-break: break-all;
   color: var(--color-neutral-dark);
 }
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  cursor: pointer;
+  align-self: center;
+  transition: background-color 200ms ease;
+}
+
+.copyBtn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.copyIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.copyError {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-warning);
+}

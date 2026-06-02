@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import CopyIcon from "@/src/components/icons/CopyIcon";
+import CheckIcon from "@/src/components/icons/CheckIcon";
 import styles from "./PixDisplay.module.css";
 
 export interface PixDisplayProps {
@@ -63,6 +65,11 @@ export default function PixDisplay({ qrCode, qrCodeBase64, expiresAt }: PixDispl
       <div className={styles.copyBlock}>
         <code className={styles.copyText}>{qrCode}</code>
         <button type="button" className={styles.copyBtn} onClick={copyPixCode}>
+          {copied ? (
+            <CheckIcon className={styles.copyIcon} />
+          ) : (
+            <CopyIcon className={styles.copyIcon} />
+          )}
           {copied ? "Copiado!" : "Copiar código"}
         </button>
         {copyFailed && (
