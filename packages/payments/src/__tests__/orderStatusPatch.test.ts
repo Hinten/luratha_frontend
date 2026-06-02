@@ -28,6 +28,28 @@ describe("buildStatusPatch", () => {
     expect(buildStatusPatch("unknown")).toEqual({ paymentStatus: "unknown", status: "unknown" });
   });
 
+  it("unknown rebaixa o fulfillment enquanto o pedido é despachável", () => {
+    // Cenário do user: pedido `paid` (ainda não enviado) recebe um status novo
+    // que na verdade é cancelamento → tem que travar o despacho.
+    for (const current of ["pending_payment", "paid", "processing", "unknown"] as const) {
+      expect(buildStatusPatch("unknown", undefined, current)).toEqual({
+        paymentStatus: "unknown",
+        status: "unknown",
+      });
+    }
+  });
+
+  it("unknown NÃO sobrescreve Order.status de pedido já enviado/entregue/terminal", () => {
+    // Pós-despacho, rebaixar pra `unknown` só apagaria o histórico sem prevenir
+    // nada. Só o paymentStatus muda; o `getOrderDisplayStatus` ainda mostra
+    // "Em análise" via override de pagamento.
+    for (const current of ["shipped", "delivered", "cancelled", "refunded"] as const) {
+      expect(buildStatusPatch("unknown", undefined, current)).toEqual({
+        paymentStatus: "unknown",
+      });
+    }
+  });
+
   it("estados que não mudam o fulfillment → só paymentStatus (Order.status preservado pelo merge)", () => {
     const noStatusChange = [
       "pending",

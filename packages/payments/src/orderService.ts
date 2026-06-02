@@ -112,7 +112,7 @@ export async function createPaymentIntent(
 
   const updatedOrder = await persistOrderPatch(order.id, {
     paymentIntentId: result.paymentId,
-    ...buildStatusPatch(result.status),
+    ...buildStatusPatch(result.status, undefined, order.status),
   });
 
   return { result, order: updatedOrder };
@@ -152,7 +152,7 @@ export async function applyOrderWebhook(
 
     const patch: Partial<Order> = {
       paymentIntentId: summary.paymentId,
-      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt) : {}),
+      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt, order.status) : {}),
     };
     tx.set(ref, mergeOrderPatch(order, patch));
 

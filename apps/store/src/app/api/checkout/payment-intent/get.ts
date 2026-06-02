@@ -5,6 +5,13 @@ import { getOrderArtifacts, loadOrder, PaymentProviderError } from "@luratha/pay
 export const runtime = "nodejs";
 
 /**
+ * Status em que o pagamento não vai avançar e não há artefato a gerar — o
+ * polling do client deve parar. Devolvemos o status sem reler o MP (round-trip
+ * desnecessário). `paid` é tratado à parte (client redireciona pro sucesso).
+ */
+const TERMINAL_FAILURE_STATUSES = new Set(["failed", "refunded", "charged_back", "unknown"]);
+
+/**
  * GET /api/checkout/payment-intent?orderId=...
  *
  * Polling do artefato de pagamento (QR Code do PIX / dados do boleto) quando o
@@ -47,6 +54,13 @@ export async function GET(request: Request) {
   // redirecionar para a página de sucesso.
   if (order.paymentStatus === "paid") {
     return NextResponse.json({ status: "paid" }, { status: 200 });
+  }
+
+  // Falha terminal (recusa/estorno/`unknown` fail-safe): o artefato não virá e o
+  // pedido não avança sozinho — devolve o status pro client parar o polling e
+  // mostrar a mensagem certa, sem gastar um GET no MercadoPago.
+  if (TERMINAL_FAILURE_STATUSES.has(order.paymentStatus)) {
+    return NextResponse.json({ status: order.paymentStatus }, { status: 200 });
   }
 
   if (!order.paymentIntentId) {

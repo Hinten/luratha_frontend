@@ -86,6 +86,18 @@ function HourglassIcon({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Status em que o pagamento não vai avançar sozinho e não há artefato a gerar —
+ * o polling deve parar (em vez de tentar por 2min) e a UI mostra a mensagem
+ * certa. `paid` é tratado à parte (redireciona pra página de sucesso).
+ */
+const TERMINAL_FAILURE_STATUSES = new Set<PaymentStatus>([
+  "failed",
+  "refunded",
+  "charged_back",
+  "unknown",
+]);
+
 const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | "error" }> = {
   paid: { label: "Pagamento aprovado", tone: "ok" },
   authorized: { label: "Pagamento autorizado", tone: "ok" },
@@ -105,13 +117,21 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
   // Artefato obtido via polling quando a criação veio sem ele.
   const [polled, setPolled] = useState<OrderArtifactsResponse | null>(null);
   const [pollTimedOut, setPollTimedOut] = useState(false);
-  const copy = STATUS_COPY[result.status];
+  // Status mais recente: o que o polling descobriu (ex.: o pagamento foi recusado
+  // ou caiu em `unknown` enquanto gerávamos o artefato) ou, antes do 1º poll, o
+  // da criação. Direciona o badge e a detecção de falha terminal.
+  const effectiveStatus = polled?.status ?? result.status;
+  const copy = STATUS_COPY[effectiveStatus];
 
   const pix = result.pix ?? polled?.pix;
   const boleto = result.boleto ?? polled?.boleto;
   const awaitingPix = result.paymentMethod === "pix" && Boolean(result.pixPending) && !pix;
   const awaitingBoleto =
     result.paymentMethod === "boleto" && Boolean(result.boletoPending) && !boleto;
+  // O artefato não vai chegar: o pagamento atingiu um status terminal de falha
+  // (recusa, estorno, ou `unknown` fail-safe) durante a janela de geração.
+  const artifactFailed =
+    (awaitingPix || awaitingBoleto) && TERMINAL_FAILURE_STATUSES.has(effectiveStatus);
   // Em análise antifraude? Usa o dado mais recente do polling; antes do 1º poll,
   // o valor da criação. Decide entre "pagamento em análise" e "gerando…".
   const underReview = polled ? Boolean(polled.underReview) : Boolean(result.underReview);
@@ -160,6 +180,9 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
         // pra UI refletir "em análise" enquanto polla.
         setPolled(data);
         if (data.pix || data.boleto) return; // artefato chegou — para de pollar
+        // Falha terminal (recusa/estorno/`unknown`): o artefato não virá e o
+        // pedido não avança sozinho — para de pollar e mostra a mensagem certa.
+        if (data.status && TERMINAL_FAILURE_STATUSES.has(data.status)) return;
         scheduleNext();
       } catch (err) {
         // Rede instável (TypeError) ou request abortado — segue tentando até o
@@ -188,6 +211,18 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
 
   const artifactLabel = result.paymentMethod === "pix" ? "o QR Code do PIX" : "o boleto";
 
+  // Fase do bloco de artefato pendente: falha terminal > timeout do polling >
+  // ainda carregando. (`paid` redireciona antes de chegar aqui.)
+  const artifactPhase: "failed" | "timeout" | "loading" = artifactFailed
+    ? "failed"
+    : pollTimedOut
+      ? "timeout"
+      : "loading";
+  const failedArtifactMessage =
+    effectiveStatus === "unknown"
+      ? "Estamos confirmando seu pagamento. Nossa equipe vai concluir a verificação e avisamos por e-mail — acompanhe também na sua conta."
+      : "Não foi possível concluir o pagamento. Você não foi cobrado — atualize a página e tente novamente ou escolha outra forma de pagamento.";
+
   return (
     <section className={styles.section} aria-live="polite">
       <header className={styles.header}>
@@ -198,40 +233,47 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
             técnico; mantemos no tipo pra logs/debug mas não exibimos. */}
       </header>
 
-      {/* Artefato (QR/boleto) ainda não disponível. Duas situações distintas:
-          (1) em análise antifraude (`underReview`) → "pagamento em análise";
-          (2) geração assíncrona normal → "gerando…". Ambas pollam por baixo. No
-          timeout (2min), a mensagem difere: análise não se resolve com refresh. */}
-      {(awaitingPix || awaitingBoleto) &&
-        (pollTimedOut ? (
-          <div className={styles.failedBlock} role="alert">
-            <p className={styles.failedDescription}>
-              {underReview
-                ? "Seu pagamento segue em análise. Avisaremos por e-mail quando concluir — você pode acompanhar na sua conta."
-                : `Não conseguimos gerar ${artifactLabel} a tempo. Atualize a página e tente novamente — você não foi cobrado.`}
-            </p>
-          </div>
-        ) : (
-          <div className={styles.pendingBlock}>
-            <HourglassIcon className={styles.pendingIcon} />
-            {underReview ? (
-              <>
-                <h3 className={styles.pendingTitle}>Pagamento em análise</h3>
-                <p className={styles.pendingDescription}>
-                  Estamos confirmando a segurança do seu pagamento. Assim que for
-                  aprovado, {artifactLabel} aparece aqui. Mantenha esta página aberta.
-                </p>
-              </>
-            ) : (
-              <>
-                <h3 className={styles.pendingTitle}>Gerando {artifactLabel}…</h3>
-                <p className={styles.pendingDescription}>
-                  Isso costuma levar alguns segundos. Mantenha esta página aberta.
-                </p>
-              </>
-            )}
-          </div>
-        ))}
+      {/* Artefato (QR/boleto) ainda não disponível. Três fases:
+          (1) `failed` — o pagamento atingiu status terminal de falha durante a
+              geração (recusa/estorno/`unknown`); não adianta esperar;
+          (2) `timeout` — esgotou os 2min de polling sem o artefato (a mensagem
+              difere se está em análise antifraude — refresh não resolve);
+          (3) `loading` — ainda gerando ("em análise" se `underReview`). */}
+      {(awaitingPix || awaitingBoleto) && artifactPhase === "failed" && (
+        <div className={styles.failedBlock} role="alert">
+          <p className={styles.failedDescription}>{failedArtifactMessage}</p>
+        </div>
+      )}
+      {(awaitingPix || awaitingBoleto) && artifactPhase === "timeout" && (
+        <div className={styles.failedBlock} role="alert">
+          <p className={styles.failedDescription}>
+            {underReview
+              ? "Seu pagamento segue em análise. Avisaremos por e-mail quando concluir — você pode acompanhar na sua conta."
+              : `Não conseguimos gerar ${artifactLabel} a tempo. Atualize a página e tente novamente — você não foi cobrado.`}
+          </p>
+        </div>
+      )}
+      {(awaitingPix || awaitingBoleto) && artifactPhase === "loading" && (
+        <div className={styles.pendingBlock}>
+          <HourglassIcon className={styles.pendingIcon} />
+          {underReview ? (
+            <>
+              <h3 className={styles.pendingTitle}>Pagamento em análise</h3>
+              <p className={styles.pendingDescription}>
+                Estamos confirmando a segurança do seu pagamento. Assim que for
+                aprovado, {artifactLabel} aparece aqui. Mantenha esta página aberta.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className={styles.pendingTitle}>Gerando {artifactLabel}…</h3>
+              <p className={styles.pendingDescription}>
+                Isso costuma levar alguns segundos. Mantenha esta página aberta.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {result.paymentMethod === "pix" && pix && (
         <div className={styles.pixBlock}>

@@ -457,15 +457,13 @@ export default function CheckoutFlow() {
       // (race entre o WebSocket do Firestore e o DELETE HTTP).
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result, snapshot });
 
-      // Limpa o cart quando o pagamento foi efetivamente iniciado: PIX/Boleto
-      // gerados (`awaiting_pix`/`awaiting_boleto`) ou cartão em análise antifraude
-      // (`in_process` → "pending"). Cartão **recusado** (status="failed") preserva
-      // o cart porque o user pode clicar "Tentar outro método" e retentar.
-      if (
-        result.status === "pending" ||
-        result.status === "awaiting_pix" ||
-        result.status === "awaiting_boleto"
-      ) {
+      // Pagamento efetivamente iniciado (PIX/boleto gerados, cartão em análise
+      // antifraude, autorizado/pré-capturado, ou até o `unknown` fail-safe) →
+      // limpa o cart: o pedido já existe e o pagamento está em curso. Só o
+      // cartão **recusado** (`failed`) preserva o cart, pra o user clicar
+      // "Tentar outro método" e retentar. (`paid` já retornou acima com
+      // clearCart + redirect.)
+      if (result.status !== "failed") {
         void clearCart();
       }
     } catch (err) {
