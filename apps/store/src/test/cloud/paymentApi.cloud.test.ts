@@ -118,7 +118,11 @@ describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
       paymentId: "mp-cloud-001",
       paymentMethod: "pix",
       status: "pending",
-      pix: { qrCode: "qr-code-data", qrCodeBase64: "qr-code-base64" },
+      pix: {
+        qrCode: "qr-code-data",
+        qrCodeBase64: "qr-code-base64",
+        expiresAt: "2026-05-29T12:00:00.000Z",
+      },
     });
 
     const res = await paymentIntentPOST(
@@ -146,5 +150,9 @@ describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
       .withConverter(adminOrderConverter)
       .get();
     expect(persisted.data()?.paymentIntentId).toBe("mp-cloud-001");
+    // Os artefatos do PIX são persistidos para reexibição em /conta/pedidos/{id}.
+    expect(persisted.data()?.paymentPix?.qrCode).toBe("qr-code-data");
+    expect(persisted.data()?.paymentPix?.qrCodeBase64).toBe("qr-code-base64");
+    expect(persisted.data()?.paymentPix?.expiresAt).toBe("2026-05-29T12:00:00.000Z");
   });
 });

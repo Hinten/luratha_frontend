@@ -119,6 +119,8 @@ export interface BoletoArtifact {
   url: string;
   barcode?: string;
   digitableLine?: string;
+  /** ISO-8601 do vencimento do boleto, quando o provider informa. */
+  expiresAt?: string;
 }
 
 /**

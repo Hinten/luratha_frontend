@@ -408,6 +408,8 @@ interface OrderPaymentResponse {
   amount?: string;
   status?: string;
   status_detail?: string;
+  /** Vencimento do PIX/boleto (payment-level). Ex.: "2026-05-29T12:00:00.000-03:00". */
+  date_of_expiration?: string;
   payment_method?: {
     id?: string;
     type?: string;
@@ -417,6 +419,19 @@ interface OrderPaymentResponse {
     barcode_content?: string;
     digitable_line?: string;
   };
+}
+
+/**
+ * Normaliza o vencimento devolvido pelo MercadoPago para ISO-8601 em UTC
+ * (`Z`), garantindo que case com `timestampSchema` ao persistir na Order.
+ * Retorna `undefined` quando ausente ou não parseável — o campo é opcional e
+ * a UI degrada para "sem countdown". `new Date(...)` não lança, então não há
+ * try/catch aqui (apenas a guarda de `NaN`).
+ */
+function normalizeExpiration(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 interface OrderResponse {
@@ -435,12 +450,15 @@ interface OrderResponse {
  * gerou o artefato (geração assíncrona) — o chamador trata como "pendente".
  */
 function extractPixPayment(response: OrderResponse): PixArtifact | null {
-  const pm = response.transactions?.payments?.[0]?.payment_method;
+  const payment = response.transactions?.payments?.[0];
+  const pm = payment?.payment_method;
   if (!pm?.qr_code || !pm?.qr_code_base64) return null;
+  const expiresAt = normalizeExpiration(payment?.date_of_expiration);
   return {
     qrCode: pm.qr_code,
     qrCodeBase64: pm.qr_code_base64,
     ticketUrl: pm.ticket_url ?? undefined,
+    ...(expiresAt ? { expiresAt } : {}),
   };
 }
 
@@ -449,12 +467,15 @@ function extractPixPayment(response: OrderResponse): PixArtifact | null {
  * gerou o `ticket_url`.
  */
 function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
-  const pm = response.transactions?.payments?.[0]?.payment_method;
+  const payment = response.transactions?.payments?.[0];
+  const pm = payment?.payment_method;
   if (!pm?.ticket_url) return null;
+  const expiresAt = normalizeExpiration(payment?.date_of_expiration);
   return {
     url: pm.ticket_url,
     barcode: pm.barcode_content ?? undefined,
     digitableLine: pm.digitable_line ?? undefined,
+    ...(expiresAt ? { expiresAt } : {}),
   };
 }
 
