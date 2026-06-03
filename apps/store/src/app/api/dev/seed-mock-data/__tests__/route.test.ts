@@ -14,10 +14,15 @@ const {
   mockReadFile,
   mockUploadProductImage,
 } = vi.hoisted(() => {
-  // Categories
+  // Categories (with converter)
   const mockCategorySet = vi.fn().mockResolvedValue(undefined);
   const mockCategoryGet = vi.fn().mockResolvedValue({ exists: false });
-  const mockCategoryDocRef = { get: mockCategoryGet, set: mockCategorySet };
+  const mockCategoryDocRef = {
+    get: mockCategoryGet,
+    set: mockCategorySet,
+    withConverter: vi.fn(),
+  };
+  mockCategoryDocRef.withConverter.mockReturnValue(mockCategoryDocRef);
   const mockCategoryDoc = vi.fn().mockReturnValue(mockCategoryDocRef);
 
   // Products (with converter)
@@ -31,10 +36,15 @@ const {
   mockProductDocRef.withConverter.mockReturnValue(mockProductDocRef);
   const mockProductDoc = vi.fn().mockReturnValue(mockProductDocRef);
 
-  // Stock
+  // Stock (with converter)
   const mockStockSet = vi.fn().mockResolvedValue(undefined);
   const mockStockGet = vi.fn().mockResolvedValue({ exists: false });
-  const mockStockDocRef = { get: mockStockGet, set: mockStockSet };
+  const mockStockDocRef = {
+    get: mockStockGet,
+    set: mockStockSet,
+    withConverter: vi.fn(),
+  };
+  mockStockDocRef.withConverter.mockReturnValue(mockStockDocRef);
   const mockStockDoc = vi.fn().mockReturnValue(mockStockDocRef);
 
   // collection() dispatcher
