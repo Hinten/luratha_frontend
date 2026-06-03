@@ -10,6 +10,8 @@ import {
 } from "@luratha/repositories/homeSeedMockData";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
+import { adminCategoryConverter } from "@luratha/firestore/adminCategoryConverter";
+import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
 import { uploadProductImage } from "@luratha/repositories/productImageUpload";
 
 const SEED_IMAGES_DIRECTORY = path.join(process.cwd(), "test-images");
@@ -101,7 +103,10 @@ export async function DELETE() {
 async function seedCategories(categories: Category[]): Promise<number> {
   const results = await Promise.all(
     categories.map(async (category) => {
-      const categoryRef = adminDb.collection(firestoreCollections.categories).doc(category.id);
+      const categoryRef = adminDb
+        .collection(firestoreCollections.categories)
+        .doc(category.id)
+        .withConverter(adminCategoryConverter);
       const existingCategory = await categoryRef.get();
       if (existingCategory.exists) {
         return false;
@@ -137,7 +142,10 @@ async function seedProducts(products: Product[]): Promise<string[]> {
 async function seedStock(stocks: Stock[]): Promise<number> {
   const results = await Promise.all(
     stocks.map(async (stock) => {
-      const stockRef = adminDb.collection(firestoreCollections.stock).doc(stock.productId);
+      const stockRef = adminDb
+        .collection(firestoreCollections.stock)
+        .doc(stock.productId)
+        .withConverter(adminStockConverter);
       const existing = await stockRef.get();
       if (existing.exists) {
         return false;
