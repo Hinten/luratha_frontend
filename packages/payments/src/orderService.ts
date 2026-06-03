@@ -36,6 +36,7 @@ export type PaymentIntentMethodInput =
   | { paymentMethod: "boleto"; payer: PaymentPayer; payerAddress: PaymentPayerAddress };
 
 function orderRef(orderId: string) {
+  // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: the ref is converter-bound (adminOrderConverter), so writes stay schema-validated. Full migration of this subsystem is tracked separately.
   return adminDb
     .collection(firestoreCollections.orders)
     .doc(orderId)

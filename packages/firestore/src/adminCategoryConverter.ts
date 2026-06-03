@@ -12,11 +12,11 @@
  */
 
 import { type FirestoreDataConverter } from "firebase-admin/firestore";
-import { type Category, validateCategory } from "@luratha/schemas";
+import { type Category, validateCategory, parseStrictWrite } from "@luratha/schemas";
 
 export const adminCategoryConverter: FirestoreDataConverter<Category> = {
   toFirestore(category: Category) {
-    return { ...category };
+    return { ...parseStrictWrite(validateCategory, category) };
   },
 
   fromFirestore(snapshot) {

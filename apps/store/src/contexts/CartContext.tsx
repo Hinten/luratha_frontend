@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+// eslint-disable-next-line no-restricted-imports -- realtime cart listener: repositories expose one-shot reads only, not onSnapshot. The refs built below are converter-bound (clientCartConverter / clientCartItemConverter), so these reads stay schema-validated.
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import { ZodError } from "zod";
 import { useAuth } from "@/src/contexts/AuthContext";

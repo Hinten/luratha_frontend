@@ -1,6 +1,11 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import { catchSyntaxRestrictions } from "../../eslint.config.base.mjs";
+import {
+  firestoreSyntaxRestrictions,
+  firestoreImportRule,
+} from "../../eslint.firestore-guards.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -16,21 +21,22 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // Forbid silent catches (see CLAUDE.md) AND raw, unvalidated Firestore
+      // refs — feature code must go through a repository + DataConverter.
       "no-empty": ["error", { allowEmptyCatch: false }],
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "CatchClause[param=null]",
-          message:
-            "Bare `catch { }` is forbidden. Bind the error and narrow it via `instanceof <SpecificError>`; rethrow anything that does not match.",
-        },
-        {
-          selector:
-            "CatchClause:not(:has(BinaryExpression[operator='instanceof'])):not(:has(ThrowStatement))",
-          message:
-            "Generic catch is forbidden. The catch body must contain either an `instanceof <SpecificError>` check OR a `throw` (rethrow).",
-        },
+        ...catchSyntaxRestrictions,
+        ...firestoreSyntaxRestrictions,
       ],
+      "no-restricted-imports": firestoreImportRule,
+    },
+  },
+  {
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-syntax": ["error", ...catchSyntaxRestrictions],
     },
   },
 ]);
