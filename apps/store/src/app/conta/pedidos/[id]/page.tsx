@@ -4,7 +4,17 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Address, Order } from "@luratha/schemas";
 import OrderStatusBadge from "@/src/components/conta/OrderStatusBadge";
+import PaymentMethodBadge from "@/src/components/conta/PaymentMethodBadge";
+import PixDisplay from "@/src/components/checkout/PixDisplay";
+import BoletoDisplay from "@/src/components/checkout/BoletoDisplay";
 import styles from "./page.module.css";
+
+/** Vencimento no passado? `false` quando a data é ausente/inválida. */
+function isExpired(expiresAt: string | undefined): boolean {
+  if (!expiresAt) return false;
+  const time = new Date(expiresAt).getTime();
+  return !Number.isNaN(time) && time < Date.now();
+}
 
 export default function PedidoDetailPage({
   params,
@@ -73,6 +83,14 @@ export default function PedidoDetailPage({
     year: "numeric",
   });
 
+  // O pedido ainda precisa de pagamento enquanto `status === "pending_payment"`
+  // (vale para `paymentStatus` pending E failed — um PIX/boleto expirado vira
+  // `failed` no webhook, mas a Order continua aguardando pagamento). Reexibimos
+  // o artefato persistido quando ainda válido; caso contrário, um aviso claro.
+  const awaitingPayment = order.status === "pending_payment";
+  const pixValid = !!order.paymentPix && !isExpired(order.paymentPix.expiresAt);
+  const boletoValid = !!order.paymentBoleto && !isExpired(order.paymentBoleto.expiresAt);
+
   return (
     <div className={styles.container}>
       <Link href="/conta/pedidos" className={styles.backLink}>
@@ -84,8 +102,53 @@ export default function PedidoDetailPage({
           <h2 className={styles.heading}>Pedido #{order.orderNumber}</h2>
           <p className={styles.muted}>Realizado em {created}</p>
         </div>
-        <OrderStatusBadge order={order} />
+        <div className={styles.headerBadges}>
+          <OrderStatusBadge order={order} />
+          <PaymentMethodBadge method={order.paymentMethod} />
+        </div>
       </header>
+
+      {awaitingPayment && order.paymentMethod === "pix" && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading}>Pagamento via PIX</h3>
+          {pixValid && order.paymentPix ? (
+            <PixDisplay
+              qrCode={order.paymentPix.qrCode}
+              qrCodeBase64={order.paymentPix.qrCodeBase64}
+              expiresAt={order.paymentPix.expiresAt}
+            />
+          ) : (
+            <p className={styles.paymentNote}>
+              O código PIX deste pedido expirou ou não está mais disponível. Faça um
+              novo pedido para gerar um novo pagamento.{" "}
+              <Link href="/" className={styles.paymentNoteLink}>
+                Ir para a loja
+              </Link>
+            </p>
+          )}
+        </section>
+      )}
+
+      {awaitingPayment && order.paymentMethod === "boleto" && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading}>Pagamento via boleto</h3>
+          {boletoValid && order.paymentBoleto ? (
+            <BoletoDisplay
+              url={order.paymentBoleto.url}
+              digitableLine={order.paymentBoleto.digitableLine}
+              barcode={order.paymentBoleto.barcode}
+            />
+          ) : (
+            <p className={styles.paymentNote}>
+              O boleto deste pedido expirou ou não está mais disponível. Faça um
+              novo pedido para gerar um novo pagamento.{" "}
+              <Link href="/" className={styles.paymentNoteLink}>
+                Ir para a loja
+              </Link>
+            </p>
+          )}
+        </section>
+      )}
 
       <section className={styles.section}>
         <h3 className={styles.sectionHeading}>Itens</h3>

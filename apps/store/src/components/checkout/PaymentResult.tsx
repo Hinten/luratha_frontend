@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { TERMINAL_PAYMENT_STATUSES, type PaymentStatus } from "@luratha/schemas";
+import PixDisplay from "./PixDisplay";
+import BoletoDisplay from "./BoletoDisplay";
 import styles from "./PaymentResult.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
@@ -103,7 +105,6 @@ const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | 
 };
 
 export default function PaymentResult({ result, orderId, onTryAgain }: PaymentResultProps) {
-  const [copied, setCopied] = useState(false);
   // Artefato obtido via polling quando a criação veio sem ele.
   const [polled, setPolled] = useState<OrderArtifactsResponse | null>(null);
   const [pollTimedOut, setPollTimedOut] = useState(false);
@@ -192,13 +193,6 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
     };
   }, [orderId, awaitingPix, awaitingBoleto, pollTimedOut]);
 
-  async function copyPixCode() {
-    if (!pix) return;
-    await navigator.clipboard.writeText(pix.qrCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2500);
-  }
-
   const artifactLabel = result.paymentMethod === "pix" ? "o QR Code do PIX" : "o boleto";
 
   // Fase do bloco de artefato pendente: falha terminal > timeout do polling >
@@ -266,57 +260,19 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
       )}
 
       {result.paymentMethod === "pix" && pix && (
-        <div className={styles.pixBlock}>
-          {/* next/image não otimiza data: URLs (PIX QR vem em base64 da MP), então usamos <img> nativo. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`data:image/png;base64,${pix.qrCodeBase64}`}
-            alt="QR Code para pagamento PIX"
-            className={styles.qr}
-          />
-          <p className={styles.pixHelp}>
-            Abra o app do seu banco, escolha pagar com PIX, escaneie o QR Code
-            ou cole o código abaixo.
-          </p>
-          <div className={styles.copyBlock}>
-            <code className={styles.copyText}>{pix.qrCode}</code>
-            <button type="button" className={styles.copyBtn} onClick={copyPixCode}>
-              {copied ? "Copiado!" : "Copiar código"}
-            </button>
-          </div>
-          {pix.expiresAt && (
-            <p className={styles.muted}>
-              Válido até{" "}
-              {new Date(pix.expiresAt).toLocaleString("pt-BR", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })}
-              .
-            </p>
-          )}
-        </div>
+        <PixDisplay
+          qrCode={pix.qrCode}
+          qrCodeBase64={pix.qrCodeBase64}
+          expiresAt={pix.expiresAt}
+        />
       )}
 
       {result.paymentMethod === "boleto" && boleto && (
-        <div className={styles.boletoBlock}>
-          <p className={styles.boletoHelp}>
-            Seu boleto foi gerado. Você pode pagar em qualquer banco ou
-            internet banking.
-          </p>
-          <a
-            href={boleto.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.boletoBtn}
-          >
-            Abrir boleto em PDF
-          </a>
-          {boleto.digitableLine && (
-            <div className={styles.copyBlock}>
-              <code className={styles.copyText}>{boleto.digitableLine}</code>
-            </div>
-          )}
-        </div>
+        <BoletoDisplay
+          url={boleto.url}
+          digitableLine={boleto.digitableLine}
+          barcode={boleto.barcode}
+        />
       )}
 
       {result.paymentMethod === "credit_card" && result.status === "pending" && (

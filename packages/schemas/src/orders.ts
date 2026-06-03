@@ -89,6 +89,18 @@ export const TERMINAL_PAYMENT_STATUSES = [
 ] as const satisfies readonly PaymentStatus[];
 
 /**
+ * Pagamento ainda aguardando o pagador — o artefato (QR do PIX / boleto) segue
+ * válido e **deve ser preservado** no documento (reexibição em `/conta/pedidos`).
+ * Quando o webhook traz qualquer outro status (pago/falha/estorno), os artefatos
+ * vencidos são apagados. Inclui `awaiting_pix`/`awaiting_boleto`, não só `pending`.
+ */
+export const AWAITING_PAYMENT_STATUSES = [
+  "pending",
+  "awaiting_pix",
+  "awaiting_boleto",
+] as const satisfies readonly PaymentStatus[];
+
+/**
  * Estados de fulfillment em que o pedido ainda **não foi despachado** — só nesses
  * o fail-safe `unknown` rebaixa o `Order.status` (ver `buildStatusPatch` em
  * `@luratha/payments`). Em `shipped`/`delivered`/terminais, sobrescrever destruiria
@@ -154,6 +166,39 @@ export const orderSchema = z
      * Opcional para retro-compatibilidade com pedidos anteriores à integração.
      */
     paymentIntentId: nonEmptyStringSchema.max(64).optional(),
+    /**
+     * Artefatos do PIX persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o QR Code em `/conta/pedidos/{id}` caso saia da
+     * tela de sucesso antes de pagar. Limpos pelo webhook quando o pagamento
+     * deixa de estar `pending` (privacidade + tamanho do doc).
+     */
+    paymentPix: z
+      .object({
+        /** Copia-cola (EMV) do PIX. */
+        qrCode: nonEmptyStringSchema,
+        /** Imagem PNG do QR em base64 (sem o prefixo `data:`). */
+        qrCodeBase64: nonEmptyStringSchema,
+        /** ISO-8601 do vencimento do QR, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
+    /**
+     * Artefatos do boleto persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o boleto em `/conta/pedidos/{id}`. Limpos pelo
+     * webhook quando o pagamento deixa de estar `pending`.
+     */
+    paymentBoleto: z
+      .object({
+        /** URL do boleto em PDF (hospedado pelo MercadoPago). */
+        url: z.url(),
+        /** Linha digitável para pagamento manual. */
+        digitableLine: nonEmptyStringSchema.optional(),
+        /** Código de barras (FEBRABAN). */
+        barcode: nonEmptyStringSchema.optional(),
+        /** ISO-8601 do vencimento do boleto, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
     items: z.array(orderItemSchema).min(1),
     itemCount: quantitySchema,
     subtotal: moneySchema,
