@@ -10,7 +10,8 @@ import {
   where,
 } from "firebase/firestore";
 import { z } from "zod";
-import { firestoreCollections, type FirestoreCategory, validateCategory } from "@luratha/schemas";
+import { firestoreCollections, type FirestoreCategory } from "@luratha/schemas";
+import { clientCategoryConverter } from "@luratha/firestore/clientCategoryConverter";
 
 type CategoryRepositoryErrorCode = "validation" | "unknown";
 
@@ -32,7 +33,10 @@ export interface CategoriesRepository {
 }
 
 export function createCategoriesRepository(dbInstance: Firestore): CategoriesRepository {
-  const categoriesCollectionRef = collection(dbInstance, firestoreCollections.categories);
+  const categoriesCollectionRef = collection(
+    dbInstance,
+    firestoreCollections.categories,
+  ).withConverter(clientCategoryConverter);
 
   async function getById(id: string): Promise<FirestoreCategory | null> {
     try {
@@ -43,7 +47,8 @@ export function createCategoriesRepository(dbInstance: Firestore): CategoriesRep
         return null;
       }
 
-      return validateCategory(snapshot.data());
+      // The converter's fromFirestore already validated the document.
+      return snapshot.data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read category "${id}"`);
     }
@@ -59,7 +64,8 @@ export function createCategoriesRepository(dbInstance: Firestore): CategoriesRep
         return null;
       }
 
-      return validateCategory(snapshot.docs[0].data());
+      // The converter's fromFirestore already validated the document.
+      return snapshot.docs[0].data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read category by slug "${slug}"`);
     }

@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type Stock, validateStock } from "@luratha/schemas";
+import { clientStockConverter } from "@luratha/firestore/clientStockConverter";
 
 type StockRepositoryErrorCode = "validation" | "not_found" | "unknown";
 
@@ -36,7 +37,9 @@ export interface StockRepository {
 }
 
 export function createStockRepository(dbInstance: Firestore): StockRepository {
-  const stockCollectionRef = collection(dbInstance, firestoreCollections.stock);
+  const stockCollectionRef = collection(dbInstance, firestoreCollections.stock).withConverter(
+    clientStockConverter,
+  );
 
   async function getByProductId(productId: string): Promise<Stock | null> {
     try {
@@ -47,7 +50,8 @@ export function createStockRepository(dbInstance: Firestore): StockRepository {
         return null;
       }
 
-      return validateStock(snapshot.data());
+      // The converter's fromFirestore already validated the document.
+      return snapshot.data();
     } catch (error) {
       throw normalizeRepositoryError(error, `read stock for product "${productId}"`);
     }
@@ -70,7 +74,7 @@ export function createStockRepository(dbInstance: Firestore): StockRepository {
         );
 
         for (const doc of snapshot.docs) {
-          const stock = validateStock(doc.data());
+          const stock = doc.data();
           stockMap.set(stock.productId, stock);
         }
       }

@@ -20,3 +20,7 @@ export const reviewSchema = z.object({
 });
 
 export type Review = z.infer<typeof reviewSchema>;
+
+export function validateReview(input: unknown): Review {
+  return reviewSchema.parse(input);
+}

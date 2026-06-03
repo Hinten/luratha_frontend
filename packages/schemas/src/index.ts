@@ -72,7 +72,7 @@ export {
   payerFormSchema,
   type PayerFormInput,
 } from "@luratha/schemas/payments";
-export { reviewSchema, type Review } from "@luratha/schemas/reviews";
+export { reviewSchema, type Review, validateReview } from "@luratha/schemas/reviews";
 export {
   userProfileSchema,
   taxIdentitySchema,

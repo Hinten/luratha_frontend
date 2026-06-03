@@ -126,6 +126,45 @@ describe("adminOrderConverter", () => {
   });
 });
 
+describe("order converters — strict-write enforcement", () => {
+  it("rejects an unknown top-level field on write (admin + client)", () => {
+    const bogus = { ...buildOrder(), notARealField: true } as Order;
+    expect(() => adminOrderConverter.toFirestore(bogus)).toThrow();
+    expect(() => clientOrderConverter.toFirestore(bogus)).toThrow();
+  });
+
+  it("round-trips an order carrying PIX/boleto payment artifacts", () => {
+    // The sensitive payments path: createPaymentIntent persists these optional
+    // nested objects; strict-write must NOT reject a valid artifact-bearing order.
+    const order = validateOrder({
+      ...buildOrder(),
+      paymentIntentId: "mp-intent-123",
+      paymentPix: {
+        qrCode: "00020126...br.gov.bcb.pix",
+        qrCodeBase64: "iVBORw0KGgoAAAANSUhEUgAA",
+      },
+      paymentBoleto: {
+        url: "https://www.mercadopago.com/boleto/123.pdf",
+        digitableLine: "34191790010104351004791020150008291070026000",
+      },
+      paidAt: ISO_NOW,
+    });
+    const written = adminOrderConverter.toFirestore(order);
+    const fakeSnapshot = { data: () => written } as Parameters<
+      typeof adminOrderConverter.fromFirestore
+    >[0];
+    expect(adminOrderConverter.fromFirestore(fakeSnapshot)).toEqual(order);
+  });
+
+  it("round-trips an order with artifacts cleared (optional keys absent)", () => {
+    // applyOrderWebhook deletes paymentPix/paymentBoleto before writing; the
+    // resulting order simply omits those keys — must still pass strict-write.
+    const order = buildOrder();
+    expect(Object.hasOwn(order, "paymentPix")).toBe(false);
+    expect(() => adminOrderConverter.toFirestore(order)).not.toThrow();
+  });
+});
+
 describe("clientUserProfileConverter", () => {
   it("round-trips a valid profile", () => {
     const profile = buildUser();

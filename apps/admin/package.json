@@ -17,13 +17,13 @@
     "@luratha/firestore": "workspace:*",
     "@luratha/repositories": "workspace:*",
     "@luratha/schemas": "workspace:*",
-    "firebase": "^12.13.0",
+    "firebase": "^12.14.0",
     "firebase-admin": "^13.10.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "server-only": "^0.0.1",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@luratha/devtools": "workspace:*",
@@ -34,8 +34,8 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.1",
+    "tsx": "^4.22.3",
     "typescript": "^5",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }
