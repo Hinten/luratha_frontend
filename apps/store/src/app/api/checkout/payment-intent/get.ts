@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
+import { TERMINAL_PAYMENT_STATUSES } from "@luratha/schemas";
 import { getOrderArtifacts, loadOrder, PaymentProviderError } from "@luratha/payments";
 
 export const runtime = "nodejs";
+
+/**
+ * Status em que o pagamento não vai avançar e não há artefato a gerar — o
+ * polling do client deve parar. Devolvemos o status sem reler o MP (round-trip
+ * desnecessário). `paid` é tratado à parte (client redireciona pro sucesso).
+ * Fonte única em `@luratha/schemas` (`TERMINAL_PAYMENT_STATUSES`).
+ */
+const TERMINAL_FAILURE_STATUSES = new Set<string>(TERMINAL_PAYMENT_STATUSES);
 
 /**
  * GET /api/checkout/payment-intent?orderId=...
@@ -47,6 +56,13 @@ export async function GET(request: Request) {
   // redirecionar para a página de sucesso.
   if (order.paymentStatus === "paid") {
     return NextResponse.json({ status: "paid" }, { status: 200 });
+  }
+
+  // Falha terminal (recusa/estorno/`unknown` fail-safe): o artefato não virá e o
+  // pedido não avança sozinho — devolve o status pro client parar o polling e
+  // mostrar a mensagem certa, sem gastar um GET no MercadoPago.
+  if (TERMINAL_FAILURE_STATUSES.has(order.paymentStatus)) {
+    return NextResponse.json({ status: order.paymentStatus }, { status: 200 });
   }
 
   if (!order.paymentIntentId) {

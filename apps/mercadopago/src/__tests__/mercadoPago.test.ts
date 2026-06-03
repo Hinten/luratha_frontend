@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "@luratha/core/logging/logger";
 import {
   describeMercadoPagoError,
   isMercadoPagoSandbox,
@@ -10,30 +11,49 @@ import {
 } from "@luratha/payments";
 
 describe("mapMpStatus", () => {
-  it("maps processed to paid (Orders API)", () => {
+  it("processed/accredited → paid; partially_refunded → partially_refunded", () => {
+    expect(mapMpStatus("processed", "accredited")).toBe("paid");
     expect(mapMpStatus("processed")).toBe("paid");
+    expect(mapMpStatus("processed", "partially_refunded")).toBe("partially_refunded");
   });
 
-  it("maps action_required to pending (PIX/boleto aguardando)", () => {
+  it("action_required → awaiting por método; waiting_capture → authorized", () => {
+    expect(mapMpStatus("action_required", "waiting_transfer", "bank_transfer")).toBe("awaiting_pix");
+    expect(mapMpStatus("action_required", "waiting_payment", "ticket")).toBe("awaiting_boleto");
+    expect(mapMpStatus("action_required", "waiting_capture", "credit_card")).toBe("authorized");
+    // Sem método reconhecido → fallback pending.
     expect(mapMpStatus("action_required")).toBe("pending");
   });
 
-  it("maps cancelled, failed and rejected to failed", () => {
-    expect(mapMpStatus("cancelled")).toBe("failed");
-    expect(mapMpStatus("failed")).toBe("failed");
-    expect(mapMpStatus("rejected")).toBe("failed");
+  it("charged_back/in_process → in_dispute; settled/reimbursed → charged_back", () => {
+    expect(mapMpStatus("charged_back", "in_process")).toBe("in_dispute");
+    expect(mapMpStatus("charged_back", "settled")).toBe("charged_back");
+    expect(mapMpStatus("charged_back", "reimbursed")).toBe("charged_back");
   });
 
-  it("maps refunded to refunded", () => {
+  it("cancelled/rejected/failed distintos; refunded → refunded", () => {
+    expect(mapMpStatus("cancelled")).toBe("cancelled");
+    expect(mapMpStatus("rejected")).toBe("rejected");
+    expect(mapMpStatus("failed")).toBe("failed");
     expect(mapMpStatus("refunded")).toBe("refunded");
   });
 
-  it("maps pending, in_process, created and unknown values to pending", () => {
-    expect(mapMpStatus("pending")).toBe("pending");
+  it("processing/in_process/created/pending → pending", () => {
+    expect(mapMpStatus("processing", "in_process")).toBe("pending");
     expect(mapMpStatus("in_process")).toBe("pending");
     expect(mapMpStatus("created")).toBe("pending");
-    expect(mapMpStatus(undefined)).toBe("pending");
-    expect(mapMpStatus("something-new")).toBe("pending");
+    expect(mapMpStatus("pending")).toBe("pending");
+  });
+
+  it("status desconhecido → 'unknown' + logger.warn (fail-safe, não chuta nem silencia)", () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    expect(mapMpStatus("status-novo-do-ml", "detail-x", "credit_card")).toBe("unknown");
+    expect(mapMpStatus(undefined)).toBe("unknown");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[mercadoPago] status desconhecido — revisar mapeamento",
+      expect.objectContaining({ status: "status-novo-do-ml" }),
+    );
+    warnSpy.mockRestore();
   });
 });
 

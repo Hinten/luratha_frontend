@@ -45,9 +45,17 @@ export {
   orderItemSchema,
   orderSchema,
   orderShippingMethodSchema,
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  PAYMENT_FAILURE_STATUSES,
+  TERMINAL_PAYMENT_STATUSES,
+  AWAITING_PAYMENT_STATUSES,
+  DISPATCHABLE_ORDER_STATUSES,
   type OrderItem,
   type Order,
+  type OrderStatus,
   type OrderShippingMethod,
+  type PaymentStatus,
   validateOrder,
 } from "@luratha/schemas/orders";
 export {

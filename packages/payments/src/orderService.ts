@@ -2,8 +2,14 @@ import "server-only";
 
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
-import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
+import {
+  AWAITING_PAYMENT_STATUSES,
+  firestoreCollections,
+  type Order,
+  validateOrder,
+} from "@luratha/schemas";
 import { createOrder, getOrder } from "./mercadoPago";
+import { buildStatusPatch } from "./orderStatusPatch";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
@@ -34,20 +40,6 @@ function orderRef(orderId: string) {
     .collection(firestoreCollections.orders)
     .doc(orderId)
     .withConverter(adminOrderConverter);
-}
-
-/** Calcula o patch de uma Order a partir de um status de pagamento. */
-function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<Order> {
-  const patch: Partial<Order> = { paymentStatus: status };
-  if (status === "paid") {
-    patch.status = "paid";
-    patch.paidAt = approvedAt ?? new Date().toISOString();
-  } else if (status === "refunded") {
-    patch.status = "refunded";
-  }
-  // "pending" / "failed" mantêm Order.status em "pending_payment" — o cliente
-  // ainda pode tentar pagar de novo (ou aguardar PIX/boleto compensar).
-  return patch;
 }
 
 /**
@@ -166,7 +158,7 @@ export async function createPaymentIntent(
           },
         }
       : {}),
-    ...buildStatusPatch(result.status),
+    ...buildStatusPatch(result.status, undefined, order.status),
   });
 
   return { result, order: updatedOrder };
@@ -206,13 +198,15 @@ export async function applyOrderWebhook(
 
     const patch: Partial<Order> = {
       paymentIntentId: summary.paymentId,
-      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt) : {}),
+      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt, order.status) : {}),
     };
-    // Quando o pagamento deixa de estar `pending` (paid/failed/refunded — PIX e
-    // boleto expirados chegam como `failed`), apagamos os artefatos: QR/boleto
-    // vencidos não devem persistir (privacidade + tamanho do doc). Enquanto
-    // `pending` (action_required), preservamos para reexibição na conta.
-    const clearPaymentArtifacts = summary.status !== "pending";
+    // Enquanto o pagamento aguarda o pagador (`pending`/`awaiting_pix`/
+    // `awaiting_boleto`), preservamos o QR/boleto para reexibição em
+    // `/conta/pedidos`. Quando resolve (pago/recusado/cancelado/estornado), o
+    // artefato venceu — apagamos (privacidade + tamanho do doc).
+    const clearPaymentArtifacts = !(
+      AWAITING_PAYMENT_STATUSES as readonly string[]
+    ).includes(summary.status);
     tx.set(ref, mergeOrderPatch(order, patch, { clearPaymentArtifacts }));
 
     return { changed: true, orderId: order.id, status: summary.status };

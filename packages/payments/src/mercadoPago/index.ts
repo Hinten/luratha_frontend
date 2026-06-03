@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "@luratha/core/logging/logger";
+import { PAYMENT_FAILURE_STATUSES } from "@luratha/schemas";
 import {
   MP_API_BASE_URL,
   resolveMercadoPagoConfig,
@@ -30,6 +31,9 @@ import {
 function totalAmountString(amount: number): string {
   return amount.toFixed(2);
 }
+
+/** Lookup dos status de falha (pagamento não concluído) — fonte em `@luratha/schemas`. */
+const FAILURE_STATUSES = new Set<PaymentStatus>(PAYMENT_FAILURE_STATUSES);
 
 /**
  * Resolve se estamos em modo sandbox.
@@ -201,31 +205,59 @@ function logAndRewrapMpError(
 }
 
 /**
- * Mapeia status da API de Orders pro vocabulário de `Order.paymentStatus`.
+ * Mapeia o status da Orders API do MP pro `Order.paymentStatus`, combinando o
+ * `status` (grosso), o `status_detail` (substatus) e o método
+ * (`bank_transfer`=pix, `ticket`=boleto). O mesmo `status` muda de sentido
+ * conforme o detail — ex.: `charged_back/in_process` (disputa em curso) vs
+ * `charged_back/settled|reimbursed` (disputa encerrada/estornada).
  *
- * Documentação MP:
- *  - `processed` (cartão aprovado, PIX recebido, boleto compensado) → `paid`
- *  - `action_required` (PIX/boleto pendentes de pagamento) → `pending`
- *  - `cancelled` / `failed` (recusa, falha) → `failed`
- *  - `refunded` (estorno) → `refunded`
- *  - `in_process` (análise antifraude) → `pending`
+ * Tabela (MP → nosso):
+ *  - `processed/accredited` → `paid`; `processed/partially_refunded` → `partially_refunded`
+ *  - `processing/in_process` (antifraude / assíncrono) → `pending`
+ *  - `action_required/waiting_capture` → `authorized`
+ *  - `action_required/waiting_payment|waiting_transfer` → `awaiting_pix`/`awaiting_boleto`
+ *  - `charged_back/in_process` → `in_dispute`; demais `charged_back` → `charged_back`
+ *  - `cancelled` → `cancelled`; `rejected` → `rejected`; `failed` → `failed`; `refunded` → `refunded`
+ *
+ * **Fail-safe:** qualquer combinação não reconhecida → `logger.warn` + `"unknown"`.
+ * Não chutamos nem silenciamos um status novo/não-documentado do MP — o pedido
+ * fica travado pra revisão em vez de ser despachado sob status incerto.
  */
-export function mapMpStatus(mpStatus: string | undefined): PaymentStatus {
+export function mapMpStatus(
+  mpStatus: string | undefined,
+  statusDetail?: string,
+  methodType?: string,
+): PaymentStatus {
   switch (mpStatus) {
     case "processed":
-      return "paid";
-    case "refunded":
-      return "refunded";
-    case "cancelled":
-    case "failed":
-    case "rejected":
-      return "failed";
-    case "action_required":
+      return statusDetail === "partially_refunded" ? "partially_refunded" : "paid";
+    case "processing":
     case "in_process":
     case "pending":
     case "created":
-    default:
       return "pending";
+    case "action_required":
+      if (statusDetail === "waiting_capture") return "authorized";
+      if (methodType === "bank_transfer") return "awaiting_pix";
+      if (methodType === "ticket") return "awaiting_boleto";
+      return "pending";
+    case "charged_back":
+      return statusDetail === "in_process" ? "in_dispute" : "charged_back";
+    case "cancelled":
+      return "cancelled";
+    case "rejected":
+      return "rejected";
+    case "failed":
+      return "failed";
+    case "refunded":
+      return "refunded";
+    default:
+      logger.warn("[mercadoPago] status desconhecido — revisar mapeamento", {
+        status: mpStatus,
+        statusDetail,
+        methodType,
+      });
+      return "unknown";
   }
 }
 
@@ -446,6 +478,24 @@ interface OrderResponse {
 }
 
 /**
+ * Tipo do método no MP (`bank_transfer`=pix, `ticket`=boleto, `credit_card`) — usado por `mapMpStatus`.
+ *
+ * PRESSUPOSTO: lê só `payments[0]`. A Orders API permite **múltiplos payments por
+ * order** (doc: "Multiple transactions per request"); hoje `buildOrderBody` sempre
+ * cria 1 payment, então é seguro. Se um dia oferecermos pagamento combinado (dois
+ * cartões, cartão + carteira), todos os extratores `payments[0]` viram bug
+ * estrutural — ver follow-up em `checkout-pendencias`.
+ */
+function paymentMethodTypeOf(response: OrderResponse): string | undefined {
+  return response.transactions?.payments?.[0]?.payment_method?.type;
+}
+
+/** `mapMpStatus` com os 3 campos (status + detail + método) extraídos da order. */
+function mapOrderStatus(response: OrderResponse): PaymentStatus {
+  return mapMpStatus(response.status, response.status_detail, paymentMethodTypeOf(response));
+}
+
+/**
  * Extrai o QR Code do PIX de uma order. Retorna `null` quando o MP ainda não
  * gerou o artefato (geração assíncrona) — o chamador trata como "pendente".
  */
@@ -482,9 +532,9 @@ function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
 /**
  * Quando uma order vem 2xx mas SEM o artefato (QR/boleto), distingue dois casos:
  *
- *  - **falha real** — o pagamento já veio recusado/cancelado (`mapMpStatus` →
- *    `failed`). Não adianta pollar; lança `PaymentProviderError` com o detalhe do
- *    MP. Retorna `"failed"`.
+ *  - **falha real** — o pagamento já veio recusado/cancelado/rejeitado
+ *    (`mapMpStatus` ∈ `PAYMENT_FAILURE_STATUSES`). Não adianta pollar; lança
+ *    `PaymentProviderError` com o detalhe do MP.
  *  - **ausência assíncrona** — status ainda pendente; o artefato deve aparecer ao
  *    reler a order. Retorna `"pending"` e o chamador marca `*Pending`.
  *
@@ -496,8 +546,8 @@ function classifyMissingArtifact(
   operation: "create" | "get",
   context: { orderId: string; paymentMethod: string },
   response: OrderResponse,
-): "pending" | "failed" {
-  const status = mapMpStatus(response.status);
+): "pending" {
+  const status = mapOrderStatus(response);
   logger.warn("[mercadoPago] order sem artefato de pagamento", {
     operation,
     ...context,
@@ -506,7 +556,7 @@ function classifyMissingArtifact(
     rawResponse: response,
   });
 
-  if (status === "failed") {
+  if (FAILURE_STATUSES.has(status)) {
     const detail = response.status_detail ?? response.status ?? "sem detalhe";
     throw new PaymentProviderError(
       `MercadoPago recusou o pagamento (${detail}).`,
@@ -571,7 +621,7 @@ export async function createOrder(input: CreatePaymentInput): Promise<PaymentInt
   const result: PaymentIntentResult = {
     paymentId: response.id,
     paymentMethod: input.paymentMethod,
-    status: mapMpStatus(response.status),
+    status: mapOrderStatus(response),
     statusDetail: response.status_detail ?? undefined,
   };
   if (isUnderReview(response)) result.underReview = true;
@@ -628,14 +678,14 @@ export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifac
     throw logAndRewrapMpError("get", { mpOrderId }, err);
   }
 
-  const status = mapMpStatus(response.status);
+  const status = mapOrderStatus(response);
   const pix = extractPixPayment(response) ?? undefined;
   const boleto = extractBoletoPayment(response) ?? undefined;
 
   // Sem artefato ainda: loga o body cru e, se o pagamento já falhou, lança (o
   // client para de pollar). Caso pendente, devolve só o status — o client segue
   // tentando.
-  if (!pix && !boleto && status === "failed") {
+  if (!pix && !boleto && FAILURE_STATUSES.has(status)) {
     classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: response.transactions?.payments?.[0]?.payment_method?.type ?? "unknown" }, response);
   }
 
@@ -667,7 +717,7 @@ export async function getOrder(orderId: string): Promise<ProviderPaymentSummary>
     );
   }
 
-  const status = mapMpStatus(response.status);
+  const status = mapOrderStatus(response);
   return {
     paymentId: response.id ?? orderId,
     status,

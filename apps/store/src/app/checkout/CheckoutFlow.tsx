@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useReducer, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Address, CartItem, UserProfile } from "@luratha/schemas";
+import { PAYMENT_FAILURE_STATUSES, type Address, type CartItem, type UserProfile } from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
@@ -457,11 +457,16 @@ export default function CheckoutFlow() {
       // (race entre o WebSocket do Firestore e o DELETE HTTP).
       dispatch({ type: "SUBMIT_OK", orderId: created.id, result, snapshot });
 
-      // Limpa o cart quando o pagamento foi efetivamente iniciado: PIX/Boleto
-      // gerados, ou cartão em análise antifraude (CONT/in_process → "pending").
-      // Cartão **recusado** (status="failed") preserva o cart porque o user
-      // pode clicar "Tentar outro método" pra retentar com método diferente.
-      if (result.status === "pending") {
+      // Pagamento efetivamente iniciado (PIX/boleto gerados, cartão em análise
+      // antifraude, autorizado/pré-capturado, ou até o `unknown` fail-safe) →
+      // limpa o cart: o pedido já existe e o pagamento está em curso. Só uma
+      // falha de pagamento (`failed`/`cancelled`/`rejected`) preserva o cart, pra
+      // o user clicar "Tentar outro método" e retentar. (`paid` já retornou acima
+      // com clearCart + redirect.)
+      const paymentFailed = (PAYMENT_FAILURE_STATUSES as readonly string[]).includes(
+        result.status,
+      );
+      if (!paymentFailed) {
         void clearCart();
       }
     } catch (err) {

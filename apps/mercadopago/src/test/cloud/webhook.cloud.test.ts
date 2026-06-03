@@ -197,6 +197,43 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     expect(order?.paymentStatus).toBe("pending");
   });
 
+  it("webhook de contestação → paymentStatus in_dispute, Order.status preservado", async () => {
+    // Contestação (MP `charged_back/in_process`) só muda o pagamento — o pedido
+    // pode já ter sido enviado, então `Order.status` não é tocado. Valida também
+    // que o Firestore aceita o novo valor de enum.
+    const orderId = await seedOrder();
+
+    mp.getOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-dispute-001",
+      status: "in_dispute",
+      orderId,
+    });
+
+    const res = await webhookPOST(
+      new Request("http://localhost/api/webhooks/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-signature": "ts=1,v1=mocked",
+          "x-request-id": "req-cloud-dispute-1",
+        },
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-dispute-1" } }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    const order = persisted.data();
+    expect(order?.paymentStatus).toBe("in_dispute");
+    // Seed é `pending_payment` — a disputa não mexe no fulfillment.
+    expect(order?.status).toBe("pending_payment");
+  });
+
   it("webhook is idempotent on a repeated notification", async () => {
     const orderId = await seedOrder();
 

@@ -27,21 +27,29 @@ export async function clearUserAddresses(uid: string): Promise<void> {
 }
 
 /**
- * Deleta orders do user em estados NÃO-terminais — `pending`, `authorized`
- * e `failed`. Preserva orders em estados terminais (`paid`, `in_dispute`,
- * `refunded`, `charged_back`) como histórico real.
+ * Deleta orders do user em estados NÃO-terminais — `pending`, `awaiting_pix`,
+ * `awaiting_boleto`, `authorized`, `failed` e `unknown`. Preserva orders em
+ * estados terminais (`paid`, `partially_refunded`, `in_dispute`, `refunded`,
+ * `charged_back`) como histórico real.
  *
- * Por que esses 3: o `POST /api/orders` cria Order com `pending`; cartão
- * em análise de fraude vai pra `authorized`; cartão rejeitado vai pra
- * `failed`. Todas são "lixo de teste" — não representam histórico real do
- * MP test user. Antes só limpávamos `pending`, então `authorized`/`failed`
- * acumulavam ao longo de runs sucessivas.
+ * Por que esses: o `POST /api/orders` cria Order com `pending`; PIX/boleto
+ * criados vão pra `awaiting_pix`/`awaiting_boleto`; cartão em análise de fraude
+ * pra `authorized`; cartão rejeitado pra `failed`; status do MP não reconhecido
+ * pra `unknown`. Todas são "lixo de teste" — não representam histórico real do
+ * MP test user.
  */
 export async function clearPendingOrdersFor(uid: string): Promise<void> {
   const snap = await adminDb
     .collection(firestoreCollections.orders)
     .where("userId", "==", uid)
-    .where("paymentStatus", "in", ["pending", "authorized", "failed"])
+    .where("paymentStatus", "in", [
+      "pending",
+      "awaiting_pix",
+      "awaiting_boleto",
+      "authorized",
+      "failed",
+      "unknown",
+    ])
     .get();
   await Promise.all(snap.docs.map((d) => d.ref.delete()));
 }

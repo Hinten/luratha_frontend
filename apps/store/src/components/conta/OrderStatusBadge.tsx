@@ -1,26 +1,17 @@
 import type { Order } from "@luratha/schemas";
+import { getOrderDisplayStatus } from "@/src/lib/orders/orderDisplayStatus";
 import styles from "./OrderStatusBadge.module.css";
 
-const labels: Record<Order["status"], string> = {
-  pending_payment: "Aguardando pagamento",
-  paid: "Pago",
-  processing: "Em preparação",
-  shipped: "Enviado",
-  delivered: "Entregue",
-  cancelled: "Cancelado",
-  refunded: "Reembolsado",
-};
-
-const variants: Record<Order["status"], string> = {
-  pending_payment: styles.warning,
-  paid: styles.info,
-  processing: styles.info,
-  shipped: styles.info,
-  delivered: styles.success,
-  cancelled: styles.muted,
-  refunded: styles.muted,
-};
-
-export default function OrderStatusBadge({ status }: { status: Order["status"] }) {
-  return <span className={`${styles.badge} ${variants[status]}`}>{labels[status]}</span>;
+/**
+ * Badge de status do pedido. Compõe a label a partir de `status` + `paymentStatus`
+ * via `getOrderDisplayStatus` (issue #121) — um pedido em contestação não aparece
+ * mais como "Pago".
+ */
+export default function OrderStatusBadge({
+  order,
+}: {
+  order: Pick<Order, "status" | "paymentStatus">;
+}) {
+  const { label, variant } = getOrderDisplayStatus(order);
+  return <span className={`${styles.badge} ${styles[variant]}`}>{label}</span>;
 }

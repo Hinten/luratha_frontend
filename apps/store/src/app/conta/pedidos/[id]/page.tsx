@@ -103,7 +103,7 @@ export default function PedidoDetailPage({
           <p className={styles.muted}>Realizado em {created}</p>
         </div>
         <div className={styles.headerBadges}>
-          <OrderStatusBadge status={order.status} />
+          <OrderStatusBadge order={order} />
           <PaymentMethodBadge method={order.paymentMethod} />
         </div>
       </header>

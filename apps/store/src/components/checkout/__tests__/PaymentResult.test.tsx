@@ -89,7 +89,7 @@ describe("PaymentResult", () => {
   it("shows retry button for a failed card payment when onTryAgain is provided (statusDetail oculto)", () => {
     const onTryAgain = vi.fn();
     render(<PaymentResult result={cardFailed} orderId={ORDER_ID} onTryAgain={onTryAgain} />);
-    expect(screen.getByText("Pagamento recusado")).toBeInTheDocument();
+    expect(screen.getByText("Falha no pagamento")).toBeInTheDocument();
     // statusDetail é jargão técnico do MP e não deve aparecer pro cliente.
     expect(screen.queryByText("Cartão recusado pelo banco.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Tentar outro método" }));
@@ -252,6 +252,66 @@ describe("PaymentResult", () => {
         /Não conseguimos gerar o QR Code do PIX a tempo/,
       );
       expect(screen.queryByRole("img", { name: "QR Code para pagamento PIX" })).toBeNull();
+    });
+
+    it("status terminal 'unknown' no polling para cedo e mostra 'em análise' (não espera 2min)", async () => {
+      vi.useFakeTimers();
+      // O artefato nunca vem; o pagamento caiu no fail-safe `unknown`.
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: "unknown" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <PaymentResult
+          result={{
+            paymentId: "mp-14",
+            paymentMethod: "pix",
+            status: "awaiting_pix",
+            pixPending: true,
+          }}
+          orderId={ORDER_ID}
+        />,
+      );
+
+      // Primeiro poll (15s) descobre o status terminal.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PAYMENT_POLL_INTERVAL_MS);
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("alert")).toHaveTextContent(/Estamos confirmando seu pagamento/);
+      expect(screen.queryByText(/Gerando o QR Code do PIX/)).toBeNull();
+
+      // Avança até o teto: não polla de novo — parou no status terminal.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PAYMENT_POLL_TIMEOUT_MS);
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("status terminal 'failed' no polling mostra recusa (sem 2min 'Gerando…')", async () => {
+      vi.useFakeTimers();
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: "failed" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <PaymentResult
+          result={{
+            paymentId: "mp-15",
+            paymentMethod: "boleto",
+            status: "awaiting_boleto",
+            boletoPending: true,
+          }}
+          orderId={ORDER_ID}
+        />,
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PAYMENT_POLL_INTERVAL_MS);
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("alert")).toHaveTextContent(/Não foi possível concluir o pagamento/);
+      expect(screen.queryByText(/Gerando o boleto/)).toBeNull();
     });
   });
 });

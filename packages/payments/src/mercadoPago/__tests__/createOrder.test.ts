@@ -116,6 +116,14 @@ describe("createOrder — artefato de pagamento", () => {
     await expect(createOrder(PIX_INPUT)).rejects.toBeInstanceOf(PaymentProviderError);
   });
 
+  it("PIX sem QR com status cancelled/rejected também lança (falha não é só 'failed')", async () => {
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    for (const status of ["cancelled", "rejected"]) {
+      mockFetch({ id: "ORD1", status, ...pixPaymentMethod() });
+      await expect(createOrder(PIX_INPUT)).rejects.toBeInstanceOf(PaymentProviderError);
+    }
+  });
+
   it("boleto com ticket_url → result.boleto preenchido", async () => {
     mockFetch({
       id: "ORD2",

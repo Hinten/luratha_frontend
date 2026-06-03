@@ -89,21 +89,32 @@ MercadoPago redeliver the notification later.
 ## MercadoPago status → `Order` mapping (`mapMpStatus`)
 
 The Orders API uses a smaller status vocabulary than the legacy Payments API.
-`mapMpStatus` normalizes everything to one of four terminal values:
+`mapMpStatus(status, statusDetail?, methodType?)` combines the coarse `status`,
+the `status_detail` substatus and the method (`bank_transfer`=pix, `ticket`=boleto):
 
-| MP Orders `status` | `Order.paymentStatus` | `Order.status` side effect |
+| MP Orders `status` / `status_detail` | `Order.paymentStatus` | `Order.status` side effect |
 |---|---|---|
-| `processed` | `paid` | → `paid`, sets `paidAt` |
-| `action_required` | `pending` | (stays `pending_payment` — PIX/boleto aguardando compensação) |
-| `in_process`, `pending`, `created` | `pending` | (stays `pending_payment`) |
-| `cancelled`, `failed`, `rejected` | `failed` | (stays `pending_payment` — customer can retry) |
+| `processed` / `accredited` | `paid` | → `paid`, sets `paidAt` |
+| `processed` / `partially_refunded` | `partially_refunded` | (stays `paid`) |
+| `action_required` / `waiting_capture` | `authorized` | (stays `pending_payment`) |
+| `action_required` / `waiting_transfer` (pix) | `awaiting_pix` | (stays `pending_payment`) |
+| `action_required` / `waiting_payment` (ticket) | `awaiting_boleto` | (stays `pending_payment`) |
+| `in_process`, `pending`, `created`, `processing` | `pending` | (stays `pending_payment`) |
+| `charged_back` / `in_process` | `in_dispute` | (stays — dispute in progress) |
+| `charged_back` / `settled`,`reimbursed` | `charged_back` | → `refunded` |
+| `cancelled` | `cancelled` | → `cancelled` (order ends) |
+| `rejected` | `rejected` | (stays `pending_payment` — customer can retry) |
+| `failed` | `failed` | (stays `pending_payment` — customer can retry) |
 | `refunded` | `refunded` | → `refunded` |
-| _anything else_ | `pending` | default fall-through |
+| _anything unrecognized_ | `unknown` (fail-safe) | → `unknown` if still dispatchable + `logger.warn` |
 
-> **Note**: dispute/chargeback semantics (`in_dispute`, `charged_back`,
-> `authorized`) that existed in the old Payments API are not surfaced by the
-> Orders API. If MP later exposes them, add a case in `mapMpStatus` and a
-> new member to `PaymentStatus` in `types.ts`.
+> **Source of truth**: the `PaymentStatus` union, `PAYMENT_STATUSES`,
+> `PAYMENT_FAILURE_STATUSES`, `TERMINAL_PAYMENT_STATUSES` and
+> `DISPATCHABLE_ORDER_STATUSES` all live in `@luratha/schemas` (`orders.ts`).
+> `@luratha/payments` re-exports `PaymentStatus`; never redefine the union.
+> The `unknown` fail-safe never shows as "paid" — it blocks fulfillment until a
+> human reviews the logged status. `cancelled`/`rejected`/`failed` are split so
+> the UI can tell the customer *why* a payment did not go through.
 
 ## Webhook signature validation
 

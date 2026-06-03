@@ -7,21 +7,19 @@
  * caso surja um segundo provider, extrair uma interface aqui.
  */
 
+import type { PaymentStatus } from "@luratha/schemas";
+
 /** Método de pagamento — espelha `Order.paymentMethod`. */
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 /**
- * Status de pagamento normalizado — espelha `Order.paymentStatus`.
- *
- * O adapter MercadoPago (API de Orders) só produz quatro estados terminais:
- * `paid`, `refunded`, `failed`, `pending`. Estados intermediários do antigo
- * Payments API (`authorized` pra cartão pré-autorizado, `in_dispute` /
- * `charged_back` pra fluxo de contestação) não têm equivalente direto na
- * Orders API e foram removidos do union. Se a Orders API expor essas
- * semânticas no futuro, basta adicionar o mapeamento em `mapMpStatus`
- * (`mercadoPago/index.ts`) e reintroduzir o membro aqui.
+ * Status de pagamento normalizado. Fonte única em `@luratha/schemas`
+ * (`PAYMENT_STATUSES` em `orders.ts`) — re-exportado aqui pra manter a superfície
+ * pública de `@luratha/payments` sem redigitar o union. `mapMpStatus`
+ * (`mercadoPago/index.ts`) combina `status` + `status_detail` + método do MP pra
+ * produzir estes valores.
  */
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type { PaymentStatus };
 
 /** Dados do pagador exigidos pelo MercadoPago. */
 export interface PaymentPayer {
