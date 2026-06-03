@@ -74,17 +74,21 @@ export class ShippingProviderError extends Error {
     | "not_supported"
     | "unknown";
   readonly cause?: unknown;
+  /** HTTP status of the provider response, when the error came from a non-ok HTTP reply. */
+  readonly httpStatus?: number;
 
   constructor(
     message: string,
     providerId: ShippingProviderId | "unknown",
     code: ShippingProviderError["code"],
     cause?: unknown,
+    httpStatus?: number,
   ) {
     super(message);
     this.name = "ShippingProviderError";
     this.providerId = providerId;
     this.code = code;
     this.cause = cause;
+    this.httpStatus = httpStatus;
   }
 }
