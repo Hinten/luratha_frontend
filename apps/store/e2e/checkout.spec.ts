@@ -213,7 +213,11 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
       .get();
     expect(orderDoc.exists).toBe(true);
     const order = orderDoc.data();
-    expect(order?.paymentStatus).toBe("pending");
+    // PIX/boleto criados ficam "aguardando pagamento" por método (mapMpStatus do
+    // MP `action_required` → `awaiting_pix`/`awaiting_boleto`).
+    const expectedPaymentStatus =
+      expected.paymentMethod === "pix" ? "awaiting_pix" : "awaiting_boleto";
+    expect(order?.paymentStatus).toBe(expectedPaymentStatus);
     expect(order?.paymentMethod).toBe(expected.paymentMethod);
     // MP Orders API retorna `paymentIntentId` no formato `ORDTST01...` (sandbox)
     // ou `ORD01...` (prod). `/.+/` aceitaria qualquer placeholder; o prefixo

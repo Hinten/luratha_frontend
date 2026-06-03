@@ -10,7 +10,7 @@ import {
   type QueryDocumentSnapshot,
   Timestamp,
 } from "firebase/firestore";
-import { type Coupon, validateCoupon } from "@luratha/schemas";
+import { type Coupon, validateCoupon, parseStrictWrite } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();
@@ -19,7 +19,7 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const clientCouponConverter: FirestoreDataConverter<Coupon> = {
   toFirestore(coupon: Coupon) {
-    const { startsAt, expiresAt, ...rest } = coupon;
+    const { startsAt, expiresAt, ...rest } = parseStrictWrite(validateCoupon, coupon);
     return {
       ...rest,
       startsAt: Timestamp.fromDate(new Date(startsAt)),

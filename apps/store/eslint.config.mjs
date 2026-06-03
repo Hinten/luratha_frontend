@@ -1,6 +1,11 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import { catchSyntaxRestrictions } from "../../eslint.config.base.mjs";
+import {
+  firestoreSyntaxRestrictions,
+  firestoreImportRule,
+} from "../../eslint.firestore-guards.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -26,28 +31,43 @@ const eslintConfig = defineConfig([
         argsIgnorePattern: "^_",
         caughtErrorsIgnorePattern: "^_",
       }],
-      // Forbid catches that swallow errors silently. Every catch must either:
-      //   (a) narrow the error via `instanceof <SpecificError>` AND rethrow the
-      //       rest, or
-      //   (b) rethrow unconditionally.
-      // `instanceof Error` does NOT count as narrowing — it's the base class of
-      // every JS exception and is enforced by convention (see CLAUDE.md), not
-      // by the linter.
+      // Forbid catches that swallow errors silently (see CLAUDE.md) AND forbid
+      // constructing raw, unvalidated Firestore refs — feature code must go
+      // through a repository + schema-bound DataConverter.
       "no-empty": ["error", { allowEmptyCatch: false }],
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "CatchClause[param=null]",
-          message:
-            "Bare `catch { }` is forbidden. Bind the error and narrow it via `instanceof <SpecificError>`; rethrow anything that does not match.",
-        },
-        {
-          selector:
-            "CatchClause:not(:has(BinaryExpression[operator='instanceof'])):not(:has(ThrowStatement))",
-          message:
-            "Generic catch is forbidden. The catch body must contain either an `instanceof <SpecificError>` check OR a `throw` (rethrow). Silent fallbacks hide bugs during debugging.",
-        },
+        ...catchSyntaxRestrictions,
+        ...firestoreSyntaxRestrictions,
       ],
+      "no-restricted-imports": firestoreImportRule,
+    },
+  },
+  {
+    // Sanctioned server-side data-access layer. Route handlers, SSR server
+    // components (page/layout) and server-only cached query helpers build admin
+    // refs directly, always paired with `.withConverter(...)` — and `toFirestore`
+    // now hard-enforces the schema on every write. So the raw-ref guard is
+    // relaxed here (the catch rules stay). Feature code on the client must still
+    // go through a repository. Any write in these paths MUST use `.withConverter`.
+    files: [
+      "src/app/api/**",
+      "src/app/**/page.tsx",
+      "src/app/**/layout.tsx",
+      "src/lib/queries/**",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-syntax": ["error", ...catchSyntaxRestrictions],
+    },
+  },
+  {
+    // Tests, cloud suites and E2E helpers seed/inspect Firestore directly; the
+    // raw-ref guard targets production code, so relax it (keep the catch rules).
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-syntax": ["error", ...catchSyntaxRestrictions],
     },
   },
 ]);

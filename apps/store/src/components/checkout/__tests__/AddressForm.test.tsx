@@ -1,7 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddressForm from "@/src/components/checkout/AddressForm";
+import { lookupCep } from "@/src/lib/cep/viaCep";
+
+// A consulta de CEP é mockada — sem rede nos testes. Default "not_found" (não
+// autocompleta, só mostra aviso) para não interferir nos testes existentes.
+vi.mock("@/src/lib/cep/viaCep", () => ({ lookupCep: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(lookupCep).mockResolvedValue({ status: "not_found" });
+});
 
 async function fillRequiredFields() {
   const user = userEvent.setup();
@@ -232,5 +241,81 @@ describe("AddressForm", () => {
     render(<AddressForm onSubmit={vi.fn()} onCancel={onCancel} />);
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("autocompleta logradouro/bairro/cidade/UF e envia ibgeCode quando o CEP é encontrado", async () => {
+    const user = userEvent.setup();
+    vi.mocked(lookupCep).mockResolvedValueOnce({
+      status: "found",
+      logradouro: "Avenida Paulista",
+      bairro: "Bela Vista",
+      localidade: "São Paulo",
+      uf: "SP",
+      ibge: "3550308",
+    });
+    const onSubmit = vi.fn();
+    render(<AddressForm onSubmit={onSubmit} submitLabel="Salvar" />);
+
+    await user.type(screen.getByLabelText("CEP"), "01310100");
+    await user.tab(); // blur dispara a consulta
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Logradouro")).toHaveValue("Avenida Paulista"),
+    );
+    expect(screen.getByLabelText("Bairro")).toHaveValue("Bela Vista");
+    expect(screen.getByLabelText("Cidade")).toHaveValue("São Paulo");
+    expect(screen.getByLabelText("UF")).toHaveValue("SP");
+
+    // Campos que o ViaCEP não traz continuam manuais.
+    await user.type(screen.getByLabelText("Nome do destinatário"), "Marina");
+    await user.type(screen.getByLabelText("Número"), "1578");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      ibgeCode: "3550308",
+      line1: "Avenida Paulista",
+      city: "São Paulo",
+      state: "SP",
+    });
+  });
+
+  it("mostra aviso (não bloqueia) quando o CEP não é encontrado", async () => {
+    const user = userEvent.setup();
+    vi.mocked(lookupCep).mockResolvedValue({ status: "not_found" });
+    const onSubmit = vi.fn();
+    render(<AddressForm onSubmit={onSubmit} submitLabel="Salvar" />);
+
+    await user.type(screen.getByLabelText("CEP"), "99999999");
+    await user.tab();
+
+    expect(
+      await screen.findByText(/Não encontramos esse CEP/i),
+    ).toBeInTheDocument();
+
+    // Preenche o resto à mão e o submit continua funcionando (aviso ≠ erro).
+    await user.type(screen.getByLabelText("Nome do destinatário"), "Marina");
+    await user.selectOptions(screen.getByLabelText("UF"), "SP");
+    await user.type(screen.getByLabelText("Logradouro"), "Rua X");
+    await user.type(screen.getByLabelText("Número"), "10");
+    await user.type(screen.getByLabelText("Bairro"), "Centro");
+    await user.type(screen.getByLabelText("Cidade"), "São Paulo");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("ibgeCode");
+  });
+
+  it("mostra aviso quando a consulta de CEP falha, sem bloquear", async () => {
+    const user = userEvent.setup();
+    vi.mocked(lookupCep).mockResolvedValueOnce({ status: "error" });
+    render(<AddressForm onSubmit={vi.fn()} />);
+
+    await user.type(screen.getByLabelText("CEP"), "01310100");
+    await user.tab();
+
+    expect(
+      await screen.findByText(/Não foi possível verificar o CEP agora/i),
+    ).toBeInTheDocument();
   });
 });

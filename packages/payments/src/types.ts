@@ -7,21 +7,19 @@
  * caso surja um segundo provider, extrair uma interface aqui.
  */
 
+import type { PaymentStatus } from "@luratha/schemas";
+
 /** Método de pagamento — espelha `Order.paymentMethod`. */
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 /**
- * Status de pagamento normalizado — espelha `Order.paymentStatus`.
- *
- * O adapter MercadoPago (API de Orders) só produz quatro estados terminais:
- * `paid`, `refunded`, `failed`, `pending`. Estados intermediários do antigo
- * Payments API (`authorized` pra cartão pré-autorizado, `in_dispute` /
- * `charged_back` pra fluxo de contestação) não têm equivalente direto na
- * Orders API e foram removidos do union. Se a Orders API expor essas
- * semânticas no futuro, basta adicionar o mapeamento em `mapMpStatus`
- * (`mercadoPago/index.ts`) e reintroduzir o membro aqui.
+ * Status de pagamento normalizado. Fonte única em `@luratha/schemas`
+ * (`PAYMENT_STATUSES` em `orders.ts`) — re-exportado aqui pra manter a superfície
+ * pública de `@luratha/payments` sem redigitar o union. `mapMpStatus`
+ * (`mercadoPago/index.ts`) combina `status` + `status_detail` + método do MP pra
+ * produzir estes valores.
  */
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type { PaymentStatus };
 
 /** Dados do pagador exigidos pelo MercadoPago. */
 export interface PaymentPayer {
@@ -85,19 +83,54 @@ export interface PaymentIntentResult {
   status: PaymentStatus;
   /** Detalhe textual do provider (motivo de recusa de cartão, etc.). */
   statusDetail?: string;
-  /** Presente quando `paymentMethod === "pix"`. */
-  pix?: {
-    qrCode: string;
-    qrCodeBase64: string;
-    ticketUrl?: string;
-    expiresAt?: string;
-  };
-  /** Presente quando `paymentMethod === "boleto"`. */
-  boleto?: {
-    url: string;
-    barcode?: string;
-    digitableLine?: string;
-  };
+  /** Presente quando `paymentMethod === "pix"` e o QR já foi gerado. */
+  pix?: PixArtifact;
+  /**
+   * PIX criado, mas o MP ainda não devolveu o QR Code (geração assíncrona).
+   * O client deve consultar `GET /api/checkout/payment-intent` até o QR chegar.
+   */
+  pixPending?: boolean;
+  /** Presente quando `paymentMethod === "boleto"` e o boleto já foi gerado. */
+  boleto?: BoletoArtifact;
+  /**
+   * Boleto criado, mas o MP ainda não devolveu os dados (`ticket_url`). O client
+   * deve consultar `GET /api/checkout/payment-intent` até o boleto chegar.
+   */
+  boletoPending?: boolean;
+  /**
+   * Pagamento em **análise antifraude** no MP (`status: processing` /
+   * `status_detail: in_process`). O artefato ainda não saiu porque a transação
+   * está sendo validada; o client mostra "pagamento em análise" em vez de
+   * "gerando…". Continua pendente (poll) — a análise pode liberar e gerar o QR.
+   */
+  underReview?: boolean;
+}
+
+export interface PixArtifact {
+  qrCode: string;
+  qrCodeBase64: string;
+  ticketUrl?: string;
+  expiresAt?: string;
+}
+
+export interface BoletoArtifact {
+  url: string;
+  barcode?: string;
+  digitableLine?: string;
+  /** ISO-8601 do vencimento do boleto, quando o provider informa. */
+  expiresAt?: string;
+}
+
+/**
+ * Resultado da releitura de uma order no provider durante o polling do artefato
+ * (PIX QR / boleto). Devolvido pelo `GET /api/checkout/payment-intent`.
+ */
+export interface OrderArtifacts {
+  status: PaymentStatus;
+  pix?: PixArtifact;
+  boleto?: BoletoArtifact;
+  /** Pagamento em análise antifraude (vide `PaymentIntentResult.underReview`). */
+  underReview?: boolean;
 }
 
 /** Resumo de um pagamento consultado no provider (usado pelo webhook). */

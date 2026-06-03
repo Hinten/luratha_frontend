@@ -17,6 +17,9 @@ const ALLOWED_STATUSES = new Set([
   "delivered",
   "cancelled",
   "refunded",
+  // Fail-safe de pagamento desconhecido — ops precisa filtrar `?status=unknown`
+  // pra enumerar os pedidos travados pra revisão manual.
+  "unknown",
 ]);
 
 /**

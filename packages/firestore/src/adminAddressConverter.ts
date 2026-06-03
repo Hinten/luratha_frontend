@@ -6,7 +6,7 @@
  */
 
 import { type FirestoreDataConverter, Timestamp } from "firebase-admin/firestore";
-import { type Address, validateAddress } from "@luratha/schemas";
+import { type Address, validateAddress, parseStrictWrite } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();
@@ -23,7 +23,7 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const adminAddressConverter: FirestoreDataConverter<Address> = {
   toFirestore(address: Address) {
-    const { createdAt, updatedAt, ...rest } = address;
+    const { createdAt, updatedAt, ...rest } = parseStrictWrite(validateAddress, address);
     return {
       ...rest,
       createdAt: Timestamp.fromDate(new Date(createdAt)),

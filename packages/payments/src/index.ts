@@ -11,10 +11,11 @@ export {
   createOrder,
   describeMercadoPagoError,
   getOrder,
+  getOrderArtifacts,
   isMercadoPagoSandbox,
   mapMpStatus,
   verifyWebhookSignature,
-  withSandboxEmail,
+  withSandboxPayer,
 } from "./mercadoPago";
 
 export {
@@ -26,15 +27,18 @@ export {
 
 export {
   PaymentProviderError,
+  type BoletoArtifact,
   type CreateBoletoPaymentInput,
   type CreateCardPaymentInput,
   type CreatePaymentInput,
   type CreatePixPaymentInput,
+  type OrderArtifacts,
   type PaymentIntentResult,
   type PaymentMethod,
   type PaymentPayer,
   type PaymentPayerAddress,
   type PaymentProviderErrorCode,
   type PaymentStatus,
+  type PixArtifact,
   type ProviderPaymentSummary,
 } from "./types";

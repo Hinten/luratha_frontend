@@ -2,8 +2,14 @@ import "server-only";
 
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
-import { firestoreCollections, type Order, validateOrder } from "@luratha/schemas";
+import {
+  AWAITING_PAYMENT_STATUSES,
+  firestoreCollections,
+  type Order,
+  validateOrder,
+} from "@luratha/schemas";
 import { createOrder, getOrder } from "./mercadoPago";
+import { buildStatusPatch } from "./orderStatusPatch";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
@@ -30,36 +36,37 @@ export type PaymentIntentMethodInput =
   | { paymentMethod: "boleto"; payer: PaymentPayer; payerAddress: PaymentPayerAddress };
 
 function orderRef(orderId: string) {
+  // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: the ref is converter-bound (adminOrderConverter), so writes stay schema-validated. Full migration of this subsystem is tracked separately.
   return adminDb
     .collection(firestoreCollections.orders)
     .doc(orderId)
     .withConverter(adminOrderConverter);
 }
 
-/** Calcula o patch de uma Order a partir de um status de pagamento. */
-function buildStatusPatch(status: PaymentStatus, approvedAt?: string): Partial<Order> {
-  const patch: Partial<Order> = { paymentStatus: status };
-  if (status === "paid") {
-    patch.status = "paid";
-    patch.paidAt = approvedAt ?? new Date().toISOString();
-  } else if (status === "refunded") {
-    patch.status = "refunded";
-  }
-  // "pending" / "failed" mantêm Order.status em "pending_payment" — o cliente
-  // ainda pode tentar pagar de novo (ou aguardar PIX/boleto compensar).
-  return patch;
-}
+/**
+ * Opções de merge. `clearPaymentArtifacts` remove `paymentPix`/`paymentBoleto`
+ * do documento — necessário porque o Admin SDK aqui não usa
+ * `ignoreUndefinedProperties` (escrever `undefined` lança) e `tx.set` faz
+ * overwrite total: a única forma de apagar um campo é a chave estar AUSENTE
+ * no objeto persistido. Por isso deletamos as chaves antes do `validateOrder`.
+ */
+type MergeOptions = { clearPaymentArtifacts?: boolean };
 
-function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {
+function mergeOrderPatch(current: Order, patch: Partial<Order>, opts?: MergeOptions): Order {
   // Merge order: existente < patch < campos imutáveis controlados pelo servidor.
-  return validateOrder({
+  const draft: Order = {
     ...current,
     ...patch,
     id: current.id,
     userId: current.userId,
     createdAt: current.createdAt,
     updatedAt: new Date().toISOString(),
-  });
+  };
+  if (opts?.clearPaymentArtifacts) {
+    delete draft.paymentPix;
+    delete draft.paymentBoleto;
+  }
+  return validateOrder(draft);
 }
 
 /**
@@ -67,14 +74,18 @@ function mergeOrderPatch(current: Order, patch: Partial<Order>): Order {
  * que reads/writes concorrentes (dois webhooks ou webhook + payment-intent
  * disparados simultaneamente) não se sobrescrevam.
  */
-async function persistOrderPatch(orderId: string, patch: Partial<Order>): Promise<Order> {
+async function persistOrderPatch(
+  orderId: string,
+  patch: Partial<Order>,
+  opts?: MergeOptions,
+): Promise<Order> {
   return adminDb.runTransaction(async (tx) => {
     const ref = orderRef(orderId);
     const snapshot = await tx.get(ref);
     if (!snapshot.exists) {
       throw new PaymentProviderError(`Pedido "${orderId}" não encontrado.`, "invalid_input");
     }
-    const merged = mergeOrderPatch(snapshot.data() as Order, patch);
+    const merged = mergeOrderPatch(snapshot.data() as Order, patch, opts);
     tx.set(ref, merged);
     return merged;
   });
@@ -123,9 +134,32 @@ export async function createPaymentIntent(
         : { ...base, paymentMethod: "pix", payer: methodInput.payer },
   );
 
+  // Persistimos os artefatos de PIX/boleto na Order para que o cliente possa
+  // reabri-los em `/conta/pedidos/{id}` caso saia da tela de sucesso. Spreads
+  // condicionais garantem chaves AUSENTES (nunca `undefined`) — o Admin SDK
+  // aqui não usa `ignoreUndefinedProperties` e escrever `undefined` lança.
   const updatedOrder = await persistOrderPatch(order.id, {
     paymentIntentId: result.paymentId,
-    ...buildStatusPatch(result.status),
+    ...(result.pix
+      ? {
+          paymentPix: {
+            qrCode: result.pix.qrCode,
+            qrCodeBase64: result.pix.qrCodeBase64,
+            ...(result.pix.expiresAt ? { expiresAt: result.pix.expiresAt } : {}),
+          },
+        }
+      : {}),
+    ...(result.boleto
+      ? {
+          paymentBoleto: {
+            url: result.boleto.url,
+            ...(result.boleto.digitableLine ? { digitableLine: result.boleto.digitableLine } : {}),
+            ...(result.boleto.barcode ? { barcode: result.boleto.barcode } : {}),
+            ...(result.boleto.expiresAt ? { expiresAt: result.boleto.expiresAt } : {}),
+          },
+        }
+      : {}),
+    ...buildStatusPatch(result.status, undefined, order.status),
   });
 
   return { result, order: updatedOrder };
@@ -165,9 +199,16 @@ export async function applyOrderWebhook(
 
     const patch: Partial<Order> = {
       paymentIntentId: summary.paymentId,
-      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt) : {}),
+      ...(statusChanged ? buildStatusPatch(summary.status, summary.approvedAt, order.status) : {}),
     };
-    tx.set(ref, mergeOrderPatch(order, patch));
+    // Enquanto o pagamento aguarda o pagador (`pending`/`awaiting_pix`/
+    // `awaiting_boleto`), preservamos o QR/boleto para reexibição em
+    // `/conta/pedidos`. Quando resolve (pago/recusado/cancelado/estornado), o
+    // artefato venceu — apagamos (privacidade + tamanho do doc).
+    const clearPaymentArtifacts = !(
+      AWAITING_PAYMENT_STATUSES as readonly string[]
+    ).includes(summary.status);
+    tx.set(ref, mergeOrderPatch(order, patch, { clearPaymentArtifacts }));
 
     return { changed: true, orderId: order.id, status: summary.status };
   });

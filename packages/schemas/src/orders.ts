@@ -13,6 +13,107 @@ import { ADDRESS_PATH_REGEX } from "@luratha/schemas/addresses";
 import { shippingProviderIdSchema } from "@luratha/schemas/siteSettings";
 
 /**
+ * Fonte única dos status de um pedido. O schema (`orderSchema`), o adapter de
+ * pagamento (`@luratha/payments`) e a UI derivam destes const arrays — nada de
+ * redigitar o union em outro arquivo. Padrão espelha `SHIPPING_PROVIDER_IDS`
+ * (`siteSettings.ts`).
+ */
+
+/** Estado de fulfillment do pedido. */
+export const ORDER_STATUSES = [
+  "pending_payment",
+  "paid",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded",
+  // Fail-safe: o pagamento veio com um status do MP que não reconhecemos. Trava
+  // o fulfillment (não aparece "pago") até revisão manual. Ver `mapMpStatus`.
+  "unknown",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/**
+ * Status de pagamento normalizado. A API de Orders do MP usa `status` (grosso) +
+ * `status_detail` (substatus); `mapMpStatus` (`@luratha/payments`) combina os
+ * dois (e o método) pra produzir estes valores.
+ */
+export const PAYMENT_STATUSES = [
+  // Pagamento iniciado, ainda em processamento (cartão em análise — MP `created`/`in_process`).
+  "pending",
+  // Aguardando o pagador pagar, por método — MP `action_required`
+  // (`waiting_transfer` p/ PIX, `waiting_payment` p/ boleto).
+  "awaiting_pix",
+  "awaiting_boleto",
+  // Cartão autorizado, ainda não capturado — MP `action_required/waiting_capture`.
+  "authorized",
+  // Pago e creditado — MP `processed/accredited`.
+  "paid",
+  // Pago com reembolso parcial — MP `processed/partially_refunded`.
+  "partially_refunded",
+  // Pago e depois contestado pelo comprador (disputa em curso) — MP `charged_back/in_process`.
+  "in_dispute",
+  // Falha genérica de processamento — MP `failed`.
+  "failed",
+  // Cancelado/expirado: PIX ou boleto não pago a tempo, ou cancelamento — MP `cancelled`.
+  "cancelled",
+  // Recusado pelo emissor/banco (cartão) — MP `rejected` (motivo no `status_detail`).
+  "rejected",
+  // Reembolso total — MP `refunded`.
+  "refunded",
+  // Estorno involuntário emitido pelo banco/emissor após disputa — MP `charged_back/{settled,reimbursed}`.
+  "charged_back",
+  // Fail-safe: status do MP não reconhecido. Persistido (não silenciado) pra forçar revisão.
+  "unknown",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/**
+ * Pagamento que não foi concluído e do qual o cliente pode tentar de novo
+ * (recusa/cancelamento/falha) — distinto de estorno (`refunded`/`charged_back`),
+ * que pressupõe pagamento prévio. Usado pra preservar o carrinho e pra reconhecer
+ * uma falha real quando o MP não devolve o artefato (PIX/boleto).
+ */
+export const PAYMENT_FAILURE_STATUSES = ["failed", "cancelled", "rejected"] as const satisfies readonly PaymentStatus[];
+
+/**
+ * Estados terminais sem artefato a gerar e que não avançam sozinhos — o polling
+ * do client (QR do PIX / boleto) deve parar em vez de tentar por 2min.
+ */
+export const TERMINAL_PAYMENT_STATUSES = [
+  ...PAYMENT_FAILURE_STATUSES,
+  "refunded",
+  "charged_back",
+  "unknown",
+] as const satisfies readonly PaymentStatus[];
+
+/**
+ * Pagamento ainda aguardando o pagador — o artefato (QR do PIX / boleto) segue
+ * válido e **deve ser preservado** no documento (reexibição em `/conta/pedidos`).
+ * Quando o webhook traz qualquer outro status (pago/falha/estorno), os artefatos
+ * vencidos são apagados. Inclui `awaiting_pix`/`awaiting_boleto`, não só `pending`.
+ */
+export const AWAITING_PAYMENT_STATUSES = [
+  "pending",
+  "awaiting_pix",
+  "awaiting_boleto",
+] as const satisfies readonly PaymentStatus[];
+
+/**
+ * Estados de fulfillment em que o pedido ainda **não foi despachado** — só nesses
+ * o fail-safe `unknown` rebaixa o `Order.status` (ver `buildStatusPatch` em
+ * `@luratha/payments`). Em `shipped`/`delivered`/terminais, sobrescrever destruiria
+ * o histórico sem prevenir nada (o despacho já ocorreu).
+ */
+export const DISPATCHABLE_ORDER_STATUSES = [
+  "pending_payment",
+  "paid",
+  "processing",
+  "unknown",
+] as const satisfies readonly OrderStatus[];
+
+/**
  * Snapshot da opção de frete escolhida no checkout.
  *
  * É um snapshot intencional — o documento não referencia configuração mutável
@@ -56,33 +157,48 @@ export const orderSchema = z
     id: nonEmptyStringSchema,
     userId: uidSchema,
     orderNumber: z.string().trim().regex(/^[A-Z0-9-]{8,32}$/),
-    status: z.enum([
-      "pending_payment",
-      "paid",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
-      "refunded",
-    ]),
+    status: z.enum(ORDER_STATUSES),
     paymentMethod: z.enum(["pix", "credit_card", "boleto"]),
-    paymentStatus: z.enum([
-      "pending",
-      "authorized",
-      "paid",
-      // Pagamento aprovado e depois contestado pelo comprador — MP `in_mediation`.
-      "in_dispute",
-      "failed",
-      "refunded",
-      // Estorno involuntário emitido pelo banco/emissor após disputa — MP `charged_back`.
-      "charged_back",
-    ]),
+    paymentStatus: z.enum(PAYMENT_STATUSES),
     /**
      * Id do pagamento no provider (MercadoPago). Preenchido por
      * `POST /api/checkout/payment-intent` e usado para correlacionar o webhook.
      * Opcional para retro-compatibilidade com pedidos anteriores à integração.
      */
     paymentIntentId: nonEmptyStringSchema.max(64).optional(),
+    /**
+     * Artefatos do PIX persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o QR Code em `/conta/pedidos/{id}` caso saia da
+     * tela de sucesso antes de pagar. Limpos pelo webhook quando o pagamento
+     * deixa de estar `pending` (privacidade + tamanho do doc).
+     */
+    paymentPix: z
+      .object({
+        /** Copia-cola (EMV) do PIX. */
+        qrCode: nonEmptyStringSchema,
+        /** Imagem PNG do QR em base64 (sem o prefixo `data:`). */
+        qrCodeBase64: nonEmptyStringSchema,
+        /** ISO-8601 do vencimento do QR, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
+    /**
+     * Artefatos do boleto persistidos na criação do payment-intent para que o
+     * cliente possa reabrir o boleto em `/conta/pedidos/{id}`. Limpos pelo
+     * webhook quando o pagamento deixa de estar `pending`.
+     */
+    paymentBoleto: z
+      .object({
+        /** URL do boleto em PDF (hospedado pelo MercadoPago). */
+        url: z.url(),
+        /** Linha digitável para pagamento manual. */
+        digitableLine: nonEmptyStringSchema.optional(),
+        /** Código de barras (FEBRABAN). */
+        barcode: nonEmptyStringSchema.optional(),
+        /** ISO-8601 do vencimento do boleto, quando o provider informa. */
+        expiresAt: timestampSchema.optional(),
+      })
+      .optional(),
     items: z.array(orderItemSchema).min(1),
     itemCount: quantitySchema,
     subtotal: moneySchema,

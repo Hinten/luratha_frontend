@@ -16,7 +16,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, expect, it, vi } from "vitest";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
-import { firestoreCollections, validateOrder } from "@luratha/schemas";
+import { firestoreCollections, type Order } from "@luratha/schemas";
+import { buildPendingOrderFixture } from "@luratha/schemas/__fixtures__/orders";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 
 // ── MercadoPago adapter mock (no real provider calls) ──────────────────────
@@ -27,7 +28,7 @@ const mp = vi.hoisted(() => ({
   mapMpStatus: vi.fn(),
 }));
 // importActual preserva o restante das exports do módulo (`isMercadoPagoSandbox`,
-// `withSandboxEmail`, `describeMercadoPagoError`) que o barrel `@luratha/payments`
+// `withSandboxPayer`, `describeMercadoPagoError`) que o barrel `@luratha/payments`
 // re-exporta — sem isso elas viram `undefined` em qualquer code path futuro
 // que as toque, escondendo a causa real do erro.
 vi.mock("@luratha/payments/mercadoPago", async () => {
@@ -48,41 +49,6 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   );
 }
 
-function buildOrderPayload(userId: string) {
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  return {
-    id,
-    userId,
-    orderNumber: `ORD-${Date.now().toString().slice(-10)}`,
-    status: "pending_payment" as const,
-    paymentMethod: "pix" as const,
-    paymentStatus: "pending" as const,
-    items: [
-      {
-        id: "item-1",
-        productId: "prod-pay-001",
-        itemSku: "SKU-PAY-AB",
-        name: "Vestido Linho",
-        photoId: "img-pay-001",
-        quantity: 1,
-        unitPrice: 200,
-        lineTotal: 200,
-        currency: "BRL" as const,
-      },
-    ],
-    itemCount: 1,
-    subtotal: 200,
-    discountTotal: 0,
-    shippingTotal: 20,
-    grandTotal: 220,
-    currency: "BRL" as const,
-    shippingAddressPath: `userProfiles/${userId}/addresses/addr-pay-001`,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
   const prefix = createCloudTestPrefix();
   const userId = `${prefix}-user`;
@@ -100,8 +66,8 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     await cleanupDocuments(seededDocs);
   });
 
-  async function seedOrder(): Promise<string> {
-    const order = validateOrder(buildOrderPayload(userId));
+  async function seedOrder(overrides: Partial<Order> = {}): Promise<string> {
+    const order = buildPendingOrderFixture({ id: randomUUID(), userId, ...overrides });
     const ref = adminDb
       .collection(firestoreCollections.orders)
       .doc(order.id)
@@ -149,6 +115,49 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     expect(order?.paidAt).toBe("2026-05-19T12:00:00.000Z");
   });
 
+  it("webhook clears persisted PIX artifacts when the payment becomes paid", async () => {
+    // O pedido foi semeado com o QR do PIX (reexibido em /conta/pedidos enquanto
+    // pending). Ao compensar, o webhook deve apagar `paymentPix` — QR vencido
+    // não deve persistir (privacidade + tamanho do doc).
+    const orderId = await seedOrder({
+      paymentPix: {
+        qrCode: "00020126-PIX-cloud",
+        qrCodeBase64: "QR-CLOUD-BASE64",
+        expiresAt: "2026-05-29T12:00:00.000Z",
+      },
+    });
+
+    mp.getOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-clear-001",
+      status: "paid",
+      orderId,
+      approvedAt: "2026-05-19T12:00:00.000Z",
+    });
+
+    const res = await webhookPOST(
+      new Request("http://localhost/api/webhooks/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-signature": "ts=1,v1=mocked",
+          "x-request-id": "req-cloud-clear-1",
+        },
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-clear-1" } }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    const order = persisted.data();
+    expect(order?.paymentStatus).toBe("paid");
+    expect(order?.paymentPix).toBeUndefined();
+  });
+
   it("webhook persists paymentIntentId even when status did not change", async () => {
     // Caso real: primeira notificação chega com `action_required` (mapeia pra
     // status "pending", igual ao seed). O status não muda, mas o
@@ -186,6 +195,43 @@ describeCloud("/api/webhooks/mercadopago (Cloud Firebase)", () => {
     const order = persisted.data();
     expect(order?.paymentIntentId).toBe("mp-cloud-pending-001");
     expect(order?.paymentStatus).toBe("pending");
+  });
+
+  it("webhook de contestação → paymentStatus in_dispute, Order.status preservado", async () => {
+    // Contestação (MP `charged_back/in_process`) só muda o pagamento — o pedido
+    // pode já ter sido enviado, então `Order.status` não é tocado. Valida também
+    // que o Firestore aceita o novo valor de enum.
+    const orderId = await seedOrder();
+
+    mp.getOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-dispute-001",
+      status: "in_dispute",
+      orderId,
+    });
+
+    const res = await webhookPOST(
+      new Request("http://localhost/api/webhooks/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-signature": "ts=1,v1=mocked",
+          "x-request-id": "req-cloud-dispute-1",
+        },
+        body: JSON.stringify({ type: "order", data: { id: "ORD-cloud-dispute-1" } }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    const order = persisted.data();
+    expect(order?.paymentStatus).toBe("in_dispute");
+    // Seed é `pending_payment` — a disputa não mexe no fulfillment.
+    expect(order?.status).toBe("pending_payment");
   });
 
   it("webhook is idempotent on a repeated notification", async () => {
