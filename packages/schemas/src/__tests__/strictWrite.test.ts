@@ -121,13 +121,15 @@ describe("mergeForWrite", () => {
     expect(merged).toEqual({ a: 1, b: 20, c: 30 });
   });
 
-  it("drops keys resolving to undefined but KEEPS null", () => {
+  it("treats an undefined patch value as absent (existing unchanged), keeps null", () => {
     const merged = mergeForWrite(
-      { keep: "v", clear: "old", gone: "old" },
-      { clear: null, gone: undefined },
+      { keep: "v", clear: "old", untouched: "old" },
+      { clear: null, untouched: undefined },
     );
-    expect(merged).toEqual({ keep: "v", clear: null });
-    expect(Object.hasOwn(merged, "gone")).toBe(false);
+    // `untouched: undefined` must NOT delete the existing field; `clear: null`
+    // stores null. The result never carries an `undefined` value.
+    expect(merged).toEqual({ keep: "v", clear: null, untouched: "old" });
+    expect(Object.values(merged).includes(undefined)).toBe(false);
   });
 
   it("does not inject schema defaults (pure shallow merge)", () => {

@@ -70,19 +70,35 @@ export function parseStrictWrite<T>(validate: (input: unknown) => T, input: unkn
 
 /**
  * Repository-side merge for PATCH semantics, following the mandated merge order
- * `{ ...existing, ...patch, ...serverFields }`. Absent keys stay unchanged;
- * `null` clears a field; keys resolving to `undefined` are dropped (the admin
- * SDK rejects `undefined`). Schema defaults are NOT injected here — they already
- * exist on `existing`; the caller re-validates the merged object afterwards.
+ * `{ ...existing, ...patch, ...serverFields }`.
+ *
+ * Key semantics:
+ *  - **absent** key in `patch` → existing value is left unchanged;
+ *  - **`null`** → stored as null (clears the field to null);
+ *  - **`undefined`** → treated as ABSENT (existing value left unchanged). An
+ *    `undefined` value never overrides or deletes an existing field. This both
+ *    keeps the result free of `undefined` (the Admin SDK rejects it) AND avoids
+ *    the footgun where a `Partial<T>` patch carrying `{ field: undefined }`
+ *    would silently delete `field` on an overwrite (`set`) write. To remove a
+ *    field, delete it explicitly on the validated object before writing.
+ *
+ * Schema defaults are NOT injected here — they already exist on `existing`; the
+ * caller re-validates the merged object afterwards. `existing` is expected to be
+ * a validated entity (the project's schemas use `.nullable().default(null)`, not
+ * `.optional()`, so a valid entity carries no `undefined` values).
  */
 export function mergeForWrite<T extends Record<string, unknown>>(
   existing: T,
   patch: Record<string, unknown>,
   serverFields: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...existing, ...patch, ...serverFields };
-  for (const key of Object.keys(merged)) {
-    if (merged[key] === undefined) delete merged[key];
+  const merged: Record<string, unknown> = { ...existing };
+  for (const source of [patch, serverFields]) {
+    for (const key of Object.keys(source)) {
+      if (Object.hasOwn(source, key) && source[key] !== undefined) {
+        merged[key] = source[key];
+      }
+    }
   }
   return merged;
 }
