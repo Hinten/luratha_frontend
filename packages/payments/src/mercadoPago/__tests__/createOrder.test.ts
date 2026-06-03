@@ -194,3 +194,55 @@ describe("getOrderArtifacts — releitura para polling", () => {
     await expect(getOrderArtifacts("ORD1")).rejects.toBeInstanceOf(PaymentProviderError);
   });
 });
+
+describe("primaryPayment — guarda de payment único", () => {
+  const MULTI_WARN = "[mercadoPago] order com múltiplos payments — usando o primeiro";
+
+  it("order com >1 payment → extrai do primeiro E loga WARNING observável", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    mockFetch({
+      id: "ORD1",
+      status: "action_required",
+      external_reference: "order-1",
+      transactions: {
+        payments: [
+          { payment_method: { type: "bank_transfer", qr_code: "QR", qr_code_base64: "B64" } },
+          { payment_method: { type: "credit_card" } },
+        ],
+      },
+    });
+
+    const artifacts = await getOrderArtifacts("ORD1");
+
+    // Artefato resolvido a partir do primeiro payment (comportamento inalterado).
+    expect(artifacts.pix).toEqual({ qrCode: "QR", qrCodeBase64: "B64", ticketUrl: undefined });
+    // E o pressuposto de payment único vira um WARNING (não um bug silencioso).
+    expect(warnSpy).toHaveBeenCalledWith(
+      MULTI_WARN,
+      expect.objectContaining({ count: 2, externalReference: "order-1" }),
+    );
+  });
+
+  it("order com 1 payment → NÃO dispara o WARNING de múltiplos (caminho normal)", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    mockFetch({
+      id: "ORD1",
+      status: "action_required",
+      ...pixPaymentMethod({ qr_code: "QR", qr_code_base64: "B64" }),
+    });
+
+    await getOrderArtifacts("ORD1");
+
+    expect(warnSpy).not.toHaveBeenCalledWith(MULTI_WARN, expect.anything());
+  });
+
+  it("order sem payments (array vazio) → sem artefato, sem crash", async () => {
+    mockFetch({ id: "ORD1", status: "action_required", transactions: { payments: [] } });
+
+    const artifacts = await getOrderArtifacts("ORD1");
+
+    expect(artifacts.pix).toBeUndefined();
+    expect(artifacts.boleto).toBeUndefined();
+    expect(artifacts.status).toBe("pending");
+  });
+});

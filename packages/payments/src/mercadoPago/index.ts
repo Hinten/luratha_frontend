@@ -478,16 +478,37 @@ interface OrderResponse {
 }
 
 /**
- * Tipo do método no MP (`bank_transfer`=pix, `ticket`=boleto, `credit_card`) — usado por `mapMpStatus`.
+ * Seleciona O pagamento de uma order. Nosso fluxo cria sempre exatamente 1
+ * (`buildOrderBody` envia `transactions.payments: [{…}]`, e cada tentativa de
+ * checkout gera uma Order/MP order nova — retentativas nunca reusam a order),
+ * então o esperado é `payments.length === 1`. A Orders API expõe `payments`
+ * como array e em tese aceita pagamento combinado (vários payments por order),
+ * que NÃO oferecemos; se o MP devolver mais de um, logamos um WARNING
+ * (observável no Cloud Logging) e seguimos com o primeiro.
  *
- * PRESSUPOSTO: lê só `payments[0]`. A Orders API permite **múltiplos payments por
- * order** (doc: "Multiple transactions per request"); hoje `buildOrderBody` sempre
- * cria 1 payment, então é seguro. Se um dia oferecermos pagamento combinado (dois
- * cartões, cartão + carteira), todos os extratores `payments[0]` viram bug
- * estrutural — ver follow-up em `checkout-pendencias`.
+ * Único ponto que lê `payments[0]`: a suposição de payment único fica
+ * centralizada aqui em vez de espalhada e silenciosa pelos extratores. O status
+ * do PEDIDO não depende disto — `mapMpStatus` usa o status agregado de
+ * order-level (`response.status`/`status_detail`), não `payments[].status`.
+ */
+function primaryPayment(response: OrderResponse): OrderPaymentResponse | undefined {
+  const payments = response.transactions?.payments;
+  if (!payments || payments.length === 0) return undefined;
+  if (payments.length > 1) {
+    logger.warn("[mercadoPago] order com múltiplos payments — usando o primeiro", {
+      orderId: response.id,
+      externalReference: response.external_reference,
+      count: payments.length,
+    });
+  }
+  return payments[0];
+}
+
+/**
+ * Tipo do método no MP (`bank_transfer`=pix, `ticket`=boleto, `credit_card`) — usado por `mapMpStatus`.
  */
 function paymentMethodTypeOf(response: OrderResponse): string | undefined {
-  return response.transactions?.payments?.[0]?.payment_method?.type;
+  return primaryPayment(response)?.payment_method?.type;
 }
 
 /** `mapMpStatus` com os 3 campos (status + detail + método) extraídos da order. */
@@ -500,7 +521,7 @@ function mapOrderStatus(response: OrderResponse): PaymentStatus {
  * gerou o artefato (geração assíncrona) — o chamador trata como "pendente".
  */
 function extractPixPayment(response: OrderResponse): PixArtifact | null {
-  const payment = response.transactions?.payments?.[0];
+  const payment = primaryPayment(response);
   const pm = payment?.payment_method;
   if (!pm?.qr_code || !pm?.qr_code_base64) return null;
   const expiresAt = normalizeExpiration(payment?.date_of_expiration);
@@ -517,7 +538,7 @@ function extractPixPayment(response: OrderResponse): PixArtifact | null {
  * gerou o `ticket_url`.
  */
 function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
-  const payment = response.transactions?.payments?.[0];
+  const payment = primaryPayment(response);
   const pm = payment?.payment_method;
   if (!pm?.ticket_url) return null;
   const expiresAt = normalizeExpiration(payment?.date_of_expiration);
@@ -686,7 +707,7 @@ export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifac
   // client para de pollar). Caso pendente, devolve só o status — o client segue
   // tentando.
   if (!pix && !boleto && FAILURE_STATUSES.has(status)) {
-    classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: response.transactions?.payments?.[0]?.payment_method?.type ?? "unknown" }, response);
+    classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: paymentMethodTypeOf(response) ?? "unknown" }, response);
   }
 
   return { status, pix, boleto, underReview: isUnderReview(response) || undefined };
