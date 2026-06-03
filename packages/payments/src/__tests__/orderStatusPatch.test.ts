@@ -24,6 +24,13 @@ describe("buildStatusPatch", () => {
     });
   });
 
+  it("cancelled → Order.status 'cancelled' (PIX/boleto expirado encerra o pedido)", () => {
+    expect(buildStatusPatch("cancelled")).toEqual({
+      paymentStatus: "cancelled",
+      status: "cancelled",
+    });
+  });
+
   it("unknown → fail-safe: status E paymentStatus 'unknown' (não vira 'pago', não despachável)", () => {
     expect(buildStatusPatch("unknown")).toEqual({ paymentStatus: "unknown", status: "unknown" });
   });
@@ -51,6 +58,8 @@ describe("buildStatusPatch", () => {
   });
 
   it("estados que não mudam o fulfillment → só paymentStatus (Order.status preservado pelo merge)", () => {
+    // `failed`/`rejected` deixam o pedido em `pending_payment` p/ o cliente
+    // retentar; `cancelled` NÃO está aqui (encerra o pedido, testado acima).
     const noStatusChange = [
       "pending",
       "awaiting_pix",
@@ -59,6 +68,7 @@ describe("buildStatusPatch", () => {
       "partially_refunded",
       "in_dispute",
       "failed",
+      "rejected",
     ] as const;
     for (const status of noStatusChange) {
       expect(buildStatusPatch(status)).toEqual({ paymentStatus: status });

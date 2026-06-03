@@ -47,7 +47,9 @@ const PAYMENT_OVERRIDE: Partial<Record<Order["paymentStatus"], LabelVariant>> = 
   partially_refunded: { label: "Reembolsado parcialmente", variant: "info" },
   in_dispute: { label: "Em contestação", variant: "warning" },
   charged_back: { label: "Estornado", variant: "muted" },
-  failed: { label: "Pagamento recusado", variant: "error" },
+  failed: { label: "Falha no pagamento", variant: "error" },
+  rejected: { label: "Pagamento recusado", variant: "error" },
+  cancelled: { label: "Pagamento cancelado", variant: "muted" },
 };
 
 export function getOrderDisplayStatus(

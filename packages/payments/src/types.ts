@@ -7,29 +7,19 @@
  * caso surja um segundo provider, extrair uma interface aqui.
  */
 
+import type { PaymentStatus } from "@luratha/schemas";
+
 /** Método de pagamento — espelha `Order.paymentMethod`. */
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
 /**
- * Status de pagamento normalizado — espelha `Order.paymentStatus`. A API de
- * Orders do MP usa `status` (grosso) + `status_detail` (substatus); `mapMpStatus`
- * (`mercadoPago/index.ts`) combina os dois (e o método) pra produzir estes
- * valores. `unknown` é o fail-safe pra qualquer status que não reconheçamos —
- * persistido (não silenciado) pra forçar revisão manual, nunca despachar um
- * pedido sob status incerto.
+ * Status de pagamento normalizado. Fonte única em `@luratha/schemas`
+ * (`PAYMENT_STATUSES` em `orders.ts`) — re-exportado aqui pra manter a superfície
+ * pública de `@luratha/payments` sem redigitar o union. `mapMpStatus`
+ * (`mercadoPago/index.ts`) combina `status` + `status_detail` + método do MP pra
+ * produzir estes valores.
  */
-export type PaymentStatus =
-  | "pending"
-  | "awaiting_pix"
-  | "awaiting_boleto"
-  | "authorized"
-  | "paid"
-  | "partially_refunded"
-  | "in_dispute"
-  | "failed"
-  | "refunded"
-  | "charged_back"
-  | "unknown";
+export type { PaymentStatus };
 
 /** Dados do pagador exigidos pelo MercadoPago. */
 export interface PaymentPayer {

@@ -1,22 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TERMINAL_PAYMENT_STATUSES, type PaymentStatus } from "@luratha/schemas";
 import styles from "./PaymentResult.module.css";
 
 export type PaymentMethod = "pix" | "credit_card" | "boleto";
 
-export type PaymentStatus =
-  | "pending"
-  | "awaiting_pix"
-  | "awaiting_boleto"
-  | "authorized"
-  | "paid"
-  | "partially_refunded"
-  | "in_dispute"
-  | "failed"
-  | "refunded"
-  | "charged_back"
-  | "unknown";
+// `PaymentStatus` é a fonte única em `@luratha/schemas` — re-exportado aqui pra
+// quem importa do componente não precisar conhecer o pacote de schemas.
+export type { PaymentStatus };
 
 export interface PixArtifact {
   qrCode: string;
@@ -89,14 +81,10 @@ function HourglassIcon({ className }: { className?: string }) {
 /**
  * Status em que o pagamento não vai avançar sozinho e não há artefato a gerar —
  * o polling deve parar (em vez de tentar por 2min) e a UI mostra a mensagem
- * certa. `paid` é tratado à parte (redireciona pra página de sucesso).
+ * certa. `paid` é tratado à parte (redireciona pra página de sucesso). Fonte
+ * única em `@luratha/schemas` (`TERMINAL_PAYMENT_STATUSES`).
  */
-const TERMINAL_FAILURE_STATUSES = new Set<PaymentStatus>([
-  "failed",
-  "refunded",
-  "charged_back",
-  "unknown",
-]);
+const TERMINAL_FAILURE_STATUSES = new Set<PaymentStatus>(TERMINAL_PAYMENT_STATUSES);
 
 const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | "error" }> = {
   paid: { label: "Pagamento aprovado", tone: "ok" },
@@ -105,7 +93,9 @@ const STATUS_COPY: Record<PaymentStatus, { label: string; tone: "ok" | "warn" | 
   awaiting_pix: { label: "Aguardando pagamento", tone: "warn" },
   awaiting_boleto: { label: "Aguardando pagamento", tone: "warn" },
   partially_refunded: { label: "Reembolsado parcialmente", tone: "warn" },
-  failed: { label: "Pagamento recusado", tone: "error" },
+  failed: { label: "Falha no pagamento", tone: "error" },
+  cancelled: { label: "Pagamento cancelado", tone: "error" },
+  rejected: { label: "Pagamento recusado", tone: "error" },
   in_dispute: { label: "Em contestação", tone: "warn" },
   refunded: { label: "Reembolsado", tone: "warn" },
   charged_back: { label: "Estornado", tone: "error" },

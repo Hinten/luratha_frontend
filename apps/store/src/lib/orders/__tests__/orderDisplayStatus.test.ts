@@ -21,7 +21,13 @@ describe("getOrderDisplayStatus", () => {
     ).toMatchObject({ label: "Reembolsado parcialmente" });
     expect(
       getOrderDisplayStatus({ status: "pending_payment", paymentStatus: "failed" }),
+    ).toMatchObject({ label: "Falha no pagamento", variant: "error" });
+    expect(
+      getOrderDisplayStatus({ status: "pending_payment", paymentStatus: "rejected" }),
     ).toMatchObject({ label: "Pagamento recusado", variant: "error" });
+    expect(
+      getOrderDisplayStatus({ status: "cancelled", paymentStatus: "cancelled" }),
+    ).toMatchObject({ label: "Pagamento cancelado", variant: "muted" });
   });
 
   it("unknown (fail-safe) → 'Em análise pela equipe técnica', nunca 'Pago'", () => {

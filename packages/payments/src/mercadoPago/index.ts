@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "@luratha/core/logging/logger";
+import { PAYMENT_FAILURE_STATUSES } from "@luratha/schemas";
 import {
   MP_API_BASE_URL,
   resolveMercadoPagoConfig,
@@ -30,6 +31,9 @@ import {
 function totalAmountString(amount: number): string {
   return amount.toFixed(2);
 }
+
+/** Lookup dos status de falha (pagamento não concluído) — fonte em `@luratha/schemas`. */
+const FAILURE_STATUSES = new Set<PaymentStatus>(PAYMENT_FAILURE_STATUSES);
 
 /**
  * Resolve se estamos em modo sandbox.
@@ -213,7 +217,7 @@ function logAndRewrapMpError(
  *  - `action_required/waiting_capture` → `authorized`
  *  - `action_required/waiting_payment|waiting_transfer` → `awaiting_pix`/`awaiting_boleto`
  *  - `charged_back/in_process` → `in_dispute`; demais `charged_back` → `charged_back`
- *  - `cancelled`/`failed`/`rejected` → `failed`; `refunded` → `refunded`
+ *  - `cancelled` → `cancelled`; `rejected` → `rejected`; `failed` → `failed`; `refunded` → `refunded`
  *
  * **Fail-safe:** qualquer combinação não reconhecida → `logger.warn` + `"unknown"`.
  * Não chutamos nem silenciamos um status novo/não-documentado do MP — o pedido
@@ -240,8 +244,10 @@ export function mapMpStatus(
     case "charged_back":
       return statusDetail === "in_process" ? "in_dispute" : "charged_back";
     case "cancelled":
-    case "failed":
+      return "cancelled";
     case "rejected":
+      return "rejected";
+    case "failed":
       return "failed";
     case "refunded":
       return "refunded";
@@ -456,7 +462,15 @@ interface OrderResponse {
   transactions?: { payments?: OrderPaymentResponse[] };
 }
 
-/** Tipo do método no MP (`bank_transfer`=pix, `ticket`=boleto, `credit_card`) — usado por `mapMpStatus`. */
+/**
+ * Tipo do método no MP (`bank_transfer`=pix, `ticket`=boleto, `credit_card`) — usado por `mapMpStatus`.
+ *
+ * PRESSUPOSTO: lê só `payments[0]`. A Orders API permite **múltiplos payments por
+ * order** (doc: "Multiple transactions per request"); hoje `buildOrderBody` sempre
+ * cria 1 payment, então é seguro. Se um dia oferecermos pagamento combinado (dois
+ * cartões, cartão + carteira), todos os extratores `payments[0]` viram bug
+ * estrutural — ver follow-up em `checkout-pendencias`.
+ */
 function paymentMethodTypeOf(response: OrderResponse): string | undefined {
   return response.transactions?.payments?.[0]?.payment_method?.type;
 }
@@ -497,9 +511,9 @@ function extractBoletoPayment(response: OrderResponse): BoletoArtifact | null {
 /**
  * Quando uma order vem 2xx mas SEM o artefato (QR/boleto), distingue dois casos:
  *
- *  - **falha real** — o pagamento já veio recusado/cancelado (`mapMpStatus` →
- *    `failed`). Não adianta pollar; lança `PaymentProviderError` com o detalhe do
- *    MP. Retorna `"failed"`.
+ *  - **falha real** — o pagamento já veio recusado/cancelado/rejeitado
+ *    (`mapMpStatus` ∈ `PAYMENT_FAILURE_STATUSES`). Não adianta pollar; lança
+ *    `PaymentProviderError` com o detalhe do MP.
  *  - **ausência assíncrona** — status ainda pendente; o artefato deve aparecer ao
  *    reler a order. Retorna `"pending"` e o chamador marca `*Pending`.
  *
@@ -511,7 +525,7 @@ function classifyMissingArtifact(
   operation: "create" | "get",
   context: { orderId: string; paymentMethod: string },
   response: OrderResponse,
-): "pending" | "failed" {
+): "pending" {
   const status = mapOrderStatus(response);
   logger.warn("[mercadoPago] order sem artefato de pagamento", {
     operation,
@@ -521,7 +535,7 @@ function classifyMissingArtifact(
     rawResponse: response,
   });
 
-  if (status === "failed") {
+  if (FAILURE_STATUSES.has(status)) {
     const detail = response.status_detail ?? response.status ?? "sem detalhe";
     throw new PaymentProviderError(
       `MercadoPago recusou o pagamento (${detail}).`,
@@ -650,7 +664,7 @@ export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifac
   // Sem artefato ainda: loga o body cru e, se o pagamento já falhou, lança (o
   // client para de pollar). Caso pendente, devolve só o status — o client segue
   // tentando.
-  if (!pix && !boleto && status === "failed") {
+  if (!pix && !boleto && FAILURE_STATUSES.has(status)) {
     classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: response.transactions?.payments?.[0]?.payment_method?.type ?? "unknown" }, response);
   }
 

@@ -1,18 +1,8 @@
-import type { Order } from "@luratha/schemas";
+import { DISPATCHABLE_ORDER_STATUSES, type Order } from "@luratha/schemas";
 import type { PaymentStatus } from "./types";
 
-/**
- * Estados de fulfillment em que o pedido ainda **não foi despachado** — só nesses
- * o fail-safe `unknown` rebaixa o `Order.status` (ver `buildStatusPatch`). Em
- * `shipped`/`delivered`/`cancelled`/`refunded` o despacho já ocorreu (ou o pedido
- * já é terminal), então sobrescrever destruiria o histórico sem prevenir nada.
- */
-const DISPATCHABLE_STATUSES = new Set<Order["status"]>([
-  "pending_payment",
-  "paid",
-  "processing",
-  "unknown",
-]);
+/** Lookup do `DISPATCHABLE_ORDER_STATUSES` (fonte em `@luratha/schemas`). */
+const DISPATCHABLE_STATUSES = new Set<Order["status"]>(DISPATCHABLE_ORDER_STATUSES);
 
 /**
  * Calcula o patch de uma Order a partir de um `paymentStatus` normalizado.
@@ -21,6 +11,9 @@ const DISPATCHABLE_STATUSES = new Set<Order["status"]>([
  * testável por unidade. Define o efeito de cada estado de pagamento no
  * `Order.status` (fulfillment):
  *  - `paid` → `status: paid` (+ `paidAt`).
+ *  - `cancelled` (PIX/boleto expirado ou cancelado) → `status: cancelled` —
+ *    encerra o pedido (só ocorre em pedido nunca pago, então não conflita com
+ *    `shipped`/`delivered`).
  *  - `refunded` / `charged_back` (estorno involuntário) → `status: refunded`.
  *  - `unknown` (fail-safe) → `status: unknown` **apenas se o pedido ainda é
  *    despachável** (`currentStatus` em `DISPATCHABLE_STATUSES`) — trava o
@@ -28,8 +21,9 @@ const DISPATCHABLE_STATUSES = new Set<Order["status"]>([
  *    preserva o `Order.status` (o despacho já ocorreu; o `paymentStatus:
  *    "unknown"` + `logger.warn` continuam sinalizando a revisão).
  *  - demais (`partially_refunded`, `in_dispute`, `authorized`, `awaiting_pix`,
- *    `awaiting_boleto`, `pending`, `failed`) → só `paymentStatus`; o
- *    `Order.status` segue o que estava (o pedido pode já ter sido pago/enviado).
+ *    `awaiting_boleto`, `pending`, `failed`, `rejected`) → só `paymentStatus`; o
+ *    `Order.status` segue o que estava (o pedido pode já ter sido pago/enviado, e
+ *    `failed`/`rejected` deixam o cliente tentar de novo sobre `pending_payment`).
  *
  * `currentStatus` (estado de fulfillment atual da Order) só importa pro caso
  * `unknown`; quando omitido, assume despachável (rebaixa) — o padrão seguro.
@@ -44,6 +38,10 @@ export function buildStatusPatch(
     case "paid":
       patch.status = "paid";
       patch.paidAt = approvedAt ?? new Date().toISOString();
+      break;
+    case "cancelled":
+      // Pagamento cancelado/expirado (nunca pago) — encerra o pedido.
+      patch.status = "cancelled";
       break;
     case "refunded":
     case "charged_back":

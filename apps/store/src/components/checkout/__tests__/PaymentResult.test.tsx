@@ -89,7 +89,7 @@ describe("PaymentResult", () => {
   it("shows retry button for a failed card payment when onTryAgain is provided (statusDetail oculto)", () => {
     const onTryAgain = vi.fn();
     render(<PaymentResult result={cardFailed} orderId={ORDER_ID} onTryAgain={onTryAgain} />);
-    expect(screen.getByText("Pagamento recusado")).toBeInTheDocument();
+    expect(screen.getByText("Falha no pagamento")).toBeInTheDocument();
     // statusDetail é jargão técnico do MP e não deve aparecer pro cliente.
     expect(screen.queryByText("Cartão recusado pelo banco.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Tentar outro método" }));

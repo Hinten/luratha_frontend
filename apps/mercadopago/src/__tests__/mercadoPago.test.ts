@@ -31,10 +31,10 @@ describe("mapMpStatus", () => {
     expect(mapMpStatus("charged_back", "reimbursed")).toBe("charged_back");
   });
 
-  it("cancelled/failed/rejected → failed; refunded → refunded", () => {
-    expect(mapMpStatus("cancelled")).toBe("failed");
+  it("cancelled/rejected/failed distintos; refunded → refunded", () => {
+    expect(mapMpStatus("cancelled")).toBe("cancelled");
+    expect(mapMpStatus("rejected")).toBe("rejected");
     expect(mapMpStatus("failed")).toBe("failed");
-    expect(mapMpStatus("rejected")).toBe("failed");
     expect(mapMpStatus("refunded")).toBe("refunded");
   });
 
