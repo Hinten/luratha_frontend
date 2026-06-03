@@ -11,8 +11,12 @@ const CNPJ = "43.123.456/0001-78";
 const INSTITUTIONAL_LINKS = [
   { href: "/sobre", label: "Sobre" },
   { href: "/contato", label: "Fale Conosco" },
+  { href: "/faq", label: "Perguntas Frequentes" },
+  { href: "/entrega", label: "Entrega e Frete" },
   { href: "/politica-de-trocas", label: "Política de Trocas" },
   { href: "/referencia-de-medidas", label: "Referência de Medidas" },
+  { href: "/politica-de-privacidade", label: "Política de Privacidade" },
+  { href: "/termos-de-uso", label: "Termos de Uso" },
 ] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 const PAYMENT_METHODS = ["Pix", "Boleto", "Visa", "Mastercard"];

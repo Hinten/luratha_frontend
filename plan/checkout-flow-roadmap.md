@@ -146,10 +146,19 @@ Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` �
 - Submissão de review (UI já tem `ReviewsList`; falta form + `POST /api/reviews`)
 - `/conta/cupons` (lista cupons disponíveis)
 
-## Fase 3 — Institucionais (estáticas, baratas)
+## Fase 3 — Institucionais (estáticas, baratas) ✅ entregue (issue #84)
 
-- `/politica-de-privacidade`, `/termos-de-uso`, `/faq`, `/entrega`
-- Atualizar `sitemap.ts`, `robots.ts` e `llms.txt` (skill `luratha-seo`)
+- [x] `/politica-de-privacidade`, `/termos-de-uso`, `/faq`, `/entrega` — páginas no ar
+      com metadata, canonical, OpenGraph e JSON-LD (`FAQPage` em faq/entrega,
+      `WebPage` nos textos legais).
+- [x] `sitemap.ts` + `llms.txt` atualizados (`robots.ts` não precisou de mudança —
+      as rotas são públicas e não casam com o `disallow`).
+- [x] Dados de identificação (razão social, CNPJ, DPO, foro) tornados configuráveis
+      via o bloco `siteSettings.company`, editável no admin em
+      `/configuracoes/empresa`. O texto legal é uma **minuta** (revisão jurídica
+      pendente); campos não preenchidos aparecem como `[INSERIR …]`.
+- [ ] **Fase 2 (futuro)** — mover o corpo das páginas para o Firestore com editor
+      WYSIWYG (Tiptap) no admin, tornando o conteúdo 100% editável sem deploy.
 
 ---
 
