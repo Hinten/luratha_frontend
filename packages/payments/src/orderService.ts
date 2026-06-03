@@ -36,7 +36,7 @@ export type PaymentIntentMethodInput =
   | { paymentMethod: "boleto"; payer: PaymentPayer; payerAddress: PaymentPayerAddress };
 
 function orderRef(orderId: string) {
-  // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: the ref is converter-bound (adminOrderConverter), so writes stay schema-validated. Full migration of this subsystem is tracked separately.
+  // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: this orchestration intentionally builds its own converter-bound ref (adminOrderConverter) so reads+writes share one runTransaction (idempotency / anti-loss). Routing through ordersRepository would break that atomicity. Writes are schema-validated by the converter's toFirestore.
   return adminDb
     .collection(firestoreCollections.orders)
     .doc(orderId)

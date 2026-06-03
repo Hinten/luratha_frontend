@@ -7,7 +7,7 @@ import {
   type QueryDocumentSnapshot,
   Timestamp,
 } from "firebase/firestore";
-import { type Order, validateOrder } from "@luratha/schemas";
+import { type Order, validateOrder, parseStrictWrite } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();
@@ -16,7 +16,9 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const clientOrderConverter: FirestoreDataConverter<Order> = {
   toFirestore(order: Order) {
-    const { createdAt, updatedAt, ...rest } = order;
+    // Re-validate the outgoing bytes and HARD-FAIL on any unrecognized top-level
+    // field. Reads are unaffected (fromFirestore below is unchanged).
+    const { createdAt, updatedAt, ...rest } = parseStrictWrite(validateOrder, order);
     return {
       ...rest,
       createdAt: Timestamp.fromDate(new Date(createdAt)),
