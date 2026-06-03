@@ -79,6 +79,11 @@ export {
   type VectorSearchRequest,
 } from "@luratha/schemas/search";
 export {
+  assertNoDroppedKeys,
+  parseStrictWrite,
+  mergeForWrite,
+} from "@luratha/schemas/strictWrite";
+export {
   siteSettingsSchema,
   shippingSettingsSchema,
   shippingServiceSchema,

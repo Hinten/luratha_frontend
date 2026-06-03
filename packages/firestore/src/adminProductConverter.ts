@@ -12,7 +12,7 @@
  */
 
 import { type FirestoreDataConverter, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { type Product, validateProduct } from "@luratha/schemas";
+import { type Product, validateProduct, parseStrictWrite } from "@luratha/schemas";
 
 /**
  * Converts a Firestore vector field to a plain number[].
@@ -51,7 +51,10 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const adminProductConverter: FirestoreDataConverter<Product> = {
   toFirestore(product: Product) {
-    const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = product;
+    // Re-validate the outgoing bytes and HARD-FAIL on any unrecognized top-level
+    // field. Reads are unaffected (fromFirestore below is unchanged).
+    const validated = parseStrictWrite(validateProduct, product);
+    const { vectorEmbedding, searchEmbedding, createdAt, updatedAt, ...rest } = validated;
     return {
       ...rest,
       createdAt: Timestamp.fromDate(new Date(createdAt)),

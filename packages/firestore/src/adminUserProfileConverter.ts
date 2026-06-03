@@ -3,7 +3,7 @@
  */
 
 import { type FirestoreDataConverter, Timestamp } from "firebase-admin/firestore";
-import { type UserProfile, validateUserProfile } from "@luratha/schemas";
+import { type UserProfile, validateUserProfile, parseStrictWrite } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();
@@ -20,7 +20,7 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const adminUserProfileConverter: FirestoreDataConverter<UserProfile> = {
   toFirestore(profile: UserProfile) {
-    const { createdAt, updatedAt, ...rest } = profile;
+    const { createdAt, updatedAt, ...rest } = parseStrictWrite(validateUserProfile, profile);
     return {
       ...rest,
       createdAt: Timestamp.fromDate(new Date(createdAt)),

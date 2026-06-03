@@ -12,6 +12,7 @@ import {
   type CartItem,
   validateCart,
   validateCartItem,
+  parseStrictWrite,
 } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
@@ -21,7 +22,7 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const clientCartConverter: FirestoreDataConverter<Cart> = {
   toFirestore(cart: Cart) {
-    const { updatedAt, ...rest } = cart;
+    const { updatedAt, ...rest } = parseStrictWrite(validateCart, cart);
     return {
       ...rest,
       updatedAt: Timestamp.fromDate(new Date(updatedAt)),
@@ -39,7 +40,7 @@ export const clientCartConverter: FirestoreDataConverter<Cart> = {
 
 export const clientCartItemConverter: FirestoreDataConverter<CartItem> = {
   toFirestore(item: CartItem) {
-    const { addedAt, updatedAt, ...rest } = item;
+    const { addedAt, updatedAt, ...rest } = parseStrictWrite(validateCartItem, item);
     return {
       ...rest,
       addedAt: Timestamp.fromDate(new Date(addedAt)),

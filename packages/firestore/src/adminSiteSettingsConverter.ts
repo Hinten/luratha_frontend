@@ -3,7 +3,7 @@
  */
 
 import { type FirestoreDataConverter, Timestamp } from "firebase-admin/firestore";
-import { type SiteSettings, validateSiteSettings } from "@luratha/schemas";
+import { type SiteSettings, validateSiteSettings, parseStrictWrite } from "@luratha/schemas";
 
 function extractTimestamp(val: unknown): string | unknown {
   if (val instanceof Timestamp) return val.toDate().toISOString();
@@ -20,7 +20,7 @@ function extractTimestamp(val: unknown): string | unknown {
 
 export const adminSiteSettingsConverter: FirestoreDataConverter<SiteSettings> = {
   toFirestore(settings: SiteSettings) {
-    const { updatedAt, ...rest } = settings;
+    const { updatedAt, ...rest } = parseStrictWrite(validateSiteSettings, settings);
     return {
       ...rest,
       updatedAt: Timestamp.fromDate(new Date(updatedAt)),
