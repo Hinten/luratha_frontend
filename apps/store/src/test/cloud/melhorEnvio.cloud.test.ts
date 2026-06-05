@@ -71,6 +71,14 @@ async function calculateWithBackoff(
   throw lastError;
 }
 
+/**
+ * Orçamento de tempo do pior caso: 4 tentativas × 10s (timeoutMs default do
+ * `melhorEnvioFetch`) + 14s de backoff (2+4+8) = ~54s. O `testTimeout` global de
+ * 30s da `vitest.cloud.config.mts` estouraria antes de esgotar os retries, então
+ * este `it` recebe um timeout próprio com folga acima dos 54s.
+ */
+const IT_TIMEOUT_MS = 70_000;
+
 describeMelhorEnvio("melhorEnvioProvider — sandbox real", () => {
   it("calcula cotações para um par de CEPs válido", async () => {
     // `enabledServices: []` desliga o filtro pós-resposta: qualquer serviço que
@@ -115,5 +123,5 @@ describeMelhorEnvio("melhorEnvioProvider — sandbox real", () => {
     // `calculate` ordena por preço crescente — a primeira é a mais barata.
     const prices = quotes.map((q) => q.price);
     expect([...prices].sort((a, b) => a - b)).toEqual(prices);
-  });
+  }, IT_TIMEOUT_MS);
 });
