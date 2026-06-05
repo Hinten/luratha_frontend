@@ -11,6 +11,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "test:firestore": "turbo run test:firestore",
@@ -18,10 +20,16 @@
     "test:e2e": "turbo run test:e2e",
     "setup:routes": "node docs/create-catalog-routes.mjs",
     "functions:build": "npm --prefix functions run build",
-    "functions:install": "npm --prefix functions ci"
+    "functions:install": "npm --prefix functions ci",
+    "prepare": "husky"
   },
   "devDependencies": {
     "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "turbo": "^2.9.16",
     "typescript-eslint": "^8.60.0"
   },

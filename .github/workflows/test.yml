@@ -28,6 +28,8 @@ jobs:
         run: pnpm run typecheck
       - name: ESLint
         run: pnpm run lint
+      - name: Prettier format check
+        run: pnpm run format:check
 
   unit:
     name: Unit / component (Vitest jsdom)

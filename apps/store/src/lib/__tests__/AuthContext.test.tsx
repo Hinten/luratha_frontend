@@ -39,23 +39,25 @@ vi.mock("firebase/auth", () => {
     onIdTokenChanged: (_auth: unknown, listener: FirebaseAuthListener) => {
       listeners.push(listener);
       // dispatch async para imitar Firebase
-      Promise.resolve().then(() => listener(currentUser));
+      void Promise.resolve().then(() => listener(currentUser));
       return () => {
         listeners = listeners.filter((l) => l !== listener);
       };
     },
-    createUserWithEmailAndPassword: vi.fn(async (_auth: unknown, email: string, password: string) => {
-      const normalized = email.toLowerCase();
-      if (fakeUsers.has(normalized)) {
-        throw new FirebaseError("auth/email-already-in-use", "email already");
-      }
-      uidCounter += 1;
-      const uid = `uid-${uidCounter}`;
-      fakeUsers.set(normalized, { uid, password, displayName: null });
-      currentUser = buildFakeUser(uid, normalized, null);
-      emit();
-      return { user: currentUser };
-    }),
+    createUserWithEmailAndPassword: vi.fn(
+      async (_auth: unknown, email: string, password: string) => {
+        const normalized = email.toLowerCase();
+        if (fakeUsers.has(normalized)) {
+          throw new FirebaseError("auth/email-already-in-use", "email already");
+        }
+        uidCounter += 1;
+        const uid = `uid-${uidCounter}`;
+        fakeUsers.set(normalized, { uid, password, displayName: null });
+        currentUser = buildFakeUser(uid, normalized, null);
+        emit();
+        return { user: currentUser };
+      },
+    ),
     signInWithEmailAndPassword: vi.fn(async (_auth: unknown, email: string, password: string) => {
       const normalized = email.toLowerCase();
       const found = fakeUsers.get(normalized);
@@ -70,15 +72,17 @@ vi.mock("firebase/auth", () => {
       currentUser = null;
       emit();
     }),
-    updateProfile: vi.fn(async (user: FakeFirebaseUser, { displayName }: { displayName: string }) => {
-      user.displayName = displayName;
-      const stored = user.email ? fakeUsers.get(user.email) : undefined;
-      if (stored) stored.displayName = displayName;
-      if (currentUser?.uid === user.uid) {
-        currentUser = { ...user };
-        emit();
-      }
-    }),
+    updateProfile: vi.fn(
+      async (user: FakeFirebaseUser, { displayName }: { displayName: string }) => {
+        user.displayName = displayName;
+        const stored = user.email ? fakeUsers.get(user.email) : undefined;
+        if (stored) stored.displayName = displayName;
+        if (currentUser?.uid === user.uid) {
+          currentUser = { ...user };
+          emit();
+        }
+      },
+    ),
     sendPasswordResetEmail: vi.fn(async () => {
       // sucesso silencioso
     }),
@@ -254,7 +258,8 @@ describe("AuthContext", () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(
       fetchMock.mock.calls.some(
-        (c) => c[0] === "/api/auth/session" && (c[1] as RequestInit | undefined)?.method === "DELETE",
+        (c) =>
+          c[0] === "/api/auth/session" && (c[1] as RequestInit | undefined)?.method === "DELETE",
       ),
     ).toBe(true);
     expect(result.current.user).toBeNull();

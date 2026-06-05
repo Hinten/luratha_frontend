@@ -14,7 +14,7 @@ export default function LogoutPage() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         await logout();
       } finally {

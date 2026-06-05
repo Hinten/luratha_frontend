@@ -16,11 +16,7 @@ function isExpired(expiresAt: string | undefined): boolean {
   return !Number.isNaN(time) && time < Date.now();
 }
 
-export default function PedidoDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [order, setOrder] = useState<Order | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
@@ -30,7 +26,7 @@ export default function PedidoDetailPage({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const orderRes = await fetch(`/api/orders/${id}`);
       if (cancelled) return;
 
@@ -48,9 +44,7 @@ export default function PedidoDetailPage({
       const segments = fetchedOrder.shippingAddressPath.split("/");
       if (segments.length === 4) {
         const [, uid, , addressId] = segments;
-        const addrRes = await fetch(
-          `/api/users/${encodeURIComponent(uid)}/addresses/${addressId}`,
-        );
+        const addrRes = await fetch(`/api/users/${encodeURIComponent(uid)}/addresses/${addressId}`);
         if (cancelled) return;
         if (addrRes.ok) {
           setAddress((await addrRes.json()) as Address);
@@ -71,7 +65,9 @@ export default function PedidoDetailPage({
     return (
       <div className={styles.container}>
         <p className={styles.muted}>Pedido não encontrado.</p>
-        <Link href="/conta/pedidos" className={styles.backLink}>← Voltar para meus pedidos</Link>
+        <Link href="/conta/pedidos" className={styles.backLink}>
+          ← Voltar para meus pedidos
+        </Link>
       </div>
     );
   }
@@ -119,8 +115,8 @@ export default function PedidoDetailPage({
             />
           ) : (
             <p className={styles.paymentNote}>
-              O código PIX deste pedido expirou ou não está mais disponível. Faça um
-              novo pedido para gerar um novo pagamento.{" "}
+              O código PIX deste pedido expirou ou não está mais disponível. Faça um novo pedido
+              para gerar um novo pagamento.{" "}
               <Link href="/" className={styles.paymentNoteLink}>
                 Ir para a loja
               </Link>
@@ -140,8 +136,8 @@ export default function PedidoDetailPage({
             />
           ) : (
             <p className={styles.paymentNote}>
-              O boleto deste pedido expirou ou não está mais disponível. Faça um
-              novo pedido para gerar um novo pagamento.{" "}
+              O boleto deste pedido expirou ou não está mais disponível. Faça um novo pedido para
+              gerar um novo pagamento.{" "}
               <Link href="/" className={styles.paymentNoteLink}>
                 Ir para a loja
               </Link>
@@ -175,10 +171,13 @@ export default function PedidoDetailPage({
           <p className={styles.muted}>Endereço removido pelo usuário.</p>
         ) : address ? (
           <p className={styles.addressBlock}>
-            {address.recipientName}<br />
+            {address.recipientName}
+            <br />
             {address.line1}, {address.number}
-            {address.complement ? ` — ${address.complement}` : ""}<br />
-            {address.neighborhood} · {address.city}/{address.state}<br />
+            {address.complement ? ` — ${address.complement}` : ""}
+            <br />
+            {address.neighborhood} · {address.city}/{address.state}
+            <br />
             CEP {address.postalCode}
           </p>
         ) : (

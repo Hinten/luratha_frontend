@@ -1,0 +1,15 @@
+# Build output & caches
+**/.next/**
+**/dist/**
+**/.turbo/**
+**/coverage/**
+**/playwright-report/**
+**/test-results/**
+
+# Generated / vendored
+pnpm-lock.yaml
+functions/lib/**
+functions/generated/**
+
+# Next.js generated types
+**/next-env.d.ts
