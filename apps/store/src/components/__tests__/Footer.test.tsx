@@ -41,6 +41,12 @@ vi.mock("@/src/lib/queries/getCachedCategories", () => ({
   ]),
 }));
 
+vi.mock("@/src/lib/queries/getCachedSiteSettings", () => ({
+  getCachedSiteSettings: vi.fn().mockResolvedValue({
+    company: { cnpj: "12.345.678/0001-99" },
+  }),
+}));
+
 describe("Footer", () => {
   it("renders the logo image with correct alt text", async () => {
     render(await Footer());
@@ -123,5 +129,10 @@ describe("Footer", () => {
     render(await Footer());
     const year = new Date().getFullYear().toString();
     expect(screen.getByText(new RegExp(year))).toBeInTheDocument();
+  });
+
+  it("renders the CNPJ configured in site settings", async () => {
+    render(await Footer());
+    expect(screen.getByText(/12\.345\.678\/0001-99/)).toBeInTheDocument();
   });
 });

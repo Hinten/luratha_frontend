@@ -103,7 +103,8 @@ export const shippingSettingsSchema = z.object({
 
 /**
  * Dados de identificação da empresa — alimentam as páginas institucionais
- * (privacidade, termos de uso) e os dados estruturados (schema.org Organization).
+ * (privacidade, termos de uso), inclusive o `publisher` (schema.org Organization)
+ * do JSON-LD dessas páginas.
  *
  * Todos os campos têm `default("")` para retrocompatibilidade: documentos
  * `settings/global` criados antes deste bloco (apenas `shipping`) continuam

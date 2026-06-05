@@ -9,6 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/contato", priority: 0.8, changeFrequency: "weekly" as const },
     { path: "/politica-de-trocas", priority: 0.6, changeFrequency: "monthly" as const },
     { path: "/referencia-de-medidas", priority: 0.6, changeFrequency: "monthly" as const },
+    // Páginas institucionais novas: priority alinhado a 0.6 com os pares acima
+    // (trocas/medidas) para manter consistência relativa entre páginas do mesmo
+    // tipo — em vez do 0.5 sugerido na issue #84, que destoaria dos existentes.
     { path: "/politica-de-privacidade", priority: 0.6, changeFrequency: "yearly" as const },
     { path: "/termos-de-uso", priority: 0.6, changeFrequency: "yearly" as const },
     { path: "/faq", priority: 0.6, changeFrequency: "monthly" as const },
