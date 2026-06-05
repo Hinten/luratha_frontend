@@ -132,6 +132,33 @@ describe("melhorEnvioProvider.calculate", () => {
     ).rejects.toMatchObject({ code: "config_missing" });
   });
 
+  it("expõe httpStatus e invalid_input em HTTP 403 (token rejeitado)", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(
+      new Response("403 Forbidden", { status: 403 }),
+    );
+    const settings = getDefaultSiteSettings().shipping;
+    await expect(
+      melhorEnvioProvider.calculate(
+        {
+          destinationPostalCode: "20040-001",
+          originPostalCode: "01310-100",
+          items: [
+            {
+              productId: "p1",
+              quantity: 1,
+              weightKg: 0.5,
+              lengthCm: 20,
+              widthCm: 15,
+              heightCm: 5,
+              unitPrice: 100,
+            },
+          ],
+        },
+        settings,
+      ),
+    ).rejects.toMatchObject({ code: "invalid_input", httpStatus: 403 });
+  });
+
   it("propaga provider_unavailable em HTTP 500", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce(
       new Response("Internal Error", { status: 500 }),
