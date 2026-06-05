@@ -96,6 +96,8 @@ export async function melhorEnvioFetch<T>(
       `Melhor Envio retornou HTTP ${response.status}: ${bodyText.slice(0, 200)}`,
       "melhor-envio",
       response.status >= 500 ? "provider_unavailable" : "invalid_input",
+      undefined,
+      response.status,
     );
   }
 
