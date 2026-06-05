@@ -80,9 +80,9 @@ export default function SobrePage() {
       <div className={styles.hero}>
         <h1 className="mb-6">Nossa História</h1>
         <p className={styles.heroText}>
-          A Luratha nasceu do amor por peças que duram e contam histórias. Somos
-          uma marca de moda feminina artesanal brasileira, comprometida com a
-          beleza intencional e o consumo consciente.
+          A Luratha nasceu do amor por peças que duram e contam histórias. Somos uma marca de moda
+          feminina artesanal brasileira, comprometida com a beleza intencional e o consumo
+          consciente.
         </p>
       </div>
 
@@ -100,13 +100,13 @@ export default function SobrePage() {
       <div className={styles.manifesto}>
         <h2 className="mb-6">Nosso Manifesto</h2>
         <p className={styles.manifestoText}>
-          Acreditamos que a moda pode ser um ato de amor — amor a si mesma, ao
-          trabalho artesanal e ao planeta. Na Luratha, cada peça é pensada para
-          ser especial no dia em que você a usa e anos depois.
+          Acreditamos que a moda pode ser um ato de amor — amor a si mesma, ao trabalho artesanal e
+          ao planeta. Na Luratha, cada peça é pensada para ser especial no dia em que você a usa e
+          anos depois.
         </p>
         <p className={styles.manifestoTextLast}>
-          Fazemos slow fashion de verdade: menos coleções, mais significado.
-          Somos feitas no Brasil, com orgulho e com carinho.
+          Fazemos slow fashion de verdade: menos coleções, mais significado. Somos feitas no Brasil,
+          com orgulho e com carinho.
         </p>
       </div>
 
@@ -119,4 +119,3 @@ export default function SobrePage() {
     </div>
   );
 }
-

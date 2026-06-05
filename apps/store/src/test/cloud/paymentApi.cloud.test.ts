@@ -65,10 +65,9 @@ const mp = vi.hoisted(() => ({
   mapMpStatus: vi.fn(),
 }));
 vi.mock("@luratha/payments/mercadoPago", async () => {
-  const actual =
-    await vi.importActual<typeof import("@luratha/payments/mercadoPago")>(
-      "@luratha/payments/mercadoPago",
-    );
+  const actual = await vi.importActual<typeof import("@luratha/payments/mercadoPago")>(
+    "@luratha/payments/mercadoPago",
+  );
   return { ...actual, ...mp };
 });
 

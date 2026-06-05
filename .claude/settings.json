@@ -14,10 +14,7 @@
       "Bash(fnm --version)",
       "Bash(echo \"EXIT:$?\")"
     ],
-    "deny": [
-      "Edit(node_modules/**)",
-      "Write(node_modules/**)"
-    ]
+    "deny": ["Edit(node_modules/**)", "Write(node_modules/**)"]
   },
   "hooks": {
     "SessionStart": [

@@ -58,7 +58,15 @@ function buildBaseProductData(prefix: string, skuSuffix: string): Record<string,
     tags: [],
     materialTags: [],
     seasonalTags: [],
-    price: { price: 100, salePrice: null, priceMin: null, priceMax: null, currency: "BRL", startDate: null, endDate: null },
+    price: {
+      price: 100,
+      salePrice: null,
+      priceMin: null,
+      priceMax: null,
+      currency: "BRL",
+      startDate: null,
+      endDate: null,
+    },
     salePrice: null,
     condition: "new",
     adult: false,
@@ -145,10 +153,13 @@ describeCloud("Image Delete — Cloud Firebase", () => {
     const assetId = `asset-del-${randomUUID().slice(0, 8)}`;
     const asset = buildImageAsset(productId, assetId);
 
-    await adminDb.collection(firestoreCollections.products).doc(productId).set({
-      ...productData,
-      photoAssets: [asset],
-    });
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .set({
+        ...productData,
+        photoAssets: [asset],
+      });
     seededDocs.push({ collection: firestoreCollections.products, id: productId });
 
     const result = await deleteProductImage(assetId);
@@ -156,7 +167,10 @@ describeCloud("Image Delete — Cloud Firebase", () => {
     expect(result.imageId).toBe(assetId);
     expect(result.updatedProducts).toContain(productId);
 
-    const updatedSnap = await adminDb.collection(firestoreCollections.products).doc(productId).get();
+    const updatedSnap = await adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .get();
     const updatedProduct = validateProduct(updatedSnap.data());
     expect(updatedProduct.photoAssets.some((a) => a.id === assetId)).toBe(false);
   });
@@ -169,10 +183,13 @@ describeCloud("Image Delete — Cloud Firebase", () => {
     const assetId = `asset-life-${randomUUID().slice(0, 8)}`;
     const asset = buildImageAsset(productId, assetId);
 
-    await adminDb.collection(firestoreCollections.products).doc(productId).set({
-      ...productData,
-      lifeStylePhotos: [asset],
-    });
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .set({
+        ...productData,
+        lifeStylePhotos: [asset],
+      });
     seededDocs.push({ collection: firestoreCollections.products, id: productId });
 
     const result = await deleteProductImage(assetId);
@@ -180,7 +197,10 @@ describeCloud("Image Delete — Cloud Firebase", () => {
     expect(result.imageId).toBe(assetId);
     expect(result.updatedProducts).toContain(productId);
 
-    const updatedSnap = await adminDb.collection(firestoreCollections.products).doc(productId).get();
+    const updatedSnap = await adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .get();
     const updatedProduct = validateProduct(updatedSnap.data());
     expect(updatedProduct.lifeStylePhotos.some((a) => a.id === assetId)).toBe(false);
   });
@@ -199,14 +219,20 @@ describeCloud("Image Delete — Cloud Firebase", () => {
     const asset2 = buildImageAsset(productId2, assetId);
 
     await Promise.all([
-      adminDb.collection(firestoreCollections.products).doc(productId1).set({
-        ...productData1,
-        photoAssets: [asset1],
-      }),
-      adminDb.collection(firestoreCollections.products).doc(productId2).set({
-        ...productData2,
-        lifeStylePhotos: [asset2],
-      }),
+      adminDb
+        .collection(firestoreCollections.products)
+        .doc(productId1)
+        .set({
+          ...productData1,
+          photoAssets: [asset1],
+        }),
+      adminDb
+        .collection(firestoreCollections.products)
+        .doc(productId2)
+        .set({
+          ...productData2,
+          lifeStylePhotos: [asset2],
+        }),
     ]);
     seededDocs.push(
       { collection: firestoreCollections.products, id: productId1 },

@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  applyOrderWebhook,
-  PaymentProviderError,
-  verifyWebhookSignature,
-} from "@luratha/payments";
+import { applyOrderWebhook, PaymentProviderError, verifyWebhookSignature } from "@luratha/payments";
 
 // `runtime = "nodejs"` mora em route.ts — Next.js só lê route segment config
 // do entry. Duplicar aqui seria dead code.

@@ -19,14 +19,14 @@ Each HTTP method lives in its own file and is re-exported through a thin `route.
 
 **Naming conventions** (substitute your entity name):
 
-| Placeholder | Example for products |
-|---|---|
-| `{entity}` | `product` |
-| `{Entity}` | `Product` |
-| `{entities}` | `products` |
-| `src/app/api/{entities}/` | `src/app/api/products/` |
-| `admin{Entity}Converter` | `adminProductConverter` |
-| `validate{Entity}` | `validateProduct` |
+| Placeholder                       | Example for products            |
+| --------------------------------- | ------------------------------- |
+| `{entity}`                        | `product`                       |
+| `{Entity}`                        | `Product`                       |
+| `{entities}`                      | `products`                      |
+| `src/app/api/{entities}/`         | `src/app/api/products/`         |
+| `admin{Entity}Converter`          | `adminProductConverter`         |
+| `validate{Entity}`                | `validateProduct`               |
 | `firestoreCollections.{entities}` | `firestoreCollections.products` |
 
 ---
@@ -74,7 +74,7 @@ All handlers use:
 - **`adminDb`** from `@/src/lib/firestore/firebaseAdmin` — bypasses Firestore security rules
 - **`admin{Entity}Converter`** from `@/src/lib/firestore/admin{Entity}Converter` — handles special Firestore types (VectorValue, Timestamp) ↔ plain JS conversion
 - **`validate{Entity}`** from `@/src/schemas/firestore` — Zod validation
-- **`createEmbeddingService`** from `@/src/lib/embeddingService` — Vertex AI embedding *(only when the entity has vector fields)*
+- **`createEmbeddingService`** from `@/src/lib/embeddingService` — Vertex AI embedding _(only when the entity has vector fields)_
 
 ---
 
@@ -253,10 +253,10 @@ Use `createEmbeddingService` with `adminApp.options.credential`. This fetches a 
 
 **Determine the embedding fields your entity needs.** For products, two fields are used:
 
-| Field | Content | Purpose |
-|---|---|---|
-| `vectorEmbedding` | Title only | Fast name-based similarity lookups |
-| `searchEmbedding` | Title + description + categoryId + variant sizes/colors | Full semantic search |
+| Field             | Content                                                 | Purpose                            |
+| ----------------- | ------------------------------------------------------- | ---------------------------------- |
+| `vectorEmbedding` | Title only                                              | Fast name-based similarity lookups |
+| `searchEmbedding` | Title + description + categoryId + variant sizes/colors | Full semantic search               |
 
 If your entity only needs one embedding field, create a simpler helper that generates just that field. Use `src/lib/productEmbeddings.ts` as a reference implementation.
 
@@ -293,12 +293,12 @@ try {
 
 ### Environment Variables
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `VERTEX_AI_PROJECT_ID` | GCP project ID | — |
-| `VERTEX_AI_LOCATION` | Region | `us-central1` |
-| `VERTEX_AI_EMBEDDING_MODEL` | Model | `text-embedding-005` |
-| `VERTEX_AI_ACCESS_TOKEN` | Static token (optional, expires in ~1h) | — |
+| Variable                    | Purpose                                 | Default              |
+| --------------------------- | --------------------------------------- | -------------------- |
+| `VERTEX_AI_PROJECT_ID`      | GCP project ID                          | —                    |
+| `VERTEX_AI_LOCATION`        | Region                                  | `us-central1`        |
+| `VERTEX_AI_EMBEDDING_MODEL` | Model                                   | `text-embedding-005` |
+| `VERTEX_AI_ACCESS_TOKEN`    | Static token (optional, expires in ~1h) | —                    |
 
 When using `credential`, none of the above are required except `VERTEX_AI_PROJECT_ID`.
 
@@ -375,11 +375,11 @@ export async function GET(request: Request) {
 
 **Adapt the supported query params to the entity's filterable fields:**
 
-| Param | Type | Description |
-|---|---|---|
-| `q` | string | Full-text search term — uses pipeline (regex on key fields) |
-| `status` | string | Filter by a status field (if present in schema) |
-| `limit` | number | Max results (default 24, max 100) |
+| Param    | Type   | Description                                                 |
+| -------- | ------ | ----------------------------------------------------------- |
+| `q`      | string | Full-text search term — uses pipeline (regex on key fields) |
+| `status` | string | Filter by a status field (if present in schema)             |
+| `limit`  | number | Max results (default 24, max 100)                           |
 
 > **Firestore index note:** Combining `where()` with `orderBy()` on a different field requires a composite index in production. Create the index via `firestore.indexes.json` or the Firebase Console.
 
@@ -435,11 +435,17 @@ import "server-only";
 import { getApps, initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { initializeServerFirestoreEmulator } from "./emulator";
-import { applyEmulatorEnvironmentDefaults, DATABASE_NAME, getFirebaseWebConfig } from "./environment";
+import {
+  applyEmulatorEnvironmentDefaults,
+  DATABASE_NAME,
+  getFirebaseWebConfig,
+} from "./environment";
 
 const SEARCH_APP_NAME = "luratha-search-server-app";
 applyEmulatorEnvironmentDefaults();
-const _app = getApps().find((a) => a.name === SEARCH_APP_NAME) ?? initializeApp(getFirebaseWebConfig(), SEARCH_APP_NAME);
+const _app =
+  getApps().find((a) => a.name === SEARCH_APP_NAME) ??
+  initializeApp(getFirebaseWebConfig(), SEARCH_APP_NAME);
 export const searchDb = getFirestore(_app, DATABASE_NAME);
 initializeServerFirestoreEmulator(searchDb);
 ```
@@ -491,6 +497,7 @@ export async function POST(request: Request) {
 ### PUT — Full Overwrite
 
 Rules:
+
 - `id` is always from the URL parameter (body value is discarded)
 - `createdAt` is preserved from the existing document
 - `updatedAt` is set to now
@@ -537,11 +544,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 Rules (critical — must be exactly this semantics):
 
-| Field in payload | Action |
-|---|---|
-| **Absent** | Kept unchanged from stored document |
-| **Present with `null`** | Set to `null` |
-| **Present with a value** | Updated to that value |
+| Field in payload         | Action                              |
+| ------------------------ | ----------------------------------- |
+| **Absent**               | Kept unchanged from stored document |
+| **Present with `null`**  | Set to `null`                       |
+| **Present with a value** | Updated to that value               |
 
 `id` and `createdAt` are always forced from the stored document. Embeddings are only regenerated when the text fields they depend on appear in the payload.
 
@@ -642,24 +649,32 @@ All API route unit tests live in `src/app/api/**/__tests__/route.test.ts` and us
 The query chain (`.withConverter().orderBy().where().limit()`) must be mocked to return the same `mockQueryRef` object. When using `?q=` (pipeline search), also mock `firebase/firestore/pipelines` and `@/src/lib/firestore/firebaseSearchDb`:
 
 ```ts
-const { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef } = vi.hoisted(() => {
-  const mockQueryGet = vi.fn();
-  const mockQueryRef = { withConverter: vi.fn(), orderBy: vi.fn(), where: vi.fn(), limit: vi.fn(), get: mockQueryGet };
-  mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
-  mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
-  mockQueryRef.where.mockReturnValue(mockQueryRef);
-  mockQueryRef.limit.mockReturnValue(mockQueryRef);
-  const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
+const { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef } = vi.hoisted(
+  () => {
+    const mockQueryGet = vi.fn();
+    const mockQueryRef = {
+      withConverter: vi.fn(),
+      orderBy: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+      get: mockQueryGet,
+    };
+    mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
+    mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
+    mockQueryRef.where.mockReturnValue(mockQueryRef);
+    mockQueryRef.limit.mockReturnValue(mockQueryRef);
+    const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
 
-  // Pipeline mocks (only needed when entity supports ?q= search)
-  const mockExecute = vi.fn();
-  const mockPipelineRef = { collection: vi.fn(), where: vi.fn(), limit: vi.fn() };
-  mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
-  mockPipelineRef.where.mockReturnValue(mockPipelineRef);
-  mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+    // Pipeline mocks (only needed when entity supports ?q= search)
+    const mockExecute = vi.fn();
+    const mockPipelineRef = { collection: vi.fn(), where: vi.fn(), limit: vi.fn() };
+    mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
 
-  return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
-});
+    return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
+  },
+);
 
 vi.mock("@/src/lib/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
@@ -673,7 +688,11 @@ vi.mock("@/src/lib/firestore/firebaseSearchDb", () => ({
 
 vi.mock("firebase/firestore/pipelines", () => ({
   execute: mockExecute,
-  field: vi.fn(() => ({ toLower: vi.fn().mockReturnThis(), regexMatch: vi.fn().mockReturnThis(), equal: vi.fn().mockReturnThis() })),
+  field: vi.fn(() => ({
+    toLower: vi.fn().mockReturnThis(),
+    regexMatch: vi.fn().mockReturnThis(),
+    equal: vi.fn().mockReturnThis(),
+  })),
   or: vi.fn((...args) => ({ type: "or", args })),
   and: vi.fn((...args) => ({ type: "and", args })),
 }));
@@ -761,7 +780,15 @@ function buildStoredProduct(overrides: Record<string, unknown> = {}): Record<str
     sku: "VLA-001-BR",
     status: "active",
     categoryId: "vestidos",
-    price: { price: 250, currency: "BRL", salePrice: null, priceMin: null, priceMax: null, startDate: null, endDate: null },
+    price: {
+      price: 250,
+      currency: "BRL",
+      salePrice: null,
+      priceMin: null,
+      priceMax: null,
+      startDate: null,
+      endDate: null,
+    },
     // ... all required schema fields ...
     ...overrides,
   };
@@ -788,7 +815,10 @@ const response = await PUT(makeRequest("PUT", body), { params });
 
 ```ts
 it("sets field to null when payload contains null", async () => {
-  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredEntity({ optionalField: "some value" }) });
+  mockGet.mockResolvedValue({
+    exists: true,
+    data: () => buildStoredEntity({ optionalField: "some value" }),
+  });
   const response = await PATCH(makeRequest("PATCH", { optionalField: null }), { params });
   expect(response.status).toBe(200);
   const data = await response.json();
@@ -796,7 +826,10 @@ it("sets field to null when payload contains null", async () => {
 });
 
 it("does not change field when it is absent from payload", async () => {
-  mockGet.mockResolvedValue({ exists: true, data: () => buildStoredEntity({ optionalField: "some value" }) });
+  mockGet.mockResolvedValue({
+    exists: true,
+    data: () => buildStoredEntity({ optionalField: "some value" }),
+  });
   const response = await PATCH(makeRequest("PATCH", { status: "inactive" }), { params });
   expect(response.status).toBe(200);
   const data = await response.json();
@@ -859,17 +892,17 @@ If you add a new `server-only` module that gets imported (directly or transitive
 
 ## Response Status Codes Summary
 
-| Scenario | Status |
-|---|---|
-| Successful fetch (GET by ID) | `200 OK` |
-| Successful list (GET collection) | `200 OK` |
-| Successful creation | `201 Created` |
-| Successful update (PUT/PATCH) | `200 OK` |
-| Successful deletion | `204 No Content` |
-| Invalid JSON body | `400 Bad Request` |
-| Zod validation failure | `400 Bad Request` (with `errors: issue[]`) |
-| Document not found (GET/PUT/PATCH/DELETE) | `404 Not Found` |
-| ID conflict (POST) | `409 Conflict` |
+| Scenario                                  | Status                                     |
+| ----------------------------------------- | ------------------------------------------ |
+| Successful fetch (GET by ID)              | `200 OK`                                   |
+| Successful list (GET collection)          | `200 OK`                                   |
+| Successful creation                       | `201 Created`                              |
+| Successful update (PUT/PATCH)             | `200 OK`                                   |
+| Successful deletion                       | `204 No Content`                           |
+| Invalid JSON body                         | `400 Bad Request`                          |
+| Zod validation failure                    | `400 Bad Request` (with `errors: issue[]`) |
+| Document not found (GET/PUT/PATCH/DELETE) | `404 Not Found`                            |
+| ID conflict (POST)                        | `409 Conflict`                             |
 
 ---
 
@@ -877,24 +910,24 @@ If you add a new `server-only` module that gets imported (directly or transitive
 
 These are the existing files for the **products** entity (with vector fields) and **categories** entity (without vector fields) — use them as templates when creating a new entity:
 
-| File | Purpose |
-|---|---|
-| `src/app/api/products/route.ts` | GET (list) and POST handlers |
-| `src/app/api/products/list.ts` | GET list handler — simple query + `?q=` pipeline search (entity **with** vector fields) |
-| `src/app/api/categories/list.ts` | GET list handler — simple query + `?q=` pipeline search (entity **without** vector fields) |
-| `src/app/api/products/[id]/route.ts` | Re-exports GET, PUT, PATCH, DELETE |
-| `src/app/api/products/[id]/get.ts` | GET handler (fetch by ID) |
-| `src/app/api/products/[id]/put.ts` | PUT handler |
-| `src/app/api/products/[id]/patch.ts` | PATCH handler |
-| `src/app/api/products/[id]/delete.ts` | DELETE handler |
-| `src/lib/productEmbeddings.ts` | Reference embedding helper — `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
-| `src/lib/firestore/adminProductConverter.ts` | Reference Admin SDK DataConverter (entity with Timestamps and vector fields) |
-| `src/lib/firestore/adminCategoryConverter.ts` | Reference Admin SDK DataConverter (entity without Timestamps or vector fields) |
-| `src/lib/firestore/clientProductConverter.ts` | Reference Client SDK DataConverter |
-| `src/lib/firestore/firebaseSearchDb.ts` | Server-only client Firestore for pipeline search (shared — do not duplicate) |
-| `src/lib/embeddingService.ts` | Vertex AI embedding service (shared) |
-| `src/lib/firestore/firebaseAdmin.ts` | `adminDb`, `adminApp`, `adminStorage` (shared) |
-| `src/schemas/firestore/products.ts` | Reference Zod product schema + `validateProduct` |
-| `src/schemas/firestore/category.ts` | Reference Zod category schema + `validateCategory` (simple schema, no Timestamps) |
-| `src/schemas/firestore/index.ts` | `firestoreCollections` + all schema exports |
-| `src/test/__mocks__/server-only.ts` | Empty no-op mock for `server-only` in Vitest |
+| File                                          | Purpose                                                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `src/app/api/products/route.ts`               | GET (list) and POST handlers                                                                                     |
+| `src/app/api/products/list.ts`                | GET list handler — simple query + `?q=` pipeline search (entity **with** vector fields)                          |
+| `src/app/api/categories/list.ts`              | GET list handler — simple query + `?q=` pipeline search (entity **without** vector fields)                       |
+| `src/app/api/products/[id]/route.ts`          | Re-exports GET, PUT, PATCH, DELETE                                                                               |
+| `src/app/api/products/[id]/get.ts`            | GET handler (fetch by ID)                                                                                        |
+| `src/app/api/products/[id]/put.ts`            | PUT handler                                                                                                      |
+| `src/app/api/products/[id]/patch.ts`          | PATCH handler                                                                                                    |
+| `src/app/api/products/[id]/delete.ts`         | DELETE handler                                                                                                   |
+| `src/lib/productEmbeddings.ts`                | Reference embedding helper — `generateProductEmbeddings`, `buildVectorEmbeddingText`, `buildSearchEmbeddingText` |
+| `src/lib/firestore/adminProductConverter.ts`  | Reference Admin SDK DataConverter (entity with Timestamps and vector fields)                                     |
+| `src/lib/firestore/adminCategoryConverter.ts` | Reference Admin SDK DataConverter (entity without Timestamps or vector fields)                                   |
+| `src/lib/firestore/clientProductConverter.ts` | Reference Client SDK DataConverter                                                                               |
+| `src/lib/firestore/firebaseSearchDb.ts`       | Server-only client Firestore for pipeline search (shared — do not duplicate)                                     |
+| `src/lib/embeddingService.ts`                 | Vertex AI embedding service (shared)                                                                             |
+| `src/lib/firestore/firebaseAdmin.ts`          | `adminDb`, `adminApp`, `adminStorage` (shared)                                                                   |
+| `src/schemas/firestore/products.ts`           | Reference Zod product schema + `validateProduct`                                                                 |
+| `src/schemas/firestore/category.ts`           | Reference Zod category schema + `validateCategory` (simple schema, no Timestamps)                                |
+| `src/schemas/firestore/index.ts`              | `firestoreCollections` + all schema exports                                                                      |
+| `src/test/__mocks__/server-only.ts`           | Empty no-op mock for `server-only` in Vitest                                                                     |

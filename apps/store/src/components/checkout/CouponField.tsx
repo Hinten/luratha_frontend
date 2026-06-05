@@ -113,11 +113,7 @@ export default function CouponField({
           autoComplete="off"
           disabled={submitting}
         />
-        <button
-          type="submit"
-          className={styles.submitBtn}
-          disabled={!code.trim() || submitting}
-        >
+        <button type="submit" className={styles.submitBtn} disabled={!code.trim() || submitting}>
           {submitting ? "Validando…" : "Aplicar"}
         </button>
       </div>

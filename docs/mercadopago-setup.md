@@ -7,13 +7,13 @@ Transparente** (API `/v1/payments`): PIX, cartão de crédito e boleto.
 
 ## Variáveis de ambiente
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `MERCADOPAGO_ACCESS_TOKEN` | sim | Access token do servidor. Pode começar com `TEST-` (sandbox) ou `APP_USR-` (produção), mas o painel atual nem sempre gera o prefixo. Use `MERCADOPAGO_ENV` como flag confiável. |
-| `MERCADOPAGO_WEBHOOK_SECRET` | sim | Secret de assinatura dos webhooks. Usado para validar o header `x-signature` das notificações. |
-| `MERCADOPAGO_ENV` | sim | `sandbox` ou `production`. Determina se o adapter aplica o rewrite do `payer.email` pra `@testuser.com`. |
-| `MERCADOPAGO_SANDBOX_PAYER_EMAIL` | sandbox | Email do test user comprador criado no painel (`test_user_<N>@testuser.com`). Em sandbox, o adapter sobrescreve `payer.email` por esse valor antes de chamar a Orders API — evita `invalid_users_involved`. |
-| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | sim (UI) | Public key exposta ao browser para tokenizar o cartão via Card Payment Brick (`@mercadopago/sdk-react`). |
+| Variável                             | Obrigatória | Descrição                                                                                                                                                                                                   |
+| ------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MERCADOPAGO_ACCESS_TOKEN`           | sim         | Access token do servidor. Pode começar com `TEST-` (sandbox) ou `APP_USR-` (produção), mas o painel atual nem sempre gera o prefixo. Use `MERCADOPAGO_ENV` como flag confiável.                             |
+| `MERCADOPAGO_WEBHOOK_SECRET`         | sim         | Secret de assinatura dos webhooks. Usado para validar o header `x-signature` das notificações.                                                                                                              |
+| `MERCADOPAGO_ENV`                    | sim         | `sandbox` ou `production`. Determina se o adapter aplica o rewrite do `payer.email` pra `@testuser.com`.                                                                                                    |
+| `MERCADOPAGO_SANDBOX_PAYER_EMAIL`    | sandbox     | Email do test user comprador criado no painel (`test_user_<N>@testuser.com`). Em sandbox, o adapter sobrescreve `payer.email` por esse valor antes de chamar a Orders API — evita `invalid_users_involved`. |
+| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | sim (UI)    | Public key exposta ao browser para tokenizar o cartão via Card Payment Brick (`@mercadopago/sdk-react`).                                                                                                    |
 
 > **Webhook URL**: configurada no painel MP (Suas integrações → Webhooks),
 > não por env var. A Orders API não aceita `notification_url` por requisição.

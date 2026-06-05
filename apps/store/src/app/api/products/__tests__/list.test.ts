@@ -2,42 +2,38 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { GET } from "@/src/app/api/products/list";
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const {
-  mockQueryGet,
-  mockQueryRef,
-  mockCollection,
-  mockExecute,
-  mockPipelineRef,
-} = vi.hoisted(() => {
-  const mockQueryGet = vi.fn();
-  const mockQueryRef = {
-    withConverter: vi.fn(),
-    orderBy: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-    get: mockQueryGet,
-  };
-  // All chain methods return the same ref so `.orderBy(...).where(...).limit(...)` works
-  mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
-  mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
-  mockQueryRef.where.mockReturnValue(mockQueryRef);
-  mockQueryRef.limit.mockReturnValue(mockQueryRef);
+const { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef } = vi.hoisted(
+  () => {
+    const mockQueryGet = vi.fn();
+    const mockQueryRef = {
+      withConverter: vi.fn(),
+      orderBy: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+      get: mockQueryGet,
+    };
+    // All chain methods return the same ref so `.orderBy(...).where(...).limit(...)` works
+    mockQueryRef.withConverter.mockReturnValue(mockQueryRef);
+    mockQueryRef.orderBy.mockReturnValue(mockQueryRef);
+    mockQueryRef.where.mockReturnValue(mockQueryRef);
+    mockQueryRef.limit.mockReturnValue(mockQueryRef);
 
-  const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
+    const mockCollection = vi.fn().mockReturnValue(mockQueryRef);
 
-  // Pipeline mocks
-  const mockExecute = vi.fn();
-  const mockPipelineRef = {
-    collection: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-  };
-  mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
-  mockPipelineRef.where.mockReturnValue(mockPipelineRef);
-  mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
+    // Pipeline mocks
+    const mockExecute = vi.fn();
+    const mockPipelineRef = {
+      collection: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+    };
+    mockPipelineRef.collection.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.where.mockReturnValue(mockPipelineRef);
+    mockPipelineRef.limit.mockReturnValue(mockPipelineRef);
 
-  return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
-});
+    return { mockQueryGet, mockQueryRef, mockCollection, mockExecute, mockPipelineRef };
+  },
+);
 
 vi.mock("@luratha/firestore/firebaseAdmin", () => ({
   adminDb: { collection: mockCollection },
@@ -65,7 +61,9 @@ vi.mock("firebase/firestore", async (importOriginal) => {
     ...actual,
     VectorValue: class {
       constructor(private _values: number[]) {}
-      toArray() { return this._values; }
+      toArray() {
+        return this._values;
+      }
     },
   };
 });
@@ -209,7 +207,11 @@ describe("GET /api/products", () => {
 
   it("does not call where for status when no status param is provided", async () => {
     await GET(makeListRequest({ categoryId: "vestidos" }));
-    expect(mockQueryRef.where).not.toHaveBeenCalledWith("status", expect.anything(), expect.anything());
+    expect(mockQueryRef.where).not.toHaveBeenCalledWith(
+      "status",
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });
 

@@ -114,7 +114,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background-color 300ms ease, transform 200ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 200ms ease;
   margin-top: 0.5rem;
 }
 

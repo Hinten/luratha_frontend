@@ -12,9 +12,7 @@ interface HomeCategoriesSectionProps {
   categories: Category[];
 }
 
-export default function HomeCategoriesSection({
-  categories,
-}: HomeCategoriesSectionProps) {
+export default function HomeCategoriesSection({ categories }: HomeCategoriesSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);

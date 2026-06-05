@@ -69,9 +69,7 @@ export function createStockRepository(dbInstance: Firestore): StockRepository {
       const BATCH_SIZE = 30;
       for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
         const batch = productIds.slice(i, i + BATCH_SIZE);
-        const snapshot = await getDocs(
-          query(stockCollectionRef, where("productId", "in", batch)),
-        );
+        const snapshot = await getDocs(query(stockCollectionRef, where("productId", "in", batch)));
 
         for (const doc of snapshot.docs) {
           const stock = doc.data();
@@ -114,9 +112,7 @@ export function createStockRepository(dbInstance: Firestore): StockRepository {
 
   async function seedMockStock(stocks: unknown[]): Promise<Stock[]> {
     try {
-      return await Promise.all(
-        stocks.map((candidate) => set(validateStock(candidate))),
-      );
+      return await Promise.all(stocks.map((candidate) => set(validateStock(candidate))));
     } catch (error) {
       throw normalizeRepositoryError(error, "seed mock stock");
     }
@@ -145,20 +141,12 @@ function normalizeRepositoryError(error: unknown, action: string): StockReposito
   }
 
   if (error instanceof FirebaseError && error.code === "not-found") {
-    return new StockRepositoryError(
-      `Failed to ${action}: document not found`,
-      "not_found",
-      error,
-    );
+    return new StockRepositoryError(`Failed to ${action}: document not found`, "not_found", error);
   }
 
   if (error instanceof Error) {
     return new StockRepositoryError(`Failed to ${action}: ${error.message}`, "unknown", error);
   }
 
-  return new StockRepositoryError(
-    `Failed to ${action} due to an unknown error`,
-    "unknown",
-    error,
-  );
+  return new StockRepositoryError(`Failed to ${action} due to an unknown error`, "unknown", error);
 }

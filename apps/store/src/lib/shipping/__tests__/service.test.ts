@@ -45,8 +45,7 @@ describe("quoteShipping", () => {
       async calculate(input) {
         // First call: cart simulation (multiple items). Second: 1kg reference.
         const total = input.items.reduce(
-          (s: number, i: { weightKg: number; quantity: number }) =>
-            s + i.weightKg * i.quantity,
+          (s: number, i: { weightKg: number; quantity: number }) => s + i.weightKg * i.quantity,
           0,
         );
         if (Math.abs(total - 1) < 0.001 && input.items[0].productId.startsWith("__free")) {
@@ -59,9 +58,7 @@ describe("quoteShipping", () => {
 
     const result = await quoteShipping({
       destinationPostalCode: "20040-001",
-      items: [
-        { productId: "p1", quantity: 2, unitPrice: 100, weightKg: 0.5 },
-      ],
+      items: [{ productId: "p1", quantity: 2, unitPrice: 100, weightKg: 0.5 }],
     });
 
     expect(result.quotes).toHaveLength(2);

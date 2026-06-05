@@ -34,9 +34,7 @@ describe("CouponField", () => {
   });
 
   it("disables the submit while the field is empty", () => {
-    render(
-      <CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />,
-    );
+    render(<CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Aplicar" })).toBeDisabled();
   });
 
@@ -49,9 +47,7 @@ describe("CouponField", () => {
     });
     global.fetch = fetchMock;
     const onApplied = vi.fn();
-    render(
-      <CouponField cartTotal={100} onApplied={onApplied} onCleared={vi.fn()} />,
-    );
+    render(<CouponField cartTotal={100} onApplied={onApplied} onCleared={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Tem um cupom?"), {
       target: { value: "welcome10" },
     });
@@ -74,9 +70,7 @@ describe("CouponField", () => {
 
   it("shows the reason returned by the API when valid:false", async () => {
     global.fetch = mockFetch({ valid: false, reason: "Cupom expirado." });
-    render(
-      <CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />,
-    );
+    render(<CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Tem um cupom?"), {
       target: { value: "OLD" },
     });
@@ -88,9 +82,7 @@ describe("CouponField", () => {
   it("surfaces server errors as a friendly alert (5xx)", async () => {
     vi.mocked(logger.error).mockClear();
     global.fetch = mockFetch({ message: "Falha no servidor." }, false, 500);
-    render(
-      <CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />,
-    );
+    render(<CouponField cartTotal={100} onApplied={vi.fn()} onCleared={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Tem um cupom?"), {
       target: { value: "ANY" },
     });

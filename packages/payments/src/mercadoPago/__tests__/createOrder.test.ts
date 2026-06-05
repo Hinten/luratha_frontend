@@ -178,7 +178,12 @@ describe("getOrderArtifacts — releitura para polling", () => {
   });
 
   it("propaga underReview quando a order está em análise (in_process)", async () => {
-    mockFetch({ id: "ORD1", status: "processing", status_detail: "in_process", ...pixPaymentMethod() });
+    mockFetch({
+      id: "ORD1",
+      status: "processing",
+      status_detail: "in_process",
+      ...pixPaymentMethod(),
+    });
 
     const artifacts = await getOrderArtifacts("ORD1");
 

@@ -42,33 +42,34 @@ For schema or Firebase request flow changes (schemas, Firestore queries, Auth/St
 
 ### Monorepo layout
 
-| Path | Purpose |
-|---|---|
-| `apps/store/` | Storefront Next.js app (`@luratha/store`) — all paths in the Directory Map are relative to here; dev port 3000 |
-| `apps/admin/` | Admin Next.js app (`@luratha/admin`) — internal panel, served on its own App Hosting backend; dev port 3001 |
-| `apps/mercadopago/` | MercadoPago webhook receiver (`@luratha/mercadopago`) — own App Hosting backend, no public pages, only `POST /api/webhooks/mercadopago`; dev port 3002 |
-| `packages/*` | Shared workspace packages, imported by name (`@luratha/<pkg>`) |
-| `functions/` | Cloud Functions — separate npm project, outside the pnpm workspace |
-| `tsconfig.base.json`, `eslint.config.base.mjs` | Shared config the `packages/*` extend (the Next.js apps keep `eslint-config-next`) |
-| `pnpm-workspace.yaml`, `turbo.json` | Workspace + task-orchestration config at the repo root |
+| Path                                           | Purpose                                                                                                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/store/`                                  | Storefront Next.js app (`@luratha/store`) — all paths in the Directory Map are relative to here; dev port 3000                                         |
+| `apps/admin/`                                  | Admin Next.js app (`@luratha/admin`) — internal panel, served on its own App Hosting backend; dev port 3001                                            |
+| `apps/mercadopago/`                            | MercadoPago webhook receiver (`@luratha/mercadopago`) — own App Hosting backend, no public pages, only `POST /api/webhooks/mercadopago`; dev port 3002 |
+| `packages/*`                                   | Shared workspace packages, imported by name (`@luratha/<pkg>`)                                                                                         |
+| `functions/`                                   | Cloud Functions — separate npm project, outside the pnpm workspace                                                                                     |
+| `tsconfig.base.json`, `eslint.config.base.mjs` | Shared config the `packages/*` extend (the Next.js apps keep `eslint-config-next`)                                                                     |
+| `pnpm-workspace.yaml`, `turbo.json`            | Workspace + task-orchestration config at the repo root                                                                                                 |
 
 ### Shared packages
 
-| Package | Source of truth for | Depends on |
-|---|---|---|
-| `@luratha/schemas` | Zod schemas / Firestore data contracts | — |
-| `@luratha/firestore` | Firebase SDK wrappers + DataConverters | `schemas` |
-| `@luratha/core` | `embeddingService`, `firestoreQueryStrategies` | `schemas` |
-| `@luratha/auth` | `requireUser` / session-cookie helpers | `firestore` |
-| `@luratha/repositories` | Firestore access layer + seed helpers | `schemas`, `firestore`, `core` |
-| `@luratha/payments` | MercadoPago adapter + order/payment orchestration (`orderService`) | `schemas`, `firestore`, `core` |
-| `@luratha/devtools` | Shared dev/test helper (`loadRootEnv`) — dev-only | — |
+| Package                 | Source of truth for                                                | Depends on                     |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------------ |
+| `@luratha/schemas`      | Zod schemas / Firestore data contracts                             | —                              |
+| `@luratha/firestore`    | Firebase SDK wrappers + DataConverters                             | `schemas`                      |
+| `@luratha/core`         | `embeddingService`, `firestoreQueryStrategies`                     | `schemas`                      |
+| `@luratha/auth`         | `requireUser` / session-cookie helpers                             | `firestore`                    |
+| `@luratha/repositories` | Firestore access layer + seed helpers                              | `schemas`, `firestore`, `core` |
+| `@luratha/payments`     | MercadoPago adapter + order/payment orchestration (`orderService`) | `schemas`, `firestore`, `core` |
+| `@luratha/devtools`     | Shared dev/test helper (`loadRootEnv`) — dev-only                  | —                              |
 
 Import shared code by package name (`@luratha/schemas`, `@luratha/firestore/firebaseAdmin`, …) — never reach across workspaces with relative or `@/` paths. Add a new shared package to the consuming app's `dependencies` (`workspace:*`) and to `transpilePackages` in its `next.config.ts`.
 
 ### Admin app (`apps/admin/`)
 
 Internal panel, deployed to a separate App Hosting backend. Auth model:
+
 - `middleware.ts` (Edge) does a shallow check — redirects to `/login` when the `__session` cookie is absent. It must not import `@luratha/auth` (firebase-admin can't run on Edge).
 - The `(dashboard)/layout.tsx` server component is the real gate: `requireUser()` verifies the cookie and the layout enforces `user.isAdmin`.
 - `POST /api/auth/session` issues the `__session` cookie only for users with the `admin` claim — it sets the cookie **host-only** (no `domain`), keeping the admin session isolated from the storefront. Never add `domain`.
@@ -83,17 +84,17 @@ Documented next to the code: `packages/payments/CLAUDE.md` (adapter + order orch
 
 Paths below are under `apps/store/`.
 
-| Path | Purpose |
-|---|---|
-| `src/app/` | Routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests |
-| `src/components/` | Shared UI + domain folders (`categoria/`, `produto/`), each with `.module.css` |
-| `src/contexts/` | Client state providers (`AuthContext`, `CartContext`) |
-| `src/lib/` | App-local helpers — constants, SEO constants, shipping, query helpers |
-| `src/services/` | Lightweight service layer (minimal — avoid duplicating repository logic) |
-| `src/test/` | Cloud test setup, Playwright cloud setup, seed helpers, Vitest setup |
-| `src/test/cloud/` | Vitest cloud integration suite (`*.cloud.test.ts`) |
-| `src/test/cloud-functions/` | Vitest Functions trigger suite (`*.functions.test.ts`) |
-| `e2e/` | Playwright specs (run against `luratha-96386`) |
+| Path                        | Purpose                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `src/app/`                  | Routes, layouts, loading/error UI, metadata, sitemap/robots, page-level tests  |
+| `src/components/`           | Shared UI + domain folders (`categoria/`, `produto/`), each with `.module.css` |
+| `src/contexts/`             | Client state providers (`AuthContext`, `CartContext`)                          |
+| `src/lib/`                  | App-local helpers — constants, SEO constants, shipping, query helpers          |
+| `src/services/`             | Lightweight service layer (minimal — avoid duplicating repository logic)       |
+| `src/test/`                 | Cloud test setup, Playwright cloud setup, seed helpers, Vitest setup           |
+| `src/test/cloud/`           | Vitest cloud integration suite (`*.cloud.test.ts`)                             |
+| `src/test/cloud-functions/` | Vitest Functions trigger suite (`*.functions.test.ts`)                         |
+| `e2e/`                      | Playwright specs (run against `luratha-96386`)                                 |
 
 ### CRUD API layout
 
@@ -114,18 +115,19 @@ All API route handlers must include `export const runtime = "nodejs"` — fireba
 
 The `@luratha/firestore` package owns these modules — import them as `@luratha/firestore/<file>`:
 
-| Module | Use when |
-|---|---|
-| `firebaseClient.ts` | Browser/client components (`"use client"` paths) |
-| `firebaseSsrApp.ts` | SSR/App Router rendering flows (server components, `generateMetadata`) |
-| `firebaseAdmin.ts` | API route handlers, seed scripts, background environments |
-| `firebaseSearchDb.ts` | Pipeline/vector search in server-only paths |
+| Module                | Use when                                                               |
+| --------------------- | ---------------------------------------------------------------------- |
+| `firebaseClient.ts`   | Browser/client components (`"use client"` paths)                       |
+| `firebaseSsrApp.ts`   | SSR/App Router rendering flows (server components, `generateMetadata`) |
+| `firebaseAdmin.ts`    | API route handlers, seed scripts, background environments              |
+| `firebaseSearchDb.ts` | Pipeline/vector search in server-only paths                            |
 
 Never import client Firebase modules into server-only flows. The Admin SDK bypasses Firestore security rules — use only in trusted server paths.
 
 ### Schemas and DataConverters
 
 All Firestore data contracts live in the `@luratha/schemas` package (`packages/schemas/src/`); DataConverters live in `@luratha/firestore` (`packages/firestore/src/`). When adding a new entity:
+
 - Define the Zod schema in `packages/schemas/src/{entity}.ts`
 - Export from `packages/schemas/src/index.ts` alongside `firestoreCollections`
 - Create `adminXxxConverter.ts` and `clientXxxConverter.ts` in `packages/firestore/src/` for entities with `Timestamp` or vector fields
@@ -181,7 +183,7 @@ catch (err) {
 }
 ```
 
-The ESLint rules (`no-empty`, `no-restricted-syntax`) enforce **(a)** that the catch is bound and **(b)** that the body contains either an `instanceof` check or a `throw`. The rule can't check that you picked a *specific* class on the RHS of `instanceof` — that part is convention. Do not weaken either rule to `warn` to silence violations; refactor the site instead.
+The ESLint rules (`no-empty`, `no-restricted-syntax`) enforce **(a)** that the catch is bound and **(b)** that the body contains either an `instanceof` check or a `throw`. The rule can't check that you picked a _specific_ class on the RHS of `instanceof` — that part is convention. Do not weaken either rule to `warn` to silence violations; refactor the site instead.
 
 ### Logging conventions
 
@@ -218,6 +220,7 @@ For `functions/` (separate npm project outside the pnpm workspace), use the loca
 ## SEO Requirements
 
 Every new route must have:
+
 - `metadata` or `generateMetadata` with unique title, description, canonical, and OG
 - `JsonLd` component with the correct schema type
 - Update `src/app/sitemap.ts`, `src/app/robots.ts`, and `public/llms.txt` when route discoverability changes
@@ -225,6 +228,7 @@ Every new route must have:
 ## Skill References
 
 For deeper implementation detail, consult these skills:
+
 - Testing patterns and mock templates: `.github/skills/luratha-testing/SKILL.md`
 - Visual identity (colors, typography, components): `.github/skills/visual-identity/SKILL.md`
 - SEO/AEO/GEO: `.github/skills/luratha-seo/SKILL.md`

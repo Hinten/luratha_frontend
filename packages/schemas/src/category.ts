@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { nonEmptyStringSchema } from "@luratha/schemas/utils";
 
-
 export const CategorySchema = z.object({
   id: nonEmptyStringSchema,
   parentId: nonEmptyStringSchema.optional(),

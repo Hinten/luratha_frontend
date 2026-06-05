@@ -43,11 +43,11 @@ const SORT_FN = [
   "function sortProducts(products: Product[], sort?: string): Product[] {",
   "  const sorted = [...products];",
   "  switch (sort) {",
-  "    case \"menor-preco\":",
+  '    case "menor-preco":',
   "      return sorted.sort((a, b) => a.price - b.price);",
-  "    case \"maior-preco\":",
+  '    case "maior-preco":',
   "      return sorted.sort((a, b) => b.price - a.price);",
-  "    case \"maior-desconto\":",
+  '    case "maior-desconto":',
   "      return sorted.sort((a, b) => {",
   "        const discountA = a.originalPrice",
   "          ? (a.originalPrice - a.price) / a.originalPrice",
@@ -102,7 +102,7 @@ const categoriaPage = [
   "  const category = CATEGORIES.find((c) => c.slug === slug);",
   "  if (!category) return notFound();",
   "",
-  '  const filtered = buildMockProducts().filter((p) => p.categorySlug === slug);',
+  "  const filtered = buildMockProducts().filter((p) => p.categorySlug === slug);",
   "  const products = sortProducts(filtered, sort);",
   "",
   "  return (",
@@ -119,7 +119,7 @@ const categoriaPage = [
   "            {category.label}",
   "          </h1>",
   '          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">',
-  "            {products.length}{\" \"}",
+  '            {products.length}{" "}',
   '            {products.length === 1 ? "produto encontrado" : "produtos encontrados"}',
   "          </p>",
   "        </div>",
@@ -172,7 +172,7 @@ const todasAsPecasPage = [
   "            Todas as Pe\u00e7as",
   "          </h1>",
   '          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">',
-  "            {products.length}{\" \"}",
+  '            {products.length}{" "}',
   "            {products.length === 1",
   '              ? "produto encontrado"',
   '              : "produtos encontrados"}',
@@ -226,7 +226,7 @@ const salePage = [
   "        <div>",
   '          <h1 className="font-[family-name:var(--font-heading)]">Promo\u00e7\u00f5es</h1>',
   '          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">',
-  "            {products.length}{\" \"}",
+  '            {products.length}{" "}',
   '            {products.length === 1 ? "produto encontrado" : "produtos encontrados"}',
   "          </p>",
   "        </div>",
@@ -257,7 +257,6 @@ console.log("\n\u2705  Done! Routes ready:\n");
 console.log("   /categoria/[slug]  \u2192  src/app/categoria/[slug]/page.tsx");
 console.log("   /todas-as-pecas    \u2192  src/app/todas-as-pecas/page.tsx");
 console.log("   /sale              \u2192  src/app/sale/page.tsx\n");
-
 
 // ─── page content ────────────────────────────────────────────────────────────
 

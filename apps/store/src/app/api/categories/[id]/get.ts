@@ -13,10 +13,7 @@ export const runtime = "nodejs";
  * Returns 404 if the category does not exist.
  * Returns 200 with the category on success.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const categoryRef = adminDb

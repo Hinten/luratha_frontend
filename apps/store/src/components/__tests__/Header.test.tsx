@@ -65,9 +65,7 @@ describe("Header", () => {
 
   it("renders the logo link pointing to the homepage", () => {
     render(<Header />);
-    const logoLink = screen
-      .getAllByRole("link")
-      .find((el) => el.getAttribute("href") === "/");
+    const logoLink = screen.getAllByRole("link").find((el) => el.getAttribute("href") === "/");
     expect(logoLink).toBeInTheDocument();
   });
 
@@ -85,7 +83,7 @@ describe("Header", () => {
     const searchInput = screen.getByTestId("search-input");
 
     expect(
-      logo.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING
+      logo.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -109,9 +107,7 @@ describe("Header", () => {
 
   it("renders the hamburger menu button", () => {
     render(<Header />);
-    expect(
-      screen.getByRole("button", { name: "Abrir menu" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menu" })).toBeInTheDocument();
   });
 
   it("toggles the mobile menu when hamburger button is clicked", () => {

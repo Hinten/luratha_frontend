@@ -3,6 +3,7 @@
 ## 1) Problemas, fixes aplicados e problemas que persistiram
 
 ### Problemas tratados no PR
+
 - PDP (`src/app/produto/[slug]/page.tsx`) ainda estava acoplado a mock local e não ao contrato de `src/schemas/firestore`.
 - Fluxo de erro e não encontrado na PDP não estava consistente para 404 e falha de carregamento.
 - Home (`src/app/page.tsx`) não estava lendo categorias/produtos da database.
@@ -10,6 +11,7 @@
 - Havia uso de tipos legados (`src/lib/types.ts`) no `ProductDetailPage`.
 
 ### Fixes implementados
+
 - Migração da PDP para consulta por `slug` via `createProductsRepository(dbServer).getBySlug`.
 - Tratamento explícito de `notFound()` para slug inexistente e erro HTTP (500) para falha de carregamento.
 - Criação de `src/app/produto/[slug]/error.tsx` para erro segmentado da rota.
@@ -20,6 +22,7 @@
 - Evolução de testes unitários/emulator/E2E para cobrir o novo fluxo.
 
 ### Problemas que persistiram (estado atual)
+
 - `npm run test:e2e` padrão ainda pode falhar/travar quando não existe acesso ao Firestore cloud, pois o comando padrão não garante emulator.
 - `npm run test:firestore` pode passar com **skip** quando o emulator não está alcançável (não falha o pipeline por padrão).
 - Existem warnings de lint preexistentes (`no-img-element` e `no-unused-vars`).
@@ -55,6 +58,7 @@ Separar Server/Client foi crítico neste PR por quatro motivos:
 Foi identificado cenário em que a experiência de loading/streaming mascarava resposta de não encontrado, resultando em comportamento percebido como 200 em vez de 404.
 
 No PR, o fluxo foi corrigido para:
+
 - resolver `slug` no server,
 - chamar `notFound()` no momento correto da rota de produto,
 - separar melhor erro de carregamento (500) de ausência de recurso (404).

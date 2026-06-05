@@ -13,11 +13,11 @@ const MAX_CATEGORIES = 100;
  */
 export const getCachedCategories = cache(async (): Promise<Category[]> => {
   const snapshot = await adminDb
-      .collection(firestoreCollections.categories)
-      .withConverter(adminCategoryConverter)
-      .orderBy("name", "asc")
-      .limit(MAX_CATEGORIES)
-      .get();
+    .collection(firestoreCollections.categories)
+    .withConverter(adminCategoryConverter)
+    .orderBy("name", "asc")
+    .limit(MAX_CATEGORIES)
+    .get();
 
-    return snapshot.docs.map((d) => d.data());
+  return snapshot.docs.map((d) => d.data());
 });

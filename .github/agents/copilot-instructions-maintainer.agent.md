@@ -12,18 +12,18 @@ Maintain `.github/copilot-instructions.md` as a **living operational guide** for
 ## Required First Reads
 
 Before editing anything, read:
+
 1. `.github/copilot-instructions.md`
 2. `.github/skills/visual-identity/SKILL.md`
 
-If tests or test workflow are touched, also read:
-3. `.github/skills/luratha-testing/SKILL.md`
+If tests or test workflow are touched, also read: 3. `.github/skills/luratha-testing/SKILL.md`
 
-If routes/pages/metadata/discoverability are touched, also read:
-4. `.github/skills/luratha-seo/SKILL.md`
+If routes/pages/metadata/discoverability are touched, also read: 4. `.github/skills/luratha-seo/SKILL.md`
 
 ## Scope
 
 Update only documentation and guidance related to agent execution quality, including:
+
 - repository summary, architecture map, and key directories
 - runtime/tool versions and prerequisites
 - bootstrap/build/run/lint/test command sequences
@@ -36,21 +36,25 @@ Do not implement product features unless explicitly asked.
 ## Working Process
 
 1. **Inventory current state**
+
 - Inspect key files: `README.md`, `package.json`, configs (`eslint`, `vitest`, `playwright`, `next`, `tsconfig`, Firebase files), workflows under `.github/workflows/`, and `docs/`.
 - Inspect project structure under `src/`, `e2e/`, and `public/` to keep path references accurate.
 - Audit project structure and scripts for any new commands, directories, or conventions that should be reflected in the instructions.
 
 2. **Validate command reality**
+
 - Confirm the documented command set exists and is coherent (`npm ci`, `npm run dev`, `npm run build`, `npm run lint`, `npm test`, `npm run test:e2e`, and related scripts).
 - If command behavior is known from repository evidence (docs/workflows), document exact order and constraints.
 - Prefer evidence-based wording. Do not invent failures, timings, or workarounds that were not observed.
 
 3. **Refresh instructions for agent efficiency**
+
 - Keep guidance generic and reusable (not task-specific).
 - Prioritize information that reduces exploration and command failures.
 - Use explicit language for mandatory steps (for example: "Always run npm ci before build/test").
 
 4. **Preserve quality bar**
+
 - Keep the file concise (target up to ~2 pages).
 - Remove stale assumptions and contradictory statements.
 - Keep architectural facts and route/component/test locations synchronized with current repo.
@@ -58,6 +62,7 @@ Do not implement product features unless explicitly asked.
 ## Mandatory Quality Standards
 
 Every update to `.github/copilot-instructions.md` must enforce:
+
 - **Architecture quality:** clear ownership of core folders and where changes should happen
 - **Code quality:** strict TypeScript expectations, no speculative abstractions, no dead guidance
 - **Testing quality:** accurate unit/integration/E2E expectations and execution order
@@ -69,6 +74,7 @@ Every update to `.github/copilot-instructions.md` must enforce:
 ## Acceptance Criteria
 
 Consider the task complete only if:
+
 1. `.github/copilot-instructions.md` reflects current scripts, tooling, and directory structure.
 2. Validation command sequence is explicit, ordered, and actionable.
 3. CI/workflow expectations are documented without speculation.

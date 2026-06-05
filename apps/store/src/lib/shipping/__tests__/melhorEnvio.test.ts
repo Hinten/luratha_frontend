@@ -133,9 +133,7 @@ describe("melhorEnvioProvider.calculate", () => {
   });
 
   it("expõe httpStatus e invalid_input em HTTP 403 (token rejeitado)", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce(
-      new Response("403 Forbidden", { status: 403 }),
-    );
+    global.fetch = vi.fn().mockResolvedValueOnce(new Response("403 Forbidden", { status: 403 }));
     const settings = getDefaultSiteSettings().shipping;
     await expect(
       melhorEnvioProvider.calculate(
@@ -160,9 +158,7 @@ describe("melhorEnvioProvider.calculate", () => {
   });
 
   it("propaga provider_unavailable em HTTP 500", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce(
-      new Response("Internal Error", { status: 500 }),
-    );
+    global.fetch = vi.fn().mockResolvedValueOnce(new Response("Internal Error", { status: 500 }));
     const settings = getDefaultSiteSettings().shipping;
     await expect(
       melhorEnvioProvider.calculate(

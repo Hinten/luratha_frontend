@@ -53,10 +53,7 @@ export async function GET(request: Request) {
 
   const status = url.searchParams.get("status")?.trim() || undefined;
   if (status && !ALLOWED_STATUSES.has(status)) {
-    return NextResponse.json(
-      { message: `Status '${status}' inválido.` },
-      { status: 400 },
-    );
+    return NextResponse.json({ message: `Status '${status}' inválido.` }, { status: 400 });
   }
 
   const limitParam = url.searchParams.get("limit");

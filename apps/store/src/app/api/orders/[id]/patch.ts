@@ -23,10 +23,7 @@ export const runtime = "nodejs";
  * Returns 404 if the order does not exist, 400 on validation failure, 200
  * with the updated order on success.
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   let body: unknown;
@@ -56,10 +53,7 @@ export async function PATCH(
 
   const existing = await orderRef.get();
   if (!existing.exists) {
-    return NextResponse.json(
-      { message: `Pedido com id "${id}" não encontrado.` },
-      { status: 404 },
-    );
+    return NextResponse.json({ message: `Pedido com id "${id}" não encontrado.` }, { status: 404 });
   }
 
   const existingData = existing.data()!;
@@ -75,11 +69,7 @@ export async function PATCH(
 
   const payload = body as Record<string, unknown>;
 
-  if (
-    !authedUser.isAdmin &&
-    payload.status !== undefined &&
-    payload.status !== "cancelled"
-  ) {
+  if (!authedUser.isAdmin && payload.status !== undefined && payload.status !== "cancelled") {
     return NextResponse.json(
       { message: "Usuário só pode alterar status para 'cancelled'." },
       { status: 403 },

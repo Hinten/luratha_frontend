@@ -113,11 +113,7 @@ describe("parseStrictWrite", () => {
 
 describe("mergeForWrite", () => {
   it("applies merge order existing < patch < serverFields", () => {
-    const merged = mergeForWrite(
-      { a: 1, b: 2, c: 3 },
-      { b: 20 },
-      { c: 30 },
-    );
+    const merged = mergeForWrite({ a: 1, b: 2, c: 3 }, { b: 20 }, { c: 30 });
     expect(merged).toEqual({ a: 1, b: 20, c: 30 });
   });
 

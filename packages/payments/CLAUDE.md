@@ -5,6 +5,7 @@ by the storefront's payment-intent endpoint and by the standalone webhook app
 (`apps/mercadopago/`, which has its own CLAUDE.md for the webhook HTTP contract).
 
 Two modules behind the barrel (`src/index.ts`):
+
 - `mercadoPago/*` — provider adapter. Talks to the **Orders API** (`POST/GET /v1/orders`)
   via raw `fetch` (no `mercadopago` npm SDK). Covers PIX, credit card (token from the Card
   Payment Brick) and boleto. Gateway errors become `PaymentProviderError`.
@@ -14,6 +15,7 @@ Two modules behind the barrel (`src/index.ts`):
   no-op when both status and `paymentIntentId` are unchanged).
 
 Consumers (both server-only):
+
 - Storefront: `POST apps/store/src/app/api/checkout/payment-intent` → `createPaymentIntent`
   (the route handler owns authz — order belongs to the user and still awaits payment).
 - Webhook: `apps/mercadopago/` → `applyOrderWebhook` (see that app's CLAUDE.md).

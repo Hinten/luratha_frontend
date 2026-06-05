@@ -33,7 +33,12 @@ export default function SearchInput() {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} role="search" aria-label="Buscar produtos">
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      role="search"
+      aria-label="Buscar produtos"
+    >
       <label htmlFor="header-search-input" className={styles.srOnly}>
         Buscar produtos
       </label>

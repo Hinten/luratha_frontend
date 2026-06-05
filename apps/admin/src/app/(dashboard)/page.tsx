@@ -10,8 +10,8 @@ export default function DashboardPage() {
     <div>
       <h1 className={styles.title}>Painel administrativo</h1>
       <p className={styles.lead}>
-        Bem-vindo(a) ao Luratha Admin. As ferramentas operacionais aparecem aqui
-        conforme são liberadas.
+        Bem-vindo(a) ao Luratha Admin. As ferramentas operacionais aparecem aqui conforme são
+        liberadas.
       </p>
 
       <ul className={styles.cards}>

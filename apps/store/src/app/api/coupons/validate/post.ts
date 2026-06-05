@@ -38,12 +38,9 @@ type CouponValidationResult =
   | { valid: false; reason: string };
 
 function computeDiscount(coupon: Coupon, cartTotal: number): number {
-  const raw =
-    coupon.type === "percentage" ? (cartTotal * coupon.amount) / 100 : coupon.amount;
+  const raw = coupon.type === "percentage" ? (cartTotal * coupon.amount) / 100 : coupon.amount;
   const capped =
-    typeof coupon.maxDiscountAmount === "number"
-      ? Math.min(raw, coupon.maxDiscountAmount)
-      : raw;
+    typeof coupon.maxDiscountAmount === "number" ? Math.min(raw, coupon.maxDiscountAmount) : raw;
   // Nunca descontar mais do que o próprio carrinho.
   return Math.min(capped, cartTotal);
 }
@@ -64,10 +61,7 @@ function evaluateCoupon(coupon: Coupon, cartTotal: number): CouponValidationResu
     return { valid: false, reason: "Cupom expirado." };
   }
 
-  if (
-    typeof coupon.usageLimit === "number" &&
-    coupon.usageCount >= coupon.usageLimit
-  ) {
+  if (typeof coupon.usageLimit === "number" && coupon.usageCount >= coupon.usageLimit) {
     return { valid: false, reason: "Cupom esgotado." };
   }
 

@@ -18,9 +18,7 @@ describe("HeroBanner", () => {
 
   it("renders the first slide title", () => {
     render(<HeroBanner />);
-    expect(
-      screen.getByText("Peças feitas com amor para durar")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Peças feitas com amor para durar")).toBeInTheDocument();
   });
 
   it("renders navigation dots", () => {

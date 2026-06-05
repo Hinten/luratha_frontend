@@ -91,8 +91,7 @@ export default function ReferenciaDeMedidasPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Referência de Medidas</h1>
           <p className={styles.headerText}>
-            Encontre o seu tamanho ideal. Todas as medidas estão em
-            centímetros.
+            Encontre o seu tamanho ideal. Todas as medidas estão em centímetros.
           </p>
         </div>
 
@@ -135,8 +134,8 @@ export default function ReferenciaDeMedidasPage() {
 
         {/* Tip note */}
         <p className={styles.footerNote}>
-          Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior.
-          Se precisar de ajuda,{" "}
+          Em caso de dúvida entre dois tamanhos, recomendamos escolher o maior. Se precisar de
+          ajuda,{" "}
           <Link href="/contato" className={styles.footerNoteLink}>
             fale conosco
           </Link>
@@ -146,5 +145,3 @@ export default function ReferenciaDeMedidasPage() {
     </div>
   );
 }
-
-

@@ -10,11 +10,11 @@ compatibility: Next.js 16+ App Router (Metadata API, generateMetadata, generateS
 
 Three complementary disciplines govern Luratha's discoverability:
 
-| Discipline | Full Name | Goal | Primary Channel |
-|---|---|---|---|
-| **SEO** | Search Engine Optimization | Rank in traditional search (Google, Bing) | Crawlers, indexers |
-| **AEO** | Answer Engine Optimization | Appear in featured snippets, AI Overviews, voice assistants | Semantic extractors |
-| **GEO** | Generative Engine Optimization | Be cited by LLMs (ChatGPT, Gemini, Copilot, Perplexity) | Language models |
+| Discipline | Full Name                      | Goal                                                        | Primary Channel     |
+| ---------- | ------------------------------ | ----------------------------------------------------------- | ------------------- |
+| **SEO**    | Search Engine Optimization     | Rank in traditional search (Google, Bing)                   | Crawlers, indexers  |
+| **AEO**    | Answer Engine Optimization     | Appear in featured snippets, AI Overviews, voice assistants | Semantic extractors |
+| **GEO**    | Generative Engine Optimization | Be cited by LLMs (ChatGPT, Gemini, Copilot, Perplexity)     | Language models     |
 
 All three share the same technical foundation: **semantic HTML, structured data (schema.org), clear metadata, and machine-readable content**. Do all three together — never in isolation.
 
@@ -87,7 +87,8 @@ Every page (Server Component) should export its own `metadata` or `generateMetad
 // Static page
 export const metadata: Metadata = {
   title: "Vestidos Artesanais",
-  description: "Vestidos femininos artesanais feitos com amor. Encontre o vestido perfeito na Luratha.",
+  description:
+    "Vestidos femininos artesanais feitos com amor. Encontre o vestido perfeito na Luratha.",
   alternates: { canonical: "https://www.luratha.com.br/colecao/vestidos" },
   openGraph: {
     title: "Vestidos Artesanais | Luratha",
@@ -98,7 +99,11 @@ export const metadata: Metadata = {
 };
 
 // Dynamic page (e.g., product detail)
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
   const product = await getProduct(params.slug);
   return {
     title: product.name,
@@ -144,10 +149,7 @@ interface JsonLdProps {
 
 export default function JsonLd({ data }: JsonLdProps) {
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }
 ```
@@ -156,17 +158,17 @@ export default function JsonLd({ data }: JsonLdProps) {
 
 ### Schema types by page
 
-| Page | Primary Schema Type | Why |
-|---|---|---|
-| Root layout | `Organization` + `WebSite` | Brand identity + sitelinks search |
-| Home page | `WebPage` + `ItemList` (featured products) | Content + product discovery |
-| Category page | `CollectionPage` + `ItemList` | Product listing |
-| Product page | `Product` + `BreadcrumbList` | Product rich results |
-| About page | `AboutPage` + `Organization` | Brand info in AI answers |
-| Contact page | `ContactPage` + `LocalBusiness` | Contact info extraction |
-| Returns policy | `FAQPage` | Featured snippets for common questions |
-| Size guide | `Table` + `FAQPage` | Size answer extraction |
-| Blog/editorial | `Article` | Content indexing |
+| Page           | Primary Schema Type                        | Why                                    |
+| -------------- | ------------------------------------------ | -------------------------------------- |
+| Root layout    | `Organization` + `WebSite`                 | Brand identity + sitelinks search      |
+| Home page      | `WebPage` + `ItemList` (featured products) | Content + product discovery            |
+| Category page  | `CollectionPage` + `ItemList`              | Product listing                        |
+| Product page   | `Product` + `BreadcrumbList`               | Product rich results                   |
+| About page     | `AboutPage` + `Organization`               | Brand info in AI answers               |
+| Contact page   | `ContactPage` + `LocalBusiness`            | Contact info extraction                |
+| Returns policy | `FAQPage`                                  | Featured snippets for common questions |
+| Size guide     | `Table` + `FAQPage`                        | Size answer extraction                 |
+| Blog/editorial | `Article`                                  | Content indexing                       |
 
 ### Organization schema (root layout or page)
 
@@ -232,9 +234,7 @@ const productSchema: WithContext<Product> = {
     "@type": "Offer",
     priceCurrency: "BRL",
     price: product.price,
-    availability: product.inStock
-      ? "https://schema.org/InStock"
-      : "https://schema.org/OutOfStock",
+    availability: product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     url: `https://www.luratha.com.br/${product.slug}`,
     seller: {
       "@type": "Organization",
@@ -381,10 +381,12 @@ export default function robots(): MetadataRoute.Robots {
 [short description of the brand]
 
 ## Sections
+
 - [Page Name](/route): short description
 ```
 
 **Rules:**
+
 - Keep it factual and concise — LLMs use it to build context
 - List all important pages with their descriptions
 - Include contact information, values, and key differentiators

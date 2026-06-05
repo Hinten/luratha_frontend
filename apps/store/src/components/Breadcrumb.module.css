@@ -34,7 +34,9 @@
   color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
   text-decoration: none;
   text-underline-offset: 3px;
-  transition: color 300ms ease, text-decoration-color 300ms ease;
+  transition:
+    color 300ms ease,
+    text-decoration-color 300ms ease;
 }
 
 .link:hover {

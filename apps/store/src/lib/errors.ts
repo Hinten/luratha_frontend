@@ -79,17 +79,23 @@ export async function throwIfNotOk(response: Response, fallbackMessage: string):
     // Body wasn't JSON — fall through to the fallback message.
   }
   const message =
-    payload && typeof payload === "object" && "message" in payload &&
+    payload &&
+    typeof payload === "object" &&
+    "message" in payload &&
     typeof (payload as { message: unknown }).message === "string"
       ? (payload as { message: string }).message
       : fallbackMessage;
   const issues =
-    payload && typeof payload === "object" && "errors" in payload &&
+    payload &&
+    typeof payload === "object" &&
+    "errors" in payload &&
     Array.isArray((payload as { errors: unknown }).errors)
-      ? ((payload as { errors: z.core.$ZodIssue[] }).errors)
+      ? (payload as { errors: z.core.$ZodIssue[] }).errors
       : [];
   const code =
-    payload && typeof payload === "object" && "code" in payload &&
+    payload &&
+    typeof payload === "object" &&
+    "code" in payload &&
     typeof (payload as { code: unknown }).code === "string"
       ? (payload as { code: string }).code
       : undefined;

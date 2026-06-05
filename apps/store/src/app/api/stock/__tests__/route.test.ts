@@ -2,46 +2,40 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { POST } from "@/src/app/api/stock/post";
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const {
-  mockStockSet,
-  mockStockDoc,
-  mockProductGet,
-  mockProductDoc,
-  mockCollection,
-} = vi.hoisted(() => {
-  // Stock collection
-  const mockStockSet = vi.fn().mockResolvedValue(undefined);
-  const mockStockDocRef = {
-    set: mockStockSet,
-  };
-  const mockStockDoc = vi.fn().mockReturnValue(mockStockDocRef);
+const { mockStockSet, mockStockDoc, mockProductGet, mockProductDoc, mockCollection } = vi.hoisted(
+  () => {
+    // Stock collection
+    const mockStockSet = vi.fn().mockResolvedValue(undefined);
+    const mockStockDocRef = {
+      set: mockStockSet,
+    };
+    const mockStockDoc = vi.fn().mockReturnValue(mockStockDocRef);
 
-  // Products collection — single doc lookup (by id)
-  const mockProductGet = vi.fn();
-  const mockProductDocRef = {
-    get: mockProductGet,
-    withConverter: vi.fn(),
-  };
-  mockProductDocRef.withConverter.mockReturnValue(mockProductDocRef);
-  const mockProductDoc = vi.fn().mockReturnValue(mockProductDocRef);
+    // Products collection — single doc lookup (by id)
+    const mockProductGet = vi.fn();
+    const mockProductDocRef = {
+      get: mockProductGet,
+      withConverter: vi.fn(),
+    };
+    mockProductDocRef.withConverter.mockReturnValue(mockProductDocRef);
+    const mockProductDoc = vi.fn().mockReturnValue(mockProductDocRef);
 
-  // collection() dispatcher
-  const mockCollection = vi.fn();
+    // collection() dispatcher
+    const mockCollection = vi.fn();
 
-  return {
-    mockStockSet,
-    mockStockDoc,
-    mockProductGet,
-    mockProductDoc,
-    mockCollection,
-  };
-});
+    return {
+      mockStockSet,
+      mockStockDoc,
+      mockProductGet,
+      mockProductDoc,
+      mockCollection,
+    };
+  },
+);
 
 // Build fake query chain returned by .where(...).limit(1).get()
 function buildFakeQueryChain(productData: Record<string, unknown> | null) {
-  const docs = productData
-    ? [{ data: () => productData }]
-    : [];
+  const docs = productData ? [{ data: () => productData }] : [];
   const get = vi.fn().mockResolvedValue({ empty: !productData, docs });
   const limit = vi.fn().mockReturnValue({ get });
   const where = vi.fn().mockReturnValue({ limit });
@@ -70,7 +64,15 @@ function buildStoredProduct(overrides: Record<string, unknown> = {}): Record<str
     sku: PRODUCT_SKU,
     status: "active",
     categoryId: "cat_vestidos",
-    price: { price: 299, currency: "BRL", salePrice: null, priceMin: null, priceMax: null, startDate: null, endDate: null },
+    price: {
+      price: 299,
+      currency: "BRL",
+      salePrice: null,
+      priceMin: null,
+      priceMax: null,
+      startDate: null,
+      endDate: null,
+    },
     salePrice: null,
     shortTitle: null,
     gtin: null,
@@ -208,9 +210,7 @@ describe("POST /api/stock", () => {
   });
 
   it("returns 400 when variants map is empty", async () => {
-    const res = await POST(
-      makeRequest({ productId: PRODUCT_ID, variants: {} }),
-    );
+    const res = await POST(makeRequest({ productId: PRODUCT_ID, variants: {} }));
     expect(res.status).toBe(400);
     const payload = await res.json();
     expect(payload.errors).toBeDefined();

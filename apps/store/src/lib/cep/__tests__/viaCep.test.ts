@@ -30,9 +30,11 @@ describe("lookupCep", () => {
   });
 
   it("aceita CEP só com dígitos e chama o endpoint correto", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ localidade: "Rio", uf: "RJ" }), { status: 200 }),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ localidade: "Rio", uf: "RJ" }), { status: 200 }),
+      );
     await lookupCep("20040001");
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://viacep.com.br/ws/20040001/json/",

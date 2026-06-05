@@ -45,9 +45,7 @@ describe("SortDropdown", () => {
     render(<SortDropdown />);
     const select = screen.getByRole("combobox");
     fireEvent.change(select, { target: { value: "maior-preco" } });
-    expect(mockPush).toHaveBeenCalledWith(
-      "/categoria/vestidos?sort=maior-preco"
-    );
+    expect(mockPush).toHaveBeenCalledWith("/categoria/vestidos?sort=maior-preco");
   });
 
   it("removes the sort param when 'recentes' is selected", () => {

@@ -7,11 +7,11 @@ estático lido de variável de ambiente.
 
 ## Variáveis de ambiente
 
-| Variável | Obrigatória | Default | Descrição |
-|---|---|---|---|
-| `MELHOR_ENVIO_TOKEN` | sim | — | Token de API (Bearer) gerado no painel do Melhor Envio. |
-| `MELHOR_ENVIO_ENV` | não | `sandbox` | `sandbox` ou `production`. Define a base URL da API. |
-| `MELHOR_ENVIO_USER_AGENT` | não | `Luratha (contato@luratha.com.br)` | Header `User-Agent` exigido pela API do Melhor Envio (eles pedem identificação + e-mail de contato). |
+| Variável                  | Obrigatória | Default                            | Descrição                                                                                            |
+| ------------------------- | ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `MELHOR_ENVIO_TOKEN`      | sim         | —                                  | Token de API (Bearer) gerado no painel do Melhor Envio.                                              |
+| `MELHOR_ENVIO_ENV`        | não         | `sandbox`                          | `sandbox` ou `production`. Define a base URL da API.                                                 |
+| `MELHOR_ENVIO_USER_AGENT` | não         | `Luratha (contato@luratha.com.br)` | Header `User-Agent` exigido pela API do Melhor Envio (eles pedem identificação + e-mail de contato). |
 
 Base URLs (definidas em `src/lib/shipping/melhorEnvio/client.ts`):
 

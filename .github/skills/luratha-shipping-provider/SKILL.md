@@ -21,17 +21,17 @@ deploy.
 
 All shipping code lives under `src/lib/shipping/`:
 
-| File / dir | Purpose |
-|---|---|
-| `types.ts` | `ShippingProvider` interface, I/O types, `ShippingProviderError` |
-| `provider.ts` | The `REGISTRY` — maps `providerId` → provider; fallback accessor; test hook |
-| `service.ts` | `server-only` orchestration: caching, fallback, free-shipping threshold |
-| `melhorEnvio/` | Reference adapter for an external HTTP API |
-| `fallback/fixedRateProvider.ts` | UF-table provider; doubles as the automatic fallback |
-| `freeShipping.ts` | `threshold = referenceCost / divisor` math |
-| `itemNormalizer.ts` | Resolves per-item weight/dimensions with `siteSettings` fallbacks |
-| `cache.ts` | In-memory quote cache keyed by CEP + cart signature |
-| `src/schemas/firestore/siteSettings.ts` | Zod schema for `settings/global`, incl. `SHIPPING_PROVIDER_IDS` |
+| File / dir                              | Purpose                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| `types.ts`                              | `ShippingProvider` interface, I/O types, `ShippingProviderError`            |
+| `provider.ts`                           | The `REGISTRY` — maps `providerId` → provider; fallback accessor; test hook |
+| `service.ts`                            | `server-only` orchestration: caching, fallback, free-shipping threshold     |
+| `melhorEnvio/`                          | Reference adapter for an external HTTP API                                  |
+| `fallback/fixedRateProvider.ts`         | UF-table provider; doubles as the automatic fallback                        |
+| `freeShipping.ts`                       | `threshold = referenceCost / divisor` math                                  |
+| `itemNormalizer.ts`                     | Resolves per-item weight/dimensions with `siteSettings` fallbacks           |
+| `cache.ts`                              | In-memory quote cache keyed by CEP + cart signature                         |
+| `src/schemas/firestore/siteSettings.ts` | Zod schema for `settings/global`, incl. `SHIPPING_PROVIDER_IDS`             |
 
 The provider interface itself:
 
@@ -92,7 +92,7 @@ object. Contract details:
 
 Put auth, base URL, timeout, and error mapping in a sibling
 `<provider>/client.ts`, mirroring `melhorEnvio/client.ts`. Keep the adapter
-(`index.ts`) focused on request/response *mapping*. Always use an
+(`index.ts`) focused on request/response _mapping_. Always use an
 `AbortController` timeout — a hung carrier API must surface as
 `provider_unavailable`, not a stuck request.
 
@@ -104,7 +104,7 @@ Edit `src/lib/shipping/provider.ts` and add the entry to `REGISTRY`:
 const REGISTRY: Record<ShippingProviderId, ShippingProvider> = {
   "melhor-envio": melhorEnvioProvider,
   "fixed-rate": fixedRateProvider,
-  "correios": correiosProvider,
+  correios: correiosProvider,
 };
 ```
 
@@ -116,16 +116,16 @@ This clears the Step 1 compile error. Nothing else imports your module —
 `service.ts` decides retries/fallback purely from the error `code`. Never let a
 raw error escape `calculate()`. Codes:
 
-| `code` | Use when | Effect in `service.ts` |
-|---|---|---|
-| `config_missing` | Required env/setting absent (e.g. token unset) | Triggers fallback (if enabled) |
-| `provider_unavailable` | Network failure, timeout, HTTP 5xx, bad JSON | Triggers fallback (if enabled) |
-| `invalid_input` | Bad CEP, empty items, HTTP 4xx | Propagates → route returns **400**, no fallback |
-| `not_supported` | Capability absent (e.g. `track()` stubbed) | Propagates |
-| `unknown` | Anything genuinely unexpected | Propagates |
+| `code`                 | Use when                                       | Effect in `service.ts`                          |
+| ---------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| `config_missing`       | Required env/setting absent (e.g. token unset) | Triggers fallback (if enabled)                  |
+| `provider_unavailable` | Network failure, timeout, HTTP 5xx, bad JSON   | Triggers fallback (if enabled)                  |
+| `invalid_input`        | Bad CEP, empty items, HTTP 4xx                 | Propagates → route returns **400**, no fallback |
+| `not_supported`        | Capability absent (e.g. `track()` stubbed)     | Propagates                                      |
+| `unknown`              | Anything genuinely unexpected                  | Propagates                                      |
 
 Construct as `new ShippingProviderError(message, providerId, code, cause?)`.
-Only `config_missing` and `provider_unavailable` are considered *recoverable* —
+Only `config_missing` and `provider_unavailable` are considered _recoverable_ —
 they are the only codes that hand off to the fallback provider.
 
 ### Step 6 — Decide where config lives
@@ -152,7 +152,7 @@ code change.
   `calculate()` mapping, service filtering, and the error-code mapping. For
   external HTTP, mock `fetch`. Follow `melhorEnvio.test.ts`.
 - **Service-level**: `provider.ts` exports `__setShippingProviderForTests(id,
-  mock)` — inject a mock provider to test orchestration/fallback without
+mock)` — inject a mock provider to test orchestration/fallback without
   hitting the network. See `service.test.ts`.
 - **Cloud integration** (`src/test/cloud/*.cloud.test.ts`, opt-in): exercises
   the real route + Firestore; auto-skips without credentials. Add a real-API

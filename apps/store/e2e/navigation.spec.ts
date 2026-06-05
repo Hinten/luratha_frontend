@@ -19,9 +19,7 @@ test.describe("Navigation", () => {
     await expect(footer.getByRole("link", { name: "Facebook" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "YouTube" })).toBeVisible();
 
-    await expect(
-      page.getByRole("link", { name: "Falar no WhatsApp" })
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Falar no WhatsApp" })).toBeVisible();
   });
 
   test("mobile hamburger menu opens and closes", async ({ page }) => {

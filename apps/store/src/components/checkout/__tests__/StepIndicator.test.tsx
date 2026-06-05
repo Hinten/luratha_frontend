@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import StepIndicator, {
-  type CheckoutStep,
-} from "@/src/components/checkout/StepIndicator";
+import StepIndicator, { type CheckoutStep } from "@/src/components/checkout/StepIndicator";
 
 const STEPS: CheckoutStep[] = [
   { id: "address", label: "Endereço" },
@@ -30,13 +28,7 @@ describe("StepIndicator", () => {
 
   it("renders completed steps as buttons when onStepClick is provided", () => {
     const onStepClick = vi.fn();
-    render(
-      <StepIndicator
-        steps={STEPS}
-        currentStep="payment"
-        onStepClick={onStepClick}
-      />,
-    );
+    render(<StepIndicator steps={STEPS} currentStep="payment" onStepClick={onStepClick} />);
     const items = screen.getAllByRole("listitem");
     expect(within(items[0]).getByRole("button")).toBeInTheDocument();
     expect(within(items[1]).getByRole("button")).toBeInTheDocument();
@@ -53,13 +45,7 @@ describe("StepIndicator", () => {
 
   it("calls onStepClick when a completed step is clicked", () => {
     const onStepClick = vi.fn();
-    render(
-      <StepIndicator
-        steps={STEPS}
-        currentStep="review"
-        onStepClick={onStepClick}
-      />,
-    );
+    render(<StepIndicator steps={STEPS} currentStep="review" onStepClick={onStepClick} />);
     fireEvent.click(screen.getByRole("button", { name: /Voltar para etapa 2/ }));
     expect(onStepClick).toHaveBeenCalledWith("shipping");
   });

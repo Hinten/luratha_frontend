@@ -50,7 +50,6 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 async function getCachedSearchResults(cacheKey: string, firestore: Firestore): Promise<Product[]> {
-
   const productsSearchRepository = createProductsSearchRepository(firestore);
 
   const cached = searchResponseCache.get(cacheKey);
@@ -155,21 +154,27 @@ export default async function BuscaPage({ searchParams }: PageProps) {
         ]}
       />
 
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 id="search-results-heading" tabIndex={-1} className="font-[family-name:var(--font-heading)]">
+          <h1
+            id="search-results-heading"
+            tabIndex={-1}
+            className="font-[family-name:var(--font-heading)]"
+          >
             {term ? `Resultados para: ${term}` : "Buscar peças Luratha"}
           </h1>
           {term ? (
             <p
               aria-live="polite"
-              className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1"
+              className="mt-1 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60"
             >
-              {products.length} {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
+              {products.length}{" "}
+              {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
             </p>
           ) : (
-            <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">
-              Digite um termo no campo de busca para encontrar produtos por nome, descrição e estilo.
+            <p className="mt-1 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60">
+              Digite um termo no campo de busca para encontrar produtos por nome, descrição e
+              estilo.
             </p>
           )}
         </div>

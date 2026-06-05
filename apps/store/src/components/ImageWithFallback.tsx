@@ -9,20 +9,9 @@ type ImageWithFallbackProps = Omit<ImageProps, "src"> & {
   src?: string | null;
 };
 
-export default function ImageWithFallback({
-  src,
-  alt,
-  ...rest
-}: ImageWithFallbackProps) {
+export default function ImageWithFallback({ src, alt, ...rest }: ImageWithFallbackProps) {
   const [errored, setErrored] = useState(false);
   const finalSrc = !src || errored ? FALLBACK_IMAGE_URL : src;
 
-  return (
-    <Image
-      {...rest}
-      src={finalSrc}
-      alt={alt}
-      onError={() => setErrored(true)}
-    />
-  );
+  return <Image {...rest} src={finalSrc} alt={alt} onError={() => setErrored(true)} />;
 }

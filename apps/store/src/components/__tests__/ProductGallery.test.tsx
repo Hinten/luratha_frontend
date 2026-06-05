@@ -67,8 +67,14 @@ describe("ProductGallery", () => {
 
   it("the first thumbnail is marked as active (aria-pressed=true) by default", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    expect(screen.getByRole("button", { name: "Ver imagem 1" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Ver imagem 2" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Ver imagem 1" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Ver imagem 2" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("renders thumbnail list with aria-label", () => {
@@ -84,8 +90,14 @@ describe("ProductGallery", () => {
 
   it("opens and closes zoom overlay when zoom image exists", () => {
     render(<ProductGallery images={images} productName="Vestido Bordado" />);
-    fireEvent.pointerDown(screen.getByAltText("Vestido Bordado — imagem 1"), { clientX: 120, clientY: 100 });
-    fireEvent.pointerUp(screen.getByAltText("Vestido Bordado — imagem 1"), { clientX: 120, clientY: 100 });
+    fireEvent.pointerDown(screen.getByAltText("Vestido Bordado — imagem 1"), {
+      clientX: 120,
+      clientY: 100,
+    });
+    fireEvent.pointerUp(screen.getByAltText("Vestido Bordado — imagem 1"), {
+      clientX: 120,
+      clientY: 100,
+    });
     expect(screen.getByRole("dialog", { name: "Imagem ampliada" })).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
     fireEvent.click(screen.getByRole("button", { name: "Fechar zoom" }));
@@ -108,6 +120,9 @@ describe("ProductGallery", () => {
     fireEvent.pointerMove(mainImage, { clientX: 120, clientY: 102 });
     fireEvent.pointerUp(mainImage, { clientX: 120, clientY: 102 });
 
-    expect(screen.getByAltText("Vestido Bordado — imagem 2")).toHaveAttribute("src", images[1].defaultUrl);
+    expect(screen.getByAltText("Vestido Bordado — imagem 2")).toHaveAttribute(
+      "src",
+      images[1].defaultUrl,
+    );
   });
 });

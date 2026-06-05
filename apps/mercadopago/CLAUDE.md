@@ -6,6 +6,7 @@ it calls (`verifyWebhookSignature`, `applyOrderWebhook`) lives in `@luratha/paym
 (see `packages/payments/CLAUDE.md`).
 
 Webhook contract (`src/app/api/webhooks/mercadopago/post.ts`):
+
 - Public endpoint called by MP servers — secured by `x-signature` HMAC validation
   (`verifyWebhookSignature`), **not** `requireUser`.
 - Status codes are a redelivery contract: `401` invalid signature; `500` provider/config

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { validateProduct } from "@luratha/schemas";
-import { getProductCardImage, getProductGalleryImages, getProductPrimaryImage } from "@/src/lib/productImages";
+import {
+  getProductCardImage,
+  getProductGalleryImages,
+  getProductPrimaryImage,
+} from "@/src/lib/productImages";
 
 const now = "2026-04-16T00:00:00.000Z";
 
@@ -70,11 +74,15 @@ const productWithAssets = validateProduct({
 
 describe("productImages", () => {
   it("returns the desktop downloadUrl as primary image", () => {
-    expect(getProductPrimaryImage(productWithAssets, "fallback")).toBe("https://example.com/desktop.webp");
+    expect(getProductPrimaryImage(productWithAssets, "fallback")).toBe(
+      "https://example.com/desktop.webp",
+    );
   });
 
   it("returns the card downloadUrl for product cards when available", () => {
-    expect(getProductCardImage(productWithAssets, "fallback")).toBe("https://example.com/card.webp");
+    expect(getProductCardImage(productWithAssets, "fallback")).toBe(
+      "https://example.com/card.webp",
+    );
   });
 
   it("builds responsive gallery data from product assets", () => {

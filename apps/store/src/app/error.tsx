@@ -21,17 +21,11 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
       </p>
 
       <div className={styles.actions}>
-        <button
-          onClick={reset}
-          className={styles.btnPrimary}
-        >
+        <button onClick={reset} className={styles.btnPrimary}>
           Tentar novamente
         </button>
 
-        <Link
-          href="/"
-          className={styles.btnSecondary}
-        >
+        <Link href="/" className={styles.btnSecondary}>
           Voltar para o início
         </Link>
       </div>
@@ -41,4 +35,3 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
     </div>
   );
 }
-

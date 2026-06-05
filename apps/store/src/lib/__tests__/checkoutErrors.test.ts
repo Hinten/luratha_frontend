@@ -24,11 +24,7 @@ beforeEach(() => {
   loggerWarnMock.mockClear();
 });
 
-function callWith(
-  step: CheckoutStep,
-  error: unknown,
-  metadata?: Record<string, unknown>,
-): string {
+function callWith(step: CheckoutStep, error: unknown, metadata?: Record<string, unknown>): string {
   const args: ReportCheckoutErrorArgs = { error, step };
   if (metadata) args.metadata = metadata;
   return reportCheckoutError(args);
@@ -156,13 +152,8 @@ describe("reportCheckoutError — severidade", () => {
 
 describe("reportCheckoutError — cross-cutting messages", () => {
   it("401 vira mensagem de sessão expirada em qualquer step", () => {
-    const msg = callWith(
-      "identification",
-      new ApiResponseError("not authed", 401),
-    );
-    expect(msg).toBe(
-      "Sua sessão expirou. Atualize a página e entre de novo para continuar.",
-    );
+    const msg = callWith("identification", new ApiResponseError("not authed", 401));
+    expect(msg).toBe("Sua sessão expirou. Atualize a página e entre de novo para continuar.");
   });
 
   it("403 vira mensagem de permissão", () => {
@@ -172,55 +163,41 @@ describe("reportCheckoutError — cross-cutting messages", () => {
 
   it("502 vira mensagem de instabilidade", () => {
     const msg = callWith("identification", new ApiResponseError("down", 502));
-    expect(msg).toBe(
-      "Estamos com instabilidade no momento. Tente novamente em alguns minutos.",
-    );
+    expect(msg).toBe("Estamos com instabilidade no momento. Tente novamente em alguns minutos.");
   });
 
   it("TypeError vira mensagem de conexão", () => {
     const msg = callWith("address_save", new TypeError("Failed to fetch"));
-    expect(msg).toBe(
-      "Sua conexão parece instável. Verifique a internet e tente novamente.",
-    );
+    expect(msg).toBe("Sua conexão parece instável. Verifique a internet e tente novamente.");
   });
 
   it("AbortError genérico vira mensagem de tempo limite", () => {
     const msg = callWith("shipping", abortError());
-    expect(msg).toBe(
-      "A operação demorou demais. Verifique sua conexão e tente novamente.",
-    );
+    expect(msg).toBe("A operação demorou demais. Verifique sua conexão e tente novamente.");
   });
 });
 
 describe("reportCheckoutError — identification step", () => {
   it("400 destaca CPF/CNPJ/e-mail", () => {
-    expect(
-      callWith("identification", new ApiResponseError("bad", 400)),
-    ).toBe(
+    expect(callWith("identification", new ApiResponseError("bad", 400))).toBe(
       "Confira os dados informados — CPF/CNPJ ou e-mail parecem inválidos.",
     );
   });
 
   it("404 sugere tentar novamente", () => {
-    expect(
-      callWith("identification", new ApiResponseError("nope", 404)),
-    ).toBe(
+    expect(callWith("identification", new ApiResponseError("nope", 404))).toBe(
       "Não conseguimos criar seu perfil agora. Tente novamente em instantes.",
     );
   });
 
   it("409 indica duplicação", () => {
-    expect(
-      callWith("identification", new ApiResponseError("dup", 409)),
-    ).toBe(
+    expect(callWith("identification", new ApiResponseError("dup", 409))).toBe(
       "Já existe um perfil com esses dados. Atualize a página e tente de novo.",
     );
   });
 
   it("500 cai no fallback de servidor", () => {
-    expect(
-      callWith("identification", new ApiResponseError("err", 500)),
-    ).toBe(
+    expect(callWith("identification", new ApiResponseError("err", 500))).toBe(
       "Tivemos um problema momentâneo no servidor. Tente novamente em instantes.",
     );
   });
@@ -272,9 +249,7 @@ describe("reportCheckoutError — address_save step", () => {
       callWith("address_save", new ApiResponseError("bad", 400), {
         hasFieldIssues: false,
       }),
-    ).toBe(
-      "Não foi possível salvar este endereço. Verifique os dados e tente novamente.",
-    );
+    ).toBe("Não foi possível salvar este endereço. Verifique os dados e tente novamente.");
   });
 
   it("409 indica duplicação", () => {
@@ -298,41 +273,25 @@ describe("reportCheckoutError — address_save step", () => {
 
 describe("reportCheckoutError — shipping step", () => {
   it("code=invalid_input indica CEP", () => {
-    expect(
-      callWith(
-        "shipping",
-        new ApiResponseError("bad cep", 400, [], "invalid_input"),
-      ),
-    ).toBe("Confira o CEP informado e tente novamente.");
+    expect(callWith("shipping", new ApiResponseError("bad cep", 400, [], "invalid_input"))).toBe(
+      "Confira o CEP informado e tente novamente.",
+    );
   });
 
   it("code=not_supported indica área não atendida", () => {
     expect(
-      callWith(
-        "shipping",
-        new ApiResponseError("not covered", 400, [], "not_supported"),
-      ),
+      callWith("shipping", new ApiResponseError("not covered", 400, [], "not_supported")),
     ).toBe("Não atendemos a esse CEP no momento.");
   });
 
   it("code=provider_unavailable indica transportadoras off", () => {
     expect(
-      callWith(
-        "shipping",
-        new ApiResponseError("down", 502, [], "provider_unavailable"),
-      ),
-    ).toBe(
-      "As transportadoras estão indisponíveis no momento. Tente novamente em alguns minutos.",
-    );
+      callWith("shipping", new ApiResponseError("down", 502, [], "provider_unavailable")),
+    ).toBe("As transportadoras estão indisponíveis no momento. Tente novamente em alguns minutos.");
   });
 
   it("code=config_missing cai no fallback de servidor curto", () => {
-    expect(
-      callWith(
-        "shipping",
-        new ApiResponseError("misconfig", 500, [], "config_missing"),
-      ),
-    ).toBe(
+    expect(callWith("shipping", new ApiResponseError("misconfig", 500, [], "config_missing"))).toBe(
       "Não conseguimos calcular o frete agora. Tente novamente em instantes.",
     );
   });
@@ -408,23 +367,15 @@ describe("reportCheckoutError — payment_card step", () => {
 
 describe("reportCheckoutError — payment_pix / payment_boleto", () => {
   it("code=invalid_input pede revisão dos dados", () => {
-    expect(
-      callWith(
-        "payment_pix",
-        new ApiResponseError("bad", 400, [], "invalid_input"),
-      ),
-    ).toBe("Confira os dados de pagamento e tente novamente.");
+    expect(callWith("payment_pix", new ApiResponseError("bad", 400, [], "invalid_input"))).toBe(
+      "Confira os dados de pagamento e tente novamente.",
+    );
   });
 
   it("code=provider_unavailable indica MP indisponível (boleto)", () => {
     expect(
-      callWith(
-        "payment_boleto",
-        new ApiResponseError("down", 502, [], "provider_unavailable"),
-      ),
-    ).toBe(
-      "O Mercado Pago está indisponível no momento. Tente novamente em alguns minutos.",
-    );
+      callWith("payment_boleto", new ApiResponseError("down", 502, [], "provider_unavailable")),
+    ).toBe("O Mercado Pago está indisponível no momento. Tente novamente em alguns minutos.");
   });
 
   it("fallback genérico para PIX", () => {
@@ -442,23 +393,15 @@ describe("reportCheckoutError — submit_order", () => {
   });
 
   it("code=invalid_input pede revisão dos dados", () => {
-    expect(
-      callWith(
-        "submit_order",
-        new ApiResponseError("bad", 400, [], "invalid_input"),
-      ),
-    ).toBe("Confira os dados de pagamento e tente novamente.");
+    expect(callWith("submit_order", new ApiResponseError("bad", 400, [], "invalid_input"))).toBe(
+      "Confira os dados de pagamento e tente novamente.",
+    );
   });
 
   it("code=provider_unavailable indica MP fora", () => {
     expect(
-      callWith(
-        "submit_order",
-        new ApiResponseError("mp down", 502, [], "provider_unavailable"),
-      ),
-    ).toBe(
-      "O Mercado Pago está indisponível no momento. Tente novamente em alguns minutos.",
-    );
+      callWith("submit_order", new ApiResponseError("mp down", 502, [], "provider_unavailable")),
+    ).toBe("O Mercado Pago está indisponível no momento. Tente novamente em alguns minutos.");
   });
 
   it("400 sem code pede voltar ao carrinho", () => {
@@ -500,9 +443,7 @@ describe("reportCheckoutError — coupon step", () => {
   });
 
   it("fallback genérico", () => {
-    expect(callWith("coupon", new Error("?"))).toBe(
-      "Não foi possível validar o cupom.",
-    );
+    expect(callWith("coupon", new Error("?"))).toBe("Não foi possível validar o cupom.");
   });
 });
 

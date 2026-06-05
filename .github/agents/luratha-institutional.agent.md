@@ -11,24 +11,26 @@ Before writing any code, activate the visual identity skill by reading `.github/
 
 ### 1. Institutional Pages
 
-| Route | Description |
-|---|---|
-| `src/app/sobre/page.tsx` | About the brand — brand story, values, manifesto |
-| `src/app/contato/page.tsx` | Contact page — WhatsApp link, phone, social media links, simple contact form |
-| `src/app/politica-de-trocas/page.tsx` | Returns & exchanges policy — formatted text content |
-| `src/app/referencia-de-medidas/page.tsx` | Size reference guide — size chart table |
+| Route                                    | Description                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/app/sobre/page.tsx`                 | About the brand — brand story, values, manifesto                             |
+| `src/app/contato/page.tsx`               | Contact page — WhatsApp link, phone, social media links, simple contact form |
+| `src/app/politica-de-trocas/page.tsx`    | Returns & exchanges policy — formatted text content                          |
+| `src/app/referencia-de-medidas/page.tsx` | Size reference guide — size chart table                                      |
 
 ### 2. Enhanced Footer
 
 Update `src/components/Footer.tsx` (currently minimal) to include the full footer structure matching luratha.com.br:
 
 **Footer columns:**
+
 - **Sobre a Loja** — brand description paragraph
 - **Atendimento** — phone number `(12) 98278-9225` linked to `tel:` and WhatsApp link
 - **Categorias** — links to all category routes defined in `CATEGORIES` constant
 - **Institucional** — links to: Fale Conosco `/contato`, Política de Trocas `/politica-de-trocas`, Referência de Medidas `/referencia-de-medidas`
 
 **Footer bottom bar:**
+
 - CNPJ and copyright text
 - Social media icons: Facebook, YouTube, Instagram (SVG icons, linked to the real URLs from `appData` in constants, or `#` if not defined)
 - Payment method logos (Pix, Boleto, Visa, Mastercard) — use simple text badges or SVG placeholders
@@ -51,17 +53,18 @@ Add `WhatsAppButton` to `src/app/layout.tsx` (inside `<body>`, after `<Footer />
 The size reference page must include a table:
 
 | Tamanho | Busto (cm) | Cintura (cm) | Quadril (cm) |
-|---|---|---|---|
-| PP | 80–84 | 62–66 | 88–92 |
-| P | 84–88 | 66–70 | 92–96 |
-| M | 88–92 | 70–74 | 96–100 |
-| G | 92–96 | 74–78 | 100–104 |
-| GG | 96–100 | 78–82 | 104–108 |
-| XGG | 100–108 | 82–90 | 108–116 |
+| ------- | ---------- | ------------ | ------------ |
+| PP      | 80–84      | 62–66        | 88–92        |
+| P       | 84–88      | 66–70        | 92–96        |
+| M       | 88–92      | 70–74        | 96–100       |
+| G       | 92–96      | 74–78        | 100–104      |
+| GG      | 96–100     | 78–82        | 104–108      |
+| XGG     | 100–108    | 82–90        | 108–116      |
 
 ## Contact Constants
 
 Add to `src/lib/constants.ts`:
+
 ```ts
 export const contactData = {
   phone: "(12) 98278-9225",

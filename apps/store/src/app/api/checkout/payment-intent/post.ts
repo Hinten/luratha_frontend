@@ -48,7 +48,10 @@ const payerSchema = z.object({
 });
 
 const boletoAddressSchema = z.object({
-  zipCode: z.string().trim().regex(/^\d{5}-?\d{3}$/, "CEP deve ter formato 99999-999."),
+  zipCode: z
+    .string()
+    .trim()
+    .regex(/^\d{5}-?\d{3}$/, "CEP deve ter formato 99999-999."),
   streetName: z.string().trim().min(1).max(120),
   streetNumber: z.string().trim().min(1).max(20),
   neighborhood: z.string().trim().min(1).max(80),

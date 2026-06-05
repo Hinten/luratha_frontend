@@ -24,10 +24,7 @@ export const runtime = "nodejs";
  * Returns 400 on validation failure.
  * Returns 200 with the updated product on success.
  */
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   let body: unknown;
@@ -105,7 +102,9 @@ export async function PUT(
     product = { ...product, ...embeddings };
   } catch (embeddingError) {
     if (embeddingError instanceof EmbeddingGenerationError) {
-      logger.warn("[PUT /api/products] Embedding generation skipped", { message: embeddingError.message });
+      logger.warn("[PUT /api/products] Embedding generation skipped", {
+        message: embeddingError.message,
+      });
     } else {
       throw embeddingError;
     }
@@ -128,4 +127,3 @@ function assignVariantIds(variants: unknown): unknown {
     return v.id ? v : { ...v, id: randomUUID() };
   });
 }
-

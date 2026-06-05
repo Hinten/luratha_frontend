@@ -104,10 +104,7 @@ describe("CartContext — guest→logged race", () => {
     // 1. Seed guest cart + token in localStorage (token simula sessão de guest
     //    cart criada quando o usuário adicionou o 1º item).
     localStorage.setItem("luratha_cart_v2", JSON.stringify([guestItem]));
-    localStorage.setItem(
-      "luratha_cart_v2_token",
-      "11111111-1111-1111-1111-111111111111",
-    );
+    localStorage.setItem("luratha_cart_v2_token", "11111111-1111-1111-1111-111111111111");
 
     // 2. Capture the snapshots() of CartContext state across renders.
     const snapshots: Array<{ isReady: boolean; isSyncing: boolean; itemCount: number }> = [];
@@ -194,9 +191,7 @@ describe("CartContext — guest→logged race", () => {
       JSON.stringify({ token, uid: "user-skip" }),
     );
 
-    const fetchMock = vi.fn((_url: string) =>
-      Promise.resolve(new Response("", { status: 200 })),
-    );
+    const fetchMock = vi.fn((_url: string) => Promise.resolve(new Response("", { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
 
     mockUserId = "user-skip";
@@ -213,9 +208,7 @@ describe("CartContext — guest→logged race", () => {
       snapshotCallbacks[1]({ docs: [] });
     });
 
-    expect(
-      fetchMock.mock.calls.find((c) => c[0] === "/api/cart/merge"),
-    ).toBeUndefined();
+    expect(fetchMock.mock.calls.find((c) => c[0] === "/api/cart/merge")).toBeUndefined();
   });
 
   it("guest with no pending items: isReady flips on snapshots alone (no merge call)", async () => {
@@ -241,8 +234,6 @@ describe("CartContext — guest→logged race", () => {
 
     expect(snapshots[snapshots.length - 1].isReady).toBe(true);
     // merge should NOT have been called when there's no pending guest item.
-    expect(
-      fetchMock.mock.calls.find((c) => c[0] === "/api/cart/merge"),
-    ).toBeUndefined();
+    expect(fetchMock.mock.calls.find((c) => c[0] === "/api/cart/merge")).toBeUndefined();
   });
 });

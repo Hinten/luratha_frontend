@@ -15,17 +15,18 @@ Dynamic category listing pages that display a grid of product cards, matching th
 
 Using Next.js App Router dynamic segments:
 
-| Route | Description |
-|---|---|
-| `src/app/categoria/[slug]/page.tsx` | Dynamic category page |
-| `src/app/todas-as-pecas/page.tsx` | All products page |
-| `src/app/sale/page.tsx` | Sale / promotions page |
+| Route                               | Description            |
+| ----------------------------------- | ---------------------- |
+| `src/app/categoria/[slug]/page.tsx` | Dynamic category page  |
+| `src/app/todas-as-pecas/page.tsx`   | All products page      |
+| `src/app/sale/page.tsx`             | Sale / promotions page |
 
 The `[slug]` values map to: `vestidos`, `blusas`, `calcas`, `saias`, `shorts`, `conjuntos`, `moletons`, `acessorios`.
 
 ## Page Structure
 
 Each category page should render:
+
 1. **Breadcrumb** — Home > [Category Name]
 2. **Page title** — category name (Playfair Display, h1)
 3. **Product count** — "X produtos encontrados"
@@ -35,20 +36,21 @@ Each category page should render:
 
 ## Components to Create
 
-| File | Purpose |
-|---|---|
-| `src/components/Breadcrumb.tsx` | Navigation breadcrumb with structured data (schema.org) |
-| `src/components/ProductGrid.tsx` | Responsive product grid wrapper |
-| `src/components/SortDropdown.tsx` | Client component for sort selection |
-| `src/app/categoria/[slug]/page.tsx` | Dynamic category page (Server Component) |
-| `src/app/todas-as-pecas/page.tsx` | All products page |
-| `src/app/sale/page.tsx` | Sale page with only discounted products |
+| File                                | Purpose                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| `src/components/Breadcrumb.tsx`     | Navigation breadcrumb with structured data (schema.org) |
+| `src/components/ProductGrid.tsx`    | Responsive product grid wrapper                         |
+| `src/components/SortDropdown.tsx`   | Client component for sort selection                     |
+| `src/app/categoria/[slug]/page.tsx` | Dynamic category page (Server Component)                |
+| `src/app/todas-as-pecas/page.tsx`   | All products page                                       |
+| `src/app/sale/page.tsx`             | Sale page with only discounted products                 |
 
 ## Data
 
 Reuse `src/lib/mockData.ts` and `src/lib/types.ts`. Extend mockData to include a `categorySlug` field on each product. Filter products by category on the server side.
 
 Add to `src/lib/constants.ts`:
+
 ```ts
 export const CATEGORIES = [
   { slug: "vestidos", label: "Vestidos" },
@@ -67,6 +69,7 @@ Generate static params for the dynamic route using `generateStaticParams()`.
 ## SEO
 
 Add `generateMetadata()` to each page returning:
+
 - `title`: "[Category] — Luratha"
 - `description`: "Explore nossa coleção de [category] slow fashion."
 

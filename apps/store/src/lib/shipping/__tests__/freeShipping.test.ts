@@ -52,9 +52,7 @@ describe("calculateFreeShippingThreshold", () => {
   });
 
   it("returns null when threshold exceeds maxThreshold (frete caro demais)", () => {
-    expect(
-      calculateFreeShippingThreshold(50, makeConfig({ maxThreshold: 200 })),
-    ).toBeNull();
+    expect(calculateFreeShippingThreshold(50, makeConfig({ maxThreshold: 200 }))).toBeNull();
   });
 
   it("keeps threshold when within maxThreshold", () => {

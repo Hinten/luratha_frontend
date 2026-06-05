@@ -72,14 +72,10 @@ function sortProducts(products: FirestoreProduct[], sort?: string): FirestorePro
       return sorted.sort((a, b) => {
         const originalPriceA = getOriginalPrice(a);
         const currentPriceA = getCurrentPrice(a);
-        const discountA = originalPriceA
-          ? (originalPriceA - currentPriceA) / originalPriceA
-          : 0;
+        const discountA = originalPriceA ? (originalPriceA - currentPriceA) / originalPriceA : 0;
         const originalPriceB = getOriginalPrice(b);
         const currentPriceB = getCurrentPrice(b);
-        const discountB = originalPriceB
-          ? (originalPriceB - currentPriceB) / originalPriceB
-          : 0;
+        const discountB = originalPriceB ? (originalPriceB - currentPriceB) / originalPriceB : 0;
         return discountB - discountA;
       });
     default:
@@ -106,16 +102,11 @@ export default async function SalePage({ searchParams }: PageProps) {
     <div className="container-luratha section-padding">
       <JsonLd data={offerCatalogSchema} />
       <JsonLd data={breadcrumbSchema} />
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Promoções" },
-        ]}
-      />
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Promoções" }]} />
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-[family-name:var(--font-heading)]">Promoções</h1>
-          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">
+          <p className="mt-1 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60">
             {products.length}{" "}
             {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
           </p>

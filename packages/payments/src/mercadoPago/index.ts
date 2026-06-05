@@ -3,11 +3,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "@luratha/core/logging/logger";
 import { PAYMENT_FAILURE_STATUSES } from "@luratha/schemas";
-import {
-  MP_API_BASE_URL,
-  resolveMercadoPagoConfig,
-  resolveWebhookSecret,
-} from "./client";
+import { MP_API_BASE_URL, resolveMercadoPagoConfig, resolveWebhookSecret } from "./client";
 import {
   type BoletoArtifact,
   type CreatePaymentInput,
@@ -79,9 +75,10 @@ export function isMercadoPagoSandbox(accessToken: string): boolean {
  */
 export function withSandboxPayer(input: CreatePaymentInput): CreatePaymentInput {
   const configuredEmail = process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL?.trim();
-  const email = configuredEmail && configuredEmail.length > 0
-    ? configuredEmail
-    : `${input.payer.email.split("@")[0] || "test"}@testuser.com`;
+  const email =
+    configuredEmail && configuredEmail.length > 0
+      ? configuredEmail
+      : `${input.payer.email.split("@")[0] || "test"}@testuser.com`;
 
   const configuredName = process.env.MERCADOPAGO_SANDBOX_PAYER_FIRST_NAME?.trim();
   const firstName = configuredName && configuredName.length > 0 ? configuredName : "APRO";
@@ -148,8 +145,7 @@ export function describeMercadoPagoError(err: unknown): MpErrorShape {
     if (typeof obj.error === "string" && obj.error !== obj.message) {
       parts.push(`(${obj.error})`);
     }
-    const message =
-      parts.length > 0 ? parts.join(" ") : JSON.stringify(obj).slice(0, 240);
+    const message = parts.length > 0 ? parts.join(" ") : JSON.stringify(obj).slice(0, 240);
     const status = typeof obj.status === "number" ? obj.status : undefined;
     return { name: "MercadoPagoApiError", message, status };
   }
@@ -707,7 +703,14 @@ export async function getOrderArtifacts(mpOrderId: string): Promise<OrderArtifac
   // client para de pollar). Caso pendente, devolve só o status — o client segue
   // tentando.
   if (!pix && !boleto && FAILURE_STATUSES.has(status)) {
-    classifyMissingArtifact("get", { orderId: response.external_reference ?? mpOrderId, paymentMethod: paymentMethodTypeOf(response) ?? "unknown" }, response);
+    classifyMissingArtifact(
+      "get",
+      {
+        orderId: response.external_reference ?? mpOrderId,
+        paymentMethod: paymentMethodTypeOf(response) ?? "unknown",
+      },
+      response,
+    );
   }
 
   return { status, pix, boleto, underReview: isUnderReview(response) || undefined };
@@ -743,7 +746,7 @@ export async function getOrder(orderId: string): Promise<ProviderPaymentSummary>
     paymentId: response.id ?? orderId,
     status,
     orderId: externalReference,
-    approvedAt: status === "paid" ? response.last_updated_date ?? undefined : undefined,
+    approvedAt: status === "paid" ? (response.last_updated_date ?? undefined) : undefined,
   };
 }
 

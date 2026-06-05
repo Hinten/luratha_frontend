@@ -205,9 +205,9 @@ export async function applyOrderWebhook(
     // `awaiting_boleto`), preservamos o QR/boleto para reexibição em
     // `/conta/pedidos`. Quando resolve (pago/recusado/cancelado/estornado), o
     // artefato venceu — apagamos (privacidade + tamanho do doc).
-    const clearPaymentArtifacts = !(
-      AWAITING_PAYMENT_STATUSES as readonly string[]
-    ).includes(summary.status);
+    const clearPaymentArtifacts = !(AWAITING_PAYMENT_STATUSES as readonly string[]).includes(
+      summary.status,
+    );
     tx.set(ref, mergeOrderPatch(order, patch, { clearPaymentArtifacts }));
 
     return { changed: true, orderId: order.id, status: summary.status };

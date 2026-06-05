@@ -28,10 +28,7 @@ export function buildSearchEmbeddingText(
   }
 
   if (product.variants) {
-    const variantParts = product.variants.flatMap((v) => [
-      ...(v.size ?? []),
-      ...(v.color ?? []),
-    ]);
+    const variantParts = product.variants.flatMap((v) => [...(v.size ?? []), ...(v.color ?? [])]);
     if (variantParts.length > 0) {
       parts.push(variantParts.join(" "));
     }
@@ -65,26 +62,18 @@ export async function generateProductEmbeddings(
 
   if (vectorResult.status === "rejected") {
     const reason =
-      vectorResult.reason instanceof Error
-        ? vectorResult.reason.message
-        : vectorResult.reason;
+      vectorResult.reason instanceof Error ? vectorResult.reason.message : vectorResult.reason;
     logger.warn("[generateProductEmbeddings] vectorEmbedding generation failed", { reason });
   }
 
   if (searchResult.status === "rejected") {
     const reason =
-      searchResult.reason instanceof Error
-        ? searchResult.reason.message
-        : searchResult.reason;
+      searchResult.reason instanceof Error ? searchResult.reason.message : searchResult.reason;
     logger.warn("[generateProductEmbeddings] searchEmbedding generation failed", { reason });
   }
 
   return {
-    ...(vectorResult.status === "fulfilled"
-      ? { vectorEmbedding: vectorResult.value }
-      : {}),
-    ...(searchResult.status === "fulfilled"
-      ? { searchEmbedding: searchResult.value }
-      : {}),
+    ...(vectorResult.status === "fulfilled" ? { vectorEmbedding: vectorResult.value } : {}),
+    ...(searchResult.status === "fulfilled" ? { searchEmbedding: searchResult.value } : {}),
   };
 }

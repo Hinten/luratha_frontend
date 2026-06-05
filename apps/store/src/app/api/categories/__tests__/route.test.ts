@@ -24,7 +24,9 @@ vi.mock("@luratha/firestore/firebaseAdmin", () => ({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Minimum valid category body (server adds id) */
-function buildMinimalCategoryBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function buildMinimalCategoryBody(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     name: "Vestidos",
     slug: "vestidos",

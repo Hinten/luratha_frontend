@@ -147,7 +147,10 @@ describe("GET /api/products/:id", () => {
   });
 
   it("passes the correct id to the Firestore doc reference", async () => {
-    mockGet.mockResolvedValue({ exists: true, data: () => buildStoredProduct({ id: "custom-id" }) });
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => buildStoredProduct({ id: "custom-id" }),
+    });
     await GET(new Request("http://localhost/api/products/custom-id"), makeParams("custom-id"));
     expect(mockDoc).toHaveBeenCalledWith("custom-id");
   });
@@ -190,10 +193,7 @@ describe("PUT /api/products/:id", () => {
   });
 
   it("returns 200 and fully replaces the product", async () => {
-    const res = await PUT(
-      makeRequest("PUT", buildPutBody({ title: "Novo Título" })),
-      makeParams(),
-    );
+    const res = await PUT(makeRequest("PUT", buildPutBody({ title: "Novo Título" })), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.id).toBe(PRODUCT_ID);
@@ -214,10 +214,7 @@ describe("PUT /api/products/:id", () => {
   });
 
   it("ignores id in the body and uses the URL param", async () => {
-    const res = await PUT(
-      makeRequest("PUT", buildPutBody({ id: "some-other-id" })),
-      makeParams(),
-    );
+    const res = await PUT(makeRequest("PUT", buildPutBody({ id: "some-other-id" })), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.id).toBe(PRODUCT_ID);
@@ -260,10 +257,7 @@ describe("PATCH /api/products/:id", () => {
   });
 
   it("returns 200 and updates only the provided field", async () => {
-    const res = await PATCH(
-      makeRequest("PATCH", { status: "archived" }),
-      makeParams(),
-    );
+    const res = await PATCH(makeRequest("PATCH", { status: "archived" }), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.status).toBe("archived");
@@ -275,10 +269,7 @@ describe("PATCH /api/products/:id", () => {
       exists: true,
       data: () => buildStoredProduct({ ratingAverage: 4.5 }),
     });
-    const res = await PATCH(
-      makeRequest("PATCH", { ratingAverage: null }),
-      makeParams(),
-    );
+    const res = await PATCH(makeRequest("PATCH", { ratingAverage: null }), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.ratingAverage).toBeNull();
@@ -289,10 +280,7 @@ describe("PATCH /api/products/:id", () => {
       exists: true,
       data: () => buildStoredProduct({ ratingAverage: 4.5 }),
     });
-    const res = await PATCH(
-      makeRequest("PATCH", { status: "archived" }),
-      makeParams(),
-    );
+    const res = await PATCH(makeRequest("PATCH", { status: "archived" }), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.ratingAverage).toBe(4.5);
@@ -301,10 +289,7 @@ describe("PATCH /api/products/:id", () => {
   it("regenerates embeddings when title is in the payload", async () => {
     const fakeEmbedding = Array.from({ length: 8 }, (_, i) => (i + 1) / 10);
     mockEmbed.mockResolvedValue(fakeEmbedding);
-    const res = await PATCH(
-      makeRequest("PATCH", { title: "Novo Título Alterado" }),
-      makeParams(),
-    );
+    const res = await PATCH(makeRequest("PATCH", { title: "Novo Título Alterado" }), makeParams());
     expect(res.status).toBe(200);
     const product = await res.json();
     expect(product.vectorEmbedding).toEqual(fakeEmbedding);
@@ -312,10 +297,7 @@ describe("PATCH /api/products/:id", () => {
 
   it("does not call embed when title and description are absent from the payload", async () => {
     mockEmbed.mockResolvedValue([0.1, 0.2]);
-    const res = await PATCH(
-      makeRequest("PATCH", { status: "archived" }),
-      makeParams(),
-    );
+    const res = await PATCH(makeRequest("PATCH", { status: "archived" }), makeParams());
     expect(res.status).toBe(200);
     expect(mockEmbed).not.toHaveBeenCalled();
   });

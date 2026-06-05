@@ -12,8 +12,7 @@ export default function NotFound() {
       <h1 className={styles.heading}>404</h1>
 
       <p className={styles.description}>
-        A página que você procura não foi encontrada. Explore nossas peças e
-        descubra algo especial.
+        A página que você procura não foi encontrada. Explore nossas peças e descubra algo especial.
       </p>
 
       <Link href="/" className={styles.btnPrimary}>
@@ -25,4 +24,3 @@ export default function NotFound() {
     </div>
   );
 }
-

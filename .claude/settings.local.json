@@ -23,9 +23,5 @@
       "Bash(pnpm test *)"
     ]
   },
-  "enabledMcpjsonServers": [
-    "next-devtools",
-    "playwright",
-    "vitest"
-  ]
+  "enabledMcpjsonServers": ["next-devtools", "playwright", "vitest"]
 }

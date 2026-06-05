@@ -38,23 +38,28 @@ For Product/ProductGroup implementation, use `.github/agents/product-schema.agen
 ### Return Policy (`MerchantReturnPolicy`)
 
 Required:
+
 - Option A: `applicableCountry` + `returnPolicyCategory` (+ `merchantReturnDays` for finite windows)
 - Option B: `merchantReturnLink`
 
 Recommended:
+
 - `returnMethod`, `returnFees`, `returnShippingFeesAmount`, `itemCondition`, `refundType`
 
 ### Shipping Policy (`ShippingService`)
 
 Required:
+
 - `shippingConditions`
 
 Recommended:
+
 - `name`, `description`, `fulfillmentType`, `handlingTime`, `validForMemberTier`
 
 ### Loyalty Program (`MemberProgram`)
 
 Required:
+
 - `MemberProgram.name`
 - `MemberProgram.description`
 - `MemberProgram.hasTiers`
@@ -62,6 +67,7 @@ Required:
 - `MemberProgramTier.hasTierBenefit`
 
 Recommended:
+
 - `MemberProgram.url`
 - `MemberProgramTier.membershipPointsEarned`
 - `MemberProgramTier.hasTierRequirement`

@@ -21,7 +21,7 @@ The overall feeling is **premium yet approachable** — never flashy, always int
 All colors are soft, natural, and feminine. The primary palette draws from nature (sage, blush, warm neutrals).
 
 | Color Name             | HEX       | RGB                | HSL                | Usage                                        |
-|------------------------|-----------|--------------------|--------------------|----------------------------------------------|
+| ---------------------- | --------- | ------------------ | ------------------ | -------------------------------------------- |
 | Primary (Blush Rose)   | `#E8B9C9` | rgb(232, 185, 201) | hsl(340, 55%, 85%) | CTAs, accents, links, hero highlights        |
 | Secondary (Sage Green) | `#A8B8A2` | rgb(168, 184, 162) | hsl(100, 20%, 70%) | Secondary buttons, icons, subtle borders     |
 | Accent (Warm Sand)     | `#EDE4D9` | rgb(237, 228, 217) | hsl(30, 25%, 92%)  | Backgrounds, cards, subtle highlights        |
@@ -33,6 +33,7 @@ All colors are soft, natural, and feminine. The primary palette draws from natur
 | Hover                  | `#D9A8B9` | rgb(217, 168, 185) | hsl(340, 40%, 78%) | Interactive states (lighter/darker variants) |
 
 **States:**
+
 - **Hover:** 8% darker or lighter depending on base
 - **Active/Focus:** Primary + subtle shadow
 - **Disabled:** Neutral Mid at 40% opacity
@@ -79,16 +80,17 @@ Expose the variables in Tailwind CSS v4 (`globals.css`):
 
 ### Scale
 
-| Role              | Font             | Size        | Line-height | Weight | Notes                          |
-|-------------------|------------------|-------------|-------------|--------|--------------------------------|
-| H1                | Playfair Display | 48–64px     | 1.1         | 700    | Letter-spacing: -0.02em        |
-| H2                | Playfair Display | 32–40px     | 1.2         | 600    |                                |
-| H3                | Playfair Display | 24–28px     | 1.3         | 500    |                                |
-| Body              | Inter            | 16–18px     | 1.6–1.7     | 400    |                                |
-| Small / Caption   | Inter            | 14px        | 1.5         | 400    |                                |
-| Buttons / Nav     | Inter            | 15–16px     | —           | 500    | Nav: uppercase, +0.5px tracking|
+| Role            | Font             | Size    | Line-height | Weight | Notes                           |
+| --------------- | ---------------- | ------- | ----------- | ------ | ------------------------------- |
+| H1              | Playfair Display | 48–64px | 1.1         | 700    | Letter-spacing: -0.02em         |
+| H2              | Playfair Display | 32–40px | 1.2         | 600    |                                 |
+| H3              | Playfair Display | 24–28px | 1.3         | 500    |                                 |
+| Body            | Inter            | 16–18px | 1.6–1.7     | 400    |                                 |
+| Small / Caption | Inter            | 14px    | 1.5         | 400    |                                 |
+| Buttons / Nav   | Inter            | 15–16px | —           | 500    | Nav: uppercase, +0.5px tracking |
 
 **Hierarchy rules:**
+
 - Hero headlines always use Playfair Display.
 - Product titles: Inter Medium.
 - All text is left-aligned on mobile for better readability.
@@ -105,7 +107,7 @@ Expose the variables in Tailwind CSS v4 (`globals.css`):
 **Breakpoints** (Tailwind CSS v4 defaults):
 
 | Token | Width  |
-|-------|--------|
+| ----- | ------ |
 | `sm`  | 640px  |
 | `md`  | 768px  |
 | `lg`  | 1024px |
@@ -123,13 +125,13 @@ Components in Luratha **must use CSS Modules** (`.module.css` files in the same 
 
 ### Rules
 
-| Scenario | Approach |
-|---|---|
-| Component has 3 or more CSS declarations | Create a `.module.css` file next to the component |
-| Hover/focus/active pseudo-states | Always in the CSS module (never inline `hover:` Tailwind) |
-| Responsive breakpoint logic | In the CSS module with `@media` queries |
-| Simple responsive visibility (e.g., `md:hidden`) | Acceptable as a Tailwind class inline |
-| Layout helpers already in `globals.css` (e.g., `container-luratha`, `section-padding`) | Apply via `className` string — do not re-declare in the module |
+| Scenario                                                                                 | Approach                                                                                                        |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Component has 3 or more CSS declarations                                                 | Create a `.module.css` file next to the component                                                               |
+| Hover/focus/active pseudo-states                                                         | Always in the CSS module (never inline `hover:` Tailwind)                                                       |
+| Responsive breakpoint logic                                                              | In the CSS module with `@media` queries                                                                         |
+| Simple responsive visibility (e.g., `md:hidden`)                                         | Acceptable as a Tailwind class inline                                                                           |
+| Layout helpers already in `globals.css` (e.g., `container-luratha`, `section-padding`)   | Apply via `className` string — do not re-declare in the module                                                  |
 | Dynamic values that cannot be known at build time (e.g., a JavaScript-computed gradient) | The single `style={}` prop for that specific dynamic value is acceptable; all other styles belong in the module |
 
 ### File naming convention
@@ -169,7 +171,10 @@ Use CSS variable tokens — **never hard-code hex values** in component code or 
   padding: 1rem 2rem;
   border-radius: 9999px;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
-  transition: background-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -255,31 +260,37 @@ Before committing any hover/focus/active color change, verify:
 
 1. **Contrast ratio** — The foreground color (text, icon) against the new background color after transition must meet a minimum contrast ratio of **3:1** (WCAG AA for UI components and large text). Use computed luminance or a contrast-checker tool.
 2. **Visual clarity of icons** — SVG icons that change color must remain clearly recognizable after the transition. A blush icon (`#E8B9C9`) on a light blush or warm-sand background becomes nearly invisible — this is a bug.
-3. **Background color is known** — Always consider the *actual* background the element sits on (the parent or ancestor background), not just the element's own background. Nav links on the `#F8F5F0` header need sufficient contrast. Footer links on the `#EDE4D9` footer background need sufficient contrast.
+3. **Background color is known** — Always consider the _actual_ background the element sits on (the parent or ancestor background), not just the element's own background. Nav links on the `#F8F5F0` header need sufficient contrast. Footer links on the `#EDE4D9` footer background need sufficient contrast.
 4. **Both fill and stroke** — For SVG icons, check that neither `fill` nor `stroke` transitions to a near-invisible color.
 5. **Aesthetic quality** — The post-transition state must look intentional, not broken. Prefer underline + color over color-only changes when the contrast ratio would otherwise be too low.
 
 ### Safe hover patterns for the Luratha palette
 
-| Element | Background | Resting color | Safe hover pattern |
-|---|---|---|---|
-| Nav / footer links (light bg) | `#F8F5F0` or `#EDE4D9` | `var(--color-neutral-dark)` | Keep dark text + add `text-decoration: underline` with `text-decoration-color: var(--color-primary)` |
-| Icon buttons on light bg | `#F8F5F0` | dark icon | Keep icon dark; add soft blush background disc: `background-color: color-mix(in srgb, var(--color-primary) 20%, transparent)` |
-| Primary button text | `#E8B9C9` → `#D9A8B9` | `var(--color-neutral-dark)` | Text color **must not change** on hover; only background shifts |
-| Secondary button text | transparent → `#A8B8A2/10` | `var(--color-neutral-dark)` | Text color **must not change** on hover; only background shifts |
-| Dark-background CTA | `#3A2F2A` → slightly lighter | `var(--color-neutral-light)` | Text color **must not change** on hover; only background shifts |
+| Element                       | Background                   | Resting color                | Safe hover pattern                                                                                                            |
+| ----------------------------- | ---------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Nav / footer links (light bg) | `#F8F5F0` or `#EDE4D9`       | `var(--color-neutral-dark)`  | Keep dark text + add `text-decoration: underline` with `text-decoration-color: var(--color-primary)`                          |
+| Icon buttons on light bg      | `#F8F5F0`                    | dark icon                    | Keep icon dark; add soft blush background disc: `background-color: color-mix(in srgb, var(--color-primary) 20%, transparent)` |
+| Primary button text           | `#E8B9C9` → `#D9A8B9`        | `var(--color-neutral-dark)`  | Text color **must not change** on hover; only background shifts                                                               |
+| Secondary button text         | transparent → `#A8B8A2/10`   | `var(--color-neutral-dark)`  | Text color **must not change** on hover; only background shifts                                                               |
+| Dark-background CTA           | `#3A2F2A` → slightly lighter | `var(--color-neutral-light)` | Text color **must not change** on hover; only background shifts                                                               |
 
 ### Anti-patterns — never do these
 
 ```css
 /* ❌ Blush text on warm-sand background — contrast ratio ≈ 1.3:1 */
-.link:hover { color: var(--color-primary); }  /* when background is var(--color-accent) */
+.link:hover {
+  color: var(--color-primary);
+} /* when background is var(--color-accent) */
 
 /* ❌ Blush icon on neutral-light background — contrast ratio ≈ 1.5:1 */
-.iconBtn:hover { color: var(--color-primary); }  /* when background is var(--color-neutral-light) */
+.iconBtn:hover {
+  color: var(--color-primary);
+} /* when background is var(--color-neutral-light) */
 
 /* ❌ Hardcoded hex values — use CSS variables instead */
-.btn { background-color: #E8B9C9; }
+.btn {
+  background-color: #e8b9c9;
+}
 
 /* ✅ Correct: keep text dark, indicate hover with underline in brand color */
 .link:hover {
@@ -298,13 +309,13 @@ Before committing any hover/focus/active color change, verify:
 
 ## Application Examples
 
-| Screen            | Description                                                                                              |
-|-------------------|----------------------------------------------------------------------------------------------------------|
-| Homepage Hero     | Picnic lifestyle photo → "Peças feitas com amor para durar" in large Playfair Display + blush CTA button |
-| PLP               | 4-column grid on desktop, filter sidebar with sage accents, hover lift + quick-add button per card       |
-| PDP               | Large image gallery on left, details on right, size selector (rounded pills), handmade storytelling      |
-| Mini-cart         | Slide-in from right, blush header, product thumbnails with remove icon                                   |
-| Checkout          | One-column on mobile, sage progress stepper, trust badges (artesanal, sustentável)                      |
+| Screen        | Description                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------- |
+| Homepage Hero | Picnic lifestyle photo → "Peças feitas com amor para durar" in large Playfair Display + blush CTA button |
+| PLP           | 4-column grid on desktop, filter sidebar with sage accents, hover lift + quick-add button per card       |
+| PDP           | Large image gallery on left, details on right, size selector (rounded pills), handmade storytelling      |
+| Mini-cart     | Slide-in from right, blush header, product thumbnails with remove icon                                   |
+| Checkout      | One-column on mobile, sage progress stepper, trust badges (artesanal, sustentável)                       |
 
 ---
 

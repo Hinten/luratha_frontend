@@ -78,9 +78,7 @@ describe("ProductSection", () => {
   });
 
   it("renders default viewAllLabel when only viewAllHref is provided", () => {
-    render(
-      <ProductSection title="Destaques" products={mockProducts} viewAllHref="/colecao" />,
-    );
+    render(<ProductSection title="Destaques" products={mockProducts} viewAllHref="/colecao" />);
     expect(screen.getByRole("link", { name: "Ver todos" })).toBeInTheDocument();
   });
 });

@@ -13,10 +13,7 @@ export const runtime = "nodejs";
  * exists for that uid, 200 with the profile on success. Requer que o uid da
  * sessão bata com :id, ou que o usuário tenha claim admin.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {

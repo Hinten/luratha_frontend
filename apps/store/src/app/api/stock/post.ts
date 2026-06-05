@@ -92,10 +92,11 @@ export async function POST(request: Request) {
       .limit(2)
       .get();
 
-    
     if (productsSnapshot.size > 1) {
       return NextResponse.json(
-        { message: `Múltiplos produtos encontrados com SKU "${sku}". Use productId para identificar unicamente.` },
+        {
+          message: `Múltiplos produtos encontrados com SKU "${sku}". Use productId para identificar unicamente.`,
+        },
         { status: 400 },
       );
     }
@@ -159,10 +160,7 @@ export async function POST(request: Request) {
   }
 
   // ── Persist ───────────────────────────────────────────────────────────────
-  await adminDb
-    .collection(firestoreCollections.stock)
-    .doc(resolvedProductId)
-    .set(stockDoc);
+  await adminDb.collection(firestoreCollections.stock).doc(resolvedProductId).set(stockDoc);
 
   return NextResponse.json(stockDoc, { status: 200 });
 }
@@ -171,7 +169,9 @@ export async function POST(request: Request) {
 
 const variantsMapSchema = z
   .record(z.string().min(1), z.number().int().min(0))
-  .refine((m) => Object.keys(m).length > 0, { message: "variants deve ter pelo menos uma entrada." });
+  .refine((m) => Object.keys(m).length > 0, {
+    message: "variants deve ter pelo menos uma entrada.",
+  });
 
 const stockUpdateRequestSchema = z
   .object({

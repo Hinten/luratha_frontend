@@ -20,9 +20,9 @@ on:
       # não disparava o workflow, deixando regressões passarem sem cobertura.
       # Cobrimos a storefront inteira + todos os packages. Custo aceito: alguns
       # runs falso-positivos (ex.: mudança só em produtos roda o E2E-MP à toa).
-      - 'apps/store/**'
-      - 'packages/**'
-      - '.github/workflows/e2e-checkout-mp.yml'
+      - "apps/store/**"
+      - "packages/**"
+      - ".github/workflows/e2e-checkout-mp.yml"
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
 # pela `concurrency` interna do job (luratha-96386-e2e), que serializa

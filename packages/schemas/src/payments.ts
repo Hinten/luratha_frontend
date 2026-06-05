@@ -17,10 +17,7 @@ export const payerFormSchema = z
     identificationType: z.enum(["CPF", "CNPJ"], {
       message: "Selecione o tipo de documento.",
     }),
-    identificationNumber: z
-      .string()
-      .trim()
-      .min(1, "Informe o número do documento."),
+    identificationNumber: z.string().trim().min(1, "Informe o número do documento."),
     /** Só obrigatório quando method === "credit_card"; validação extra no PaymentStep. */
     cardholderName: z.string().trim().max(80).optional(),
   })
