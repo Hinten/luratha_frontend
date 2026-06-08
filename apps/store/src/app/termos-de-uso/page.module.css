@@ -1,0 +1,91 @@
+/* ─── Termos de Uso Page ─────────────────────────────────────────────────── */
+
+.container {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+/* Page header */
+.header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.headerText {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--color-neutral-dark) 75%, transparent);
+}
+
+.updatedAt {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+}
+
+/* Sections */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-neutral-dark);
+  margin-bottom: 0.75rem;
+}
+
+.sectionText {
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--color-neutral-dark) 80%, transparent);
+}
+
+.sectionText + .sectionText {
+  margin-top: 0.75rem;
+}
+
+/* Inline links */
+.inlineLink {
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--color-neutral-dark);
+}
+
+.inlineLink:hover {
+  text-decoration-color: var(--color-primary);
+}
+
+/* Divider */
+.divider {
+  margin-block: 3rem;
+  height: 1px;
+  background-color: var(--color-neutral-mid);
+}
+
+/* Contact note card */
+.contactNote {
+  background-color: var(--color-accent);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.contactNoteText {
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--color-neutral-dark) 80%, transparent);
+}
+
+.contactNoteLink {
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--color-neutral-dark);
+}
+
+.contactNoteLink:hover {
+  color: var(--color-neutral-dark);
+  text-decoration-color: var(--color-primary);
+}
