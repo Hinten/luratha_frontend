@@ -40,16 +40,16 @@ Read every component and page in the project:
 
 For each file, check:
 
-| Dimension          | What to verify                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------------------------- |
-| **Colors**         | Only palette tokens (`var(--color-*)`) used — no hard-coded hex/rgb values outside `globals.css`          |
-| **Typography**     | Headings use `font-[family-name:var(--font-heading)]`, body/nav use `font-[family-name:var(--font-body)]` |
-| **Spacing**        | Padding/margin in multiples of 8px                                                                        |
-| **Border radius**  | Buttons are `rounded-3xl`; cards use `rounded-2xl` or `rounded-3xl`                                       |
-| **Responsiveness** | Mobile-first; breakpoints at `sm/md/lg/xl`                                                                |
-| **Hover states**   | Buttons lift with `hover:-translate-y-0.5` + color shift; transitions are `duration-300`                  |
-| **Accessibility**  | Interactive elements have `aria-label`; images have `alt`; focus rings visible                            |
-| **Brand voice**    | Copy (labels, placeholders, empty states) is warm, Portuguese, intentional                                |
+| Dimension | What to verify |
+|---|---|
+| **Colors** | Only palette tokens (`var(--color-*)`) used — no hard-coded hex/rgb values outside `globals.css` |
+| **Typography** | Headings use `font-[family-name:var(--font-heading)]`, body/nav use `font-[family-name:var(--font-body)]` |
+| **Spacing** | Padding/margin in multiples of 8px |
+| **Border radius** | Buttons are `rounded-3xl`; cards use `rounded-2xl` or `rounded-3xl` |
+| **Responsiveness** | Mobile-first; breakpoints at `sm/md/lg/xl` |
+| **Hover states** | Buttons lift with `hover:-translate-y-0.5` + color shift; transitions are `duration-300` |
+| **Accessibility** | Interactive elements have `aria-label`; images have `alt`; focus rings visible |
+| **Brand voice** | Copy (labels, placeholders, empty states) is warm, Portuguese, intentional |
 
 ---
 
@@ -62,7 +62,6 @@ Fetch https://www.luratha.com.br/ and note:
 - UI interactions (animations, micro-interactions, hover effects) present on the live site that should be added to the skill
 
 Also check individual sections if accessible:
-
 - `/vestidos` or any category page — product card details, grid layout, filter/sort controls
 - Any product detail page (PDP) — image layout, size selector, CTA button
 - Footer — payment logos, SSL seal, social media icons
@@ -84,7 +83,6 @@ Produce a structured findings report with this format for each issue found:
 ```
 
 Group findings by severity:
-
 - **Critical** — directly breaks the visual identity (wrong colors, wrong fonts)
 - **Major** — significant deviation from spec (wrong spacing rhythm, missing responsiveness)
 - **Minor** — small inconsistencies (border radius, transition duration)
@@ -97,14 +95,12 @@ Group findings by severity:
 If Step 2 reveals design patterns on the live site or in the codebase that are **not yet in the skill**, update `.github/skills/visual-identity/SKILL.md` to document them.
 
 **When to add to the skill:**
-
 - New color usage (e.g., a discount badge color)
 - New component pattern (e.g., product card badge, WhatsApp button style)
 - New interaction pattern (e.g., image zoom on hover)
 - Corrections to existing rules (e.g., live site uses a different border radius for cards)
 
 **When NOT to change the skill:**
-
 - Bugs or deviations on the live site that should be fixed, not replicated
 - Temporary promotional elements (seasonal banners, flash sale styles)
 
@@ -119,8 +115,8 @@ After updating the skill, add a changelog entry at the bottom of the file:
 
 ## Changelog
 
-| Date       | Change          | Reason                               |
-| ---------- | --------------- | ------------------------------------ |
+| Date | Change | Reason |
+|---|---|---|
 | YYYY-MM-DD | Added [pattern] | Found on live site / design decision |
 ```
 
@@ -131,7 +127,6 @@ After updating the skill, add a changelog entry at the bottom of the file:
 For **Critical** and **Major** findings only, apply the fixes directly to the source files.
 
 Rules for fixes:
-
 - Only change what is necessary to fix the specific issue — no refactoring
 - Use `var(--color-*)` tokens from `globals.css`, never hard-coded hex values
 - Never modify test files unless the fix breaks a test assertion
@@ -146,19 +141,16 @@ Rules for fixes:
 Output a summary with three sections:
 
 ### 1. Skill Updates
-
 List every change made to `.github/skills/visual-identity/SKILL.md` with a brief rationale.
 
 ### 2. Fixes Applied
-
 List every Critical/Major fix applied to the codebase (file, what changed, why).
 
 ### 3. Open Findings (for developer review)
-
 A table of Minor and Enhancement findings that were documented but not auto-fixed:
 
-| ID  | Title | Severity | File | Recommended Fix |
-| --- | ----- | -------- | ---- | --------------- |
+| ID | Title | Severity | File | Recommended Fix |
+|---|---|---|---|---|
 
 ---
 

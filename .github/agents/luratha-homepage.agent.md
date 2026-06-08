@@ -19,18 +19,17 @@ The full home page matching the structure of luratha.com.br, with these sections
 
 ## Components to Create
 
-| File                                | Purpose                                                                                                         |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `src/components/ProductCard.tsx`    | Reusable product card: image, name, rating (optional), price, installment text, discount badge, favorite button |
-| `src/components/HeroBanner.tsx`     | Hero carousel/banner with auto-play and navigation dots                                                         |
-| `src/components/CategoryBlock.tsx`  | Category image card with label overlay, links to category route                                                 |
-| `src/components/ProductSection.tsx` | Section wrapper with title + horizontal scrollable product grid                                                 |
-| `src/app/page.tsx`                  | Home page assembling all sections                                                                               |
+| File | Purpose |
+|---|---|
+| `src/components/ProductCard.tsx` | Reusable product card: image, name, rating (optional), price, installment text, discount badge, favorite button |
+| `src/components/HeroBanner.tsx` | Hero carousel/banner with auto-play and navigation dots |
+| `src/components/CategoryBlock.tsx` | Category image card with label overlay, links to category route |
+| `src/components/ProductSection.tsx` | Section wrapper with title + horizontal scrollable product grid |
+| `src/app/page.tsx` | Home page assembling all sections |
 
 ## Data / Types
 
 Create `src/lib/types.ts` with:
-
 ```ts
 export interface Product {
   id: string;

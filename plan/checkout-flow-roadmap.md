@@ -9,7 +9,6 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 ## Estado Atual (snapshot)
 
 **Existe:**
-
 - Rotas: `/`, `/carrinho`, `/busca`, `/login`, `/register`, `/logout`, `/categoria/[slug]`, `/produto/[slug]`, `/todas-as-pecas`, `/sale`, `/sobre`, `/contato`, `/referencia-de-medidas`, `/politica-de-trocas`
 - APIs: `products`, `categories`, `stock`, `images`, `dev/seed-mock-data`
 - Contexts: `AuthContext` (localStorage), `CartContext` (localStorage)
@@ -17,7 +16,6 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 - Schemas Firestore prontos sem UI: `orders.ts`, `users.ts` (UserProfile), `coupons.ts`, `reviews.ts`, `carts.ts`
 
 **Não existe (gaps):**
-
 - ❌ Páginas: `/checkout`, `/conta`, `/conta/pedidos`, `/conta/pedidos/[id]`, `/conta/enderecos`, `/conta/dados`
 - ❌ APIs: `orders`, `users`, `coupons`, `cart` (server-side)
 - ❌ Repos: `ordersRepository`, `usersRepository`, `couponsRepository`
@@ -34,7 +32,6 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 ### 1.1 Infra compartilhada (pré-requisito)
 
 **Arquivos a criar:**
-
 - `src/lib/repositories/ordersRepository.ts` — list/get/create/update (espelhar `productsRepository.ts`)
 - `src/lib/repositories/usersRepository.ts` — getProfile/updateProfile/listAddresses/upsertAddress
 - `src/lib/repositories/couponsRepository.ts` — getByCode/validateForCart
@@ -43,7 +40,6 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 - ~~`src/middleware.ts` — proteger `/conta/*` e `/checkout` exigindo auth~~ ✅ entregue em PR #81 (presence-check no edge + `requireUser()` nos handlers)
 
 **Padrões a seguir** (do `CLAUDE.md` + skill `luratha-crud-api`):
-
 - Cada handler HTTP em arquivo próprio + `route.ts` re-exporta
 - `export const runtime = "nodejs"` em todas as routes
 - Usar `.withConverter()` em todas as refs
@@ -52,20 +48,19 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 
 ### 1.2 APIs (`src/app/api/`)
 
-| Endpoint                       | Métodos                                            | Notas                                                                                                                                                           |
-| ------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/orders`                  | GET (list por user), POST (criar a partir do cart) | POST faz: valida estoque, decrementa stock, cria Order com status `pending_payment`, retorna `paymentIntent`                                                    |
-| `/api/orders/[id]`             | GET, PATCH                                         | PATCH para atualizar status (admin) ou cancelar (user dono)                                                                                                     |
-| `/api/users/[id]`              | GET, PATCH                                         | Perfil — só o próprio user ou admin                                                                                                                             |
-| `/api/users/[id]/addresses`    | GET, POST, DELETE                                  | CRUD de endereços salvos                                                                                                                                        |
-| `/api/coupons/validate`        | POST                                               | ✅ entregue (issue #82 final, junto da #83) — autenticado, valida cupom contra `cartTotal` e devolve `{valid, code, type, discount}` ou `{valid:false, reason}` |
-| `/api/checkout/shipping`       | POST                                               | Stub inicial: aceita CEP+itens, retorna opções (PAC/SEDEX). Plugar Melhor Envio depois                                                                          |
-| `/api/checkout/payment-intent` | POST                                               | ✅ entregue (issue #77) — cria o pagamento no MercadoPago (PIX/cartão/boleto). Webhook em `/api/webhooks/mercadopago`                                           |
+| Endpoint | Métodos | Notas |
+|---|---|---|
+| `/api/orders` | GET (list por user), POST (criar a partir do cart) | POST faz: valida estoque, decrementa stock, cria Order com status `pending_payment`, retorna `paymentIntent` |
+| `/api/orders/[id]` | GET, PATCH | PATCH para atualizar status (admin) ou cancelar (user dono) |
+| `/api/users/[id]` | GET, PATCH | Perfil — só o próprio user ou admin |
+| `/api/users/[id]/addresses` | GET, POST, DELETE | CRUD de endereços salvos |
+| `/api/coupons/validate` | POST | ✅ entregue (issue #82 final, junto da #83) — autenticado, valida cupom contra `cartTotal` e devolve `{valid, code, type, discount}` ou `{valid:false, reason}` |
+| `/api/checkout/shipping` | POST | Stub inicial: aceita CEP+itens, retorna opções (PAC/SEDEX). Plugar Melhor Envio depois |
+| `/api/checkout/payment-intent` | POST | ✅ entregue (issue #77) — cria o pagamento no MercadoPago (PIX/cartão/boleto). Webhook em `/api/webhooks/mercadopago` |
 
 ### 1.3 Páginas (`src/app/`) ✅ entregue (issue #83)
 
 **Checkout (1 fluxo, 4 steps numa só rota com state):** ✅
-
 - `src/app/checkout/page.tsx` — client component que monta `CheckoutFlow.tsx` (server-side gate via `src/proxy.ts`)
   - Step 1: Endereço — `AddressStep` lista salvos via `/api/users/[uid]/addresses` + inline `AddressForm`
   - Step 2: Frete — `ShippingStep` chama `/api/checkout/shipping`
@@ -75,7 +70,6 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 - `src/app/checkout/{layout.tsx,error.tsx,loading.tsx}` ✅
 
 **Conta (layout protegido):**
-
 - `src/app/conta/layout.tsx` — sidebar com links (Pedidos, Dados, Endereços, Sair) + checagem auth (redirect `/login?redirect=/conta`)
 - `src/app/conta/page.tsx` — dashboard (resumo: último pedido, dados básicos)
 - `src/app/conta/dados/page.tsx` — edita perfil (nome, email, telefone) via `PATCH /api/users/[id]`
@@ -86,14 +80,12 @@ Este plano é um **roadmap priorizado** para fechar o fluxo crítico de compra (
 ### 1.4 Componentes
 
 Criar em `src/components/checkout/` e `src/components/conta/`:
-
 - ✅ `checkout/`: `StepIndicator.tsx`, `AddressForm.tsx` (extraído de `/conta/enderecos`), `AddressStep.tsx`, `ShippingStep.tsx`, `PaymentStep.tsx`, `PaymentResult.tsx`, `OrderSummary.tsx`, `CouponField.tsx` — todos com `.module.css` e testes unitários
 - ✅ `conta/`: `AccountSidebar.tsx`, `OrderListItem.tsx`, `OrderStatusBadge.tsx`, `AddressCard.tsx` (já entregues em PRs anteriores)
 
 Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` — wrapper lazy do `@mercadopago/sdk-js` que devolve `{token, paymentMethodId, installments, cardholderEmail}` no shape esperado pelo `payment-intent`. ✅
 
 **Reutilizar** (já existe):
-
 - `src/contexts/CartContext.tsx` — ler itens no checkout, limpar após sucesso (`clearCart()`)
 - `src/contexts/AuthContext.tsx` — checar user logado, redirect login
 - `src/components/JsonLd.tsx` — para `Order` schema na página de sucesso
@@ -164,7 +156,6 @@ Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` �
 ## Arquivos Críticos a Modificar/Criar
 
 **Novos:**
-
 - `src/middleware.ts`
 - `src/lib/repositories/{orders,users,coupons}Repository.ts`
 - `src/lib/firestore/{admin,client}{Order,UserProfile}Converter.ts`
@@ -177,7 +168,6 @@ Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` �
 - `src/components/{checkout,conta}/*.tsx` (+`.module.css`)
 
 **Modificar:**
-
 - `src/app/sitemap.ts` — adicionar produtos
 - `src/app/robots.ts` — adicionar `/checkout/`
 - `src/components/Header.tsx` — link "Minha conta" quando logado
@@ -199,7 +189,6 @@ npm run test:e2e        # ao menos um spec novo do fluxo (e2e/checkout.spec.ts)
 ```
 
 **E2E mínimo a criar** (`e2e/checkout.spec.ts`):
-
 1. Login com user de teste
 2. Adicionar produto ao carrinho
 3. Ir a `/checkout`, preencher endereço, escolher frete, confirmar pagamento (mock)
@@ -207,13 +196,11 @@ npm run test:e2e        # ao menos um spec novo do fluxo (e2e/checkout.spec.ts)
 5. Ir a `/conta/pedidos` e ver o pedido criado
 
 **Cloud tests** a criar:
-
 - `src/test/cloud/orders.cloud.test.ts` — CRUD de Order via API (com `createCloudTestPrefix()`)
 - `src/test/cloud/users.cloud.test.ts` — perfil + endereços
 - `src/test/cloud/coupons.cloud.test.ts` — validação
 
 **Smoke manual** (skill `visual-identity`):
-
 - Verificar tipografia/cores dos forms de checkout (Playfair em headings, Inter em body, tokens `var(--color-*)`)
 - Estados de focus visível em todos os inputs
 - Mobile: stepper colapsável, sidebar de conta vira drawer

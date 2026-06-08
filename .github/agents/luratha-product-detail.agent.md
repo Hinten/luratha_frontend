@@ -38,18 +38,17 @@ The product detail page renders:
 
 ## Components to Create
 
-| File                                | Purpose                                             |
-| ----------------------------------- | --------------------------------------------------- |
-| `src/components/ProductGallery.tsx` | Image gallery with main image + thumbnails          |
-| `src/components/SizeSelector.tsx`   | Size option buttons with selected state             |
-| `src/components/PriceBlock.tsx`     | Handles price display, discount badge, installments |
-| `src/components/ReviewsList.tsx`    | Renders a list of reviews with star ratings         |
-| `src/app/produto/[slug]/page.tsx`   | Product detail page                                 |
+| File | Purpose |
+|---|---|
+| `src/components/ProductGallery.tsx` | Image gallery with main image + thumbnails |
+| `src/components/SizeSelector.tsx` | Size option buttons with selected state |
+| `src/components/PriceBlock.tsx` | Handles price display, discount badge, installments |
+| `src/components/ReviewsList.tsx` | Renders a list of reviews with star ratings |
+| `src/app/produto/[slug]/page.tsx` | Product detail page |
 
 ## Types
 
 Add to `src/lib/types.ts`:
-
 ```ts
 export interface ProductDetail extends Product {
   description: string;
@@ -75,7 +74,6 @@ Add at least 3 `ProductDetail` entries to `src/lib/mockData.ts`. Use `https://pl
 ## SEO
 
 Add `generateMetadata({ params })` returning:
-
 - `title`: "[Product Name] — Luratha"
 - `description`: First 160 chars of product description
 - `openGraph.images`: First product image URL

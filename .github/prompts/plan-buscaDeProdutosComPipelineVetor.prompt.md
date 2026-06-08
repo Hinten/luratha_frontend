@@ -4,13 +4,13 @@ Implementar busca em duas superfícies (global e por categoria) usando Pipeline 
 
 ## Decisões Fechadas
 
-| Item                            | Decisão                                                         |
-| ------------------------------- | --------------------------------------------------------------- |
-| Provedor de embedding           | Vertex AI                                                       |
-| Fallback                        | Obrigatório para Core Query quando Pipeline/Vector indisponível |
-| Superfícies de busca            | Ambas: global em `/busca` e contextual em `/categoria/[slug]`   |
-| Testes cloud                    | Somente manual via `npm run test:cloud`                         |
-| Tipo de embeddings dos produtos | Pré-computados em seed + atualização incremental                |
+| Item | Decisão |
+|---|---|
+| Provedor de embedding | Vertex AI |
+| Fallback | Obrigatório para Core Query quando Pipeline/Vector indisponível |
+| Superfícies de busca | Ambas: global em `/busca` e contextual em `/categoria/[slug]` |
+| Testes cloud | Somente manual via `npm run test:cloud` |
+| Tipo de embeddings dos produtos | Pré-computados em seed + atualização incremental |
 
 ---
 
@@ -139,14 +139,14 @@ async function search(filters, options = {}) {
 
 Ampliar leitura de `searchParams` com novos parâmetros:
 
-| Parâmetro  | Tipo           | Descrição              |
-| ---------- | -------------- | ---------------------- |
-| `q`        | `string`       | Termo de busca livre   |
-| `sort`     | `string`       | Já existe              |
-| `minPrice` | `number`       | Filtro de preço mínimo |
-| `maxPrice` | `number`       | Filtro de preço máximo |
-| `tags`     | `string` (CSV) | Filtros de tags        |
-| `page`     | `number`       | Paginação básica       |
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `q` | `string` | Termo de busca livre |
+| `sort` | `string` | Já existe |
+| `minPrice` | `number` | Filtro de preço mínimo |
+| `maxPrice` | `number` | Filtro de preço máximo |
+| `tags` | `string` (CSV) | Filtros de tags |
+| `page` | `number` | Paginação básica |
 
 - Substituir chamada `productsRepository.list()` por `productsSearchRepository.search()` com `categorySlug` fixado.
 - Preservar React `cache()` para memoização.
@@ -317,13 +317,11 @@ jobs:
 ### 7.1 Índices (`firestore.indexes.json`)
 
 Existentes (manter):
-
 - `(status, categorySlug, priceMin)`
 - `(status, ratingAverage DESC, reviewCount DESC)`
 - `(tags CONTAINS, status, updatedAt DESC)`
 
 Novos necessários (confirmar com `gcloud firestore indexes list` após deploy):
-
 - `(status, categorySlug, priceMin, priceMax)` para buscas com range duplo de preço
 - Índice vetorial: configurar via Console Firebase no projeto Enterprise (não suportado em `firestore.indexes.json` ainda)
 
@@ -366,21 +364,21 @@ npm run build           # obrigatório: impacto em produção
 
 ## Arquivos a Criar/Modificar
 
-| Arquivo                                            | Ação      | Fase |
-| -------------------------------------------------- | --------- | ---- |
-| `src/lib/repositories/productMapper.ts`            | Criar     | 2.6  |
-| `src/lib/repositories/productsSearchRepository.ts` | Criar     | 2    |
-| `src/lib/embeddingService.ts`                      | Criar     | 3    |
-| `src/app/busca/page.tsx`                           | Criar     | 4.2  |
-| `src/components/busca/SearchInput.tsx`             | Criar     | 4.3  |
-| `vitest.cloud.config.mts`                          | Criar     | 6.2  |
-| `src/test/cloudTests.globalSetup.ts`               | Criar     | 6.2  |
-| `src/test/cloud/sharedSetup.ts`                    | Criar     | 6.2  |
-| `src/test/cloud/pipelineSearch.test.ts`            | Criar     | 6.2  |
-| `src/test/cloud/vectorSearch.test.ts`              | Criar     | 6.2  |
-| `.github/workflows/cloud-firestore-tests.yml`      | Criar     | 6.5  |
-| `src/app/categoria/[slug]/page.tsx`                | Modificar | 4.1  |
-| `src/components/Header.tsx`                        | Modificar | 4.3  |
-| `package.json`                                     | Modificar | 6.2  |
-| `firestore.indexes.json`                           | Modificar | 7.1  |
-| `src/app/robots.ts`                                | Modificar | 5.3  |
+| Arquivo | Ação | Fase |
+|---|---|---|
+| `src/lib/repositories/productMapper.ts` | Criar | 2.6 |
+| `src/lib/repositories/productsSearchRepository.ts` | Criar | 2 |
+| `src/lib/embeddingService.ts` | Criar | 3 |
+| `src/app/busca/page.tsx` | Criar | 4.2 |
+| `src/components/busca/SearchInput.tsx` | Criar | 4.3 |
+| `vitest.cloud.config.mts` | Criar | 6.2 |
+| `src/test/cloudTests.globalSetup.ts` | Criar | 6.2 |
+| `src/test/cloud/sharedSetup.ts` | Criar | 6.2 |
+| `src/test/cloud/pipelineSearch.test.ts` | Criar | 6.2 |
+| `src/test/cloud/vectorSearch.test.ts` | Criar | 6.2 |
+| `.github/workflows/cloud-firestore-tests.yml` | Criar | 6.5 |
+| `src/app/categoria/[slug]/page.tsx` | Modificar | 4.1 |
+| `src/components/Header.tsx` | Modificar | 4.3 |
+| `package.json` | Modificar | 6.2 |
+| `firestore.indexes.json` | Modificar | 7.1 |
+| `src/app/robots.ts` | Modificar | 5.3 |

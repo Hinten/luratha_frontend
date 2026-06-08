@@ -20,12 +20,12 @@ deploy/escala/incidentes isolados, e um editor de Site Settings funcionando como
 
 ## Decisões (confirmadas com o usuário)
 
-| Tema                | Decisão                                                                 |
-| ------------------- | ----------------------------------------------------------------------- |
-| Tooling de monorepo | **pnpm + Turborepo**                                                    |
-| Deploy do admin     | Backend de App Hosting separado + subdomínio `admin.luratha.com.br`     |
-| Escopo v1           | Editor de Site Settings (`settings/global`), sobre a base de auth/shell |
-| Sessão loja/admin   | **Separada** — cookie `__session` host-only, sem `domain`               |
+| Tema | Decisão |
+|---|---|
+| Tooling de monorepo | **pnpm + Turborepo** |
+| Deploy do admin | Backend de App Hosting separado + subdomínio `admin.luratha.com.br` |
+| Escopo v1 | Editor de Site Settings (`settings/global`), sobre a base de auth/shell |
+| Sessão loja/admin | **Separada** — cookie `__session` host-only, sem `domain` |
 
 **pnpm sobre npm**: num monorepo multi-app, pnpm impede "phantom dependencies" — o
 `apps/admin` só importa o que declarou, reforçando o isolamento pedido. Store
@@ -83,7 +83,6 @@ válidos; adicionar ao alias `server-only` já presente nos `vitest.config`.
 `set-admin-claim`. Fases 1–3 não dependem disto e podem começar já.
 
 **Fase 1 — Esqueleto monorepo (alto risco, PR isolado).**
-
 - `pnpm-workspace.yaml`, `turbo.json`, `package.json` raiz; migrar
   `package-lock.json` → `pnpm-lock.yaml`.
 - Mover storefront para `apps/store/` (rotas, components, lib, etc.), `next.config.ts`
@@ -106,7 +105,6 @@ de session-cookie de `packages/auth`; `middleware.ts` exigindo `__session` + cla
 `admin === true` (reusa `requireUser()`); shell com nav lateral + dashboard mínimo;
 layout com `noindex`. Tema reusando tokens de `packages/ui`. Acrescentar `apps/admin`
 e a convenção de CRUD API do admin ao `Directory Map` / secção CRUD do `CLAUDE.md`.
-
 - **Sessão separada (decisão confirmada).** O admin reusa o handler de
   `src/app/api/auth/session/route.ts`, que já cria o cookie `__session` **sem
   atributo `domain`** (host-only) — separação é o comportamento padrão. Regra a
@@ -115,7 +113,6 @@ e a convenção de CRUD API do admin ao `Directory Map` / secção CRUD do `CLAU
   subdomínio (IndexedDB do client SDK também é por-origem).
 
 **Fase 4 — Editor de Site Settings (bloqueada pela Fase 0).**
-
 - Tela `apps/admin/src/app/configuracoes` lê `settings/global` via repositório de
   `siteSettings` (`packages/repositories`).
 - Formulário: `providerId`, `originPostalCode`, `enabledServices[]`,

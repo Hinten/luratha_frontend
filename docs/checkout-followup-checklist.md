@@ -11,14 +11,12 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 Última iteração `b15ec7b` (2026-05-25). Resumo de onde o trabalho parou:
 
 **O que funciona** (validado pelo user):
-
 - Fluxo PIX completo em `pnpm dev` local — QR Code renderiza, copia código, redirect.
 - Fluxo Boleto local (URL PDF + linha digitável).
 - Login + 4 steps do checkout em local e em App Hosting.
 - Removida máscara do CPF (input aceita raw digits) — schema Zod normaliza.
 
 **O que NÃO funciona ainda — cardForm de Cartão**:
-
 - Local (`http://localhost:3000` E `https://localhost:3000` via `next dev --experimental-https`): CORS bloqueia em `api.mercadopago.com/v1/card_tokens` e `/v1/payment_methods/search`. Doc MP confirma: rejeita domínios locais.
 - **App Hosting deployed**: também dá CORS em `card_tokens` no último teste do user (`luratha-app-frontend--luratha-96386.us-east5.hosted.app`). Isso é o impasse atual — não tínhamos previsto.
 
@@ -42,7 +40,6 @@ Tracker vivo do que ficou pendente após o merge do PR #122 (`feat(checkout): p�
 - [ ] Como fallback de UX: documentar mensagem amigável "Pagamento por cartão indisponível no momento, use PIX ou Boleto" se a tokenização falhar.
 
 **Arquivos de referência**:
-
 - `apps/store/src/lib/mercadopago/cardForm.ts` — callbacks de debug já logam `[mp.cardForm] bin change`, `paymentMethods`, `installments`. Pedir pro user copiar esses logs no próximo teste.
 - `apps/store/src/components/checkout/PaymentStep.tsx` — input CPF sem máscara, submit usa `cardFormHandle.submit()`.
 - `apps/store/src/lib/payment/mercadoPago/client.ts` — server-side, usa `MERCADOPAGO_ACCESS_TOKEN`.
@@ -59,12 +56,10 @@ Cobertura real da API MercadoPago — até agora só houve mocks. Subir o branch
 > PIX/Boleto funcionam em localhost normalmente, porque a tokenização não acontece no client — só nosso `/api/checkout/payment-intent` chama o MP server-to-server (`apps/store/src/lib/payment/mercadoPago/`, runtime `nodejs`).
 >
 > **Onde cada chamada MP acontece** (auditoria):
->
 > - **Iframe MP (client)** → `POST /v1/card_tokens`, `GET /v1/payment_methods/search` — PCI compliance: PAN/CVV ficam no iframe hospedado pelo MP, nosso JS nunca toca dados sensíveis.
 > - **Nosso server** → `POST /v1/payments`, webhook receiver — sem CORS, usa `MERCADOPAGO_ACCESS_TOKEN`.
 >
 > **⚠️ Cartões de teste são por país (siteId)**. A conta MP do projeto é **Brasil (MLB)**, então use:
->
 > - **Mastercard**: `5031 4332 1540 6351` — CVV `123`, validade `11/30`
 > - **Visa**: `4235 6477 2802 5682` — CVV `123`, validade `11/30`
 > - **Amex**: `3753 651535 56885` — CVV `1234`, validade `11/30`

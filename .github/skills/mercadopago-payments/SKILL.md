@@ -23,13 +23,13 @@ All payment code lives in the **`@luratha/payments`** workspace package
 (`packages/payments/`), shared between the storefront (creates the payment)
 and the dedicated `apps/mercadopago` webhook app (confirms it):
 
-| File / dir                                    | Purpose                                                                                                                  |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `packages/payments/src/types.ts`              | I/O contracts, `PaymentIntentResult`, `PaymentProviderError`                                                             |
-| `packages/payments/src/mercadoPago/client.ts` | Reads credentials from env, builds `MercadoPagoConfig`                                                                   |
-| `packages/payments/src/mercadoPago/index.ts`  | Adapter — `createOrder`, `getOrder`, `verifyWebhookSignature`, `mapMpStatus`, `isMercadoPagoSandbox`, `withSandboxEmail` |
-| `packages/payments/src/orderService.ts`       | `Order`-aware orchestration: load order, create payment, persist, apply webhook                                          |
-| `packages/payments/src/index.ts`              | Barrel re-export — consumers import from `@luratha/payments`                                                             |
+| File / dir | Purpose |
+|---|---|
+| `packages/payments/src/types.ts` | I/O contracts, `PaymentIntentResult`, `PaymentProviderError` |
+| `packages/payments/src/mercadoPago/client.ts` | Reads credentials from env, builds `MercadoPagoConfig` |
+| `packages/payments/src/mercadoPago/index.ts` | Adapter — `createOrder`, `getOrder`, `verifyWebhookSignature`, `mapMpStatus`, `isMercadoPagoSandbox`, `withSandboxEmail` |
+| `packages/payments/src/orderService.ts` | `Order`-aware orchestration: load order, create payment, persist, apply webhook |
+| `packages/payments/src/index.ts` | Barrel re-export — consumers import from `@luratha/payments` |
 
 Consumers (both import via `@luratha/payments`):
 
@@ -38,10 +38,10 @@ Consumers (both import via `@luratha/payments`):
 
 API routes:
 
-| Route                               | App                                                                          | Purpose                                                      |
-| ----------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `POST /api/checkout/payment-intent` | `@luratha/store` (storefront)                                                | Creates the MP payment for an existing Order; auth-protected |
-| `POST /api/webhooks/mercadopago`    | `@luratha/mercadopago` (dedicated webhook backend `luratha-app-mercadopago`) | Receives MP notifications; **public**, secured by signature  |
+| Route | App | Purpose |
+|---|---|---|
+| `POST /api/checkout/payment-intent` | `@luratha/store` (storefront) | Creates the MP payment for an existing Order; auth-protected |
+| `POST /api/webhooks/mercadopago` | `@luratha/mercadopago` (dedicated webhook backend `luratha-app-mercadopago`) | Receives MP notifications; **public**, secured by signature |
 
 ## Payment lifecycle
 
@@ -77,11 +77,11 @@ point at it — that is how the asynchronous webhook finds the right order.
 
 ## The `PaymentProviderError` → HTTP status mapping
 
-| `code`                 | payment-intent | webhook                          |
-| ---------------------- | -------------- | -------------------------------- |
-| `config_missing`       | 500            | 500                              |
-| `invalid_input`        | 400            | 200 (acknowledge, nothing to do) |
-| `provider_unavailable` | 502            | 500 (so MP retries)              |
+| `code` | payment-intent | webhook |
+|---|---|---|
+| `config_missing` | 500 | 500 |
+| `invalid_input` | 400 | 200 (acknowledge, nothing to do) |
+| `provider_unavailable` | 502 | 500 (so MP retries) |
 
 The webhook returns **500** on transient failures on purpose — that makes
 MercadoPago redeliver the notification later.
@@ -92,21 +92,21 @@ The Orders API uses a smaller status vocabulary than the legacy Payments API.
 `mapMpStatus(status, statusDetail?, methodType?)` combines the coarse `status`,
 the `status_detail` substatus and the method (`bank_transfer`=pix, `ticket`=boleto):
 
-| MP Orders `status` / `status_detail`             | `Order.paymentStatus` | `Order.status` side effect                        |
-| ------------------------------------------------ | --------------------- | ------------------------------------------------- |
-| `processed` / `accredited`                       | `paid`                | → `paid`, sets `paidAt`                           |
-| `processed` / `partially_refunded`               | `partially_refunded`  | (stays `paid`)                                    |
-| `action_required` / `waiting_capture`            | `authorized`          | (stays `pending_payment`)                         |
-| `action_required` / `waiting_transfer` (pix)     | `awaiting_pix`        | (stays `pending_payment`)                         |
-| `action_required` / `waiting_payment` (ticket)   | `awaiting_boleto`     | (stays `pending_payment`)                         |
-| `in_process`, `pending`, `created`, `processing` | `pending`             | (stays `pending_payment`)                         |
-| `charged_back` / `in_process`                    | `in_dispute`          | (stays — dispute in progress)                     |
-| `charged_back` / `settled`,`reimbursed`          | `charged_back`        | → `refunded`                                      |
-| `cancelled`                                      | `cancelled`           | → `cancelled` (order ends)                        |
-| `rejected`                                       | `rejected`            | (stays `pending_payment` — customer can retry)    |
-| `failed`                                         | `failed`              | (stays `pending_payment` — customer can retry)    |
-| `refunded`                                       | `refunded`            | → `refunded`                                      |
-| _anything unrecognized_                          | `unknown` (fail-safe) | → `unknown` if still dispatchable + `logger.warn` |
+| MP Orders `status` / `status_detail` | `Order.paymentStatus` | `Order.status` side effect |
+|---|---|---|
+| `processed` / `accredited` | `paid` | → `paid`, sets `paidAt` |
+| `processed` / `partially_refunded` | `partially_refunded` | (stays `paid`) |
+| `action_required` / `waiting_capture` | `authorized` | (stays `pending_payment`) |
+| `action_required` / `waiting_transfer` (pix) | `awaiting_pix` | (stays `pending_payment`) |
+| `action_required` / `waiting_payment` (ticket) | `awaiting_boleto` | (stays `pending_payment`) |
+| `in_process`, `pending`, `created`, `processing` | `pending` | (stays `pending_payment`) |
+| `charged_back` / `in_process` | `in_dispute` | (stays — dispute in progress) |
+| `charged_back` / `settled`,`reimbursed` | `charged_back` | → `refunded` |
+| `cancelled` | `cancelled` | → `cancelled` (order ends) |
+| `rejected` | `rejected` | (stays `pending_payment` — customer can retry) |
+| `failed` | `failed` | (stays `pending_payment` — customer can retry) |
+| `refunded` | `refunded` | → `refunded` |
+| _anything unrecognized_ | `unknown` (fail-safe) | → `unknown` if still dispatchable + `logger.warn` |
 
 > **Source of truth**: the `PaymentStatus` union, `PAYMENT_STATUSES`,
 > `PAYMENT_FAILURE_STATUSES`, `TERMINAL_PAYMENT_STATUSES` and
@@ -114,7 +114,7 @@ the `status_detail` substatus and the method (`bank_transfer`=pix, `ticket`=bole
 > `@luratha/payments` re-exports `PaymentStatus`; never redefine the union.
 > The `unknown` fail-safe never shows as "paid" — it blocks fulfillment until a
 > human reviews the logged status. `cancelled`/`rejected`/`failed` are split so
-> the UI can tell the customer _why_ a payment did not go through.
+> the UI can tell the customer *why* a payment did not go through.
 
 ## Webhook signature validation
 
@@ -135,13 +135,13 @@ expected = HMAC_SHA256_hex(MERCADOPAGO_WEBHOOK_SECRET, manifest)
 
 See `docs/mercadopago-setup.md` for the full how-to.
 
-| Variable                             | Required     | Notes                                                                                                                                                                |
-| ------------------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MERCADOPAGO_ACCESS_TOKEN`           | yes          | Server token. Sandbox **may** start with `TEST-` (não é garantido pelo painel atual)                                                                                 |
-| `MERCADOPAGO_WEBHOOK_SECRET`         | yes          | Validates the `x-signature` header                                                                                                                                   |
-| `MERCADOPAGO_ENV`                    | yes          | `sandbox` ou `production`. Flag explícita lida em `isMercadoPagoSandbox`. Fallback: prefixo `TEST-` quando ausente                                                   |
-| `MERCADOPAGO_SANDBOX_PAYER_EMAIL`    | sandbox only | Email do test user comprador (formato `test_user_<N>@testuser.com`). Em sandbox o adapter reescreve `payer.email` por esse valor pra evitar `invalid_users_involved` |
-| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | yes (UI)     | Browser key for card tokenization via the Brick                                                                                                                      |
+| Variable | Required | Notes |
+|---|---|---|
+| `MERCADOPAGO_ACCESS_TOKEN` | yes | Server token. Sandbox **may** start with `TEST-` (não é garantido pelo painel atual) |
+| `MERCADOPAGO_WEBHOOK_SECRET` | yes | Validates the `x-signature` header |
+| `MERCADOPAGO_ENV` | yes | `sandbox` ou `production`. Flag explícita lida em `isMercadoPagoSandbox`. Fallback: prefixo `TEST-` quando ausente |
+| `MERCADOPAGO_SANDBOX_PAYER_EMAIL` | sandbox only | Email do test user comprador (formato `test_user_<N>@testuser.com`). Em sandbox o adapter reescreve `payer.email` por esse valor pra evitar `invalid_users_involved` |
+| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | yes (UI) | Browser key for card tokenization via the Brick |
 
 A URL do webhook é configurada **no painel MP** (Suas integrações → Webhooks),
 não por env var — a Orders API não aceita `notification_url` por requisição.

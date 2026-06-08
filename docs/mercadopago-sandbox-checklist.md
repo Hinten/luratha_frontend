@@ -63,14 +63,14 @@ de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 
 ## Onde cada chamada acontece (auditoria arquitetural)
 
-| Operação                                              | Lado             | Arquivo / por quê                                                                                                                       |
-| ----------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Carregar SDK MP (`https://sdk.mercadopago.com/js/v2`) | Client           | `apps/store/src/lib/mercadopago/loadSdk.ts` — `loadMercadoPago()`                                                                       |
-| Inicializar `cardForm` (cria iframes MP)              | Client           | `apps/store/src/lib/mercadopago/cardForm.ts:143` — `sdk.cardForm({...})`                                                                |
-| `POST /v1/card_tokens` (PAN+CVV → token)              | **Iframe MP**    | PCI compliance — PAN/CVV ficam no domínio `mercadopago.com`, nosso JS nunca vê                                                          |
-| `GET /v1/payment_methods/search` (BIN → métodos)      | **Iframe MP**    | Idem                                                                                                                                    |
-| `POST /v1/payments` (criar pagamento usando token)    | **Nosso server** | `apps/store/src/lib/payment/mercadoPago/index.ts` via `/api/checkout/payment-intent` (runtime `nodejs`, usa `MERCADOPAGO_ACCESS_TOKEN`) |
-| Webhook (`POST /api/webhooks/mercadopago`)            | **Nosso server** | MP chama nosso server; sem CORS                                                                                                         |
+| Operação | Lado | Arquivo / por quê |
+|---|---|---|
+| Carregar SDK MP (`https://sdk.mercadopago.com/js/v2`) | Client | `apps/store/src/lib/mercadopago/loadSdk.ts` — `loadMercadoPago()` |
+| Inicializar `cardForm` (cria iframes MP) | Client | `apps/store/src/lib/mercadopago/cardForm.ts:143` — `sdk.cardForm({...})` |
+| `POST /v1/card_tokens` (PAN+CVV → token) | **Iframe MP** | PCI compliance — PAN/CVV ficam no domínio `mercadopago.com`, nosso JS nunca vê |
+| `GET /v1/payment_methods/search` (BIN → métodos) | **Iframe MP** | Idem |
+| `POST /v1/payments` (criar pagamento usando token) | **Nosso server** | `apps/store/src/lib/payment/mercadoPago/index.ts` via `/api/checkout/payment-intent` (runtime `nodejs`, usa `MERCADOPAGO_ACCESS_TOKEN`) |
+| Webhook (`POST /api/webhooks/mercadopago`) | **Nosso server** | MP chama nosso server; sem CORS |
 
 > A tokenização **tem** que ser client-side: se nosso JS tocasse o PAN ou CVV,
 > entraríamos em PCI scope D (certificação, audit anual). O iframe hospedado
@@ -85,27 +85,27 @@ de HTTPS. Os testes unit/firestore rodam em `http://localhost` normal.
 > abaixo; para outros países, consulte a
 > [doc oficial MP](https://www.mercadopago.com.br/developers/pt/docs/checkout-bricks/additional-content/your-integrations/test/cards).
 
-| Bandeira     | Número                | CVV    | Validade |
-| ------------ | --------------------- | ------ | -------- |
-| Mastercard   | `5031 4332 1540 6351` | `123`  | `11/30`  |
-| Visa         | `4235 6477 2802 5682` | `123`  | `11/30`  |
-| Amex         | `3753 651535 56885`   | `1234` | `11/30`  |
-| Elo (débito) | `5067 7667 8388 8311` | `123`  | `11/30`  |
+| Bandeira | Número | CVV | Validade |
+|---|---|---|---|
+| Mastercard | `5031 4332 1540 6351` | `123` | `11/30` |
+| Visa | `4235 6477 2802 5682` | `123` | `11/30` |
+| Amex | `3753 651535 56885` | `1234` | `11/30` |
+| Elo (débito) | `5067 7667 8388 8311` | `123` | `11/30` |
 
 O **número** identifica país + bandeira; o **nome impresso** controla o
 cenário de status. Use qualquer número MLB acima e **mude o nome** para
 forçar o resultado:
 
-| Nome impresso | Resultado                  |
-| ------------- | -------------------------- |
-| `APRO`        | Aprovado                   |
-| `OTHE`        | Recusado por erro geral    |
-| `CONT`        | Pendente                   |
-| `CALL`        | Recusado, validação manual |
-| `FUND`        | Saldo insuficiente         |
-| `SECU`        | CVV inválido               |
-| `EXPI`        | Validade inválida          |
-| `FORM`        | Erro de formulário         |
+| Nome impresso | Resultado |
+|---|---|
+| `APRO` | Aprovado |
+| `OTHE` | Recusado por erro geral |
+| `CONT` | Pendente |
+| `CALL` | Recusado, validação manual |
+| `FUND` | Saldo insuficiente |
+| `SECU` | CVV inválido |
+| `EXPI` | Validade inválida |
+| `FORM` | Erro de formulário |
 
 Documento (CPF) para APRO/OTHE: `12345678909`.
 
@@ -166,18 +166,18 @@ Documento (CPF) para APRO/OTHE: `12345678909`.
 - [ ] Webhook `paid` chega e flippa `paymentStatus` no Firestore
 - [ ] `/conta/pedidos/<id>` reflete o status final
 - [ ] Nenhuma chamada real à MP saiu da suite automatizada
-      (`pnpm test` + `pnpm test:firestore` + `pnpm test:e2e` continuam mockando)
+  (`pnpm test` + `pnpm test:firestore` + `pnpm test:e2e` continuam mockando)
 
 ## Onde olhar quando algo falhar
 
-| Sintoma                                    | Provavelmente é                               | Onde checar                                                                     |
-| ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------- |
-| `code: "config_missing"` no payment-intent | `MERCADOPAGO_ACCESS_TOKEN` não foi lido       | `.env` + reinício do `pnpm dev`                                                 |
-| QR PIX em branco                           | response sem `pix.qrCodeBase64`               | log de `apps/store/src/lib/payment/mercadoPago/index.ts`                        |
-| Webhook 401 ou 403                         | endpoint público sendo gateado por engano     | `apps/store/src/app/api/webhooks/mercadopago/post.ts` (não chama `requireUser`) |
-| Webhook 400                                | assinatura inválida                           | `MERCADOPAGO_WEBHOOK_SECRET` diferente do painel                                |
-| Order não muda de status                   | `external_reference` divergente               | log do webhook + `Order.paymentIntentId`                                        |
-| `cardForm` não carrega iframes             | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` faltando | console do browser; precisa começar com `TEST-` na sandbox                      |
+| Sintoma | Provavelmente é | Onde checar |
+|---|---|---|
+| `code: "config_missing"` no payment-intent | `MERCADOPAGO_ACCESS_TOKEN` não foi lido | `.env` + reinício do `pnpm dev` |
+| QR PIX em branco | response sem `pix.qrCodeBase64` | log de `apps/store/src/lib/payment/mercadoPago/index.ts` |
+| Webhook 401 ou 403 | endpoint público sendo gateado por engano | `apps/store/src/app/api/webhooks/mercadopago/post.ts` (não chama `requireUser`) |
+| Webhook 400 | assinatura inválida | `MERCADOPAGO_WEBHOOK_SECRET` diferente do painel |
+| Order não muda de status | `external_reference` divergente | log do webhook + `Order.paymentIntentId` |
+| `cardForm` não carrega iframes | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` faltando | console do browser; precisa começar com `TEST-` na sandbox |
 
 ## Referências
 

@@ -13,11 +13,9 @@ Before writing any code, read the full SEO skill:
 ## Your Responsibilities
 
 ### SEO — Search Engine Optimization
-
 Make every Luratha page discoverable and well-ranked in Google, Bing, and other search engines.
 
 **Technical SEO tasks:**
-
 - Add/update the `metadata` export on every page (title, description, canonical, keywords)
 - Implement Open Graph and Twitter Card metadata
 - Create/update `src/app/sitemap.ts` for all static routes
@@ -26,11 +24,9 @@ Make every Luratha page discoverable and well-ranked in Google, Bing, and other 
 - Add descriptive `alt` text to all images
 
 ### AEO — Answer Engine Optimization
-
 Make Luratha content appear in AI Overviews, featured snippets, and voice assistant answers.
 
 **AEO tasks:**
-
 - Inject schema.org JSON-LD structured data on every page
 - Use `FAQPage` schema on the returns policy and size guide pages
 - Use `Product` schema on product detail pages
@@ -39,11 +35,9 @@ Make Luratha content appear in AI Overviews, featured snippets, and voice assist
 - Structure content with direct answers near headings
 
 ### GEO — Generative Engine Optimization
-
 Make Luratha the authoritative source cited by LLMs (ChatGPT, Gemini, Copilot, Perplexity).
 
 **GEO tasks:**
-
 - Maintain `public/llms.txt` following the [llmstxt.org](https://llmstxt.org/) specification
 - Use explicit brand mentions ("Luratha", "slow fashion brasileiro", "artesanal") in content
 - Ensure all social profiles are listed in `Organization.sameAs` schema
@@ -54,16 +48,13 @@ Make Luratha the authoritative source cited by LLMs (ChatGPT, Gemini, Copilot, P
 ## Files to Create / Modify
 
 ### Core SEO infrastructure
-
 - `src/app/layout.tsx` — enhance root `metadata` with `metadataBase`, `template`, Open Graph, Twitter, robots
 - `src/app/sitemap.ts` — dynamic sitemap for all routes
 - `src/app/robots.ts` — robots.txt configuration
 - `src/components/JsonLd.tsx` — reusable JSON-LD injection component
 
 ### Per-page metadata + structured data
-
 Apply to every page:
-
 - `src/app/page.tsx` (Home) — `WebPage` + `WebSite` + `Organization` schema
 - `src/app/sobre/page.tsx` — `AboutPage` + `Organization` schema
 - `src/app/contato/page.tsx` — `ContactPage` + `LocalBusiness` schema
@@ -73,7 +64,6 @@ Apply to every page:
 - Product detail pages — `Product` + `BreadcrumbList` schema
 
 ### GEO files
-
 - `public/llms.txt` — already exists; update when new routes/sections are added
 
 ---
@@ -95,18 +85,18 @@ Apply to every page:
 
 ## Schema.org Priority by Page
 
-| Page                             | Required Schemas                               | Priority                  |
-| -------------------------------- | ---------------------------------------------- | ------------------------- |
-| Root layout (`layout.tsx`)       | `Organization`, `WebSite`                      | P0 — always present       |
-| Home (`/`)                       | `WebPage`, `ItemList` (featured products)      | P0                        |
-| Product detail (`/<slug>`)       | `Product`, `BreadcrumbList`, `AggregateRating` | P0 — enables rich results |
-| Category listing (`/colecao/*`)  | `CollectionPage`, `BreadcrumbList`, `ItemList` | P1                        |
-| About (`/sobre`)                 | `AboutPage`, `Organization`                    | P1 — GEO brand signals    |
-| Contact (`/contato`)             | `ContactPage`, `LocalBusiness`                 | P1 — contact extraction   |
-| Returns policy                   | `FAQPage`                                      | P1 — featured snippets    |
-| Size guide                       | `FAQPage`, size `Table`                        | P1 — featured snippets    |
-| All products (`/todas-as-pecas`) | `CollectionPage`, `BreadcrumbList`             | P2                        |
-| Sale (`/sale`)                   | `OfferCatalog`, `BreadcrumbList`               | P2                        |
+| Page | Required Schemas | Priority |
+|---|---|---|
+| Root layout (`layout.tsx`) | `Organization`, `WebSite` | P0 — always present |
+| Home (`/`) | `WebPage`, `ItemList` (featured products) | P0 |
+| Product detail (`/<slug>`) | `Product`, `BreadcrumbList`, `AggregateRating` | P0 — enables rich results |
+| Category listing (`/colecao/*`) | `CollectionPage`, `BreadcrumbList`, `ItemList` | P1 |
+| About (`/sobre`) | `AboutPage`, `Organization` | P1 — GEO brand signals |
+| Contact (`/contato`) | `ContactPage`, `LocalBusiness` | P1 — contact extraction |
+| Returns policy | `FAQPage` | P1 — featured snippets |
+| Size guide | `FAQPage`, size `Table` | P1 — featured snippets |
+| All products (`/todas-as-pecas`) | `CollectionPage`, `BreadcrumbList` | P2 |
+| Sale (`/sale`) | `OfferCatalog`, `BreadcrumbList` | P2 |
 
 ---
 
@@ -137,7 +127,6 @@ const LURATHA_SCHEMA_CONSTANTS = {
 ## llms.txt Maintenance Rules
 
 Update `public/llms.txt` whenever:
-
 1. A new route/page is added → add to the relevant section
 2. Contact information changes → update the Contato section
 3. New product categories are added → add to the Loja section

@@ -8,13 +8,13 @@ compatibility: Node.js 22, Vitest 4, Playwright, React Testing Library, Next.js 
 
 ## Test Stack
 
-| Tool                            | Role                                                           |
-| ------------------------------- | -------------------------------------------------------------- |
-| **Vitest 4**                    | Unit and integration test runner                               |
-| **React Testing Library**       | Component rendering and DOM assertions                         |
-| **@testing-library/jest-dom**   | Custom matchers (`toBeInTheDocument`, `toHaveAttribute`, etc.) |
-| **@testing-library/user-event** | Realistic user interaction simulation                          |
-| **Playwright**                  | End-to-End (E2E) browser tests (Chromium)                      |
+| Tool | Role |
+|---|---|
+| **Vitest 4** | Unit and integration test runner |
+| **React Testing Library** | Component rendering and DOM assertions |
+| **@testing-library/jest-dom** | Custom matchers (`toBeInTheDocument`, `toHaveAttribute`, etc.) |
+| **@testing-library/user-event** | Realistic user interaction simulation |
+| **Playwright** | End-to-End (E2E) browser tests (Chromium) |
 
 ---
 
@@ -53,7 +53,6 @@ npx playwright test --headed
 ```
 
 > **CI note:** On a fresh environment, Playwright browsers must be installed first:
->
 > ```bash
 > npx playwright install --with-deps chromium
 > ```
@@ -86,25 +85,25 @@ luratha_frontend/
 
 ### File naming conventions
 
-| Location            | Pattern                     | Purpose            |
-| ------------------- | --------------------------- | ------------------ |
+| Location | Pattern | Purpose |
+|---|---|---|
 | `src/**/__tests__/` | `*.test.ts` or `*.test.tsx` | Unit / integration |
-| `e2e/`              | `*.spec.ts`                 | E2E browser tests  |
+| `e2e/` | `*.spec.ts` | E2E browser tests |
 
 ---
 
 ## What to Test — Decision Table
 
-| What you create                         | Tests required                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------- |
-| New utility function / constant         | Unit test in `src/lib/__tests__/`                                      |
-| New React component                     | Unit test in `src/components/__tests__/` (render, props, interactions) |
-| New page                                | Unit test in `src/app/__tests__/` + E2E test in `e2e/`                 |
-| New route / navigation link             | E2E navigation test                                                    |
-| Form or interactive flow                | Integration test (Vitest) + E2E test (Playwright)                      |
-| Authentication flow                     | E2E test                                                               |
-| Firebase utility/hook                   | Unit test with Firebase emulator mocks                                 |
-| Schema or Firebase request flow changes | `npm run test:firestore` is mandatory and must pass                    |
+| What you create | Tests required |
+|---|---|
+| New utility function / constant | Unit test in `src/lib/__tests__/` |
+| New React component | Unit test in `src/components/__tests__/` (render, props, interactions) |
+| New page | Unit test in `src/app/__tests__/` + E2E test in `e2e/` |
+| New route / navigation link | E2E navigation test |
+| Form or interactive flow | Integration test (Vitest) + E2E test (Playwright) |
+| Authentication flow | E2E test |
+| Firebase utility/hook | Unit test with Firebase emulator mocks |
+| Schema or Firebase request flow changes | `npm run test:firestore` is mandatory and must pass |
 
 ---
 
@@ -292,7 +291,6 @@ vi.mock("firebase/auth", () => ({
 Run `npm run test:coverage` to generate a coverage report in `coverage/`. Open `coverage/index.html` in a browser to view it.
 
 Coverage is collected for all `src/` files except:
-
 - `node_modules`, `.next`, `src/test`, `**/*.config.*`, `src/app/layout.tsx`
 
 ---
@@ -300,7 +298,6 @@ Coverage is collected for all `src/` files except:
 ## Vitest Configuration
 
 Key settings in `vitest.config.mts`:
-
 - `environment: "jsdom"` — simulates the browser DOM
 - `globals: true` — `describe`, `it`, `expect` available without imports
 - `setupFiles: ["./src/test/setup.ts"]` — loads jest-dom matchers
@@ -311,7 +308,6 @@ Path alias `@/` → repo root (via `vite-tsconfig-paths`). Use `@/src/components
 ## Playwright Configuration
 
 Key settings in `playwright.config.ts`:
-
 - `baseURL: "http://localhost:3000"` — use relative paths in `page.goto()`
 - `webServer` — auto-starts `npm run dev` before tests
 - `retries: 2` on CI, `0` locally
@@ -324,18 +320,18 @@ Key settings in `playwright.config.ts`:
 
 ### Vitest (16 tests across 4 files)
 
-| File                | Tests                                                                                        |
-| ------------------- | -------------------------------------------------------------------------------------------- |
-| `Header.test.tsx`   | Logo renders, logo link, desktop nav links, cart button, hamburger toggle, mobile menu close |
-| `Footer.test.tsx`   | Logo renders, logo link, nav links, copyright name, copyright year                           |
-| `constants.test.ts` | appData has name, logo, and correct types                                                    |
-| `page.test.tsx`     | Home page renders a heading                                                                  |
+| File | Tests |
+|---|---|
+| `Header.test.tsx` | Logo renders, logo link, desktop nav links, cart button, hamburger toggle, mobile menu close |
+| `Footer.test.tsx` | Logo renders, logo link, nav links, copyright name, copyright year |
+| `constants.test.ts` | appData has name, logo, and correct types |
+| `page.test.tsx` | Home page renders a heading |
 
 ### Playwright (7 tests across 2 files)
 
-| File                 | Tests                                                           |
-| -------------------- | --------------------------------------------------------------- |
-| `home.spec.ts`       | Page loads with title, header with logo, footer with copyright  |
+| File | Tests |
+|---|---|
+| `home.spec.ts` | Page loads with title, header with logo, footer with copyright |
 | `navigation.spec.ts` | Header nav links, cart button, hamburger menu, footer nav links |
 
 ---

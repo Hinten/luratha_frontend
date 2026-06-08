@@ -16,11 +16,9 @@ Also read the project's Firebase configuration from `firebase.json` and `.fireba
 A client-side cart using React Context and `localStorage` for persistence.
 
 **Files:**
-
 - `src/lib/CartContext.tsx` — `CartProvider`, `useCart` hook, context type
 
 **Cart state shape:**
-
 ```ts
 interface CartItem {
   productId: string;
@@ -34,7 +32,7 @@ interface CartItem {
 
 interface CartState {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">) => void;
+  addItem: (item: Omit<CartItem, 'quantity'>) => void;
   removeItem: (productId: string, size: string) => void;
   updateQuantity: (productId: string, size: string, quantity: number) => void;
   clearCart: () => void;
@@ -50,7 +48,6 @@ Persist cart to `localStorage` under key `"luratha_cart"`. Load from localStorag
 `src/app/carrinho/page.tsx` — displays cart items, quantities, subtotal, and a "Finalizar Compra" placeholder button.
 
 **Structure:**
-
 1. Page title "Meu Carrinho"
 2. If empty: illustration + "Seu carrinho está vazio" + link to `/todas-as-pecas`
 3. Cart item rows: thumbnail, name, size, price, quantity stepper (+/-), remove button
@@ -82,11 +79,11 @@ Create `src/lib/AuthContext.tsx` — `AuthProvider` and `useAuth` hook using `on
 
 ### 4. Auth Pages
 
-| Route                        | Description                                                        |
-| ---------------------------- | ------------------------------------------------------------------ |
-| `src/app/entrar/page.tsx`    | Login page — email/password form + Google sign-in option           |
-| `src/app/cadastrar/page.tsx` | Register page — name, email, password form                         |
-| `src/app/conta/page.tsx`     | User account — shows name, email, order placeholder, logout button |
+| Route | Description |
+|---|---|
+| `src/app/entrar/page.tsx` | Login page — email/password form + Google sign-in option |
+| `src/app/cadastrar/page.tsx` | Register page — name, email, password form |
+| `src/app/conta/page.tsx` | User account — shows name, email, order placeholder, logout button |
 
 All auth pages are `"use client"` components. Use `signInWithEmailAndPassword`, `createUserWithEmailAndPassword`, `signInWithPopup` with `GoogleAuthProvider`, and `signOut` from `firebase/auth`.
 
@@ -95,7 +92,6 @@ Redirect to `/conta` after successful login/register. Redirect to `/entrar` from
 ### 5. Header Updates
 
 Update `src/components/Header.tsx`:
-
 - Replace the static cart icon with a link to `/carrinho` that shows the item count badge from `useCart()`
 - Add user icon: if authenticated, links to `/conta`; if not, links to `/entrar`
 

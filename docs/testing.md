@@ -6,13 +6,13 @@ This document describes the test suite for the Luratha frontend, how to run the 
 
 ## Test Stack
 
-| Tool                                                                                   | Role                                            |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| [Vitest](https://vitest.dev/)                                                          | Unit and integration test runner                |
-| [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) | Component rendering and assertions              |
-| [@testing-library/jest-dom](https://github.com/testing-library/jest-dom)               | Custom DOM matchers (`toBeInTheDocument`, etc.) |
-| [@testing-library/user-event](https://github.com/testing-library/user-event)           | Simulating real user interactions               |
-| [Playwright](https://playwright.dev/)                                                  | End-to-End (E2E) browser tests                  |
+| Tool | Role |
+|---|---|
+| [Vitest](https://vitest.dev/) | Unit and integration test runner |
+| [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) | Component rendering and assertions |
+| [@testing-library/jest-dom](https://github.com/testing-library/jest-dom) | Custom DOM matchers (`toBeInTheDocument`, etc.) |
+| [@testing-library/user-event](https://github.com/testing-library/user-event) | Simulating real user interactions |
+| [Playwright](https://playwright.dev/) | End-to-End (E2E) browser tests |
 
 ---
 
@@ -106,7 +106,6 @@ npx playwright test --headed
 HTML reports are saved to `playwright-report/`. Run `npx playwright show-report` to open them.
 
 > **Note:** On CI, Playwright browsers must be installed first:
->
 > ```bash
 > npx playwright install --with-deps chromium
 > ```
@@ -192,15 +191,15 @@ The `baseURL` is set to `http://localhost:3000` in `playwright.config.ts`, so yo
 
 ## When to Write Tests
 
-| Scenario                           | Test type                               |
-| ---------------------------------- | --------------------------------------- |
-| New utility function or constant   | Unit test                               |
-| New React component                | Unit test (render, props, states)       |
+| Scenario | Test type |
+|---|---|
+| New utility function or constant | Unit test |
+| New React component | Unit test (render, props, states) |
 | Component with complex state logic | Integration test (interactions, events) |
-| New page or route                  | E2E test                                |
-| Navigation flows                   | E2E test                                |
-| Form submission                    | Integration + E2E test                  |
-| Authentication flow                | E2E test                                |
+| New page or route | E2E test |
+| Navigation flows | E2E test |
+| Form submission | Integration + E2E test |
+| Authentication flow | E2E test |
 
 ---
 
