@@ -51,6 +51,16 @@ describe("PoliticaDePrivacidadePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the last-updated date as a <time> with ISO dateTime", async () => {
+    getSettingsMock.mockResolvedValueOnce({ company: EMPTY_COMPANY });
+
+    const { container } = render(await PoliticaDePrivacidadePage());
+
+    const time = container.querySelector("time");
+    expect(time).toHaveTextContent("3 de junho de 2026");
+    expect(time).toHaveAttribute("datetime", "2026-06-03");
+  });
+
   it("shows the configured DPO and legal name when company data is filled", async () => {
     getSettingsMock.mockResolvedValueOnce({
       company: {

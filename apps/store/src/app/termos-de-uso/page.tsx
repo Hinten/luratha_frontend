@@ -168,7 +168,9 @@ export default async function TermosDeUsoPage() {
             As condições para usar a loja Luratha e realizar suas compras com segurança e
             transparência.
           </p>
-          <p className={styles.updatedAt}>Última atualização: {LAST_UPDATED_LABEL}</p>
+          <p className={styles.updatedAt}>
+            Última atualização: <time dateTime={LAST_UPDATED_ISO}>{LAST_UPDATED_LABEL}</time>
+          </p>
         </div>
 
         <div className={styles.sections}>

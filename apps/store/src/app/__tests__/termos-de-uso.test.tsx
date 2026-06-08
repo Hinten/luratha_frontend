@@ -49,6 +49,16 @@ describe("TermosDeUsoPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the last-updated date as a <time> with ISO dateTime", async () => {
+    getSettingsMock.mockResolvedValueOnce({ company: EMPTY_COMPANY });
+
+    const { container } = render(await TermosDeUsoPage());
+
+    const time = container.querySelector("time");
+    expect(time).toHaveTextContent("3 de junho de 2026");
+    expect(time).toHaveAttribute("datetime", "2026-06-03");
+  });
+
   it("shows the configured legal name, CNPJ and jurisdiction when filled", async () => {
     getSettingsMock.mockResolvedValueOnce({
       company: {

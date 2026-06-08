@@ -172,7 +172,9 @@ export default async function PoliticaDePrivacidadePage() {
             Sua privacidade importa. Saiba como tratamos seus dados pessoais em conformidade com a
             LGPD (Lei nº 13.709/2018).
           </p>
-          <p className={styles.updatedAt}>Última atualização: {LAST_UPDATED_LABEL}</p>
+          <p className={styles.updatedAt}>
+            Última atualização: <time dateTime={LAST_UPDATED_ISO}>{LAST_UPDATED_LABEL}</time>
+          </p>
         </div>
 
         <div className={styles.sections}>
