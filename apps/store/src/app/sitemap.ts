@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const categories = await getCachedCategories();
   const categoryRoutes = categories.map(({ slug }) => ({
-    path: `/colecao/${slug}`,
+    path: `/categoria/${slug}`,
     priority: 0.8 as const,
     changeFrequency: "weekly" as const,
   }));

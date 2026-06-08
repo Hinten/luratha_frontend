@@ -18,7 +18,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "e2e", "src/test/cloud/**", "src/test/cloud-functions/**"],
+    // `src/test/seo/**` is the dedicated SEO/AEO/GEO suite (vitest.seo.config.mts,
+    // `pnpm test:seo`) — exclude it here so it stays isolated from `pnpm test`.
+    exclude: [
+      "node_modules",
+      ".next",
+      "e2e",
+      "src/test/cloud/**",
+      "src/test/cloud-functions/**",
+      "src/test/seo/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
