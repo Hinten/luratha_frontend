@@ -4,12 +4,14 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import {
+  confirmPasswordReset as fbConfirmPasswordReset,
   createUserWithEmailAndPassword,
   onIdTokenChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
+  verifyPasswordResetCode as fbVerifyPasswordResetCode,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { getClientAuth } from "@luratha/firestore/firebaseClient";
@@ -31,6 +33,8 @@ interface AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  verifyPasswordResetCode: (oobCode: string) => Promise<string>;
+  confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -60,6 +64,12 @@ function mapFirebaseError(err: unknown): AuthClientError | null {
       return new AuthClientError("Este e-mail já está em uso.");
     case "auth/weak-password":
       return new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
+    case "auth/expired-action-code":
+      return new AuthClientError("O link de redefinição expirou. Solicite um novo.");
+    case "auth/invalid-action-code":
+      return new AuthClientError("Link inválido ou já utilizado. Solicite um novo.");
+    case "auth/user-disabled":
+      return new AuthClientError("Esta conta foi desativada.");
     case "auth/too-many-requests":
       return new AuthClientError("Muitas tentativas. Tente novamente em alguns minutos.");
     case "auth/network-request-failed":
@@ -289,7 +299,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
     try {
       const auth = getClientAuth();
+      // Localiza o template padrão do Firebase para PT-BR (o conteúdo/tom do
+      // email é customizado no Firebase Console — o SDK só controla o idioma).
+      auth.languageCode = "pt-BR";
       await sendPasswordResetEmail(auth, email.trim());
+    } catch (err) {
+      const mapped = mapFirebaseError(err);
+      throw mapped ?? err;
+    }
+  }, []);
+
+  const verifyPasswordResetCode = useCallback(async (oobCode: string) => {
+    if (!oobCode) throw new AuthClientError("Link inválido ou expirado.");
+    try {
+      const auth = getClientAuth();
+      return await fbVerifyPasswordResetCode(auth, oobCode);
+    } catch (err) {
+      const mapped = mapFirebaseError(err);
+      throw mapped ?? err;
+    }
+  }, []);
+
+  const confirmPasswordReset = useCallback(async (oobCode: string, newPassword: string) => {
+    if (!oobCode) throw new AuthClientError("Link inválido ou expirado.");
+    if (newPassword.length < 6) {
+      throw new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
+    }
+    try {
+      const auth = getClientAuth();
+      await fbConfirmPasswordReset(auth, oobCode, newPassword);
     } catch (err) {
       const mapped = mapFirebaseError(err);
       throw mapped ?? err;
@@ -306,6 +344,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         sendPasswordReset,
+        verifyPasswordResetCode,
+        confirmPasswordReset,
       }}
     >
       {children}

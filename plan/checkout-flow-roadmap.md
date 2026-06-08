@@ -137,12 +137,19 @@ Helpers do MercadoPago (browser): `src/lib/mercadopago/{loadSdk,cardForm}.ts` �
 - **Reset de senha** entregue junto: página `/esqueci-senha` chamando `sendPasswordResetEmail` do Firebase SDK (sem endpoint server-side).
 - **APIs endurecidas**: `/api/orders`, `/api/users/*`, `/api/users/[id]/addresses/*` agora retornam 401 sem cookie e 403 quando uid do token não bate. POST `/api/orders` também valida `body.userId === token.uid`.
 
+#### Resolvido (issue #88 — página de redefinição)
+
+- **Página de redefinição custom `/recuperar-senha`**: handler do link do email (`?mode=resetPassword&oobCode=...`) com form de nova senha via `verifyPasswordResetCode` + `confirmPasswordReset` (no `AuthContext`), em vez da página hospedada do Firebase. `/esqueci-senha` segue como a página de solicitação.
+- **Email de reset em PT-BR**: `sendPasswordReset` agora define `auth.languageCode = "pt-BR"` antes de enviar → o Firebase usa o template localizado em português. O conteúdo/tom da marca **não é editável via SDK** (nem client nem Admin SDK expõem templates de email) — é passo manual no Console.
+- **Pré-requisitos de deploy (manuais no Firebase Console)**: (1) Authentication → Templates → "Password reset" → *Customize action URL* → `https://www.luratha.com.br/recuperar-senha` (sem isso o link cai na página hospedada e `/recuperar-senha` nunca recebe o `oobCode`); (2) editar o assunto/corpo do template com o tom da Luratha (opcional).
+- **SEO**: `/recuperar-senha` entra no `robots disallow` (página transacional por token de uso único, como `/conta`/`/checkout`); fora do `sitemap`.
+
 ---
 
 ## Fase 2 (após fase 1) — fora do escopo desta task
 
 - Wishlist (`/favoritos` + schema novo `wishlists` + `/api/wishlist`)
-- Reset de senha (`/recuperar-senha`) via `sendPasswordResetEmail` do Firebase Auth
+- ~~Reset de senha (`/recuperar-senha`)~~ ✅ entregue na issue #88 (página de redefinição custom + email PT-BR via SDK)
 - Submissão de review (UI já tem `ReviewsList`; falta form + `POST /api/reviews`)
 - `/conta/cupons` (lista cupons disponíveis)
 

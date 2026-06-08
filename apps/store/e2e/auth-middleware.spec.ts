@@ -71,4 +71,14 @@ test.describe("Auth middleware", () => {
     await page.getByRole("button", { name: /Enviar link/i }).click();
     await expect(page.getByRole("status")).toBeVisible();
   });
+
+  test("/recuperar-senha without an oobCode shows the invalid-link state", async ({ page }) => {
+    await page.goto("/recuperar-senha");
+    await expect(page.getByRole("heading", { name: "Redefinir senha" })).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText(/Link inválido ou expirado/);
+    await expect(page.getByRole("link", { name: "Solicitar novo link" })).toHaveAttribute(
+      "href",
+      "/esqueci-senha",
+    );
+  });
 });
