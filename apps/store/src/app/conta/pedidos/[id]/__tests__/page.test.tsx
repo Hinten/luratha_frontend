@@ -11,6 +11,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// O ReorderButton (no estado expirado) usa useCart() e useRouter() — sem
+// CartProvider/router no teste, mockamos ambos para isolar a página.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("@/src/contexts/CartContext", () => ({
+  useCart: () => ({ addItem: vi.fn() }),
+}));
+
 function baseOrder(overrides: Partial<Order> = {}): Order {
   const now = new Date().toISOString();
   return {
@@ -122,6 +132,21 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
       await screen.findByText(/código PIX deste pedido expirou ou não está mais disponível/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "QR Code para pagamento PIX" })).toBeNull();
+    // No estado expirado, o botão "Pedir novamente" deve aparecer.
+    expect(screen.getByRole("button", { name: "Pedir novamente" })).toBeInTheDocument();
+  });
+
+  it("não exibe o botão 'Pedir novamente' quando o pagamento foi confirmado", async () => {
+    stubFetch(
+      baseOrder({
+        status: "paid",
+        paymentStatus: "paid",
+        paymentPix: { qrCode: "00020126-PIX", qrCodeBase64: "BASE64DATA" },
+      }),
+    );
+    await renderPage();
+    await screen.findByText("Pedido #ORD-12345678");
+    expect(screen.queryByRole("button", { name: "Pedir novamente" })).toBeNull();
   });
 
   it("mostra aviso quando o pedido PIX está pendente mas sem QR salvo", async () => {
@@ -166,6 +191,7 @@ describe("PedidoDetailPage — reexibição de pagamento", () => {
     expect(
       await screen.findByText(/boleto deste pedido expirou ou não está mais disponível/),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pedir novamente" })).toBeInTheDocument();
   });
 
   it("exibe o badge da forma de pagamento escolhida no pedido", async () => {
