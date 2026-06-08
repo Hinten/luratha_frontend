@@ -1,7 +1,12 @@
 import path from "node:path";
 
-/** Double-quote a path for safe shell interpolation. */
-const quote = (p) => `"${p}"`;
+/**
+ * POSIX single-quote a string so the shell treats it as a literal — safe for
+ * spaces, `$`, backticks, double quotes, and embedded single quotes (escaped as
+ * `'\''`). Applied to both the filenames AND the whole inner command, so the
+ * nested `sh -c '<inner>'` round-trips through lint-staged's argv parser intact.
+ */
+const sq = (s) => `'${s.replace(/'/g, "'\\''")}'`;
 
 /**
  * lint-staged config for the pnpm + Turborepo monorepo.
@@ -29,13 +34,12 @@ export default {
     }
     const commands = [];
     for (const [workspace, workspaceFiles] of byWorkspace) {
-      commands.push(
-        `sh -c 'cd ${workspace} && eslint --fix --max-warnings 0 ${workspaceFiles
-          .map(quote)
-          .join(" ")}'`,
-      );
+      const inner = `cd ${sq(workspace)} && eslint --fix --max-warnings 0 ${workspaceFiles
+        .map(sq)
+        .join(" ")}`;
+      commands.push(`sh -c ${sq(inner)}`);
     }
-    commands.push(`prettier --write ${files.map(quote).join(" ")}`);
+    commands.push(`prettier --write ${files.map(sq).join(" ")}`);
     return commands;
   },
   "functions/**/*.{ts,js}": "prettier --write",

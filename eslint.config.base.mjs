@@ -89,7 +89,9 @@ export default defineConfig([
     // Type-aware pass over package sources (the files in each package's
     // tsconfig `include`). `projectService` auto-discovers the nearest
     // tsconfig per file, so this works through the re-export in each package.
-    files: ["src/**/*.ts"],
+    // Glob mirrors the apps (`.ts`/`.tsx`/`.mts`) so async correctness rules
+    // cover every source flavor, not just `.ts`.
+    files: ["src/**/*.{ts,tsx,mts}"],
     plugins: {
       "@typescript-eslint": tseslint.plugin,
     },
