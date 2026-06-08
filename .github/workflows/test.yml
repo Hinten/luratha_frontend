@@ -31,6 +31,31 @@ jobs:
       - name: Prettier format check
         run: pnpm run format:check
 
+  duplication:
+    name: Code duplication (jscpd — report only)
+    runs-on: ubuntu-latest
+    # Informative only — never blocks the PR. `.jscpd.json` sets no threshold,
+    # so jscpd always exits 0; `continue-on-error` is belt-and-suspenders. Runs
+    # independently (no `needs`) so it never gates other jobs.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run jscpd
+        run: pnpm run dupcheck
+      - name: Upload duplication report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jscpd-report
+          path: report/jscpd
+          retention-days: 7
+
   unit:
     name: Unit / component (Vitest jsdom)
     runs-on: ubuntu-latest

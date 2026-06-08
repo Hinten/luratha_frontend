@@ -20,6 +20,9 @@ blob-report/
 # turborepo
 .turbo
 
+# jscpd duplication report
+report/
+
 # next.js
 .next/
 out/
