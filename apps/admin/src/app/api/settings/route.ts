@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
-import {
-  getSiteSettings,
-  setSiteSettings,
-} from "@luratha/repositories/siteSettingsRepository";
+import { getSiteSettings, setSiteSettings } from "@luratha/repositories/siteSettingsRepository";
 
 export const runtime = "nodejs";
 
@@ -31,10 +28,7 @@ export async function PATCH(request: Request) {
     throw err;
   }
   if (!user.isAdmin) {
-    return NextResponse.json(
-      { message: "Acesso restrito a administradores." },
-      { status: 403 },
-    );
+    return NextResponse.json({ message: "Acesso restrito a administradores." }, { status: 403 });
   }
 
   let body: unknown;
@@ -50,10 +44,7 @@ export async function PATCH(request: Request) {
     throw err;
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return NextResponse.json(
-      { message: "Corpo deve ser um objeto JSON." },
-      { status: 400 },
-    );
+    return NextResponse.json({ message: "Corpo deve ser um objeto JSON." }, { status: 400 });
   }
 
   const current = await getSiteSettings({ forceFresh: true });

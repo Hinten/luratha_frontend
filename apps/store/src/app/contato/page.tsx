@@ -11,8 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/contato` },
   openGraph: {
     title: "Fale Conosco – Luratha",
-    description:
-      "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
+    description: "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
     url: `${SITE_URL}/contato`,
     type: "website",
     images: [DEFAULT_OG_IMAGE],
@@ -23,8 +22,7 @@ const contactPageSchema = {
   "@context": "https://schema.org" as const,
   "@type": "ContactPage",
   name: "Fale Conosco – Luratha",
-  description:
-    "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
+  description: "Entre em contato com a Luratha pelo WhatsApp, telefone ou formulário.",
   url: `${SITE_URL}/contato`,
 };
 
@@ -67,8 +65,7 @@ export default function ContatoPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Fale Conosco</h1>
           <p className={styles.headerText}>
-            Estamos aqui para ajudar. Entre em contato pelos canais abaixo ou
-            preencha o formulário.
+            Estamos aqui para ajudar. Entre em contato pelos canais abaixo ou preencha o formulário.
           </p>
         </div>
 
@@ -97,10 +94,7 @@ export default function ContatoPage() {
             </a>
 
             {/* Phone */}
-            <a
-              href={`tel:${contactData.phoneTel}`}
-              className={styles.phoneBtn}
-            >
+            <a href={`tel:${contactData.phoneTel}`} className={styles.phoneBtn}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -188,5 +182,3 @@ export default function ContatoPage() {
     </div>
   );
 }
-
-

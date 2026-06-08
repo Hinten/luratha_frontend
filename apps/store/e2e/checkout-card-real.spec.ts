@@ -8,10 +8,7 @@ import {
   waitForCartHydrated,
   goToCheckoutViaCart,
 } from "./_cartHelpers";
-import {
-  clearUserAddresses,
-  clearPendingOrdersFor,
-} from "./_userStateHelpers";
+import { clearUserAddresses, clearPendingOrdersFor } from "./_userStateHelpers";
 
 /**
  * Checkout cartão — fluxo end-to-end SEM mocks.
@@ -123,9 +120,7 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     await clearPendingOrdersFor(uid);
   });
 
-  test("fluxo completo: address + frete + order + cartão APRO", async ({
-    page,
-  }) => {
+  test("fluxo completo: address + frete + order + cartão APRO", async ({ page }) => {
     if (!uid) throw new Error("uid não capturado no beforeEach");
 
     await seedFixtureCart(uid);
@@ -140,9 +135,7 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
 
     // Step 2 — Endereço novo via UI. User sem endereços → form em vez de
     // lista. Sem auto-fill por CEP no AddressForm, preenchemos tudo manual.
-    await expect(
-      page.getByRole("heading", { name: /Para onde enviamos/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Para onde enviamos/i })).toBeVisible();
     await page.getByLabel("Nome do destinatário").fill("MP Test User");
     await page.getByLabel("CEP").fill("01310100");
     await page.getByLabel("UF").selectOption("SP");
@@ -160,9 +153,7 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     // Step 3 — Frete real (provider Melhor Envio). Quotes chegam via
     // /api/checkout/shipping. Aguardamos pelo menos uma opção renderizar e
     // clicamos Continuar (a primeira é checked por default).
-    await expect(
-      page.getByRole("heading", { name: /Como você quer receber/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Como você quer receber/i })).toBeVisible();
     await expect(page.getByRole("radiogroup", { name: /frete/i })).toBeVisible({
       timeout: 30_000,
     });
@@ -173,26 +164,21 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     // (não cria Order). A Order só é criada no submit do Brick (Step 5):
     // `confirmOrder()` em CheckoutFlow.tsx:339-413 faz POST /api/orders
     // DEPOIS do tokenize, sequencialmente com POST /api/checkout/payment-intent.
-    await expect(
-      page.getByRole("heading", { name: /Revise antes de pagar/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Revise antes de pagar/i })).toBeVisible();
     await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
     await page.waitForURL(/[?&]step=payment/, { timeout: 10_000 });
 
     // Step 5 — Pagamento. Tab Cartão → Brick real.
     await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
     await page.getByRole("tab", { name: "Cartão" }).click();
-    await expect(
-      page.getByText(/Carregando ambiente seguro/i),
-    ).toBeHidden({ timeout: 30_000 });
+    await expect(page.getByText(/Carregando ambiente seguro/i)).toBeHidden({ timeout: 30_000 });
 
     // Preencher PAN dispara fetch async pra `installments?bin=...`. Brick
     // re-renderiza populando combobox de parcelas — esse re-render reseta
     // inputs externos preenchidos antes (cardholder, doc). Aguardamos o
     // settle ANTES de preencher os demais.
     const installmentsLoaded = page.waitForResponse(
-      (res) =>
-        res.url().includes("/payment_methods/installments") && res.status() === 200,
+      (res) => res.url().includes("/payment_methods/installments") && res.status() === 200,
       { timeout: 15_000 },
     );
     await page
@@ -233,9 +219,7 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     // Captura o orderId da response do POST /api/orders pra asserir Firestore
     // depois. Configurar `waitForResponse` ANTES do click pra não perder.
     const orderResponse = page.waitForResponse(
-      (res) =>
-        res.url().endsWith("/api/orders") &&
-        res.request().method() === "POST",
+      (res) => res.url().endsWith("/api/orders") && res.request().method() === "POST",
       { timeout: 30_000 },
     );
     await page.getByRole("button", { name: /Pagar/i }).click();
@@ -247,18 +231,12 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     expect(orderId).toMatch(/.+/);
     console.log(`[order] criado: ${orderId}`);
 
-    await expect(page).toHaveURL(
-      new RegExp(`/checkout/sucesso/${orderId}`),
-      { timeout: 60_000 },
-    );
+    await expect(page).toHaveURL(new RegExp(`/checkout/sucesso/${orderId}`), { timeout: 60_000 });
 
     // Asserções no Firestore: Order ficou com paymentStatus=paid +
     // paymentIntentId setado (server persistiu via `createPaymentIntent`
     // service após o adapter MP).
-    const orderDoc = await adminDb
-      .collection(firestoreCollections.orders)
-      .doc(orderId)
-      .get();
+    const orderDoc = await adminDb.collection(firestoreCollections.orders).doc(orderId).get();
     expect(orderDoc.exists).toBe(true);
     const order = orderDoc.data();
     expect(order?.paymentStatus).toBe("paid");
@@ -271,10 +249,7 @@ test.describe("Checkout — cartão real (end-to-end sem mocks)", () => {
     );
 
     // Cart limpo pelo CheckoutFlow.clearCart() pós-sucesso.
-    const cartDoc = await adminDb
-      .collection(firestoreCollections.carts)
-      .doc(uid)
-      .get();
+    const cartDoc = await adminDb.collection(firestoreCollections.carts).doc(uid).get();
     expect(cartDoc.exists).toBe(false);
   });
 });

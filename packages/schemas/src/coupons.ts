@@ -8,7 +8,12 @@ import {
 export const couponSchema = z
   .object({
     id: nonEmptyStringSchema,
-    code: z.string().trim().min(3).max(32).transform((value) => value.toUpperCase()),
+    code: z
+      .string()
+      .trim()
+      .min(3)
+      .max(32)
+      .transform((value) => value.toUpperCase()),
     type: z.enum(["percentage", "fixed"]),
     amount: z.number().gt(0),
     maxDiscountAmount: z.number().gt(0).optional(),

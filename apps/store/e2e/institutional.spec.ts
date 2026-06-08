@@ -4,9 +4,7 @@ test.describe("Institutional Pages", () => {
   test("/sobre renders heading, brand values and manifesto", async ({ page }) => {
     await page.goto("/sobre");
     await expect(page).toHaveTitle(/Luratha/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: /Nossa História/i })
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Nossa História/i })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Artesanal" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Versátil" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Sustentável" })).toBeVisible();
@@ -16,9 +14,7 @@ test.describe("Institutional Pages", () => {
   test("/contato renders heading, WhatsApp link and contact form", async ({ page }) => {
     await page.goto("/contato");
     await expect(page).toHaveTitle(/Luratha/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: /Fale Conosco/i })
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Fale Conosco/i })).toBeVisible();
 
     const waLink = page.getByRole("link", { name: /WhatsApp/i }).first();
     await expect(waLink).toBeVisible();
@@ -27,16 +23,14 @@ test.describe("Institutional Pages", () => {
     await expect(page.getByLabel("Nome")).toBeVisible();
     await expect(page.getByLabel("E-mail")).toBeVisible();
     await expect(page.getByLabel("Mensagem")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Enviar mensagem" })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enviar mensagem" })).toBeVisible();
   });
 
   test("/politica-de-trocas renders heading and policy sections", async ({ page }) => {
     await page.goto("/politica-de-trocas");
     await expect(page).toHaveTitle(/Luratha/);
     await expect(
-      page.getByRole("heading", { level: 1, name: /Política de Trocas/i })
+      page.getByRole("heading", { level: 1, name: /Política de Trocas/i }),
     ).toBeVisible();
     await expect(page.getByText("Prazo para Troca ou Devolução")).toBeVisible();
     await expect(page.getByText("Condições para Troca")).toBeVisible();
@@ -46,7 +40,7 @@ test.describe("Institutional Pages", () => {
     await page.goto("/referencia-de-medidas");
     await expect(page).toHaveTitle(/Luratha/);
     await expect(
-      page.getByRole("heading", { level: 1, name: /Referência de Medidas/i })
+      page.getByRole("heading", { level: 1, name: /Referência de Medidas/i }),
     ).toBeVisible();
 
     await expect(page.getByRole("columnheader", { name: "Tamanho" })).toBeVisible();

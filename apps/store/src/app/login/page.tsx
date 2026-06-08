@@ -50,9 +50,7 @@ function LoginForm() {
       <div className={`container-luratha ${styles.inner}`}>
         <div className={styles.card}>
           <h1 className={styles.heading}>Entrar</h1>
-          <p className={styles.subheading}>
-            Bem-vinda de volta à Luratha ✨
-          </p>
+          <p className={styles.subheading}>Bem-vinda de volta à Luratha ✨</p>
 
           {error && (
             <p role="alert" className={styles.error}>

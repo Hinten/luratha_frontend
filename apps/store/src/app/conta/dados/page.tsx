@@ -80,7 +80,7 @@ export default function ContaDadosPage() {
       setLoading(false);
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -162,31 +162,72 @@ export default function ContaDadosPage() {
       <h2 className={styles.heading}>Meus dados</h2>
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
-        {error && <p role="alert" className={styles.error}>{error}</p>}
-        {success && <p role="status" className={styles.successBox}>Dados salvos.</p>}
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        )}
+        {success && (
+          <p role="status" className={styles.successBox}>
+            Dados salvos.
+          </p>
+        )}
 
         <fieldset className={styles.fieldset}>
           <legend className={styles.legend}>Contato</legend>
 
           <div className={styles.row}>
             <div className={styles.field}>
-              <label htmlFor="firstName" className={styles.label}>Nome</label>
-              <input id="firstName" className={styles.input} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+              <label htmlFor="firstName" className={styles.label}>
+                Nome
+              </label>
+              <input
+                id="firstName"
+                className={styles.input}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
             </div>
             <div className={styles.field}>
-              <label htmlFor="lastName" className={styles.label}>Sobrenome</label>
-              <input id="lastName" className={styles.input} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+              <label htmlFor="lastName" className={styles.label}>
+                Sobrenome
+              </label>
+              <input
+                id="lastName"
+                className={styles.input}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
             </div>
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="email" className={styles.label}>E-mail</label>
-            <input id="email" type="email" className={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <label htmlFor="email" className={styles.label}>
+              E-mail
+            </label>
+            <input
+              id="email"
+              type="email"
+              className={styles.input}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="phone" className={styles.label}>Telefone (com DDD)</label>
-            <input id="phone" className={styles.input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+5511987654321" />
+            <label htmlFor="phone" className={styles.label}>
+              Telefone (com DDD)
+            </label>
+            <input
+              id="phone"
+              className={styles.input}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+5511987654321"
+            />
           </div>
         </fieldset>
 
@@ -194,7 +235,9 @@ export default function ContaDadosPage() {
           <legend className={styles.legend}>Dados fiscais (necessários para NF-e)</legend>
 
           <div className={styles.field}>
-            <label htmlFor="taxType" className={styles.label}>Tipo</label>
+            <label htmlFor="taxType" className={styles.label}>
+              Tipo
+            </label>
             <select
               id="taxType"
               className={styles.input}
@@ -211,17 +254,41 @@ export default function ContaDadosPage() {
           {taxType === "PF" && (
             <>
               <div className={styles.field}>
-                <label htmlFor="cpf" className={styles.label}>CPF</label>
-                <input id="cpf" className={styles.input} value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" required />
+                <label htmlFor="cpf" className={styles.label}>
+                  CPF
+                </label>
+                <input
+                  id="cpf"
+                  className={styles.input}
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                  placeholder="000.000.000-00"
+                  required
+                />
               </div>
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label htmlFor="rg" className={styles.label}>RG (opcional)</label>
-                  <input id="rg" className={styles.input} value={rg} onChange={(e) => setRg(e.target.value)} />
+                  <label htmlFor="rg" className={styles.label}>
+                    RG (opcional)
+                  </label>
+                  <input
+                    id="rg"
+                    className={styles.input}
+                    value={rg}
+                    onChange={(e) => setRg(e.target.value)}
+                  />
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="birthDate" className={styles.label}>Data de nascimento</label>
-                  <input id="birthDate" type="date" className={styles.input} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                  <label htmlFor="birthDate" className={styles.label}>
+                    Data de nascimento
+                  </label>
+                  <input
+                    id="birthDate"
+                    type="date"
+                    className={styles.input}
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                  />
                 </div>
               </div>
             </>
@@ -230,25 +297,65 @@ export default function ContaDadosPage() {
           {taxType === "PJ" && (
             <>
               <div className={styles.field}>
-                <label htmlFor="cnpj" className={styles.label}>CNPJ</label>
-                <input id="cnpj" className={styles.input} value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" required />
+                <label htmlFor="cnpj" className={styles.label}>
+                  CNPJ
+                </label>
+                <input
+                  id="cnpj"
+                  className={styles.input}
+                  value={cnpj}
+                  onChange={(e) => setCnpj(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                  required
+                />
               </div>
               <div className={styles.field}>
-                <label htmlFor="legalName" className={styles.label}>Razão social</label>
-                <input id="legalName" className={styles.input} value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
+                <label htmlFor="legalName" className={styles.label}>
+                  Razão social
+                </label>
+                <input
+                  id="legalName"
+                  className={styles.input}
+                  value={legalName}
+                  onChange={(e) => setLegalName(e.target.value)}
+                  required
+                />
               </div>
               <div className={styles.field}>
-                <label htmlFor="tradeName" className={styles.label}>Nome fantasia (opcional)</label>
-                <input id="tradeName" className={styles.input} value={tradeName} onChange={(e) => setTradeName(e.target.value)} />
+                <label htmlFor="tradeName" className={styles.label}>
+                  Nome fantasia (opcional)
+                </label>
+                <input
+                  id="tradeName"
+                  className={styles.input}
+                  value={tradeName}
+                  onChange={(e) => setTradeName(e.target.value)}
+                />
               </div>
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label htmlFor="ie" className={styles.label}>Inscrição Estadual</label>
-                  <input id="ie" className={styles.input} value={stateRegistration} onChange={(e) => setStateRegistration(e.target.value)} placeholder="número, ISENTO ou NAO_CONTRIBUINTE" required />
+                  <label htmlFor="ie" className={styles.label}>
+                    Inscrição Estadual
+                  </label>
+                  <input
+                    id="ie"
+                    className={styles.input}
+                    value={stateRegistration}
+                    onChange={(e) => setStateRegistration(e.target.value)}
+                    placeholder="número, ISENTO ou NAO_CONTRIBUINTE"
+                    required
+                  />
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="im" className={styles.label}>Inscrição Municipal (opcional)</label>
-                  <input id="im" className={styles.input} value={municipalRegistration} onChange={(e) => setMunicipalRegistration(e.target.value)} />
+                  <label htmlFor="im" className={styles.label}>
+                    Inscrição Municipal (opcional)
+                  </label>
+                  <input
+                    id="im"
+                    className={styles.input}
+                    value={municipalRegistration}
+                    onChange={(e) => setMunicipalRegistration(e.target.value)}
+                  />
                 </div>
               </div>
             </>
@@ -257,12 +364,30 @@ export default function ContaDadosPage() {
           {taxType === "ESTRANGEIRO" && (
             <div className={styles.row}>
               <div className={styles.field}>
-                <label htmlFor="documentId" className={styles.label}>Número do documento</label>
-                <input id="documentId" className={styles.input} value={documentId} onChange={(e) => setDocumentId(e.target.value)} required />
+                <label htmlFor="documentId" className={styles.label}>
+                  Número do documento
+                </label>
+                <input
+                  id="documentId"
+                  className={styles.input}
+                  value={documentId}
+                  onChange={(e) => setDocumentId(e.target.value)}
+                  required
+                />
               </div>
               <div className={styles.field}>
-                <label htmlFor="documentCountry" className={styles.label}>País emissor (código ISO)</label>
-                <input id="documentCountry" className={styles.input} value={documentCountry} onChange={(e) => setDocumentCountry(e.target.value.toUpperCase())} maxLength={2} placeholder="US" required />
+                <label htmlFor="documentCountry" className={styles.label}>
+                  País emissor (código ISO)
+                </label>
+                <input
+                  id="documentCountry"
+                  className={styles.input}
+                  value={documentCountry}
+                  onChange={(e) => setDocumentCountry(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  placeholder="US"
+                  required
+                />
               </div>
             </div>
           )}

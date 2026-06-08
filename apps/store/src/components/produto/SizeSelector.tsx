@@ -5,11 +5,7 @@ import ImageWithFallback from "@/src/components/ImageWithFallback";
 import styles from "./SizeSelector.module.css";
 import AddToCartButton from "./AddToCartButton";
 import type { CartItemInput } from "@/src/contexts/CartContext";
-import type {
-  Product as FirestoreProduct,
-  ProductVariant,
-  Stock,
-} from "@luratha/schemas";
+import type { Product as FirestoreProduct, ProductVariant, Stock } from "@luratha/schemas";
 
 interface SizeSelectorProps {
   product: FirestoreProduct;
@@ -32,19 +28,15 @@ function buildVariantLabel(
   if (selectedSize) parts.push(selectedSize);
   if (parts.length > 0) return parts.join(" / ");
   if (variant) {
-    const fallback = [
-      variant.color?.[0] ?? null,
-      variant.size?.[0] ?? null,
-    ].filter((entry): entry is string => Boolean(entry));
+    const fallback = [variant.color?.[0] ?? null, variant.size?.[0] ?? null].filter(
+      (entry): entry is string => Boolean(entry),
+    );
     if (fallback.length > 0) return fallback.join(" / ");
   }
   return undefined;
 }
 
-function resolvePhotoId(
-  product: FirestoreProduct,
-  variant: ProductVariant | null,
-): string | null {
+function resolvePhotoId(product: FirestoreProduct, variant: ProductVariant | null): string | null {
   if (variant && variant.photoIds.length > 0) return variant.photoIds[0];
   return product.photoAssets[0]?.id ?? null;
 }
@@ -61,11 +53,7 @@ function extractUniqueSizes(product: FirestoreProduct): string[] {
   return Array.from(new Set([...productSizes, ...variantSizes]));
 }
 
-function findMatchingVariant(
-  product: FirestoreProduct,
-  color: string | null,
-  size: string | null,
-) {
+function findMatchingVariant(product: FirestoreProduct, color: string | null, size: string | null) {
   if (!product.variants) return null;
   return (
     product.variants.find((v) => {
@@ -93,8 +81,7 @@ function getColorSwatchUrl(product: FirestoreProduct, color: string): string | n
   const asset = product.photoAssets.find((candidate) => candidate.id === photoId);
   if (!asset) return null;
 
-  const resolution =
-    asset.resolutions.swatch ?? asset.resolutions.card ?? asset.resolutions.mobile;
+  const resolution = asset.resolutions.swatch ?? asset.resolutions.card ?? asset.resolutions.mobile;
   return resolution.downloadUrl;
 }
 
@@ -177,12 +164,18 @@ export default function SizeSelector({
   const [favorited, setFavorited] = useState(false);
 
   const hasVariants = (product.variants?.length ?? 0) > 0;
-  const currentQty = getCurrentQty(product, stock, selectedColor, selectedSize, hasColors, hasSizes);
+  const currentQty = getCurrentQty(
+    product,
+    stock,
+    selectedColor,
+    selectedSize,
+    hasColors,
+    hasSizes,
+  );
   const totalStock = stock?.quantity ?? product.totalStock;
 
   const selectionComplete =
-    (hasColors ? selectedColor !== null : true) &&
-    (hasSizes ? selectedSize !== null : true);
+    (hasColors ? selectedColor !== null : true) && (hasSizes ? selectedSize !== null : true);
 
   const matchedVariant = useMemo(
     () => findMatchingVariant(product, selectedColor, selectedSize),
@@ -193,8 +186,7 @@ export default function SizeSelector({
   // real variant. Combos that don't exist (no matching variant) must stay
   // non-addable even when the stock doc is missing or has `hasVariants: false`
   // — otherwise the cart item carries no variantId and the add is rejected.
-  const variantSelectionUnavailable =
-    hasVariants && selectionComplete && matchedVariant === null;
+  const variantSelectionUnavailable = hasVariants && selectionComplete && matchedVariant === null;
 
   const isOutOfStock =
     variantSelectionUnavailable ||
@@ -203,8 +195,7 @@ export default function SizeSelector({
       : totalStock === 0);
 
   // For simple products without variants, fall back to product.totalStock
-  const stockQtyForDisplay =
-    currentQty ?? ((!hasColors && !hasSizes) ? totalStock : null);
+  const stockQtyForDisplay = currentQty ?? (!hasColors && !hasSizes ? totalStock : null);
 
   const urgency =
     stockQtyForDisplay !== null && stockQtyForDisplay > 0
@@ -238,16 +229,7 @@ export default function SizeSelector({
       currency: "BRL",
       quantity: 1,
     };
-  }, [
-    imageUrl,
-    matchedVariant,
-    price,
-    product,
-    productId,
-    selectedColor,
-    selectedSize,
-    slug,
-  ]);
+  }, [imageUrl, matchedVariant, price, product, productId, selectedColor, selectedSize, slug]);
 
   const canAddToCart = cartItemInput !== null;
 
@@ -268,8 +250,14 @@ export default function SizeSelector({
 
   function handleBeforeAdd(): boolean {
     let valid = true;
-    if (hasColors && !selectedColor) { setColorError(true); valid = false; }
-    if (hasSizes && !selectedSize) { setSizeError(true); valid = false; }
+    if (hasColors && !selectedColor) {
+      setColorError(true);
+      valid = false;
+    }
+    if (hasSizes && !selectedSize) {
+      setSizeError(true);
+      valid = false;
+    }
     return valid;
   }
 

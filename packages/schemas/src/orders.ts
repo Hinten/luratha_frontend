@@ -75,7 +75,11 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
  * que pressupõe pagamento prévio. Usado pra preservar o carrinho e pra reconhecer
  * uma falha real quando o MP não devolve o artefato (PIX/boleto).
  */
-export const PAYMENT_FAILURE_STATUSES = ["failed", "cancelled", "rejected"] as const satisfies readonly PaymentStatus[];
+export const PAYMENT_FAILURE_STATUSES = [
+  "failed",
+  "cancelled",
+  "rejected",
+] as const satisfies readonly PaymentStatus[];
 
 /**
  * Estados terminais sem artefato a gerar e que não avançam sozinhos — o polling
@@ -156,7 +160,10 @@ export const orderSchema = z
   .object({
     id: nonEmptyStringSchema,
     userId: uidSchema,
-    orderNumber: z.string().trim().regex(/^[A-Z0-9-]{8,32}$/),
+    orderNumber: z
+      .string()
+      .trim()
+      .regex(/^[A-Z0-9-]{8,32}$/),
     status: z.enum(ORDER_STATUSES),
     paymentMethod: z.enum(["pix", "credit_card", "boleto"]),
     paymentStatus: z.enum(PAYMENT_STATUSES),

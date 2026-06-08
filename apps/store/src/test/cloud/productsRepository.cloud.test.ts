@@ -25,7 +25,11 @@ import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/ap
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { adminApp, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
-import { DATABASE_NAME, getFirebaseProjectId, getFirebaseWebConfig } from "@luratha/firestore/environment";
+import {
+  DATABASE_NAME,
+  getFirebaseProjectId,
+  getFirebaseWebConfig,
+} from "@luratha/firestore/environment";
 import { createEmbeddingService } from "@luratha/core/embeddingService";
 import { createProductsRepository } from "@luratha/repositories/productsRepository";
 import {
@@ -50,7 +54,11 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
 }
 
 /** Minimal valid product data for seeding */
-function buildBaseProductData(prefix: string, skuToken: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function buildBaseProductData(
+  prefix: string,
+  skuToken: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   const now = new Date().toISOString();
   const id = `${prefix}-${randomUUID().slice(0, 8)}`;
   const sku = `SKU_${skuToken}_${id.slice(-6).toUpperCase()}`;
@@ -74,7 +82,15 @@ function buildBaseProductData(prefix: string, skuToken: string, overrides: Recor
     tags: [],
     materialTags: [],
     seasonalTags: [],
-    price: { price: 100, salePrice: null, priceMin: null, priceMax: null, currency: "BRL", startDate: null, endDate: null },
+    price: {
+      price: 100,
+      salePrice: null,
+      priceMin: null,
+      priceMax: null,
+      currency: "BRL",
+      startDate: null,
+      endDate: null,
+    },
     salePrice: null,
     condition: "new",
     adult: false,
@@ -218,10 +234,13 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
     const asset1 = buildImageAsset(id, "asset-001");
     const asset2 = buildImageAsset(id, "asset-002");
 
-    await adminDb.collection(firestoreCollections.products).doc(id).set({
-      ...productData,
-      photoAssets: [asset1, asset2],
-    });
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(id)
+      .set({
+        ...productData,
+        photoAssets: [asset1, asset2],
+      });
     seededDocs.push({ collection: firestoreCollections.products, id });
 
     const repo = createProductsRepository(db);
@@ -260,8 +279,8 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
 
   /**
    * 4. Register product with variants
-  * Creates a variable product with size variants and verifies the variants array
-  * is stored and retrieved with correct SKUs and active flags.
+   * Creates a variable product with size variants and verifies the variants array
+   * is stored and retrieved with correct SKUs and active flags.
    */
   it("registers product with variants: variant array is stored and retrieved", async () => {
     const baseData = buildBaseProductData(prefix, skuToken, { categoryId });
@@ -274,10 +293,13 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
       { id: `var-${randomUUID().slice(0, 8)}`, sku: `${parentSku}-G`, photoIds: [], active: false },
     ];
 
-    await adminDb.collection(firestoreCollections.products).doc(id).set({
-      ...baseData,
-      variants,
-    });
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(id)
+      .set({
+        ...baseData,
+        variants,
+      });
     seededDocs.push({ collection: firestoreCollections.products, id });
 
     const repo = createProductsRepository(db);
@@ -369,14 +391,13 @@ describeCloud("Product Registration + Vector Search (Cloud Firebase)", () => {
       },
     };
 
-    const searchRepo = createProductsSearchRepository(db, { embeddingService: failingEmbeddingService });
+    const searchRepo = createProductsSearchRepository(db, {
+      embeddingService: failingEmbeddingService,
+    });
     const searchOptions: SearchOptions = { useVectors: true };
 
     // Should not throw
-    const results = await searchRepo.search(
-      { categorySlug, limit: 10 },
-      searchOptions,
-    );
+    const results = await searchRepo.search({ categorySlug, limit: 10 }, searchOptions);
 
     expect(Array.isArray(results)).toBe(true);
   });

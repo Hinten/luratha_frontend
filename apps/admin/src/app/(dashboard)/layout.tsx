@@ -8,11 +8,7 @@ import styles from "./layout.module.css";
  * that a `__session` cookie exists; here (a Node server component) the cookie
  * is verified and the `admin` custom claim is enforced via `requireUser()`.
  */
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   let user;
   try {
     user = await requireUser();

@@ -1,8 +1,5 @@
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
-import {
-  adminCartConverter,
-  adminCartItemConverter,
-} from "@luratha/firestore/adminCartConverter";
+import { adminCartConverter, adminCartItemConverter } from "@luratha/firestore/adminCartConverter";
 import { firestoreCollections, type CartItem } from "@luratha/schemas";
 import { expect, type Page } from "@playwright/test";
 
@@ -72,9 +69,7 @@ export async function seedFixtureCart(uid: string): Promise<void> {
 
   const itemsCol = cartRef.collection(firestoreCollections.cartItems);
   await Promise.all(
-    items.map((item) =>
-      itemsCol.doc(item.id).withConverter(adminCartItemConverter).set(item),
-    ),
+    items.map((item) => itemsCol.doc(item.id).withConverter(adminCartItemConverter).set(item)),
   );
 }
 
@@ -117,4 +112,3 @@ export async function goToCheckoutViaCart(page: Page): Promise<void> {
   await finalizar.click();
   await expect(page).toHaveURL("/checkout", { timeout: 10_000 });
 }
-

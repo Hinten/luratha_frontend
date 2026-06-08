@@ -1,8 +1,5 @@
 import { pipelineSearchRequestSchema, vectorSearchRequestSchema } from "@luratha/schemas";
-import {
-  normalizeLimit,
-  normalizeOffset,
-} from "@luratha/core/firestoreQueryStrategies.utils";
+import { normalizeLimit, normalizeOffset } from "@luratha/core/firestoreQueryStrategies.utils";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "rating_desc";
 
@@ -22,12 +19,7 @@ interface CoreQueryPlan {
   collection: "products";
   where: Array<{
     field: string;
-    op:
-      | "=="
-      | ">="
-      | "<="
-      | "array-contains-any"
-      | "array-contains";
+    op: "==" | ">=" | "<=" | "array-contains-any" | "array-contains";
     value: string | number | string[];
   }>;
   orderBy: Array<{ field: string; direction: "asc" | "desc" }>;

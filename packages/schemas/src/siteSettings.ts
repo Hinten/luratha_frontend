@@ -47,7 +47,11 @@ export const freeShippingConfigSchema = z.object({
 
 export const fixedRateEntrySchema = z.object({
   /** UF do destino (sigla de 2 letras maiúsculas). */
-  state: z.string().trim().length(2).regex(/^[A-Z]{2}$/),
+  state: z
+    .string()
+    .trim()
+    .length(2)
+    .regex(/^[A-Z]{2}$/),
   /** Preço base do serviço (até `weightLimitKg`). */
   price: nonNegativeMoneySchema,
   /** Prazo estimado em dias úteis. */
@@ -93,9 +97,7 @@ export const shippingSettingsSchema = z.object({
     .default({ length: 20, width: 15, height: 5 }),
   /** TTL do cache em memória do servidor para cotações. */
   cacheTtlSeconds: z.number().int().min(0).max(86400).default(3600),
-  freeShipping: freeShippingConfigSchema.default(() =>
-    freeShippingConfigSchema.parse({}),
-  ),
+  freeShipping: freeShippingConfigSchema.default(() => freeShippingConfigSchema.parse({})),
   /** Configuração do fallback `fixed-rate`. Usado quando providerId === "fixed-rate"
    *  ou quando o provider externo falhar (degradação graceful). */
   fixedRate: fixedRateConfigSchema.default(() => fixedRateConfigSchema.parse({})),

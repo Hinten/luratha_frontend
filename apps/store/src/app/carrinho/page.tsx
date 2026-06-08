@@ -42,8 +42,7 @@ export default function CarrinhoPage() {
       : null;
   const cheapestKey = cheapest ? cartShippingQuoteKey(cheapest) : null;
   const eligibleForFreeShipping =
-    shipping.freeShippingThreshold !== null &&
-    totalPrice >= shipping.freeShippingThreshold;
+    shipping.freeShippingThreshold !== null && totalPrice >= shipping.freeShippingThreshold;
 
   const validKeys = new Set(shipping.quotes.map(cartShippingQuoteKey));
   const effectiveKey =
@@ -80,9 +79,7 @@ export default function CarrinhoPage() {
               🛍️
             </span>
             <p className={styles.emptyTitle}>Seu carrinho está vazio</p>
-            <p className={styles.emptyText}>
-              Explore nossas peças e adicione seus favoritos aqui.
-            </p>
+            <p className={styles.emptyText}>Explore nossas peças e adicione seus favoritos aqui.</p>
             <Link href="/todas-as-pecas" className={styles.emptyLink}>
               Ver Categorias
             </Link>
@@ -111,8 +108,7 @@ export default function CarrinhoPage() {
 
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>
-                  Subtotal ({totalItems}{" "}
-                  {totalItems === 1 ? "item" : "itens"})
+                  Subtotal ({totalItems} {totalItems === 1 ? "item" : "itens"})
                 </span>
                 <span>{formatBRL(totalPrice)}</span>
               </div>
@@ -239,17 +235,11 @@ function CartItemRow({ item, eager, onUpdateQuantity, onRemove }: CartItemRowPro
             {item.name}
           </Link>
         </p>
-        {item.variantLabel ? (
-          <p className={styles.itemMeta}>{item.variantLabel}</p>
-        ) : null}
+        {item.variantLabel ? <p className={styles.itemMeta}>{item.variantLabel}</p> : null}
         <p className={styles.itemPrice}>{formatBRL(item.unitPrice)}</p>
 
         <div className={styles.itemFooter}>
-          <div
-            className={styles.stepper}
-            role="group"
-            aria-label={`Quantidade de ${item.name}`}
-          >
+          <div className={styles.stepper} role="group" aria-label={`Quantidade de ${item.name}`}>
             <button
               type="button"
               className={styles.stepperBtn}

@@ -12,10 +12,7 @@ export const runtime = "nodejs";
  * Fetches the order identified by :id. Returns 404 when the order does not
  * exist, 200 with the order on success.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {
@@ -34,10 +31,7 @@ export async function GET(
   const snapshot = await orderRef.get();
 
   if (!snapshot.exists) {
-    return NextResponse.json(
-      { message: `Pedido com id "${id}" não encontrado.` },
-      { status: 404 },
-    );
+    return NextResponse.json({ message: `Pedido com id "${id}" não encontrado.` }, { status: 404 });
   }
 
   const order = snapshot.data()!;

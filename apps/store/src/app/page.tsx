@@ -15,8 +15,7 @@ export const metadata: Metadata = {
   alternates: { canonical: SITE_URL },
   openGraph: {
     title: "Luratha | Moda Artesanal Feminina",
-    description:
-      "Descubra peças slow fashion artesanais brasileiras feitas com amor para durar.",
+    description: "Descubra peças slow fashion artesanais brasileiras feitas com amor para durar.",
     url: SITE_URL,
     type: "website",
     images: [DEFAULT_OG_IMAGE],

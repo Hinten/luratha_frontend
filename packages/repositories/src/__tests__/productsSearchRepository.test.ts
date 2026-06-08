@@ -53,7 +53,11 @@ vi.mock("firebase/firestore", () => ({
   }),
   limit: vi.fn(() => ({ kind: "limit" })),
   getDocs: getDocsMock,
-  Timestamp: class { toDate() { return new Date(); } },
+  Timestamp: class {
+    toDate() {
+      return new Date();
+    }
+  },
   VectorValue: class {},
 }));
 
@@ -97,8 +101,10 @@ vi.mock("firebase/firestore/pipelines", () => {
   // `.toLower().regexMatch(...)`, `.descending()` and friends work.
   function makeExpression(kind: string, args: unknown[] = []): Record<string, unknown> {
     const expr: Record<string, unknown> = { kind, args };
-    const chained = (subKind: string) =>
-      (...subArgs: unknown[]) => makeExpression(`${kind}.${subKind}`, subArgs);
+    const chained =
+      (subKind: string) =>
+      (...subArgs: unknown[]) =>
+        makeExpression(`${kind}.${subKind}`, subArgs);
     for (const method of [
       "equal",
       "greaterThanOrEqual",
@@ -117,8 +123,10 @@ vi.mock("firebase/firestore/pipelines", () => {
     return expr;
   }
 
-  const expressionFactory = (kind: string) =>
-    (...args: unknown[]) => makeExpression(kind, args);
+  const expressionFactory =
+    (kind: string) =>
+    (...args: unknown[]) =>
+      makeExpression(kind, args);
 
   return {
     and: expressionFactory("and"),
@@ -339,13 +347,14 @@ describe("productsSearchRepository.search exact-match short-circuit", () => {
   });
 
   it("falls through to the regular pipeline search when exact match yields nothing", async () => {
-    const fallbackDoc = buildProductDocResult({ id: "prod_home_03", title: "Blusa Cropped Algodão" });
+    const fallbackDoc = buildProductDocResult({
+      id: "prod_home_03",
+      title: "Blusa Cropped Algodão",
+    });
     // First execute() = exact-match returns []; second execute() = pipeline search returns one product.
-    executeMock
-      .mockResolvedValueOnce({ results: [] })
-      .mockResolvedValueOnce({
-        results: [{ id: "prod_home_03", data: () => fallbackDoc }],
-      });
+    executeMock.mockResolvedValueOnce({ results: [] }).mockResolvedValueOnce({
+      results: [{ id: "prod_home_03", data: () => fallbackDoc }],
+    });
 
     const repo = createProductsSearchRepository(buildFirestoreStub());
     const results = await repo.search({ term: "blusa", limit: 24 });
@@ -388,9 +397,7 @@ describe("productsSearchRepository.search exact-match short-circuit", () => {
     executeMock.mockRejectedValueOnce(new Error("unexpected bug"));
 
     const repo = createProductsSearchRepository(buildFirestoreStub());
-    await expect(repo.search({ term: "blusa", limit: 24 })).rejects.toThrow(
-      "unexpected bug",
-    );
+    await expect(repo.search({ term: "blusa", limit: 24 })).rejects.toThrow("unexpected bug");
   });
 });
 

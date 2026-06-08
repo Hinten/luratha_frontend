@@ -74,9 +74,7 @@ describe("CartContext (guest mode)", () => {
   });
 
   it("throws if useCart is called outside CartProvider", () => {
-    expect(() => renderHook(() => useCart())).toThrow(
-      "useCart must be used within a CartProvider",
-    );
+    expect(() => renderHook(() => useCart())).toThrow("useCart must be used within a CartProvider");
   });
 
   it("addItem adds a new item with quantity 1", async () => {
@@ -262,9 +260,7 @@ describe("CartContext (guest mode)", () => {
     await act(async () => {
       // Repository requires moneySchema (gt 0); these should be silently rejected
       // by the validateCartItem call inside the guest builder.
-      await expect(
-        result.current.addItem({ ...baseItem, unitPrice: 0 }),
-      ).rejects.toBeDefined();
+      await expect(result.current.addItem({ ...baseItem, unitPrice: 0 })).rejects.toBeDefined();
     });
 
     expect(result.current.items).toHaveLength(0);
@@ -274,9 +270,7 @@ describe("CartContext (guest mode)", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     await act(async () => {
-      await expect(
-        result.current.addItem({ ...baseItem, unitPrice: -10 }),
-      ).rejects.toBeDefined();
+      await expect(result.current.addItem({ ...baseItem, unitPrice: -10 })).rejects.toBeDefined();
     });
 
     expect(result.current.items).toHaveLength(0);

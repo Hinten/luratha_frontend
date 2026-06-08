@@ -107,12 +107,7 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button
-            type="submit"
-            className={styles.submit}
-            disabled={loading}
-            aria-busy={loading}
-          >
+          <button type="submit" className={styles.submit} disabled={loading} aria-busy={loading}>
             {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>

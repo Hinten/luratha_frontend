@@ -38,7 +38,11 @@ vi.mock("@/src/components/home/DevSeedButton", () => ({
 
 // HeroBanner uses useEffect/useState — mock it to avoid timer issues in tests
 vi.mock("@/src/components/home/HeroBanner", () => ({
-  default: () => <section aria-label="Banner principal"><h1>Peças feitas com amor para durar</h1></section>,
+  default: () => (
+    <section aria-label="Banner principal">
+      <h1>Peças feitas com amor para durar</h1>
+    </section>
+  ),
 }));
 
 const mockCategories: Category[] = [
@@ -47,7 +51,12 @@ const mockCategories: Category[] = [
   validateCategory({ id: "calcas", name: "Calças", slug: "calcas" }),
 ];
 
-function createProduct(id: string, title: string, price: number, salePrice: number | null = null): Product {
+function createProduct(
+  id: string,
+  title: string,
+  price: number,
+  salePrice: number | null = null,
+): Product {
   const sku = `LURATHA_${id.replace(/[^A-Z0-9_]/g, "_").toUpperCase()}`;
   return validateProduct({
     id,

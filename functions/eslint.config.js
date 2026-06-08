@@ -1,23 +1,37 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const tsParser = require("@typescript-eslint/parser");
+const tseslint = require("typescript-eslint");
+const eslintConfigPrettier = require("eslint-config-prettier");
 
-module.exports = [
-  {
-    ignores: ["lib/**", "generated/**", "node_modules/**"],
-  },
+/**
+ * Flat ESLint config for the Cloud Functions project. Functions is a separate
+ * npm project (outside the pnpm workspace), so it can't import the shared
+ * `eslint.config.base.mjs` — but it now mirrors the same toolchain instead of
+ * the old `eslint-config-google` + legacy `.eslintrc.js` setup: ESLint 9 +
+ * `typescript-eslint` recommended, a type-aware pass for unhandled Promises,
+ * and formatting delegated to Prettier (the old `quotes`/`indent` rules were
+ * dropped). The workspace "no generic catches" policy is intentionally NOT
+ * applied here — the triggers have their own log-and-continue error semantics.
+ */
+module.exports = tseslint.config(
+  { ignores: ["lib/**", "generated/**", "node_modules/**"] },
+  ...tseslint.configs.recommended,
   {
     files: ["src/**/*.{js,ts}"],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
-        project: ["tsconfig.json", "tsconfig.dev.json"],
-        sourceType: "module",
-        ecmaVersion: "latest",
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
     rules: {
-      quotes: ["error", "double"],
-      indent: ["error", 2],
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
+      "@typescript-eslint/await-thenable": "error",
     },
   },
-];
+  // Prettier compatibility — must stay last.
+  eslintConfigPrettier,
+);

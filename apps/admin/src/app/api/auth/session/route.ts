@@ -50,19 +50,13 @@ export async function POST(request: Request) {
     decoded = await adminAuth.verifyIdToken(idToken, true);
   } catch (err) {
     if (err instanceof FirebaseAuthError) {
-      return NextResponse.json(
-        { message: "Token inválido ou expirado." },
-        { status: 401 },
-      );
+      return NextResponse.json({ message: "Token inválido ou expirado." }, { status: 401 });
     }
     throw err;
   }
 
   if (decoded.admin !== true) {
-    return NextResponse.json(
-      { message: "Acesso restrito a administradores." },
-      { status: 403 },
-    );
+    return NextResponse.json({ message: "Acesso restrito a administradores." }, { status: 403 });
   }
 
   let sessionCookie: string;
@@ -72,10 +66,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     if (err instanceof FirebaseAuthError) {
-      return NextResponse.json(
-        { message: "Falha ao criar a sessão." },
-        { status: 500 },
-      );
+      return NextResponse.json({ message: "Falha ao criar a sessão." }, { status: 500 });
     }
     throw err;
   }

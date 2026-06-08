@@ -83,10 +83,7 @@ export const fixedRateProvider: ShippingProvider = {
       );
     }
 
-    const totalWeightKg = input.items.reduce(
-      (sum, item) => sum + item.weightKg * item.quantity,
-      0,
-    );
+    const totalWeightKg = input.items.reduce((sum, item) => sum + item.weightKg * item.quantity, 0);
 
     return [
       {

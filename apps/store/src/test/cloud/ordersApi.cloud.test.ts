@@ -33,7 +33,10 @@ function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string |
 
 vi.mock("@luratha/auth/requireUser", () => {
   class AuthError extends Error {
-    constructor(public readonly status: 401 | 403, message: string) {
+    constructor(
+      public readonly status: 401 | 403,
+      message: string,
+    ) {
       super(message);
       this.name = "AuthError";
     }
@@ -184,7 +187,9 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
   // ── GET /api/orders?userId= ──────────────────────────────────────────────
 
   it("GET /api/orders?userId= lists orders for the user, newest-first", async () => {
-    const second = buildOrderPayload(userId, { orderNumber: `ORD-2-${Date.now().toString().slice(-8)}` });
+    const second = buildOrderPayload(userId, {
+      orderNumber: `ORD-2-${Date.now().toString().slice(-8)}`,
+    });
     const createRes = await ordersPOST(
       new Request("http://localhost/api/orders", {
         method: "POST",
@@ -213,7 +218,9 @@ describeCloud("/api/orders (Cloud Firebase)", () => {
   });
 
   it("GET /api/orders rejects userId of another user when not admin", async () => {
-    const response = await ordersGET(new Request("http://localhost/api/orders?userId=someone-else"));
+    const response = await ordersGET(
+      new Request("http://localhost/api/orders?userId=someone-else"),
+    );
     expect(response.status).toBe(403);
   });
 

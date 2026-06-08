@@ -42,39 +42,20 @@ describe("Breadcrumb", () => {
   });
 
   it("renders multiple items", () => {
-    render(
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Vestidos" },
-        ]}
-      />
-    );
+    render(<Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Vestidos" }]} />);
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.getByText("Vestidos")).toBeInTheDocument();
   });
 
   it("marks the last item as current page", () => {
-    render(
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Vestidos" },
-        ]}
-      />
-    );
+    render(<Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Vestidos" }]} />);
     const current = screen.getByText("Vestidos");
     expect(current).toHaveAttribute("aria-current", "page");
   });
 
   it("renders the schema.org structured data script", () => {
     const { container } = render(
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Vestidos" },
-        ]}
-      />
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Vestidos" }]} />,
     );
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();

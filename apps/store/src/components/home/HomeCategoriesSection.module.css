@@ -30,7 +30,9 @@
   color: var(--color-neutral-dark);
   font-family: var(--font-body);
   font-size: 1.25rem;
-  transition: background-color 300ms ease, border-color 300ms ease;
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease;
 }
 
 .arrowButton:hover:not(:disabled) {

@@ -11,10 +11,7 @@ import {
   validateCartItem,
 } from "@luratha/schemas";
 import { toCents } from "@luratha/schemas/utils";
-import {
-  adminCartConverter,
-  adminCartItemConverter,
-} from "@luratha/firestore/adminCartConverter";
+import { adminCartConverter, adminCartItemConverter } from "@luratha/firestore/adminCartConverter";
 
 const MAX_QUANTITY_PER_ITEM = 99;
 const MAX_DISTINCT_ITEMS = 50;
@@ -73,11 +70,7 @@ export interface CartSnapshot {
 export interface CartsRepository {
   getCart(userId: string): Promise<CartSnapshot>;
   addItem(userId: string, input: CartItemWrite): Promise<CartSnapshot>;
-  setItemQuantity(
-    userId: string,
-    itemId: string,
-    quantity: number,
-  ): Promise<CartSnapshot>;
+  setItemQuantity(userId: string, itemId: string, quantity: number): Promise<CartSnapshot>;
   removeItem(userId: string, itemId: string): Promise<CartSnapshot>;
   clear(userId: string): Promise<void>;
   /**
@@ -86,11 +79,7 @@ export interface CartsRepository {
    * `cart.recentMergeTokens`, retorna o snapshot atual sem alterar nada —
    * resolve duplicações em reload, multi-tab, Strict Mode dev, etc.
    */
-  mergeItems(
-    userId: string,
-    inputs: CartItemWrite[],
-    mergeToken: string,
-  ): Promise<CartSnapshot>;
+  mergeItems(userId: string, inputs: CartItemWrite[], mergeToken: string): Promise<CartSnapshot>;
 }
 
 export function createCartsRepository(adminDb: AdminFirestore): CartsRepository {
@@ -130,10 +119,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
     recentMergeTokens: string[] = [],
   ): Cart {
     const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-    const subtotalCents = items.reduce(
-      (sum, i) => sum + toCents(i.unitPrice) * i.quantity,
-      0,
-    );
+    const subtotalCents = items.reduce((sum, i) => sum + toCents(i.unitPrice) * i.quantity, 0);
     const subtotal = subtotalCents / 100;
     const grandTotal = Math.max(0, subtotal);
     return validateCart({
@@ -157,10 +143,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
 
   async function getCart(userId: string): Promise<CartSnapshot> {
     try {
-      const [cartSnap, items] = await Promise.all([
-        cartRef(userId).get(),
-        readItems(userId),
-      ]);
+      const [cartSnap, items] = await Promise.all([cartRef(userId).get(), readItems(userId)]);
       const isoNow = new Date().toISOString();
       const cart = cartSnap.exists ? cartSnap.data()! : emptyCart(userId, isoNow);
       return { cart, items };
@@ -189,9 +172,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         const itemSnap = await tx.get(itemDocRef);
 
         const previousItems: CartItem[] = allItemsSnap.docs.map((d) => d.data());
-        const previousTokens = cartSnap.exists
-          ? (cartSnap.data()?.recentMergeTokens ?? [])
-          : [];
+        const previousTokens = cartSnap.exists ? (cartSnap.data()?.recentMergeTokens ?? []) : [];
 
         let updatedItem: CartItem;
         if (itemSnap.exists) {
@@ -247,10 +228,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
   ): Promise<CartSnapshot> {
     try {
       if (!Number.isFinite(quantity) || !Number.isInteger(quantity)) {
-        throw new CartRepositoryError(
-          "Quantity must be a finite integer.",
-          "validation",
-        );
+        throw new CartRepositoryError("Quantity must be a finite integer.", "validation");
       }
 
       if (quantity <= 0) {
@@ -288,9 +266,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         });
 
         const previousItems = allItemsSnap.docs.map((d) => d.data());
-        const previousTokens = cartSnap.exists
-          ? (cartSnap.data()?.recentMergeTokens ?? [])
-          : [];
+        const previousTokens = cartSnap.exists ? (cartSnap.data()?.recentMergeTokens ?? []) : [];
         const nextItems = mergeIntoList(previousItems, updated);
         const nextCart = computeTotals(nextItems, isoNow, userId, previousTokens);
 
@@ -321,12 +297,8 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
           );
         }
 
-        const previousItems = allItemsSnap.docs
-          .map((d) => d.data())
-          .filter((i) => i.id !== itemId);
-        const previousTokens = cartSnap.exists
-          ? (cartSnap.data()?.recentMergeTokens ?? [])
-          : [];
+        const previousItems = allItemsSnap.docs.map((d) => d.data()).filter((i) => i.id !== itemId);
+        const previousTokens = cartSnap.exists ? (cartSnap.data()?.recentMergeTokens ?? []) : [];
         const nextCart = computeTotals(previousItems, isoNow, userId, previousTokens);
 
         tx.delete(itemDocRef);
@@ -370,9 +342,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
         const cartSnap = await tx.get(cartDocRef);
         const existingItemsSnap = await tx.get(itemsCollection(userId));
 
-        const previousTokens = cartSnap.exists
-          ? (cartSnap.data()?.recentMergeTokens ?? [])
-          : [];
+        const previousTokens = cartSnap.exists ? (cartSnap.data()?.recentMergeTokens ?? []) : [];
 
         // Idempotência: se essa leva já foi mesclada (mesmo token), devolve
         // o snapshot atual sem alterar nada. Cobre reload, multi-tab,
@@ -463,16 +433,7 @@ function normalize(error: unknown, action: string): CartRepositoryError {
     );
   }
   if (error instanceof Error) {
-    return new CartRepositoryError(
-      `Failed to ${action}: ${error.message}`,
-      "unknown",
-      error,
-    );
+    return new CartRepositoryError(`Failed to ${action}: ${error.message}`, "unknown", error);
   }
-  return new CartRepositoryError(
-    `Failed to ${action} due to an unknown error.`,
-    "unknown",
-    error,
-  );
+  return new CartRepositoryError(`Failed to ${action} due to an unknown error.`, "unknown", error);
 }
-

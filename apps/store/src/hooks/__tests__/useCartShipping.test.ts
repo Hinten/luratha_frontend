@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCartShipping } from "@/src/hooks/useCartShipping";
-import {
-  clearShippingEstimate,
-  saveShippingEstimate,
-} from "@/src/lib/shipping/clientStorage";
+import { clearShippingEstimate, saveShippingEstimate } from "@/src/lib/shipping/clientStorage";
 import type { CartItem } from "@luratha/schemas";
 import type { ShippingQuote } from "@/src/lib/shipping/types";
 

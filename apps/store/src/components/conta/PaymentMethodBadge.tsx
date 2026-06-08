@@ -13,10 +13,6 @@ const variants: Record<Order["paymentMethod"], string> = {
   boleto: styles.boleto,
 };
 
-export default function PaymentMethodBadge({
-  method,
-}: {
-  method: Order["paymentMethod"];
-}) {
+export default function PaymentMethodBadge({ method }: { method: Order["paymentMethod"] }) {
   return <span className={`${styles.badge} ${variants[method]}`}>{labels[method]}</span>;
 }

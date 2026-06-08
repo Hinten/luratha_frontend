@@ -110,10 +110,7 @@ describe("AddressForm", () => {
     await fillRequiredFields();
     await user.type(screen.getByLabelText("Apelido (ex: Casa, Trabalho)"), "Casa");
     await user.type(screen.getByLabelText("Complemento"), "apto 12");
-    await user.type(
-      screen.getByLabelText("Ponto de referência (opcional)"),
-      "Próximo ao metrô",
-    );
+    await user.type(screen.getByLabelText("Ponto de referência (opcional)"), "Próximo ao metrô");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -134,9 +131,7 @@ describe("AddressForm", () => {
     // O Zod deve barrar — onSubmit não foi chamado.
     expect(onSubmit).not.toHaveBeenCalled();
     // E erros inline aparecem nos campos obrigatórios.
-    expect(
-      await screen.findByText("Informe o nome do destinatário."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Informe o nome do destinatário.")).toBeInTheDocument();
     expect(screen.getByText("Selecione um estado.")).toBeInTheDocument();
   });
 
@@ -146,27 +141,18 @@ describe("AddressForm", () => {
     const cep = screen.getByLabelText("CEP");
     await user.type(cep, "123");
     await user.tab();
-    expect(
-      await screen.findByText("CEP inválido. Use o formato 00000-000."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("CEP inválido. Use o formato 00000-000.")).toBeInTheDocument();
   });
 
   it("renderiza o banner geral acima do botão de submit (não no topo)", () => {
     render(
-      <AddressForm
-        onSubmit={vi.fn()}
-        onCancel={vi.fn()}
-        error="Falha de rede ao salvar."
-        saving
-      />,
+      <AddressForm onSubmit={vi.fn()} onCancel={vi.fn()} error="Falha de rede ao salvar." saving />,
     );
     const banner = screen.getByRole("alert");
     expect(banner).toHaveTextContent("Falha de rede ao salvar.");
     // O banner deve aparecer DEPOIS do checkbox "isDefault" no DOM (próximo ao botão).
     const submitBtn = screen.getByRole("button", { name: "Salvando…" });
-    expect(banner.compareDocumentPosition(submitBtn)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    expect(banner.compareDocumentPosition(submitBtn)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(submitBtn).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
   });
@@ -193,23 +179,17 @@ describe("AddressForm", () => {
         ]}
       />,
     );
-    expect(
-      await screen.findByText("Esse CEP não atende nossa região."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Esse CEP não atende nossa região.")).toBeInTheDocument();
   });
 
   it("hides the isDefault checkbox when hideIsDefault is true", () => {
     render(<AddressForm onSubmit={vi.fn()} hideIsDefault />);
-    expect(
-      screen.queryByLabelText("Tornar este o endereço padrão"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Tornar este o endereço padrão")).not.toBeInTheDocument();
   });
 
   it("hides the Apelido field when hideLabel is true", () => {
     render(<AddressForm onSubmit={vi.fn()} hideLabel />);
-    expect(
-      screen.queryByLabelText("Apelido (ex: Casa, Trabalho)"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Apelido (ex: Casa, Trabalho)")).not.toBeInTheDocument();
     // demais campos continuam visíveis
     expect(screen.getByLabelText("Nome do destinatário")).toBeInTheDocument();
     expect(screen.getByLabelText("CEP")).toBeInTheDocument();
@@ -223,9 +203,7 @@ describe("AddressForm", () => {
         initialValues={{ recipientName: "Marina Souza" }}
       />,
     );
-    expect(screen.getByLabelText("Nome do destinatário")).toHaveValue(
-      "Marina Souza",
-    );
+    expect(screen.getByLabelText("Nome do destinatário")).toHaveValue("Marina Souza");
   });
 
   it("renders cancel button only when onCancel is provided", () => {
@@ -289,9 +267,7 @@ describe("AddressForm", () => {
     await user.type(screen.getByLabelText("CEP"), "99999999");
     await user.tab();
 
-    expect(
-      await screen.findByText(/Não encontramos esse CEP/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Não encontramos esse CEP/i)).toBeInTheDocument();
 
     // Preenche o resto à mão e o submit continua funcionando (aviso ≠ erro).
     await user.type(screen.getByLabelText("Nome do destinatário"), "Marina");
@@ -314,8 +290,6 @@ describe("AddressForm", () => {
     await user.type(screen.getByLabelText("CEP"), "01310100");
     await user.tab();
 
-    expect(
-      await screen.findByText(/Não foi possível verificar o CEP agora/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Não foi possível verificar o CEP agora/i)).toBeInTheDocument();
   });
 });

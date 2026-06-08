@@ -61,11 +61,7 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
           )}
           <span className={styles.currentPrice}>{formatBRL(currentPrice)}</span>
         </div>
-        {isLowStock && (
-          <span className={styles.lowStockText}>
-            Últimas {effectiveStock} unid.
-          </span>
-        )}
+        {isLowStock && <span className={styles.lowStockText}>Últimas {effectiveStock} unid.</span>}
       </div>
     </>
   );
@@ -75,14 +71,8 @@ export default function ProductCard({ product, stock }: ProductCardProps) {
       {discountPct > 0 && !isOutOfStock && (
         <span className={styles.discountBadge}>-{discountPct}%</span>
       )}
-      {isOutOfStock && (
-        <span className={styles.outOfStockBadge}>Esgotado</span>
-      )}
-      <button
-        className={styles.favoriteBtn}
-        aria-label="Adicionar aos favoritos"
-        type="button"
-      >
+      {isOutOfStock && <span className={styles.outOfStockBadge}>Esgotado</span>}
+      <button className={styles.favoriteBtn} aria-label="Adicionar aos favoritos" type="button">
         ♡
       </button>
       {slug ? (

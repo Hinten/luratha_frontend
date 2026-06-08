@@ -174,7 +174,15 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         sku: `SKU_${skuToken}_A`,
         priceMin: 200,
         priceMax: 200,
-        price: { price: 200, salePrice: null, priceMin: 200, priceMax: 200, currency: "BRL", startDate: null, endDate: null },
+        price: {
+          price: 200,
+          salePrice: null,
+          priceMin: 200,
+          priceMax: 200,
+          currency: "BRL",
+          startDate: null,
+          endDate: null,
+        },
         // Denormalized fields used by the exact-match short-circuit; even
         // products without variants must persist these arrays so the
         // arrayContains queries don't fail on missing fields.
@@ -196,11 +204,39 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         sku: `SKU_${skuToken}_B`,
         priceMin: 120,
         priceMax: 120,
-        price: { price: 120, salePrice: null, priceMin: 120, priceMax: 120, currency: "BRL", startDate: null, endDate: null },
+        price: {
+          price: 120,
+          salePrice: null,
+          priceMin: 120,
+          priceMax: 120,
+          currency: "BRL",
+          startDate: null,
+          endDate: null,
+        },
         // Variant product — denormalized arrays power the variant exact-match path.
         variants: [
-          { id: `var-${prefix}-b-p`, sku: `SKU_${skuToken}_B_P`, photoIds: [], active: true, color: null, size: ["P"], gtin: null, mpn: null, item_group_id: null },
-          { id: `var-${prefix}-b-m`, sku: `SKU_${skuToken}_B_M`, photoIds: [], active: true, color: null, size: ["M"], gtin: null, mpn: null, item_group_id: null },
+          {
+            id: `var-${prefix}-b-p`,
+            sku: `SKU_${skuToken}_B_P`,
+            photoIds: [],
+            active: true,
+            color: null,
+            size: ["P"],
+            gtin: null,
+            mpn: null,
+            item_group_id: null,
+          },
+          {
+            id: `var-${prefix}-b-m`,
+            sku: `SKU_${skuToken}_B_M`,
+            photoIds: [],
+            active: true,
+            color: null,
+            size: ["M"],
+            gtin: null,
+            mpn: null,
+            item_group_id: null,
+          },
         ],
         variantIds: [`var-${prefix}-b-p`, `var-${prefix}-b-m`],
         variantSkus: [`SKU_${skuToken}_B_P`, `SKU_${skuToken}_B_M`],
@@ -221,7 +257,15 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         categoryId: "cat-other-not-test",
         priceMin: 300,
         priceMax: 300,
-        price: { price: 300, salePrice: null, priceMin: 300, priceMax: 300, currency: "BRL", startDate: null, endDate: null },
+        price: {
+          price: 300,
+          salePrice: null,
+          priceMin: 300,
+          priceMax: 300,
+          currency: "BRL",
+          startDate: null,
+          endDate: null,
+        },
         variantIds: [],
         variantSkus: [],
       },
@@ -247,7 +291,7 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
    */
   it("returns empty array when term is empty (page-level guard)", () => {
     const term = "  "; // whitespace-only as the page trims it
-    const products = (term.trim()) ? ["would call repository"] : [];
+    const products = term.trim() ? ["would call repository"] : [];
     expect(products).toHaveLength(0);
   });
 

@@ -61,10 +61,7 @@ export function createOrdersRepository(dbInstance: Firestore): OrdersRepository 
       await runTransaction(dbInstance, async (transaction) => {
         const existing = await transaction.get(orderRef);
         if (existing.exists()) {
-          throw new OrderRepositoryError(
-            `Order with id "${parsed.id}" already exists`,
-            "conflict",
-          );
+          throw new OrderRepositoryError(`Order with id "${parsed.id}" already exists`, "conflict");
         }
         transaction.set(orderRef, parsed);
       });
@@ -118,10 +115,7 @@ export function createOrdersRepository(dbInstance: Firestore): OrdersRepository 
     }
   }
 
-  async function listByUser(
-    userId: string,
-    filters: OrderListFilters = {},
-  ): Promise<Order[]> {
+  async function listByUser(userId: string, filters: OrderListFilters = {}): Promise<Order[]> {
     try {
       const constraints: QueryConstraint[] = [
         where("userId", "==", userId),
@@ -191,11 +185,7 @@ function normalizeRepositoryError(error: unknown, action: string): OrderReposito
   }
 
   if (error instanceof FirebaseError && error.code === "not-found") {
-    return new OrderRepositoryError(
-      `Failed to ${action}: document not found`,
-      "not_found",
-      error,
-    );
+    return new OrderRepositoryError(`Failed to ${action}: document not found`, "not_found", error);
   }
 
   if (error instanceof Error) {

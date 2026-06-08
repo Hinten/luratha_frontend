@@ -45,7 +45,9 @@
   border-radius: 12px;
   padding: 0.875rem 1.125rem;
   cursor: pointer;
-  transition: border-color 200ms ease, background-color 200ms ease;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease;
 }
 
 .option:hover {

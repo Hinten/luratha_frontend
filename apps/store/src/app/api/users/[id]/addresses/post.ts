@@ -22,10 +22,7 @@ export const runtime = "nodejs";
  * Se `isDefault: true` for enviado, todos os outros endereços do usuário
  * têm `isDefault` desmarcado em batch para garantir um único default.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: userId } = await params;
 
   try {

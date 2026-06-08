@@ -31,7 +31,15 @@ vi.mock("@/src/components/produto/AddToCartButton", () => ({
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const BASE_TIMESTAMP = "2026-01-01T00:00:00.000Z";
-const BASE_PRICE = { price: 389, currency: "BRL" as const, salePrice: null, priceMin: null, priceMax: null, startDate: null, endDate: null };
+const BASE_PRICE = {
+  price: 389,
+  currency: "BRL" as const,
+  salePrice: null,
+  priceMin: null,
+  priceMax: null,
+  startDate: null,
+  endDate: null,
+};
 
 function makeProduct(overrides: Record<string, unknown> = {}): Product {
   return validateProduct({
@@ -75,9 +83,39 @@ const productWithSizes = makeProduct({ size: ["PP", "P", "M", "G", "GG"] });
 
 const productWithColorAndSize = makeProduct({
   variants: [
-    { id: "v1", sku: "VB_AP_001", color: ["Azul"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
-    { id: "v2", sku: "VB_AM_001", color: ["Azul"], size: ["M"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
-    { id: "v3", sku: "VB_VP_001", color: ["Vermelho"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+    {
+      id: "v1",
+      sku: "VB_AP_001",
+      color: ["Azul"],
+      size: ["P"],
+      photoIds: [],
+      active: true,
+      gtin: null,
+      mpn: null,
+      item_group_id: null,
+    },
+    {
+      id: "v2",
+      sku: "VB_AM_001",
+      color: ["Azul"],
+      size: ["M"],
+      photoIds: [],
+      active: true,
+      gtin: null,
+      mpn: null,
+      item_group_id: null,
+    },
+    {
+      id: "v3",
+      sku: "VB_VP_001",
+      color: ["Vermelho"],
+      size: ["P"],
+      photoIds: [],
+      active: true,
+      gtin: null,
+      mpn: null,
+      item_group_id: null,
+    },
   ],
 });
 
@@ -138,14 +176,14 @@ describe("SizeSelector — only sizes (no colors)", () => {
   it("renders AddToCartButton when cart props are provided", () => {
     render(<SizeSelector product={productWithSizes} {...cartProps} />);
     expect(
-      screen.getByRole("button", { name: /Adicionar Vestido Bordado ao carrinho/i })
+      screen.getByRole("button", { name: /Adicionar Vestido Bordado ao carrinho/i }),
     ).toBeInTheDocument();
   });
 
   it("renders a fallback add-to-cart button when cart props are missing", () => {
     render(<SizeSelector product={productWithSizes} />);
     expect(
-      screen.getByRole("button", { name: /Adicionar Vestido Bordado ao carrinho/i })
+      screen.getByRole("button", { name: /Adicionar Vestido Bordado ao carrinho/i }),
     ).toBeInTheDocument();
   });
 
@@ -220,31 +258,44 @@ describe("SizeSelector — simple product (no variants)", () => {
 
 describe("SizeSelector — color + size with stock-aware variants", () => {
   it("renders color selector group", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     expect(screen.getByRole("group", { name: "Selecione a cor" })).toBeInTheDocument();
   });
 
   it("renders color buttons for each unique color", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     expect(screen.getByRole("button", { name: "Azul" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Vermelho" })).toBeInTheDocument();
   });
 
   it("marks color as selected when clicked", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Azul" }));
     expect(screen.getByRole("button", { name: "Azul" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Vermelho" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Vermelho" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("shows error when trying to add without selecting a color", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     expect(screen.getByText("Selecione uma cor")).toBeInTheDocument();
   });
 
   it("shows 'PRODUTO ESGOTADO' when selecting a fully out-of-stock color+size combo", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     // Vermelho+P has qty=0
     fireEvent.click(screen.getByRole("button", { name: "Vermelho" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
@@ -252,7 +303,9 @@ describe("SizeSelector — color + size with stock-aware variants", () => {
   });
 
   it("resets selected size when color changes", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Azul" }));
     fireEvent.click(screen.getByRole("button", { name: "M" }));
     expect(screen.getByRole("button", { name: "M" })).toHaveAttribute("aria-pressed", "true");
@@ -262,24 +315,32 @@ describe("SizeSelector — color + size with stock-aware variants", () => {
   });
 
   it("shows stock urgency for a valid combo (Azul+P has qty=5)", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Azul" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
     expect(screen.getByText("Últimas 5 peças!")).toBeInTheDocument();
   });
 
   it("shows 'Em estoque' for a combo with qty > 5 (Azul+M has qty=8)", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Azul" }));
     fireEvent.click(screen.getByRole("button", { name: "M" }));
     expect(screen.getByText("Em estoque")).toBeInTheDocument();
   });
 
   it("does not show normal add-to-cart when combo is out of stock", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Vermelho" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
-    expect(screen.queryByRole("button", { name: /Adicionar .* ao carrinho/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Adicionar .* ao carrinho/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -299,31 +360,43 @@ describe("SizeSelector — unresolvable variant combo (no stock doc)", () => {
     render(<SizeSelector product={productWithColorAndSize} {...cartProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Azul" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
-    expect(
-      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i })).not.toBeInTheDocument();
   });
 
   it("resolves a variant when the colour lives on product.color and variants carry only size", () => {
     const productColourOnProduct = makeProduct({
       color: ["Off-white"],
       variants: [
-        { id: "v1", sku: "OW_001_P", color: null, size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
-        { id: "v2", sku: "OW_001_M", color: null, size: ["M"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+        {
+          id: "v1",
+          sku: "OW_001_P",
+          color: null,
+          size: ["P"],
+          photoIds: [],
+          active: true,
+          gtin: null,
+          mpn: null,
+          item_group_id: null,
+        },
+        {
+          id: "v2",
+          sku: "OW_001_M",
+          color: null,
+          size: ["M"],
+          photoIds: [],
+          active: true,
+          gtin: null,
+          mpn: null,
+          item_group_id: null,
+        },
       ],
     });
     render(<SizeSelector product={productColourOnProduct} {...cartProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Off-white" }));
     fireEvent.click(screen.getByRole("button", { name: "P" }));
-    expect(
-      screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /PRODUTO ESGOTADO/i })).not.toBeInTheDocument();
   });
 });
 
@@ -331,7 +404,9 @@ describe("SizeSelector — unresolvable variant combo (no stock doc)", () => {
 
 describe("SizeSelector — color swatch image fallback", () => {
   it("renders text pill when variants have no photoIds (no swatch available)", () => {
-    render(<SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />);
+    render(
+      <SizeSelector product={productWithColorAndSize} stock={stockWithVariants} {...cartProps} />,
+    );
     const azulButton = screen.getByRole("button", { name: "Azul" });
     expect(azulButton.tagName).toBe("BUTTON");
     expect(azulButton.querySelector("img")).toBeNull();
@@ -379,8 +454,28 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
       },
     ],
     variants: [
-      { id: "v1", sku: "SK_AZ_P", color: ["Azul"], size: ["P"], photoIds: ["photo_azul"], active: true, gtin: null, mpn: null, item_group_id: null },
-      { id: "v2", sku: "SK_VM_P", color: ["Vermelho"], size: ["P"], photoIds: [], active: true, gtin: null, mpn: null, item_group_id: null },
+      {
+        id: "v1",
+        sku: "SK_AZ_P",
+        color: ["Azul"],
+        size: ["P"],
+        photoIds: ["photo_azul"],
+        active: true,
+        gtin: null,
+        mpn: null,
+        item_group_id: null,
+      },
+      {
+        id: "v2",
+        sku: "SK_VM_P",
+        color: ["Vermelho"],
+        size: ["P"],
+        photoIds: [],
+        active: true,
+        gtin: null,
+        mpn: null,
+        item_group_id: null,
+      },
     ],
   });
 
@@ -389,7 +484,9 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
     expect(img).not.toBeNull();
-    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/azul-card.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain(
+      "https://example.com/azul-card.webp",
+    );
   });
 
   it("falls back to text pill for a color whose variant has no photoId", () => {
@@ -446,14 +543,26 @@ describe("SizeSelector — color swatch image when variant has photo", () => {
         },
       ],
       variants: [
-        { id: "v1", sku: "SK_AZ_P", color: ["Azul"], size: ["P"], photoIds: ["photo_swatch"], active: true, gtin: null, mpn: null, item_group_id: null },
+        {
+          id: "v1",
+          sku: "SK_AZ_P",
+          color: ["Azul"],
+          size: ["P"],
+          photoIds: ["photo_swatch"],
+          active: true,
+          gtin: null,
+          mpn: null,
+          item_group_id: null,
+        },
       ],
     });
 
     render(<SizeSelector product={productWithExplicitSwatch} {...cartProps} />);
     const azulButton = screen.getByRole("button", { name: "Azul" });
     const img = azulButton.querySelector("img");
-    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain("https://example.com/swatch.webp");
+    expect(decodeURIComponent(img!.getAttribute("src") ?? "")).toContain(
+      "https://example.com/swatch.webp",
+    );
   });
 });
 

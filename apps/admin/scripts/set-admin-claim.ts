@@ -19,9 +19,7 @@ async function main(): Promise<void> {
   const revoke = process.argv.includes("--revoke");
 
   if (!email || email.startsWith("--")) {
-    console.error(
-      "Uso: pnpm --filter @luratha/admin grant-admin <email> [--revoke]",
-    );
+    console.error("Uso: pnpm --filter @luratha/admin grant-admin <email> [--revoke]");
     process.exit(1);
   }
 
@@ -49,10 +47,11 @@ async function main(): Promise<void> {
   }
   await adminAuth.setCustomUserClaims(user.uid, claims);
 
-  console.log(
-    `${revoke ? "Revogado" : "Concedido"} acesso admin para ${email} (uid ${user.uid}).`,
-  );
+  console.log(`${revoke ? "Revogado" : "Concedido"} acesso admin para ${email} (uid ${user.uid}).`);
   console.log("O usuário precisa sair e entrar de novo para a claim valer.");
 }
 
-main();
+main().catch((err: unknown) => {
+  console.error(err);
+  process.exitCode = 1;
+});

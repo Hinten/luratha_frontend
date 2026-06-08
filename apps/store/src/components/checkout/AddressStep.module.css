@@ -45,7 +45,9 @@
   border-radius: 12px;
   padding: 1rem 1.25rem;
   cursor: pointer;
-  transition: border-color 200ms ease, background-color 200ms ease;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease;
 }
 
 .option:hover {
@@ -102,7 +104,9 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   cursor: pointer;
-  transition: border-color 200ms ease, color 200ms ease;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease;
 }
 
 .addBtn:hover {

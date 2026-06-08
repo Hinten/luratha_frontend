@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  nonEmptyStringSchema,
-  timestampSchema,
-  uidSchema,
-} from "@luratha/schemas/utils";
+import { nonEmptyStringSchema, timestampSchema, uidSchema } from "@luratha/schemas/utils";
 
 export const reviewSchema = z.object({
   id: nonEmptyStringSchema,

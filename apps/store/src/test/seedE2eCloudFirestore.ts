@@ -15,14 +15,20 @@ export async function seedE2eCloudFirestore(): Promise<void> {
   const categories = buildHomeSeedCategories();
   await Promise.all(
     categories.map((category) =>
-      adminDb.collection(firestoreCollections.categories).doc(category.id).set(category, { merge: true }),
+      adminDb
+        .collection(firestoreCollections.categories)
+        .doc(category.id)
+        .set(category, { merge: true }),
     ),
   );
 
   const products = buildE2eTestProducts();
   await Promise.all(
     products.map((product) =>
-      adminDb.collection(firestoreCollections.products).doc(product.id).set(product, { merge: true }),
+      adminDb
+        .collection(firestoreCollections.products)
+        .doc(product.id)
+        .set(product, { merge: true }),
     ),
   );
 }
@@ -33,6 +39,8 @@ export async function clearE2eFixtures(): Promise<void> {
 
   await Promise.all([
     ...productIds.map((id) => adminDb.collection(firestoreCollections.products).doc(id).delete()),
-    ...categoryIds.map((id) => adminDb.collection(firestoreCollections.categories).doc(id).delete()),
+    ...categoryIds.map((id) =>
+      adminDb.collection(firestoreCollections.categories).doc(id).delete(),
+    ),
   ]);
 }

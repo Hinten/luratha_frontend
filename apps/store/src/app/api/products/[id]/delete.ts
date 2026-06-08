@@ -12,10 +12,7 @@ export const runtime = "nodejs";
  * Returns 404 if the product does not exist.
  * Returns 204 (No Content) on successful deletion.
  */
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const productRef = adminDb.collection(firestoreCollections.products).doc(id);

@@ -175,7 +175,6 @@ export async function quoteFreeShippingThreshold(input: {
   divisor: number;
   enabled: boolean;
 }> {
-  
   const siteSettings = await getSiteSettings();
   const shippingSettings = siteSettings.shipping;
   const destinationPostalCode = normalizePostalCode(input.destinationPostalCode);

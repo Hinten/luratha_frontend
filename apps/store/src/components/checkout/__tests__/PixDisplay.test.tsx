@@ -26,9 +26,7 @@ describe("PixDisplay", () => {
   });
 
   it("shows a manual-copy hint when the clipboard write is denied", async () => {
-    const writeText = vi.fn().mockRejectedValue(
-      new DOMException("denied", "NotAllowedError"),
-    );
+    const writeText = vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },

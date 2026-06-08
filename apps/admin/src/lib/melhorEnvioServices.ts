@@ -40,18 +40,14 @@ interface RawService {
   company?: { name?: string } | null;
 }
 
-export async function fetchMelhorEnvioServices(): Promise<
-  MelhorEnvioServiceOption[] | null
-> {
+export async function fetchMelhorEnvioServices(): Promise<MelhorEnvioServiceOption[] | null> {
   const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
   if (!token) return null;
 
   const envName = (process.env.MELHOR_ENVIO_ENV ?? "sandbox").toLowerCase();
-  const baseUrl =
-    envName === "production" ? BASE_URLS.production : BASE_URLS.sandbox;
+  const baseUrl = envName === "production" ? BASE_URLS.production : BASE_URLS.sandbox;
   const userAgent =
-    process.env.MELHOR_ENVIO_USER_AGENT?.trim() ||
-    "Luratha (contato@luratha.com.br)";
+    process.env.MELHOR_ENVIO_USER_AGENT?.trim() || "Luratha (contato@luratha.com.br)";
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -78,9 +74,7 @@ export async function fetchMelhorEnvioServices(): Promise<
   }
 
   if (!response.ok) {
-    console.warn(
-      `[melhorEnvioServices] HTTP ${response.status} — usando editor manual.`,
-    );
+    console.warn(`[melhorEnvioServices] HTTP ${response.status} — usando editor manual.`);
     return null;
   }
 

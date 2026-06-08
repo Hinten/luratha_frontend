@@ -18,7 +18,9 @@ describe("mapMpStatus", () => {
   });
 
   it("action_required → awaiting por método; waiting_capture → authorized", () => {
-    expect(mapMpStatus("action_required", "waiting_transfer", "bank_transfer")).toBe("awaiting_pix");
+    expect(mapMpStatus("action_required", "waiting_transfer", "bank_transfer")).toBe(
+      "awaiting_pix",
+    );
     expect(mapMpStatus("action_required", "waiting_payment", "ticket")).toBe("awaiting_boleto");
     expect(mapMpStatus("action_required", "waiting_capture", "credit_card")).toBe("authorized");
     // Sem método reconhecido → fallback pending.
@@ -186,11 +188,15 @@ describe("isMercadoPagoSandbox", () => {
     // `TEST-`, então não dá pra inferir o ambiente do token. A função
     // exige `MERCADOPAGO_ENV` setado pra evitar comportamento ambíguo.
     it("joga PaymentProviderError quando MERCADOPAGO_ENV não está setado, mesmo com token TEST-", () => {
-      expect(() => isMercadoPagoSandbox("TEST-1234567890")).toThrow(/MERCADOPAGO_ENV não configurado/);
+      expect(() => isMercadoPagoSandbox("TEST-1234567890")).toThrow(
+        /MERCADOPAGO_ENV não configurado/,
+      );
     });
 
     it("joga PaymentProviderError quando MERCADOPAGO_ENV não está setado, mesmo com token APP_USR-", () => {
-      expect(() => isMercadoPagoSandbox("APP_USR-1234567890")).toThrow(/MERCADOPAGO_ENV não configurado/);
+      expect(() => isMercadoPagoSandbox("APP_USR-1234567890")).toThrow(
+        /MERCADOPAGO_ENV não configurado/,
+      );
     });
   });
 });
@@ -245,9 +251,7 @@ describe("withSandboxPayer", () => {
         "test_user_99@testuser.com",
       );
       process.env.MERCADOPAGO_SANDBOX_PAYER_EMAIL = "   ";
-      expect(withSandboxPayer(pixInput("real@gmail.com")).payer.email).toBe(
-        "real@testuser.com",
-      );
+      expect(withSandboxPayer(pixInput("real@gmail.com")).payer.email).toBe("real@testuser.com");
     });
 
     it("fallback: reescreve o domínio mantendo o local-part quando não é @testuser.com", () => {
@@ -336,9 +340,9 @@ describe("verifyWebhookSignature", () => {
   });
 
   it("rejects when the signature header is missing", () => {
-    expect(
-      verifyWebhookSignature({ signatureHeader: null, requestId: "req", dataId: "1" }),
-    ).toBe(false);
+    expect(verifyWebhookSignature({ signatureHeader: null, requestId: "req", dataId: "1" })).toBe(
+      false,
+    );
   });
 
   it("rejects when dataId is missing", () => {

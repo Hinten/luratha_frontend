@@ -13,7 +13,10 @@ export const timestampSchema = z
 export const moneySchema = z.number().gt(0);
 export const nonNegativeMoneySchema = z.number().min(0);
 export const quantitySchema = z.number().int().gt(0);
-export const skuSchema = z.string().trim().regex(/^[A-Z0-9_-]{6,64}$/);
+export const skuSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z0-9_-]{6,64}$/);
 export const uidSchema = z.string().trim().min(6).max(128);
 export const colorHexSchema = z.string().regex(/^#([A-Fa-f0-9]{6})$/);
 

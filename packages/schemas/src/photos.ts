@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  colorHexSchema,
-  nonEmptyStringSchema,
-  timestampSchema,
-} from "@luratha/schemas/utils";
+import { colorHexSchema, nonEmptyStringSchema, timestampSchema } from "@luratha/schemas/utils";
 
 export const photoSchema = z.object({
   id: nonEmptyStringSchema,

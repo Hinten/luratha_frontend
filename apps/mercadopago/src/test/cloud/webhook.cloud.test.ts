@@ -32,10 +32,9 @@ const mp = vi.hoisted(() => ({
 // re-exporta — sem isso elas viram `undefined` em qualquer code path futuro
 // que as toque, escondendo a causa real do erro.
 vi.mock("@luratha/payments/mercadoPago", async () => {
-  const actual =
-    await vi.importActual<typeof import("@luratha/payments/mercadoPago")>(
-      "@luratha/payments/mercadoPago",
-    );
+  const actual = await vi.importActual<typeof import("@luratha/payments/mercadoPago")>(
+    "@luratha/payments/mercadoPago",
+  );
   return { ...actual, ...mp };
 });
 

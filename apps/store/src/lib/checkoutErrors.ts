@@ -244,8 +244,7 @@ function pickFriendlyMessage(args: ReportCheckoutErrorArgs): string {
       // recusas de cartão (essas vêm pela API do payment-intent, step
       // `submit_order`). Discriminamos `metadata.brickCause` pra dar copy
       // específica nas falhas conhecidas.
-      const cause =
-        typeof metadata?.brickCause === "string" ? metadata.brickCause : "";
+      const cause = typeof metadata?.brickCause === "string" ? metadata.brickCause : "";
       if (cause === "fields_setup_failed" || cause === "get_payment_methods_failed") {
         return "Não conseguimos carregar o formulário de cartão. Recarregue a página ou escolha PIX/Boleto.";
       }

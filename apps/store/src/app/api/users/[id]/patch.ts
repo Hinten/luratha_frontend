@@ -19,10 +19,7 @@ export const runtime = "nodejs";
  * Returns 404 if no profile exists, 400 on validation failure, 200 with the
  * updated profile on success.
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {

@@ -21,7 +21,11 @@ import {
   type BooleanExpression,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
-import { buildProductSlug, type Product as FirestoreProduct, validateProduct } from "@luratha/schemas";
+import {
+  buildProductSlug,
+  type Product as FirestoreProduct,
+  validateProduct,
+} from "@luratha/schemas";
 import {
   buildCoreProductQueryPlan,
   buildEnterprisePipelineSearchPlan,
@@ -31,9 +35,7 @@ import {
   type ProductSort,
 } from "@luratha/core/firestoreQueryStrategies";
 import { logger } from "@luratha/core/logging/logger";
-import {
-  ProductRepositoryError,
-} from "@luratha/repositories/productsRepository";
+import { ProductRepositoryError } from "@luratha/repositories/productsRepository";
 import { createCategoriesRepository } from "@luratha/repositories/categoriesRepository";
 import {
   EmbeddingGenerationError,
@@ -117,9 +119,7 @@ export function createProductsSearchRepository(
       const snapshot = await getDocs(
         query(collection(dbInstance, plan.collection), ...baseConstraints),
       );
-      const products = snapshot.docs.map((entry) =>
-        normalizeSearchProduct(entry.data(), entry.id),
-      );
+      const products = snapshot.docs.map((entry) => normalizeSearchProduct(entry.data(), entry.id));
       const sorted = sortProductsInMemory(products, plan.orderBy);
       return sorted.slice(plan.offset, plan.offset + plan.limit);
     }
@@ -206,15 +206,13 @@ export function createProductsSearchRepository(
       pipelineFilters.push(field("categoryId").equal(categoryId));
     }
 
-    pipeline = pipeline
-      .where(combineWithAnd(pipelineFilters))
-      .findNearest({
-        field: "searchEmbedding",
-        vectorValue: embedding,
-        distanceMeasure: "cosine",
-        limit: vectorPlan.stages[1]?.details?.topK as number,
-        distanceField: "score",
-      });
+    pipeline = pipeline.where(combineWithAnd(pipelineFilters)).findNearest({
+      field: "searchEmbedding",
+      vectorValue: embedding,
+      distanceMeasure: "cosine",
+      limit: vectorPlan.stages[1]?.details?.topK as number,
+      distanceField: "score",
+    });
 
     const snapshot = await execute(pipeline);
     return mapPipelineSnapshotToProducts(snapshot);
@@ -268,7 +266,9 @@ export function createProductsSearchRepository(
         if (!(error instanceof FirebaseError)) {
           throw error;
         }
-        logger.warn("[productsSearchRepository] exact-match lookup failed; falling back", { error });
+        logger.warn("[productsSearchRepository] exact-match lookup failed; falling back", {
+          error,
+        });
       }
     }
 
@@ -351,10 +351,7 @@ function extractTimestamp(val: unknown): string | undefined {
   return undefined;
 }
 
-function normalizeSearchProduct(
-  input: unknown,
-  fallbackId: string,
-): FirestoreProduct {
+function normalizeSearchProduct(input: unknown, fallbackId: string): FirestoreProduct {
   const record = (input ?? {}) as Partial<FirestoreProduct> & {
     id?: string;
     slug?: string | null;
@@ -379,12 +376,14 @@ function normalizeSearchProduct(
       id: record.id ?? fallbackId,
       createdAt: extractTimestamp(record.createdAt),
       updatedAt: extractTimestamp(record.updatedAt),
-      vectorEmbedding: record.vectorEmbedding instanceof VectorValue
-        ? record.vectorEmbedding.toArray()
-        : record.vectorEmbedding,
-      searchEmbedding: record.searchEmbedding instanceof VectorValue
-        ? record.searchEmbedding.toArray()
-        : record.searchEmbedding,
+      vectorEmbedding:
+        record.vectorEmbedding instanceof VectorValue
+          ? record.vectorEmbedding.toArray()
+          : record.vectorEmbedding,
+      searchEmbedding:
+        record.searchEmbedding instanceof VectorValue
+          ? record.searchEmbedding.toArray()
+          : record.searchEmbedding,
     });
   } catch (err) {
     if (!(err instanceof z.ZodError)) {
@@ -418,7 +417,8 @@ function createFallbackSearchProduct(
 ): FirestoreProduct {
   const normalizedSku = record.sku?.trim();
   const normalizedTitle = record.title?.trim();
-  const fallbackSku = normalizedSku && normalizedSku.length > 0 ? normalizedSku : DEFAULT_PRODUCT_SKU;
+  const fallbackSku =
+    normalizedSku && normalizedSku.length > 0 ? normalizedSku : DEFAULT_PRODUCT_SKU;
   const fallbackTitle =
     normalizedTitle && normalizedTitle.length > 0 ? normalizedTitle : DEFAULT_PRODUCT_TITLE;
   const now = new Date().toISOString();
@@ -508,10 +508,7 @@ function isMissingIndexError(error: unknown): boolean {
   }
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    return (
-      message.includes("failed-precondition") ||
-      message.includes("requires an index")
-    );
+    return message.includes("failed-precondition") || message.includes("requires an index");
   }
   return false;
 }

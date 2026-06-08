@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  quoteFreeShippingThreshold,
-  quoteShipping,
-} from "@/src/lib/shipping/service";
+import { quoteFreeShippingThreshold, quoteShipping } from "@/src/lib/shipping/service";
 import { ShippingProviderError } from "@/src/lib/shipping/types";
 
 export const runtime = "nodejs";

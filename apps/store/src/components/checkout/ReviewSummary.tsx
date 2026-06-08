@@ -100,8 +100,7 @@ export default function ReviewSummary({
           {address.complement ? ` — ${address.complement}` : ""}
         </p>
         <p className={styles.line}>
-          {address.neighborhood} · {address.city}/{address.state} · CEP{" "}
-          {address.postalCode}
+          {address.neighborhood} · {address.city}/{address.state} · CEP {address.postalCode}
         </p>
       </ReviewCard>
 

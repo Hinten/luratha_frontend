@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { UFS } from "@luratha/schemas/constants";
-import {
-  nonEmptyStringSchema,
-  timestampSchema,
-} from "@luratha/schemas/utils";
+import { nonEmptyStringSchema, timestampSchema } from "@luratha/schemas/utils";
 
 /**
  * Endereço salvo do usuário, persistido como subcoleção em
@@ -24,15 +21,10 @@ export const addressSchema = z.object({
   label: z.string().trim().max(50, "Apelido muito longo (máx. 50).").optional(),
 
   /** Nome de quem recebe — pode diferir do nome do usuário. */
-  recipientName: z
-    .string()
-    .trim()
-    .min(1, "Informe o nome do destinatário."),
+  recipientName: z.string().trim().min(1, "Informe o nome do destinatário."),
 
   /** CEP no formato 99999-999. */
-  postalCode: z
-    .string()
-    .regex(/^\d{5}-\d{3}$/, "CEP inválido. Use o formato 00000-000."),
+  postalCode: z.string().regex(/^\d{5}-\d{3}$/, "CEP inválido. Use o formato 00000-000."),
 
   /** Logradouro (rua/avenida). */
   line1: z.string().trim().min(1, "Informe o logradouro."),
@@ -45,18 +37,10 @@ export const addressSchema = z.object({
     .max(20, "Número muito longo (máx. 20)."),
 
   /** Complemento (apto, bloco, sala). Opcional. */
-  complement: z
-    .string()
-    .trim()
-    .max(100, "Complemento muito longo (máx. 100).")
-    .optional(),
+  complement: z.string().trim().max(100, "Complemento muito longo (máx. 100).").optional(),
 
   /** Ponto de referência (opcional). */
-  reference: z
-    .string()
-    .trim()
-    .max(200, "Referência muito longa (máx. 200).")
-    .optional(),
+  reference: z.string().trim().max(200, "Referência muito longa (máx. 200).").optional(),
 
   /** Bairro. */
   neighborhood: z.string().trim().min(1, "Informe o bairro."),
@@ -68,7 +52,10 @@ export const addressSchema = z.object({
   state: z.enum(UFS, { message: "Selecione um estado." }),
 
   /** Código IBGE do município (7 dígitos). Necessário para NF-e. Opcional aqui. */
-  ibgeCode: z.string().regex(/^\d{7}$/).optional(),
+  ibgeCode: z
+    .string()
+    .regex(/^\d{7}$/)
+    .optional(),
 
   country: z.literal("BR"),
 

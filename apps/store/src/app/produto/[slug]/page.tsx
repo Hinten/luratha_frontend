@@ -23,7 +23,6 @@ interface PageProps {
 const DEFAULT_PRODUCT_IMAGE_URL = "/image_404.png";
 
 const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProduct | null> => {
-
   const authenticatedAppForUser = await getAuthenticatedAppForUser();
   const productsRepository = createProductsRepository(authenticatedAppForUser.firestore);
 
@@ -40,16 +39,18 @@ const getCacheProductBySlug = cache(async (slug: string): Promise<FirestoreProdu
   }
 });
 
-const getCachedCategoryById = cache(async (categoryId: string): Promise<FirestoreCategory | null> => {
-  try {
-    const authenticatedAppForUser = await getAuthenticatedAppForUser();
-    const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
-    return await categoriesRepository.getById(categoryId);
-  } catch (error) {
-    logger.error("[ProdutoPage] error fetching category", { categoryId, error });
-    throw createHttpStatusError(500, "Erro ao carregar dados da categoria do produto.");
-  }
-});
+const getCachedCategoryById = cache(
+  async (categoryId: string): Promise<FirestoreCategory | null> => {
+    try {
+      const authenticatedAppForUser = await getAuthenticatedAppForUser();
+      const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
+      return await categoriesRepository.getById(categoryId);
+    } catch (error) {
+      logger.error("[ProdutoPage] error fetching category", { categoryId, error });
+      throw createHttpStatusError(500, "Erro ao carregar dados da categoria do produto.");
+    }
+  },
+);
 
 const getCachedStockByProductId = cache(async (productId: string): Promise<Stock | null> => {
   try {
@@ -107,6 +108,9 @@ export default async function ProdutoPage({ params }: PageProps) {
   );
 }
 
-function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
+function createHttpStatusError(
+  statusCode: number,
+  message: string,
+): Error & { statusCode: number } {
   return Object.assign(new Error(message), { statusCode });
 }

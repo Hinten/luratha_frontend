@@ -35,9 +35,7 @@ const mockReviews: Review[] = [
 describe("ReviewsList", () => {
   it("renders the empty state when there are no reviews", () => {
     render(<ReviewsList reviews={[]} />);
-    expect(
-      screen.getByText(/ainda não possui avaliações/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/ainda não possui avaliações/i)).toBeInTheDocument();
   });
 
   it("renders the author name for each review", () => {
@@ -65,9 +63,7 @@ describe("ReviewsList", () => {
 
   it("renders the section with correct aria-label", () => {
     render(<ReviewsList reviews={mockReviews} />);
-    expect(
-      screen.getByRole("region", { name: "Avaliações do produto" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Avaliações do produto" })).toBeInTheDocument();
   });
 
   it("renders star ratings with accessible aria-labels", () => {

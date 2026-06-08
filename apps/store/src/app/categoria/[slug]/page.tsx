@@ -25,9 +25,7 @@ interface PageProps {
   }>;
 }
 
-
 const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCategory | null> => {
-
   const authenticatedAppForUser = await getAuthenticatedAppForUser();
   const categoriesRepository = createCategoriesRepository(authenticatedAppForUser.firestore);
 
@@ -41,9 +39,10 @@ const getCachedCategoryBySlug = cache(async (slug: string): Promise<FirestoreCat
 
 const getCachedCategoryProducts = cache(
   async (category: FirestoreCategory, filters: ProductSearchFilters) => {
-
     const authenticatedAppForUser = await getAuthenticatedAppForUser();
-    const productsSearchRepository = createProductsSearchRepository(authenticatedAppForUser.firestore);
+    const productsSearchRepository = createProductsSearchRepository(
+      authenticatedAppForUser.firestore,
+    );
 
     try {
       return await productsSearchRepository.search({
@@ -51,7 +50,10 @@ const getCachedCategoryProducts = cache(
         categorySlug: category.slug,
       });
     } catch (error) {
-      logger.error("[CategoriaPage] error fetching products for category", { categorySlug: category.slug, error });
+      logger.error("[CategoriaPage] error fetching products for category", {
+        categorySlug: category.slug,
+        error,
+      });
       throw createHttpStatusError(500, "Erro ao carregar produtos da categoria no banco.");
     }
   },
@@ -123,27 +125,22 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     <div className="container-luratha section-padding">
       <JsonLd data={collectionPageSchema} />
       <JsonLd data={breadcrumbSchema} />
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: category.name },
-        ]}
-      />
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: category.name }]} />
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)]">
-            {category.name}
-          </h1>
+          <h1 className="font-[family-name:var(--font-heading)]">{category.name}</h1>
           <p
             aria-live="polite"
-            className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1"
+            className="mt-1 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60"
           >
             {products.length}{" "}
             {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
           </p>
         </div>
         <Suspense fallback={null}>
-          <SortDropdown currentSort={parsedParams.sort ? toDropdownSort(parsedParams.sort) : "recentes"} />
+          <SortDropdown
+            currentSort={parsedParams.sort ? toDropdownSort(parsedParams.sort) : "recentes"}
+          />
         </Suspense>
       </div>
       <ProductGrid products={products} />
@@ -151,7 +148,10 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   );
 }
 
-function createHttpStatusError(statusCode: number, message: string): Error & { statusCode: number } {
+function createHttpStatusError(
+  statusCode: number,
+  message: string,
+): Error & { statusCode: number } {
   return Object.assign(new Error(message), { statusCode });
 }
 

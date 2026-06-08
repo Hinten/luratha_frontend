@@ -23,9 +23,9 @@ export async function getHomePageData(): Promise<HomePageData> {
 
   // Removed timout, using page cache later to ensure data is fresh while avoiding timeouts on slow connections or large datasets.
   const [products, categories] = await Promise.all([
-      productsRepository.list({ status: "active", limit: 30 }),
-      getCachedCategories(),
-    ]).then((results) => results);
+    productsRepository.list({ status: "active", limit: 30 }),
+    getCachedCategories(),
+  ]).then((results) => results);
 
   let stockMap = new Map<string, Stock>();
   if (products.length > 0) {

@@ -95,7 +95,10 @@ describe("POST /api/webhooks/mercadopago", () => {
 
   it("returns 500 when the webhook secret is not configured", async () => {
     mocked.verifyWebhookSignature.mockImplementation(() => {
-      throw new PaymentProviderError("MERCADOPAGO_WEBHOOK_SECRET não configurado.", "config_missing");
+      throw new PaymentProviderError(
+        "MERCADOPAGO_WEBHOOK_SECRET não configurado.",
+        "config_missing",
+      );
     });
 
     const res = await POST(webhookRequest(orderEvent));

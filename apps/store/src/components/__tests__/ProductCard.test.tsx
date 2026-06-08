@@ -115,9 +115,7 @@ describe("ProductCard", () => {
 
   it("renders the favorite button", () => {
     render(<ProductCard product={baseProduct} />);
-    expect(
-      screen.getByRole("button", { name: "Adicionar aos favoritos" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Adicionar aos favoritos" })).toBeInTheDocument();
   });
 
   it("renders a link to /produto/[slug] when slug is provided", () => {

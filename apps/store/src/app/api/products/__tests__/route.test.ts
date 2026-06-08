@@ -28,16 +28,25 @@ vi.mock("@luratha/core/embeddingService", () => ({
 
 // Prevent the list.ts → firebaseSearchDb import from initialising a real Firebase app.
 vi.mock("@luratha/firestore/firebaseSearchDb", () => ({
-  searchDb: { pipeline: vi.fn(() => ({ collection: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis() })) },
+  searchDb: {
+    pipeline: vi.fn(() => ({
+      collection: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+    })),
+  },
 }));
 
 vi.mock("firebase/firestore/pipelines", () => ({
   execute: vi.fn().mockResolvedValue({ results: [] }),
-  field: vi.fn(() => ({ toLower: vi.fn().mockReturnThis(), regexMatch: vi.fn().mockReturnThis(), equal: vi.fn().mockReturnThis() })),
+  field: vi.fn(() => ({
+    toLower: vi.fn().mockReturnThis(),
+    regexMatch: vi.fn().mockReturnThis(),
+    equal: vi.fn().mockReturnThis(),
+  })),
   or: vi.fn(),
   and: vi.fn(),
 }));
-
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
