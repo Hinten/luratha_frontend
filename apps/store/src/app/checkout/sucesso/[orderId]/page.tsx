@@ -7,6 +7,7 @@ import { firestoreCollections, type Order } from "@luratha/schemas";
 import { AuthError, requireUser } from "@luratha/auth/requireUser";
 import JsonLd, { type JsonLdData } from "@/src/components/JsonLd";
 import SuccessClient from "./SuccessClient";
+import { getSuccessCopy } from "./successCopy";
 import styles from "./page.module.css";
 
 export const runtime = "nodejs";
@@ -76,18 +77,23 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
   if (!order) notFound();
   if (order.userId !== user.uid) notFound();
 
+  const copy = getSuccessCopy(order);
+
   return (
     <main className={styles.page}>
       <JsonLd data={orderJsonLd(order)} />
       <SuccessClient />
 
       <div className={styles.card}>
-        <p className={styles.eyebrow}>Pedido confirmado</p>
-        <h1 className={styles.heading}>Obrigada pela compra!</h1>
-        <p className={styles.lead}>
-          Recebemos seu pedido <strong>{order.orderNumber}</strong>. Você pode acompanhar o status
-          na sua conta.
+        <p className={`${styles.eyebrow} ${copy.awaitingPayment ? styles.eyebrowAwaiting : ""}`}>
+          {copy.eyebrow}
         </p>
+        <h1 className={styles.heading}>{copy.heading}</h1>
+        <p className={styles.lead}>
+          Recebemos seu pedido <strong>{order.orderNumber}</strong>.
+          {!copy.awaitingPayment && ` ${copy.nextStep}`}
+        </p>
+        {copy.awaitingPayment && <p className={styles.callout}>{copy.nextStep}</p>}
 
         <dl className={styles.totals}>
           <div className={styles.row}>
