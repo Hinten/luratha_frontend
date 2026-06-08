@@ -68,7 +68,9 @@ describe("embeddingService", () => {
     } as Response);
 
     const mockCredential = {
-      getAccessToken: vi.fn().mockResolvedValue({ access_token: "dynamic-token", expires_in: 3600 }),
+      getAccessToken: vi
+        .fn()
+        .mockResolvedValue({ access_token: "dynamic-token", expires_in: 3600 }),
     };
 
     const service = createEmbeddingService({
@@ -117,7 +119,9 @@ describe("embeddingService", () => {
     vi.spyOn(globalThis, "fetch").mockImplementationOnce((_url, opts) => {
       // Immediately abort so the signal fires before the promise resolves
       (opts?.signal as AbortSignal)?.dispatchEvent(new Event("abort"));
-      return new Promise((_, reject) => reject(Object.assign(new Error("The operation was aborted."), { name: "AbortError" })));
+      return new Promise((_, reject) =>
+        reject(Object.assign(new Error("The operation was aborted."), { name: "AbortError" })),
+      );
     });
 
     const service = createEmbeddingService({
@@ -129,4 +133,3 @@ describe("embeddingService", () => {
     await expect(service.embed("teste de timeout")).rejects.toThrow();
   });
 });
-

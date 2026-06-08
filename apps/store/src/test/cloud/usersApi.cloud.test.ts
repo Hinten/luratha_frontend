@@ -32,7 +32,10 @@ function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string |
 
 vi.mock("@luratha/auth/requireUser", () => {
   class AuthError extends Error {
-    constructor(public readonly status: 401 | 403, message: string) {
+    constructor(
+      public readonly status: 401 | 403,
+      message: string,
+    ) {
       super(message);
       this.name = "AuthError";
     }

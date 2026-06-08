@@ -2,7 +2,12 @@
 
 import { startTransition, useEffect, useReducer, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PAYMENT_FAILURE_STATUSES, type Address, type CartItem, type UserProfile } from "@luratha/schemas";
+import {
+  PAYMENT_FAILURE_STATUSES,
+  type Address,
+  type CartItem,
+  type UserProfile,
+} from "@luratha/schemas";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
@@ -10,22 +15,14 @@ import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
-import ShippingStep, {
-  type ShippingQuote,
-} from "@/src/components/checkout/ShippingStep";
+import ShippingStep, { type ShippingQuote } from "@/src/components/checkout/ShippingStep";
 import PaymentStep, {
   type PaymentPayer,
   type PaymentSubmitPayload,
 } from "@/src/components/checkout/PaymentStep";
-import PaymentResult, {
-  type PaymentResultData,
-} from "@/src/components/checkout/PaymentResult";
-import StepIndicator, {
-  type CheckoutStep,
-} from "@/src/components/checkout/StepIndicator";
-import OrderSummary, {
-  type AppliedCoupon,
-} from "@/src/components/checkout/OrderSummary";
+import PaymentResult, { type PaymentResultData } from "@/src/components/checkout/PaymentResult";
+import StepIndicator, { type CheckoutStep } from "@/src/components/checkout/StepIndicator";
+import OrderSummary, { type AppliedCoupon } from "@/src/components/checkout/OrderSummary";
 import CouponField from "@/src/components/checkout/CouponField";
 import ReviewSummary from "@/src/components/checkout/ReviewSummary";
 import styles from "./CheckoutFlow.module.css";
@@ -36,12 +33,7 @@ import styles from "./CheckoutFlow.module.css";
  * view transiente (pós-submit), derivada da presença de `state.paymentResult`
  * em memória; não tem URL própria.
  */
-type VisibleStepId =
-  | "identification"
-  | "address"
-  | "shipping"
-  | "review"
-  | "payment";
+type VisibleStepId = "identification" | "address" | "shipping" | "review" | "payment";
 type StepId = VisibleStepId | "result";
 
 const VISIBLE_STEPS: CheckoutStep[] = [
@@ -166,10 +158,7 @@ function emptyInitial(): State {
  * exigem os mesmos pré-requisitos (payer + address + quote); o que diferencia
  * é que Payment é onde o user finaliza o pagamento (chama `confirmOrder`).
  */
-function enforceStepPrereqs(
-  requested: VisibleStepId,
-  state: State,
-): VisibleStepId {
+function enforceStepPrereqs(requested: VisibleStepId, state: State): VisibleStepId {
   if (requested === "address" && !state.payer) return "identification";
   if (requested === "shipping" && (!state.payer || !state.address)) {
     return !state.payer ? "identification" : "address";
@@ -248,8 +237,7 @@ export default function CheckoutFlow() {
 
   // Se temos resultado de pagamento em memória, ele sobrepõe o urlStep —
   // o user precisa ver o QR/confirmação até clicar "Acompanhar pedido".
-  const showingResult =
-    state.paymentResult !== null && state.orderId !== null;
+  const showingResult = state.paymentResult !== null && state.orderId !== null;
   const activeStep: StepId = showingResult ? "result" : urlStep;
 
   // Sincroniza a URL quando o requested foi rebaixado pelos pré-reqs
@@ -279,7 +267,7 @@ export default function CheckoutFlow() {
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/users/${userId}`);
         if (!res.ok) return;
@@ -463,9 +451,7 @@ export default function CheckoutFlow() {
       // falha de pagamento (`failed`/`cancelled`/`rejected`) preserva o cart, pra
       // o user clicar "Tentar outro método" e retentar. (`paid` já retornou acima
       // com clearCart + redirect.)
-      const paymentFailed = (PAYMENT_FAILURE_STATUSES as readonly string[]).includes(
-        result.status,
-      );
+      const paymentFailed = (PAYMENT_FAILURE_STATUSES as readonly string[]).includes(result.status);
       if (!paymentFailed) {
         void clearCart();
       }
@@ -512,13 +498,9 @@ export default function CheckoutFlow() {
               userId={user!.uid}
               defaults={{
                 email: profile?.email ?? user!.email,
-                firstName:
-                  profile?.firstName ?? user!.name.split(/\s+/)[0],
-                lastName:
-                  profile?.lastName ??
-                  user!.name.split(/\s+/).slice(1).join(" "),
-                identificationType:
-                  profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF",
+                firstName: profile?.firstName ?? user!.name.split(/\s+/)[0],
+                lastName: profile?.lastName ?? user!.name.split(/\s+/).slice(1).join(" "),
+                identificationType: profile?.taxIdentity?.type === "PJ" ? "CNPJ" : "CPF",
                 identificationNumber:
                   profile?.taxIdentity?.type === "PF"
                     ? profile.taxIdentity.cpf
@@ -538,9 +520,7 @@ export default function CheckoutFlow() {
               userId={user!.uid}
               selectedAddressId={state.address?.id ?? null}
               defaultRecipientName={
-                profile
-                  ? `${profile.firstName} ${profile.lastName}`.trim()
-                  : user!.name
+                profile ? `${profile.firstName} ${profile.lastName}`.trim() : user!.name
               }
               onSelect={(a) => dispatch({ type: "SET_ADDRESS", address: a })}
               onContinue={() => goToStep("shipping")}
@@ -636,9 +616,7 @@ export default function CheckoutFlow() {
               <button
                 type="button"
                 className={styles.confirmBtn}
-                onClick={() =>
-                  router.replace(`/checkout/sucesso/${state.orderId}`)
-                }
+                onClick={() => router.replace(`/checkout/sucesso/${state.orderId}`)}
               >
                 Acompanhar pedido
               </button>

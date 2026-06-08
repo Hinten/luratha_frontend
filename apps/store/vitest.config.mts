@@ -18,23 +18,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: [
-      "node_modules",
-      ".next",
-      "e2e",
-      "src/test/cloud/**",
-      "src/test/cloud-functions/**",
-    ],
+    exclude: ["node_modules", ".next", "e2e", "src/test/cloud/**", "src/test/cloud-functions/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: [
-        "node_modules",
-        ".next",
-        "src/test",
-        "**/*.config.*",
-        "src/app/layout.tsx",
-      ],
+      exclude: ["node_modules", ".next", "src/test", "**/*.config.*", "src/app/layout.tsx"],
     },
   },
 });

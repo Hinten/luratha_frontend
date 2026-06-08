@@ -23,12 +23,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleLogout}
-      disabled={loading}
-      className={styles.button}
-    >
+    <button type="button" onClick={handleLogout} disabled={loading} className={styles.button}>
       {loading ? "Saindo…" : "Sair"}
     </button>
   );

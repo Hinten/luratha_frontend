@@ -21,9 +21,7 @@ describe("JsonLd", () => {
     // `<` was escaped to its JSON unicode form.
     expect(html).toContain("\\u003c");
     // …yet the structured data is semantically preserved (parser reverses it).
-    expect((JSON.parse(html) as { name: string }).name).toBe(
-      "</script><script>alert(1)</script>",
-    );
+    expect((JSON.parse(html) as { name: string }).name).toBe("</script><script>alert(1)</script>");
   });
 
   it("renders valid, unchanged JSON-LD for ordinary data", () => {

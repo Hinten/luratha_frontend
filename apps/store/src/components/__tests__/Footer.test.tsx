@@ -74,16 +74,12 @@ describe("Footer", () => {
 
   it("renders Política de Trocas link", async () => {
     render(await Footer());
-    expect(
-      screen.getByRole("link", { name: "Política de Trocas" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Política de Trocas" })).toBeInTheDocument();
   });
 
   it("renders Referência de Medidas link", async () => {
     render(await Footer());
-    expect(
-      screen.getByRole("link", { name: "Referência de Medidas" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Referência de Medidas" })).toBeInTheDocument();
   });
 
   it("renders categories", async () => {

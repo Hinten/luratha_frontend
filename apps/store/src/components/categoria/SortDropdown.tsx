@@ -17,9 +17,7 @@ interface SortDropdownProps {
   currentSort?: string;
 }
 
-export default function SortDropdown({
-  currentSort = "recentes",
-}: SortDropdownProps) {
+export default function SortDropdown({ currentSort = "recentes" }: SortDropdownProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -36,7 +34,7 @@ export default function SortDropdown({
       const href = query ? `${pathname}?${query}` : pathname;
       router.push(href as Route);
     },
-    [router, pathname, searchParams]
+    [router, pathname, searchParams],
   );
 
   return (
@@ -59,4 +57,3 @@ export default function SortDropdown({
     </div>
   );
 }
-

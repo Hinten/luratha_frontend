@@ -53,9 +53,7 @@ test.describe("Authentication (Auth)", () => {
     await expect(page.getByLabel("Nome completo")).toBeVisible();
     await expect(page.getByLabel("E-mail")).toBeVisible();
     await expect(page.getByLabel("Senha", { exact: true })).toBeVisible();
-    await expect(
-      page.locator("main").getByRole("link", { name: "Entrar" }),
-    ).toBeVisible();
+    await expect(page.locator("main").getByRole("link", { name: "Entrar" })).toBeVisible();
   });
 
   test("register with mismatched passwords shows error", async ({ page }) => {
@@ -81,9 +79,7 @@ test.describe("Authentication (Auth)", () => {
     await page.getByRole("button", { name: "Criar conta" }).click();
     await expect(page).toHaveURL("/");
     await expect(page.locator("header")).toContainText("Ana");
-    await expect(
-      page.getByRole("button", { name: "Sair da conta" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible();
   });
 
   test("register → logout → login round-trip", async ({ page }) => {

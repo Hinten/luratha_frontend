@@ -62,7 +62,9 @@
   font-size: 0.9375rem;
   padding: 0.875rem 2rem;
   border-radius: 9999px;
-  transition: background-color 300ms ease, transform 200ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 200ms ease;
   text-decoration: none;
 }
 
@@ -244,7 +246,9 @@
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
-  transition: color 200ms ease, background-color 200ms ease;
+  transition:
+    color 200ms ease,
+    background-color 200ms ease;
 }
 
 .removeBtn:hover:not(:disabled) {
@@ -312,7 +316,9 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: background-color 300ms ease, transform 200ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 200ms ease;
   margin-top: 0.5rem;
 }
 
@@ -332,7 +338,9 @@
   font-weight: 500;
   color: color-mix(in srgb, var(--color-neutral-dark) 65%, transparent);
   cursor: pointer;
-  transition: border-color 200ms ease, color 200ms ease;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease;
   /* Alinha Spinner inline com "Limpando…" no estado pendente */
   display: inline-flex;
   align-items: center;

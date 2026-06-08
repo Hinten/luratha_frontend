@@ -43,7 +43,9 @@ export async function POST() {
   const stockCreated = await seedStock(stockItems);
   console.log(`[seed-mock-data] Itens de estoque criados: ${stockCreated}`);
 
-  console.log(`[seed-mock-data] Fazendo upload de imagens para ${createdProductIds.length} produto(s)...`);
+  console.log(
+    `[seed-mock-data] Fazendo upload de imagens para ${createdProductIds.length} produto(s)...`,
+  );
   const uploadedImages = await seedProductImages(products, createdProductIds);
   console.log(`[seed-mock-data] Imagens de produto enviadas: ${uploadedImages}`);
 
@@ -84,7 +86,9 @@ export async function DELETE() {
   const stockDeleted = await deleteStock(products);
   console.log(`[seed-mock-data] Itens de estoque deletados: ${stockDeleted}`);
 
-  console.log(`[seed-mock-data] Deletando arquivos do Storage para ${products.length} produto(s)...`);
+  console.log(
+    `[seed-mock-data] Deletando arquivos do Storage para ${products.length} produto(s)...`,
+  );
   const storageFilesDeleted = await deleteProductStorageFiles(products);
   console.log(`[seed-mock-data] Arquivos do Storage deletados: ${storageFilesDeleted}`);
 
@@ -158,7 +162,10 @@ async function seedStock(stocks: Stock[]): Promise<number> {
   return results.filter(Boolean).length;
 }
 
-async function seedProductImages(products: Product[], createdProductIds: string[]): Promise<number> {
+async function seedProductImages(
+  products: Product[],
+  createdProductIds: string[],
+): Promise<number> {
   if (createdProductIds.length === 0) {
     return 0;
   }
@@ -198,7 +205,10 @@ async function seedProductImages(products: Product[], createdProductIds: string[
   return uploadedImages;
 }
 
-async function seedVariantImages(products: Product[], createdProductIds: string[]): Promise<number> {
+async function seedVariantImages(
+  products: Product[],
+  createdProductIds: string[],
+): Promise<number> {
   if (createdProductIds.length === 0) {
     return 0;
   }
@@ -293,7 +303,9 @@ async function deleteProductStorageFiles(products: Product[]): Promise<number> {
     const prefix = `products/${product.id}/`;
     const [files] = await adminBucket.getFiles({ prefix });
     if (files.length === 0) continue;
-    console.log(`[seed-mock-data]   Deletando ${files.length} arquivo(s) do Storage: "${product.id}"...`);
+    console.log(
+      `[seed-mock-data]   Deletando ${files.length} arquivo(s) do Storage: "${product.id}"...`,
+    );
     await Promise.all(files.map((file) => file.delete()));
     total += files.length;
   }
@@ -306,7 +318,10 @@ async function getSeedImagePaths(): Promise<string[]> {
   try {
     const imageDirectoryEntries = await readdir(SEED_IMAGES_DIRECTORY, { withFileTypes: true });
     return imageDirectoryEntries
-      .filter((entry) => entry.isFile() && SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+      .filter(
+        (entry) =>
+          entry.isFile() && SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()),
+      )
       .map((entry) => path.join(SEED_IMAGES_DIRECTORY, entry.name))
       .sort();
   } catch (error) {

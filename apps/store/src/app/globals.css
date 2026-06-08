@@ -7,23 +7,23 @@
   --font-body: var(--font-inter), system-ui, sans-serif;
 
   /* Color Palette */
-  --color-primary:       #E8B9C9; /* Blush Rose  – CTAs, accents, links         */
-  --color-primary-hover: #D9A8B9; /* Hover state for primary                    */
-  --color-secondary:     #A8B8A2; /* Sage Green  – secondary buttons, icons     */
-  --color-accent:        #EDE4D9; /* Warm Sand   – card/section backgrounds     */
-  --color-neutral-dark:  #3A2F2A; /* Headings, body text, navigation            */
-  --color-neutral-light: #F8F5F0; /* Page background                            */
-  --color-neutral-mid:   #D9D2C7; /* Dividers, subtle shadows                   */
-  --color-error:         #C9A8A8; /* Alerts                                     */
-  --color-warning:       #B45309; /* Low-stock / caution text (amber-700)       */
+  --color-primary: #e8b9c9; /* Blush Rose  – CTAs, accents, links         */
+  --color-primary-hover: #d9a8b9; /* Hover state for primary                    */
+  --color-secondary: #a8b8a2; /* Sage Green  – secondary buttons, icons     */
+  --color-accent: #ede4d9; /* Warm Sand   – card/section backgrounds     */
+  --color-neutral-dark: #3a2f2a; /* Headings, body text, navigation            */
+  --color-neutral-light: #f8f5f0; /* Page background                            */
+  --color-neutral-mid: #d9d2c7; /* Dividers, subtle shadows                   */
+  --color-error: #c9a8a8; /* Alerts                                     */
+  --color-warning: #b45309; /* Low-stock / caution text (amber-700)       */
 
   /* Spacing base unit: 8 px → kept as multiples in Tailwind utilities */
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
 :root {
-  --background: #F8F5F0;
-  --foreground: #3A2F2A;
+  --background: #f8f5f0;
+  --foreground: #3a2f2a;
 }
 
 *,
@@ -40,7 +40,7 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
-  font-size: 1rem;        /* 16px */
+  font-size: 1rem; /* 16px */
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -58,9 +58,19 @@ h6 {
   line-height: 1.15;
 }
 
-h1 { font-size: clamp(2.5rem, 5vw, 4rem);   font-weight: 700; letter-spacing: -0.02em; }
-h2 { font-size: clamp(2rem,   4vw, 2.5rem); font-weight: 600; }
-h3 { font-size: clamp(1.5rem, 3vw, 1.75rem);font-weight: 500; }
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 600;
+}
+h3 {
+  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  font-weight: 500;
+}
 
 p {
   font-size: 1rem;
@@ -96,7 +106,7 @@ small,
   width: 100%;
   max-width: 1280px;
   margin-inline: auto;
-  padding-inline: 1rem;   /* 16px mobile */
+  padding-inline: 1rem; /* 16px mobile */
 }
 
 @media (min-width: 768px) {
@@ -106,12 +116,12 @@ small,
 }
 
 .section-padding {
-  padding-block: 3rem;   /* 48px mobile */
+  padding-block: 3rem; /* 48px mobile */
 }
 
 @media (min-width: 1024px) {
   .section-padding {
-    padding-block: 5rem;  /* 80px desktop */
+    padding-block: 5rem; /* 80px desktop */
   }
 }
 
@@ -129,13 +139,26 @@ small,
 }
 
 /* ─── Scrollbar (subtle) ─────────────────────────────────────────────────── */
-::-webkit-scrollbar        { width: 6px; }
-::-webkit-scrollbar-track  { background: var(--color-neutral-light); }
-::-webkit-scrollbar-thumb  { background: var(--color-neutral-mid); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-light);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-mid);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

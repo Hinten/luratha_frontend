@@ -55,8 +55,8 @@ export default function EsqueciSenhaPage() {
 
           {submitted ? (
             <p role="status" className={styles.successBox}>
-              Se houver uma conta com esse e-mail, enviaremos um link de redefinição
-              em instantes. Verifique sua caixa de entrada.
+              Se houver uma conta com esse e-mail, enviaremos um link de redefinição em instantes.
+              Verifique sua caixa de entrada.
             </p>
           ) : (
             <form className={styles.form} onSubmit={handleSubmit} noValidate>

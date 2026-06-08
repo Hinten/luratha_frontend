@@ -56,11 +56,7 @@ export default function CartShippingOptions({
   onSelect,
 }: CartShippingOptionsProps) {
   if (!hasPostalCode) {
-    return (
-      <p className={styles.status}>
-        Informe seu CEP acima para ver as opções de frete.
-      </p>
-    );
+    return <p className={styles.status}>Informe seu CEP acima para ver as opções de frete.</p>;
   }
   if (loading) {
     return (
@@ -72,16 +68,14 @@ export default function CartShippingOptions({
   if (error || quotes.length === 0) {
     return (
       <p className={styles.status} role="alert">
-        Não foi possível calcular o frete para este CEP agora. Tente novamente em
-        instantes.
+        Não foi possível calcular o frete para este CEP agora. Tente novamente em instantes.
       </p>
     );
   }
 
   const cheapest = quotes.reduce((a, b) => (b.price < a.price ? b : a));
   const cheapestKey = cartShippingQuoteKey(cheapest);
-  const eligible =
-    freeShippingThreshold !== null && subtotal >= freeShippingThreshold;
+  const eligible = freeShippingThreshold !== null && subtotal >= freeShippingThreshold;
   const remaining =
     freeShippingThreshold !== null ? Math.max(0, freeShippingThreshold - subtotal) : 0;
   const progressPercent =
@@ -132,10 +126,7 @@ export default function CartShippingOptions({
               aria-valuemax={100}
               aria-valuenow={progressPercent}
             >
-              <div
-                className={styles.progressFill}
-                style={{ width: `${progressPercent}%` }}
-              />
+              <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         ))}
@@ -158,9 +149,7 @@ export default function CartShippingOptions({
               />
               <span className={styles.optionBody}>
                 <span className={styles.optionName}>{row.name}</span>
-                {row.detail ? (
-                  <span className={styles.optionDetail}>{row.detail}</span>
-                ) : null}
+                {row.detail ? <span className={styles.optionDetail}>{row.detail}</span> : null}
               </span>
               <span className={styles.optionPrice}>{row.priceLabel}</span>
             </label>

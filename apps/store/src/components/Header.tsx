@@ -27,7 +27,7 @@ export default function Header() {
   }
 
   function handleMobileLogout() {
-    logout();
+    void logout();
     setMenuOpen(false);
   }
 
@@ -93,7 +93,7 @@ export default function Header() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-6 h-6"
+              className="h-6 w-6"
             >
               <path
                 strokeLinecap="round"
@@ -115,12 +115,30 @@ export default function Header() {
             onClick={() => setMenuOpen((prev) => !prev)}
           >
             {menuOpen ? (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
               </svg>
             )}
           </button>
@@ -145,30 +163,18 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <span className={styles.mobileUserName}>Olá, {firstName}</span>
-              <Link
-                href="/conta"
-                onClick={handleMobileLinkClick}
-                className={styles.mobileNavLink}
-              >
+              <Link href="/conta" onClick={handleMobileLinkClick} className={styles.mobileNavLink}>
                 Minha conta
               </Link>
               <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
-              <button
-                type="button"
-                className={styles.mobileNavLink}
-                onClick={handleMobileLogout}
-              >
+              <button type="button" className={styles.mobileNavLink} onClick={handleMobileLogout}>
                 Sair
               </button>
             </>
           ) : (
             <>
               <DevSeedButton enabled={process.env.NODE_ENV === "development"} />
-              <Link
-                href="/login"
-                onClick={handleMobileLinkClick}
-                className={styles.mobileNavLink}
-              >
+              <Link href="/login" onClick={handleMobileLinkClick} className={styles.mobileNavLink}>
                 Entrar
               </Link>
               <Link

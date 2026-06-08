@@ -17,10 +17,5 @@ export default function JsonLd({ data }: JsonLdProps) {
   // injetar markup (XSS). O parser de JSON-LD reverte o escape, então os dados
   // estruturados permanecem idênticos.
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: json }}
-    />
-  );
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />;
 }

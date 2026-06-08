@@ -59,8 +59,7 @@ export default function PixDisplay({ qrCode, qrCodeBase64, expiresAt }: PixDispl
         className={styles.qr}
       />
       <p className={styles.pixHelp}>
-        Abra o app do seu banco, escolha pagar com PIX, escaneie o QR Code
-        ou cole o código abaixo.
+        Abra o app do seu banco, escolha pagar com PIX, escaneie o QR Code ou cole o código abaixo.
       </p>
       <div className={styles.copyBlock}>
         <code className={styles.copyText}>{qrCode}</code>
@@ -74,8 +73,7 @@ export default function PixDisplay({ qrCode, qrCodeBase64, expiresAt }: PixDispl
         </button>
         {copyFailed && (
           <p className={styles.copyError} role="alert">
-            Não foi possível copiar automaticamente. Selecione o código acima e
-            copie manualmente.
+            Não foi possível copiar automaticamente. Selecione o código acima e copie manualmente.
           </p>
         )}
       </div>

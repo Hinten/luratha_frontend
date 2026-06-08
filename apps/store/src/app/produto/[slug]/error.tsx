@@ -10,10 +10,8 @@ export default function ProductErrorPage({ error, reset }: ProductErrorPageProps
 
   return (
     <div className="container-luratha section-padding">
-      <h1 className="font-[family-name:var(--font-heading)] text-3xl mb-4">
-        Erro {statusCode}
-      </h1>
-      <p className="font-[family-name:var(--font-body)] mb-6">
+      <h1 className="mb-4 font-[family-name:var(--font-heading)] text-3xl">Erro {statusCode}</h1>
+      <p className="mb-6 font-[family-name:var(--font-body)]">
         {error.message || "Não foi possível carregar o produto no momento."}
       </p>
       <button

@@ -165,8 +165,8 @@ export default async function TermosDeUsoPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Termos de Uso</h1>
           <p className={styles.headerText}>
-            As condições para usar a loja Luratha e realizar suas compras com
-            segurança e transparência.
+            As condições para usar a loja Luratha e realizar suas compras com segurança e
+            transparência.
           </p>
           <p className={styles.updatedAt}>Última atualização: {LAST_UPDATED_LABEL}</p>
         </div>

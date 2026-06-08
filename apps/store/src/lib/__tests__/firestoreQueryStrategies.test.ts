@@ -75,9 +75,7 @@ describe("firestore query strategies", () => {
 
   it("recommends pipeline for full text and large tag searches", () => {
     expect(shouldUsePipeline({ term: "vestido artesanal" })).toBe(true);
-    expect(shouldUsePipeline({ tags: Array.from({ length: 5 }, () => "linho") })).toBe(
-      true,
-    );
+    expect(shouldUsePipeline({ tags: Array.from({ length: 5 }, () => "linho") })).toBe(true);
     expect(shouldUsePipeline({ categorySlug: "vestidos", tags: ["linho"] })).toBe(false);
   });
 
@@ -122,8 +120,8 @@ describe("firestore query strategies", () => {
 
     it("every seed product has the price.price field used by min/max filters", () => {
       const plan = buildCoreProductQueryPlan({ minPrice: 100, maxPrice: 500 });
-      const priceFilters = plan.where.filter((clause) =>
-        clause.field === "price.price" || clause.field === "priceMin",
+      const priceFilters = plan.where.filter(
+        (clause) => clause.field === "price.price" || clause.field === "priceMin",
       );
       expect(priceFilters.length).toBeGreaterThan(0);
       for (const filter of priceFilters) {

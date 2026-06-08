@@ -150,20 +150,14 @@ describe("PUT /api/categories/:id", () => {
   });
 
   it("ignores id in the body and uses the URL param", async () => {
-    const res = await PUT(
-      makeRequest("PUT", buildPutBody({ id: "some-other-id" })),
-      makeParams(),
-    );
+    const res = await PUT(makeRequest("PUT", buildPutBody({ id: "some-other-id" })), makeParams());
     expect(res.status).toBe(200);
     const category = await res.json();
     expect(category.id).toBe(CATEGORY_ID);
   });
 
   it("stores category with optional parentId when provided", async () => {
-    const res = await PUT(
-      makeRequest("PUT", buildPutBody({ parentId: "roupas" })),
-      makeParams(),
-    );
+    const res = await PUT(makeRequest("PUT", buildPutBody({ parentId: "roupas" })), makeParams());
     expect(res.status).toBe(200);
     const category = await res.json();
     expect(category.parentId).toBe("roupas");

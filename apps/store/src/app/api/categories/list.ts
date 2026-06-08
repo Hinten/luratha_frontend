@@ -75,10 +75,7 @@ async function searchByQuery(
   const regex = escapeRegex(q.toLowerCase());
 
   const pipelineFilters: BooleanExpression[] = [
-    or(
-      field("name").toLower().regexMatch(regex),
-      field("slug").toLower().regexMatch(regex),
-    ),
+    or(field("name").toLower().regexMatch(regex), field("slug").toLower().regexMatch(regex)),
   ];
 
   if (parentId) {

@@ -67,7 +67,9 @@
   gap: 0.25rem;
   text-decoration: none;
   color: inherit;
-  transition: border-color 200ms ease, transform 200ms ease;
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease;
 }
 
 .card:hover {

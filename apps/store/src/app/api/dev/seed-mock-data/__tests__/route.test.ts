@@ -56,9 +56,11 @@ const {
   });
 
   // fs/promises
-  const mockReaddir = vi.fn().mockRejectedValue(
-    Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" }),
-  );
+  const mockReaddir = vi
+    .fn()
+    .mockRejectedValue(
+      Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" }),
+    );
   const mockReadFile = vi.fn().mockResolvedValue(Buffer.from("fake-image-data"));
 
   // productImageUpload

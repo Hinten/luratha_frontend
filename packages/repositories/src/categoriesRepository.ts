@@ -98,5 +98,9 @@ function normalizeRepositoryError(error: unknown, action: string): CategoryRepos
     return new CategoryRepositoryError(`Failed to ${action}: ${error.message}`, "unknown", error);
   }
 
-  return new CategoryRepositoryError(`Failed to ${action} due to an unknown error`, "unknown", error);
+  return new CategoryRepositoryError(
+    `Failed to ${action} due to an unknown error`,
+    "unknown",
+    error,
+  );
 }

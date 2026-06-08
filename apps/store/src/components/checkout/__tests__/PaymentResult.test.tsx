@@ -98,9 +98,7 @@ describe("PaymentResult", () => {
 
   it("hides the retry button when onTryAgain is omitted", () => {
     render(<PaymentResult result={cardFailed} orderId={ORDER_ID} />);
-    expect(
-      screen.queryByRole("button", { name: "Tentar outro método" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tentar outro método" })).toBeNull();
   });
 
   // ── Polling do artefato pendente (QR do PIX / boleto) ──────────────────────
@@ -115,9 +113,11 @@ describe("PaymentResult", () => {
       vi.useFakeTimers();
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse({ status: "pending", pix: { qrCode: "PIXCODE", qrCodeBase64: "B64" } }),
-        ),
+        vi
+          .fn()
+          .mockResolvedValue(
+            jsonResponse({ status: "pending", pix: { qrCode: "PIXCODE", qrCodeBase64: "B64" } }),
+          ),
       );
 
       render(
@@ -136,9 +136,7 @@ describe("PaymentResult", () => {
         await vi.advanceTimersByTimeAsync(PAYMENT_POLL_INTERVAL_MS);
       });
 
-      expect(fetch).toHaveBeenCalledWith(
-        `/api/checkout/payment-intent?orderId=${ORDER_ID}`,
-      );
+      expect(fetch).toHaveBeenCalledWith(`/api/checkout/payment-intent?orderId=${ORDER_ID}`);
       expect(screen.getByRole("img", { name: "QR Code para pagamento PIX" })).toBeInTheDocument();
       expect(screen.queryByText(/Gerando o QR Code do PIX/)).toBeNull();
     });
@@ -147,9 +145,11 @@ describe("PaymentResult", () => {
       vi.useFakeTimers();
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse({ status: "pending", boleto: { url: "https://mp.example.com/b.pdf" } }),
-        ),
+        vi
+          .fn()
+          .mockResolvedValue(
+            jsonResponse({ status: "pending", boleto: { url: "https://mp.example.com/b.pdf" } }),
+          ),
       );
 
       render(

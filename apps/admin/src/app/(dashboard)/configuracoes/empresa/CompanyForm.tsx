@@ -32,7 +32,11 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: "Contato e privacidade (LGPD)",
     fields: [
-      { key: "contactEmail", label: "E-mail de atendimento", placeholder: "contato@luratha.com.br" },
+      {
+        key: "contactEmail",
+        label: "E-mail de atendimento",
+        placeholder: "contato@luratha.com.br",
+      },
       {
         key: "dpoName",
         label: "Encarregado de Dados (DPO)",

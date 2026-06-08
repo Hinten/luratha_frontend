@@ -38,7 +38,7 @@ export default function EnderecosPage() {
   useEffect(() => {
     if (!uid) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       await refresh();
       if (!cancelled) setLoading(false);
     })();

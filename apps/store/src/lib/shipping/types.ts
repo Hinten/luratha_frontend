@@ -1,7 +1,4 @@
-import type {
-  ShippingProviderId,
-  ShippingSettings,
-} from "@luratha/schemas";
+import type { ShippingProviderId, ShippingSettings } from "@luratha/schemas";
 
 /** Item enviado ao provider de cálculo. Pesos/dimensões já resolvidos com fallback. */
 export interface ShippingItemInput {

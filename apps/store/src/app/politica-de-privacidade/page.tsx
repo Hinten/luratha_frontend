@@ -91,7 +91,9 @@ function buildSections(company: CompanySettings): Section[] {
     },
     {
       title: "5. Com quem compartilhamos",
-      paragraphs: ["Compartilhamos dados apenas com parceiros essenciais à operação, e na medida necessária:"],
+      paragraphs: [
+        "Compartilhamos dados apenas com parceiros essenciais à operação, e na medida necessária:",
+      ],
       items: [
         "MercadoPago — processamento de pagamentos (PIX, cartão e boleto).",
         "Melhor Envio, Correios e transportadoras — cálculo de frete e entrega.",
@@ -167,8 +169,8 @@ export default async function PoliticaDePrivacidadePage() {
         <div className={styles.header}>
           <h1 className="mb-4">Política de Privacidade</h1>
           <p className={styles.headerText}>
-            Sua privacidade importa. Saiba como tratamos seus dados pessoais em
-            conformidade com a LGPD (Lei nº 13.709/2018).
+            Sua privacidade importa. Saiba como tratamos seus dados pessoais em conformidade com a
+            LGPD (Lei nº 13.709/2018).
           </p>
           <p className={styles.updatedAt}>Última atualização: {LAST_UPDATED_LABEL}</p>
         </div>

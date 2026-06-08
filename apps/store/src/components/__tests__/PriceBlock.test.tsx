@@ -30,9 +30,7 @@ describe("PriceBlock", () => {
   });
 
   it("renders installment text when provided", () => {
-    render(
-      <PriceBlock price={289} installments={{ count: 3, value: 96.33 }} />
-    );
+    render(<PriceBlock price={289} installments={{ count: 3, value: 96.33 }} />);
     expect(screen.getByText(/3x/)).toBeInTheDocument();
     expect(screen.getByText(/sem juros/)).toBeInTheDocument();
   });

@@ -35,16 +35,13 @@ export async function registerNewUser(page: Page): Promise<string> {
   // o spec não consegue mockar `/api/users/{uid}/...` nem chamar
   // seedFixtureCart(uid). `/api/auth/me` não existe (a rota é `/session`).
   const sessionResponse = page.waitForResponse(
-    (res) =>
-      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    (res) => res.url().includes("/api/auth/session") && res.request().method() === "POST",
     { timeout: 15_000 },
   );
   await page.getByRole("button", { name: "Criar conta" }).click();
   const response = await sessionResponse;
   if (!response.ok()) {
-    throw new Error(
-      `[E2E] /api/auth/session falhou no register (${response.status()}).`,
-    );
+    throw new Error(`[E2E] /api/auth/session falhou no register (${response.status()}).`);
   }
   const data = (await response.json()) as { uid?: string };
   if (!data.uid) {
@@ -92,8 +89,7 @@ export async function loginOrRegisterTestUser(page: Page): Promise<string> {
   await page.getByLabel("Senha", { exact: true }).fill(password);
 
   const loginSessionWait = page.waitForResponse(
-    (res) =>
-      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    (res) => res.url().includes("/api/auth/session") && res.request().method() === "POST",
     { timeout: 10_000 },
   );
   await page.getByRole("button", { name: "Entrar" }).click();
@@ -143,8 +139,7 @@ export async function loginOrRegisterTestUser(page: Page): Promise<string> {
   await page.getByLabel("Confirmar senha").fill(password);
 
   const registerSessionWait = page.waitForResponse(
-    (res) =>
-      res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    (res) => res.url().includes("/api/auth/session") && res.request().method() === "POST",
     { timeout: 15_000 },
   );
   await page.getByRole("button", { name: "Criar conta" }).click();

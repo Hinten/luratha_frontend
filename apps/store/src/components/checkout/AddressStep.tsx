@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import type { z } from "zod";
 import type { Address } from "@luratha/schemas";
-import AddressForm, {
-  type AddressFormPayload,
-} from "@/src/components/checkout/AddressForm";
+import AddressForm, { type AddressFormPayload } from "@/src/components/checkout/AddressForm";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import styles from "./AddressStep.module.css";
@@ -45,7 +43,7 @@ export default function AddressStep({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/users/${userId}/addresses`);
         if (cancelled) return;
@@ -166,9 +164,7 @@ export default function AddressStep({
           serverIssues={serverIssues}
           hideIsDefault
           hideLabel
-          initialValues={
-            defaultRecipientName ? { recipientName: defaultRecipientName } : undefined
-          }
+          initialValues={defaultRecipientName ? { recipientName: defaultRecipientName } : undefined}
           onSubmit={handleCreate}
         />
       </section>
@@ -183,11 +179,7 @@ export default function AddressStep({
         {state.addresses.map((a) => {
           const checked = a.id === selectedAddressId;
           return (
-            <label
-              key={a.id}
-              className={styles.option}
-              data-checked={checked || undefined}
-            >
+            <label key={a.id} className={styles.option} data-checked={checked || undefined}>
               <input
                 type="radio"
                 name="address"

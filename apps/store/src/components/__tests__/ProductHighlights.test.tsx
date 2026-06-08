@@ -11,9 +11,7 @@ const highlights = [
 describe("ProductHighlights", () => {
   it("renders a list with the correct aria-label", () => {
     render(<ProductHighlights highlights={highlights} />);
-    expect(
-      screen.getByRole("list", { name: "Destaques do produto" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Destaques do produto" })).toBeInTheDocument();
   });
 
   it("renders all highlight items", () => {

@@ -13,10 +13,7 @@ export const runtime = "nodejs";
  * Returns 404 if the product does not exist.
  * Returns 200 with the product on success.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const productRef = adminDb

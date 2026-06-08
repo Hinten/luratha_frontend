@@ -64,7 +64,9 @@ export class ProductImageUploadError extends Error {
   }
 }
 
-export async function uploadProductImage(input: UploadProductImageInput): Promise<UploadProductImageResult> {
+export async function uploadProductImage(
+  input: UploadProductImageInput,
+): Promise<UploadProductImageResult> {
   const imageId = input.imageId?.trim() || createImageId(input.fileName);
   const now = new Date().toISOString();
 
@@ -72,7 +74,10 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
     throw new ProductImageUploadError("productId is required", "validation");
   }
 
-  const productRef = adminDb.collection(firestoreCollections.products).doc(input.productId).withConverter(adminProductConverter);
+  const productRef = adminDb
+    .collection(firestoreCollections.products)
+    .doc(input.productId)
+    .withConverter(adminProductConverter);
   const snapshot = await productRef.get();
 
   if (!snapshot.exists) {
@@ -80,7 +85,11 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
   }
 
   const currentProduct = snapshot.data()!;
-  const uploadedVariants = await createAndUploadVariants(input.productId, imageId, input.fileBuffer);
+  const uploadedVariants = await createAndUploadVariants(
+    input.productId,
+    imageId,
+    input.fileBuffer,
+  );
   const imageAsset = {
     id: imageId,
     alt: input.alt?.trim() || null,
@@ -115,13 +124,14 @@ export async function uploadProductImage(input: UploadProductImageInput): Promis
   }
 
   const targetVariantIds = new Set(variantIds);
-  const nextVariants = targetVariantIds.size > 0
-    ? currentProduct.variants?.map((variant) =>
-        targetVariantIds.has(variant.id) && !variant.photoIds.includes(imageId)
-          ? { ...variant, photoIds: [...variant.photoIds, imageId] }
-          : variant,
-      ) ?? null
-    : currentProduct.variants;
+  const nextVariants =
+    targetVariantIds.size > 0
+      ? (currentProduct.variants?.map((variant) =>
+          targetVariantIds.has(variant.id) && !variant.photoIds.includes(imageId)
+            ? { ...variant, photoIds: [...variant.photoIds, imageId] }
+            : variant,
+        ) ?? null)
+      : currentProduct.variants;
 
   const updatedProduct = validateProduct({
     ...currentProduct,
@@ -146,7 +156,9 @@ async function createAndUploadVariants(
 ): Promise<ProductImageResolutionsMap> {
   const sourceMetadata = await sharp(fileBuffer).metadata();
   const sourceAspectRatio =
-    sourceMetadata.width && sourceMetadata.height ? sourceMetadata.height / sourceMetadata.width : null;
+    sourceMetadata.width && sourceMetadata.height
+      ? sourceMetadata.height / sourceMetadata.width
+      : null;
 
   const uploads = await Promise.all(
     IMAGE_VARIANTS.map(async ({ name, width }) => {
@@ -173,7 +185,9 @@ async function createAndUploadVariants(
       const outputWidth = transformed.info.width ?? width;
       const outputHeight =
         transformed.info.height ??
-        (sourceAspectRatio ? Math.max(1, Math.round(outputWidth * sourceAspectRatio)) : outputWidth);
+        (sourceAspectRatio
+          ? Math.max(1, Math.round(outputWidth * sourceAspectRatio))
+          : outputWidth);
 
       return {
         name,
@@ -276,8 +290,9 @@ async function createZoomVariant(
 
   const sourceAspectRatio = sourceWidth > 0 ? sourceHeight / sourceWidth : null;
   const outputWidth = transformed.info.width ?? Math.min(ZOOM_WIDTH, sourceWidth);
-  const outputHeight = transformed.info.height
-    ?? (sourceAspectRatio ? Math.max(1, Math.round(outputWidth * sourceAspectRatio)) : outputWidth);
+  const outputHeight =
+    transformed.info.height ??
+    (sourceAspectRatio ? Math.max(1, Math.round(outputWidth * sourceAspectRatio)) : outputWidth);
 
   return {
     width: outputWidth,

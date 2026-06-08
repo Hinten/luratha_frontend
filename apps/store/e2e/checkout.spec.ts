@@ -8,10 +8,7 @@ import {
   waitForCartHydrated,
   goToCheckoutViaCart,
 } from "./_cartHelpers";
-import {
-  clearUserAddresses,
-  clearPendingOrdersFor,
-} from "./_userStateHelpers";
+import { clearUserAddresses, clearPendingOrdersFor } from "./_userStateHelpers";
 
 /**
  * Checkout PIX e Boleto — fluxo end-to-end SEM mocks.
@@ -57,16 +54,12 @@ const REQUIRED_ENVS = [
 // ── Tests sem auth (proxy + UI estática) ────────────────────────────────────
 
 test.describe("Checkout — guards e UI", () => {
-  test("acesso sem sessão redireciona para /login?redirect=%2Fcheckout", async ({
-    page,
-  }) => {
+  test("acesso sem sessão redireciona para /login?redirect=%2Fcheckout", async ({ page }) => {
     await page.goto("/checkout");
     await expect(page).toHaveURL(/\/login\?redirect=%2Fcheckout/);
   });
 
-  test("acesso sem sessão à página de sucesso redireciona com path completo", async ({
-    page,
-  }) => {
+  test("acesso sem sessão à página de sucesso redireciona com path completo", async ({ page }) => {
     await page.goto("/checkout/sucesso/order-x");
     await expect(page).toHaveURL(/\/login\?redirect=%2Fcheckout%2Fsucesso%2Forder-x/);
   });
@@ -161,9 +154,7 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
 
     // Step 2 — Endereço novo via UI (`AddressStep` renderiza form quando o
     // user não tem endereços; o `clearUserAddresses` no beforeEach garante).
-    await expect(
-      page.getByRole("heading", { name: /Para onde enviamos/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Para onde enviamos/i })).toBeVisible();
     await page.getByLabel("Nome do destinatário").fill("MP Test User");
     await page.getByLabel("CEP").fill("01310100");
     await page.getByLabel("UF").selectOption("SP");
@@ -175,9 +166,7 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     await page.waitForURL(/[?&]step=shipping/, { timeout: 15_000 });
 
     // Step 3 — Frete real (provider Melhor Envio).
-    await expect(
-      page.getByRole("heading", { name: /Como você quer receber/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Como você quer receber/i })).toBeVisible();
     await expect(page.getByRole("radiogroup", { name: /frete/i })).toBeVisible({
       timeout: 30_000,
     });
@@ -185,16 +174,12 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     await page.waitForURL(/[?&]step=review/, { timeout: 10_000 });
 
     // Step 4 — Revisão.
-    await expect(
-      page.getByRole("heading", { name: /Revise antes de pagar/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Revise antes de pagar/i })).toBeVisible();
     await page.getByRole("button", { name: /Continuar para pagamento/ }).click();
     await page.waitForURL(/[?&]step=payment/, { timeout: 10_000 });
 
     // Step 5 — Pagamento (caller escolhe método).
-    await expect(
-      page.getByRole("heading", { name: /Como você quer pagar/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Como você quer pagar/ })).toBeVisible();
   }
 
   /**
@@ -207,10 +192,7 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     orderId: string,
     expected: { paymentMethod: "pix" | "boleto" },
   ) {
-    const orderDoc = await adminDb
-      .collection(firestoreCollections.orders)
-      .doc(orderId)
-      .get();
+    const orderDoc = await adminDb.collection(firestoreCollections.orders).doc(orderId).get();
     expect(orderDoc.exists).toBe(true);
     const order = orderDoc.data();
     // PIX/boleto criados ficam "aguardando pagamento" por método (mapMpStatus do
@@ -237,9 +219,7 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     // /api/orders ANTES do click pra não perder a response (confirmOrder
     // executa: POST /api/orders → POST /api/checkout/payment-intent → MP).
     const orderResponse = page.waitForResponse(
-      (res) =>
-        res.url().endsWith("/api/orders") &&
-        res.request().method() === "POST",
+      (res) => res.url().endsWith("/api/orders") && res.request().method() === "POST",
       { timeout: 30_000 },
     );
     await page.getByRole("button", { name: "Gerar PIX" }).click();
@@ -251,12 +231,10 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     console.log(`[pix order] criado: ${orderId}`);
 
     // PaymentResult: QR Code img (base64 real do MP) + botão "Copiar código".
-    await expect(
-      page.getByRole("img", { name: "QR Code para pagamento PIX" }),
-    ).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.getByRole("button", { name: /Copiar código/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("img", { name: "QR Code para pagamento PIX" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole("button", { name: /Copiar código/ })).toBeVisible();
 
     // URL não bouncing durante PaymentResult — CheckoutFlow renderiza o
     // overlay sem mexer na query string. Sem esse assert, regressão futura
@@ -281,9 +259,7 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     await page.getByRole("tab", { name: "Boleto" }).click();
 
     const orderResponse = page.waitForResponse(
-      (res) =>
-        res.url().endsWith("/api/orders") &&
-        res.request().method() === "POST",
+      (res) => res.url().endsWith("/api/orders") && res.request().method() === "POST",
       { timeout: 30_000 },
     );
     await page.getByRole("button", { name: "Gerar boleto" }).click();
@@ -295,9 +271,9 @@ test.describe("Checkout — PIX/Boleto real (end-to-end sem mocks)", () => {
     console.log(`[boleto order] criado: ${orderId}`);
 
     // PaymentResult: link "Abrir boleto em PDF" com URL real do MP.
-    await expect(
-      page.getByRole("link", { name: "Abrir boleto em PDF" }),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("link", { name: "Abrir boleto em PDF" })).toBeVisible({
+      timeout: 30_000,
+    });
 
     // URL não bouncing durante PaymentResult (ver justificativa no PIX test).
     await expect(page).toHaveURL(/\/checkout\?step=payment/);

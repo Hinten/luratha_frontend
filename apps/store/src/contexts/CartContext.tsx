@@ -1,13 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- realtime cart listener: repositories expose one-shot reads only, not onSnapshot. The refs built below are converter-bound (clientCartConverter / clientCartItemConverter), so these reads stay schema-validated.
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import { ZodError } from "zod";
@@ -97,10 +90,7 @@ function emptyCart(userId: string): Cart {
 
 function computeLocalCart(userId: string, items: CartItem[]): Cart {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotalCents = items.reduce(
-    (sum, i) => sum + toCents(i.unitPrice) * i.quantity,
-    0,
-  );
+  const subtotalCents = items.reduce((sum, i) => sum + toCents(i.unitPrice) * i.quantity, 0);
   const subtotal = subtotalCents / 100;
   return validateCart({
     id: userId,
@@ -354,8 +344,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     // Read pending guest items synchronously, BEFORE subscribing or merging,
     // so a slow Firestore snapshot can't race with localStorage being cleared.
-    const pending =
-      lastMergedFor.current === userId ? [] : hydrateGuestItems();
+    const pending = lastMergedFor.current === userId ? [] : hydrateGuestItems();
     const pendingToken = readGuestToken();
     const lastMerged = readLastMerged();
     // Skip o merge se essa leva (mesmo token) já foi mesclada pra esse uid.
@@ -367,8 +356,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       lastMerged !== null &&
       lastMerged.token === pendingToken &&
       lastMerged.uid === userId;
-    const needsMerge =
-      pending.length > 0 && pendingToken !== null && !alreadyMerged;
+    const needsMerge = pending.length > 0 && pendingToken !== null && !alreadyMerged;
     if (needsMerge) {
       lastMergedFor.current = userId;
     }
@@ -390,9 +378,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const cartRef = doc(db, firestoreCollections.carts, userId).withConverter(
-      clientCartConverter,
-    );
+    const cartRef = doc(db, firestoreCollections.carts, userId).withConverter(clientCartConverter);
     const itemsRef = collection(
       db,
       firestoreCollections.carts,
@@ -484,24 +470,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * totals and persists to localStorage inside the same setter, so back-to-back
    * synchronous calls (e.g. add x3) see the latest items without closure drift.
    */
-  const updateGuestItems = useCallback(
-    (transform: (prev: CartItem[]) => CartItem[]) => {
-      setItems((prev) => {
-        const next = transform(prev);
-        setCart(computeLocalCart(GUEST_OWNER, next));
-        persistGuestItems(next);
-        // Token vive enquanto houver items pendentes pra mesclar. Limpa quando
-        // o carrinho fica vazio (sem o que mesclar = sem precisar de token).
-        if (next.length > 0) {
-          ensureGuestToken();
-        } else {
-          clearGuestToken();
-        }
-        return next;
-      });
-    },
-    [],
-  );
+  const updateGuestItems = useCallback((transform: (prev: CartItem[]) => CartItem[]) => {
+    setItems((prev) => {
+      const next = transform(prev);
+      setCart(computeLocalCart(GUEST_OWNER, next));
+      persistGuestItems(next);
+      // Token vive enquanto houver items pendentes pra mesclar. Limpa quando
+      // o carrinho fica vazio (sem o que mesclar = sem precisar de token).
+      if (next.length > 0) {
+        ensureGuestToken();
+      } else {
+        clearGuestToken();
+      }
+      return next;
+    });
+  }, []);
 
   // --- Public actions -----------------------------------------------------
   const addItem = useCallback(
@@ -516,9 +499,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateGuestItems((prev) => {
           const existing = prev.find((i) => i.id === id);
           if (existing) {
-            return prev.map((i) =>
-              i.id === id ? buildGuestItem(input, existing) : i,
-            );
+            return prev.map((i) => (i.id === id ? buildGuestItem(input, existing) : i));
           }
           return [...prev, validatedFresh];
         });
@@ -567,14 +548,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         setIsSyncing(true);
-        const response = await fetch(
-          `/api/cart/items/${encodeURIComponent(itemId)}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ quantity }),
-          },
-        );
+        const response = await fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quantity }),
+        });
         await throwIfNotOk(response, "Falha ao atualizar item.");
       } catch (err) {
         if (!(err instanceof ApiResponseError)) throw err;
@@ -595,10 +573,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         setIsSyncing(true);
-        const response = await fetch(
-          `/api/cart/items/${encodeURIComponent(itemId)}`,
-          { method: "DELETE" },
-        );
+        const response = await fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, {
+          method: "DELETE",
+        });
         // 404 means the item was already gone — treat as success.
         if (response.status === 404) return;
         await throwIfNotOk(response, "Falha ao remover item.");

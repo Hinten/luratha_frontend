@@ -93,8 +93,8 @@ export default function EntregaPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Entrega e Frete</h1>
           <p className={styles.headerText}>
-            Tudo sobre como o frete é calculado, os prazos, as transportadoras e
-            o rastreamento do seu pedido.
+            Tudo sobre como o frete é calculado, os prazos, as transportadoras e o rastreamento do
+            seu pedido.
           </p>
         </div>
 

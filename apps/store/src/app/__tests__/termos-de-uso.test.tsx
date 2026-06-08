@@ -43,9 +43,7 @@ describe("TermosDeUsoPage", () => {
 
     render(await TermosDeUsoPage());
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Termos de Uso" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Termos de Uso" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: /Lei aplicável e foro/i }),
     ).toBeInTheDocument();

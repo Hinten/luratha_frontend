@@ -69,10 +69,7 @@ export function useCartShipping(items: CartItem[]): CartShippingState {
   const postalCode = estimate?.postalCode ?? null;
 
   const payload = useMemo(() => buildItemsPayload(items), [items]);
-  const signature = useMemo(
-    () => JSON.stringify({ postalCode, payload }),
-    [postalCode, payload],
-  );
+  const signature = useMemo(() => JSON.stringify({ postalCode, payload }), [postalCode, payload]);
 
   const [result, setResult] = useState<FetchResult | null>(null);
 

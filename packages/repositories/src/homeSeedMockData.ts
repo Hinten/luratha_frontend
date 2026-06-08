@@ -193,7 +193,8 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
     {
       id: "prod_home_11",
       title: "Vestido Festa Tecido Nobre",
-      description: "Vestido de festa confeccionado em tecido nobre com acabamento artesanal delicado.",
+      description:
+        "Vestido de festa confeccionado em tecido nobre com acabamento artesanal delicado.",
       sku: "LURATHA_1011",
       categorySlug: "vestidos",
       tags: ["vestido", "festa"],
@@ -203,9 +204,9 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       color: ["Preto"],
       variants: [
         { id: "var_prod11_pp", sku: "LURATHA_1011_PP", size: ["PP"], color: ["Preto"] },
-        { id: "var_prod11_p",  sku: "LURATHA_1011_P",  size: ["P"],  color: ["Preto"] },
-        { id: "var_prod11_m",  sku: "LURATHA_1011_M",  size: ["M"],  color: ["Preto"] },
-        { id: "var_prod11_g",  sku: "LURATHA_1011_G",  size: ["G"],  color: ["Preto"] },
+        { id: "var_prod11_p", sku: "LURATHA_1011_P", size: ["P"], color: ["Preto"] },
+        { id: "var_prod11_m", sku: "LURATHA_1011_M", size: ["M"], color: ["Preto"] },
+        { id: "var_prod11_g", sku: "LURATHA_1011_G", size: ["G"], color: ["Preto"] },
       ],
     },
     {
@@ -260,9 +261,9 @@ export function buildHomeSeedProducts(categories = buildHomeSeedCategories()): P
       stock: 3, // p:0 + m:2 + g:1 + gg:0
       color: ["Rosé", "Verde Sálvia", "Azul", "Bege"],
       variants: [
-        { id: "var_prod15_p",  sku: "LURATHA_1015_P",  size: ["P"],  color: ["Rosé"] },
-        { id: "var_prod15_m",  sku: "LURATHA_1015_M",  size: ["M"],  color: ["Verde Sálvia"] },
-        { id: "var_prod15_g",  sku: "LURATHA_1015_G",  size: ["G"],  color: ["Azul"] },
+        { id: "var_prod15_p", sku: "LURATHA_1015_P", size: ["P"], color: ["Rosé"] },
+        { id: "var_prod15_m", sku: "LURATHA_1015_M", size: ["M"], color: ["Verde Sálvia"] },
+        { id: "var_prod15_g", sku: "LURATHA_1015_G", size: ["G"], color: ["Azul"] },
         { id: "var_prod15_gg", sku: "LURATHA_1015_GG", size: ["GG"], color: ["Bege"] },
       ],
     },

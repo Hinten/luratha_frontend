@@ -49,11 +49,7 @@ function emitPretty(severity: Severity, message: string, payload?: unknown): voi
   const isTty = Boolean(process.stdout?.isTTY);
   const prefix = isTty ? `${ANSI[severity]}${TAG[severity]}\x1b[0m` : TAG[severity];
   const sink =
-    severity === "ERROR"
-      ? console.error
-      : severity === "WARNING"
-        ? console.warn
-        : console.log;
+    severity === "ERROR" ? console.error : severity === "WARNING" ? console.warn : console.log;
   if (payload !== undefined) {
     sink(`${prefix} ${message}`, payload);
   } else {

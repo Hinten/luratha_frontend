@@ -13,10 +13,7 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
-import {
-  buildProductSlug,
-  firestoreCollections,
-} from "@luratha/schemas";
+import { buildProductSlug, firestoreCollections } from "@luratha/schemas";
 import { describeCloud, createCloudTestPrefix } from "@/src/test/cloud/sharedSetup";
 
 // ── Auth mock (single source of truth for the suite) ───────────────────────
@@ -25,9 +22,7 @@ const auth = vi.hoisted(() => ({
     current: null as { uid: string; email: string | null; isAdmin: boolean } | null,
   },
 }));
-function mockAuthedUser(
-  opts: { uid: string; isAdmin?: boolean; email?: string | null } | null,
-) {
+function mockAuthedUser(opts: { uid: string; isAdmin?: boolean; email?: string | null } | null) {
   auth.state.current = opts
     ? {
         uid: opts.uid,
@@ -38,7 +33,10 @@ function mockAuthedUser(
 }
 vi.mock("@luratha/auth/requireUser", () => {
   class AuthError extends Error {
-    constructor(public readonly status: 401 | 403, message: string) {
+    constructor(
+      public readonly status: 401 | 403,
+      message: string,
+    ) {
       super(message);
       this.name = "AuthError";
     }
@@ -68,10 +66,7 @@ vi.mock("@luratha/auth/requireUser", () => {
 // Imports of route handlers happen *after* vi.mock (hoisted).
 import { GET as cartGET, DELETE as cartDELETE } from "@/src/app/api/cart/route";
 import { POST as itemsPOST } from "@/src/app/api/cart/items/route";
-import {
-  PUT as itemPUT,
-  DELETE as itemDELETE,
-} from "@/src/app/api/cart/items/[itemId]/route";
+import { PUT as itemPUT, DELETE as itemDELETE } from "@/src/app/api/cart/items/[itemId]/route";
 import { POST as mergePOST } from "@/src/app/api/cart/merge/route";
 
 // ── Test fixtures ──────────────────────────────────────────────────────────
@@ -84,8 +79,7 @@ const VARIANT_G_SKU = "SKUVARG_CCCC";
 
 function buildPhotoAsset(productId: string, assetId: string) {
   const now = new Date().toISOString();
-  const url = (label: string) =>
-    `https://example.com/${productId}/${assetId}/${label}.webp`;
+  const url = (label: string) => `https://example.com/${productId}/${assetId}/${label}.webp`;
   return {
     id: assetId,
     alt: "foto teste",
@@ -290,9 +284,7 @@ async function clearCartFromFirestore(userId: string): Promise<void> {
 
 async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   await Promise.all(
-    tracked.map(({ collection, id }) =>
-      adminDb.collection(collection).doc(id).delete(),
-    ),
+    tracked.map(({ collection, id }) => adminDb.collection(collection).doc(id).delete()),
   );
 }
 
@@ -564,10 +556,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
 
   it("POST /api/cart/items returns 409 when unitPrice differs from catalog", async () => {
     const response = await itemsPOST(
-      jsonRequest(
-        "http://localhost/api/cart/items",
-        buildItemPayload({ unitPrice: 1 }),
-      ),
+      jsonRequest("http://localhost/api/cart/items", buildItemPayload({ unitPrice: 1 })),
     );
     expect(response.status).toBe(409);
   });
@@ -631,10 +620,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
 
   it("POST /api/cart/items returns 400 when imageUrl is not a valid URL", async () => {
     const response = await itemsPOST(
-      jsonRequest(
-        "http://localhost/api/cart/items",
-        buildItemPayload({ imageUrl: "not-a-url" }),
-      ),
+      jsonRequest("http://localhost/api/cart/items", buildItemPayload({ imageUrl: "not-a-url" })),
     );
     expect(response.status).toBe(400);
   });
@@ -679,11 +665,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     const itemId = createdBody.items[0].id;
 
     const response = await itemPUT(
-      jsonRequest(
-        `http://localhost/api/cart/items/${itemId}`,
-        { quantity: 5 },
-        "PUT",
-      ),
+      jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 5 }, "PUT"),
       { params: Promise.resolve({ itemId }) },
     );
 
@@ -701,11 +683,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     const itemId = createdBody.items[0].id;
 
     const response = await itemPUT(
-      jsonRequest(
-        `http://localhost/api/cart/items/${itemId}`,
-        { quantity: 0 },
-        "PUT",
-      ),
+      jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 0 }, "PUT"),
       { params: Promise.resolve({ itemId }) },
     );
 
@@ -723,11 +701,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     const itemId = createdBody.items[0].id;
 
     const response = await itemPUT(
-      jsonRequest(
-        `http://localhost/api/cart/items/${itemId}`,
-        { quantity: -5 },
-        "PUT",
-      ),
+      jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: -5 }, "PUT"),
       { params: Promise.resolve({ itemId }) },
     );
 
@@ -744,11 +718,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     const itemId = createdBody.items[0].id;
 
     const response = await itemPUT(
-      jsonRequest(
-        `http://localhost/api/cart/items/${itemId}`,
-        { quantity: 1.5 },
-        "PUT",
-      ),
+      jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 1.5 }, "PUT"),
       { params: Promise.resolve({ itemId }) },
     );
     expect(response.status).toBe(400);
@@ -762,11 +732,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     const itemId = createdBody.items[0].id;
 
     const response = await itemPUT(
-      jsonRequest(
-        `http://localhost/api/cart/items/${itemId}`,
-        { quantity: 200 },
-        "PUT",
-      ),
+      jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 200 }, "PUT"),
       { params: Promise.resolve({ itemId }) },
     );
     expect(response.status).toBe(409);
@@ -774,11 +740,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
 
   it("PUT /api/cart/items/:itemId returns 404 when item does not exist", async () => {
     const response = await itemPUT(
-      jsonRequest(
-        "http://localhost/api/cart/items/missing",
-        { quantity: 2 },
-        "PUT",
-      ),
+      jsonRequest("http://localhost/api/cart/items/missing", { quantity: 2 }, "PUT"),
       { params: Promise.resolve({ itemId: "missing" }) },
     );
     expect(response.status).toBe(404);
@@ -957,9 +919,7 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   });
 
   it("POST /api/cart/merge returns 400 sem mergeToken", async () => {
-    const response = await mergePOST(
-      jsonRequest("http://localhost/api/cart/merge", { items: [] }),
-    );
+    const response = await mergePOST(jsonRequest("http://localhost/api/cart/merge", { items: [] }));
     expect(response.status).toBe(400);
   });
 });

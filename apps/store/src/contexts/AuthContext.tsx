@@ -1,13 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import {
@@ -124,56 +117,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe: (() => void) | undefined;
     try {
       const auth = getClientAuth();
-      unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
-        if (!fbUser) {
-          setUser(null);
-          setIsLoading(false);
-          if (previousUidRef.current !== null) {
-            previousUidRef.current = null;
-            // Invalidate the RSC cache so Server Components below the header
-            // re-render without the (now stale) session cookie.
-            router.refresh();
-          }
-          return;
-        }
-        try {
-          // Establish the server session cookie BEFORE exposing `user` to
-          // consumers. Otherwise CartContext (and any other consumer keyed on
-          // `useAuth().user`) would fire cookie-authenticated requests like
-          // POST /api/cart/merge before the __session cookie reaches the
-          // browser, getting 401s from `requireUser()`.
-          const idToken = await fbUser.getIdToken();
-          await postSession(idToken);
-          const authedUser = await buildAuthUser(fbUser);
-          setUser(authedUser);
-          if (previousUidRef.current !== authedUser.uid) {
-            previousUidRef.current = authedUser.uid;
-            router.refresh();
-          }
-        } catch (err) {
-          if (
-            !(err instanceof AuthClientError) &&
-            !(err instanceof TypeError) &&
-            !(err instanceof FirebaseError)
-          ) {
-            throw err;
-          }
-          // postSession (AuthClientError) or fetch network (TypeError) failed —
-          // sign out of the Firebase client to avoid a divergent state where
-          // the client is authenticated but the server has no session cookie.
-          try {
-            await signOut(auth);
-          } catch (signOutErr) {
-            if (!(signOutErr instanceof FirebaseError)) {
-              throw signOutErr;
+      unsubscribe = onIdTokenChanged(auth, (fbUser) => {
+        // Wrap the async work in a void IIFE so the listener itself returns
+        // `void` (Firebase's NextFn contract) — the Promise is intentionally
+        // fire-and-forget.
+        void (async () => {
+          if (!fbUser) {
+            setUser(null);
+            setIsLoading(false);
+            if (previousUidRef.current !== null) {
+              previousUidRef.current = null;
+              // Invalidate the RSC cache so Server Components below the header
+              // re-render without the (now stale) session cookie.
+              router.refresh();
             }
-            // Already signed out — non-fatal.
+            return;
           }
-          setUser(null);
-          logger.warn("Falha ao estabelecer sessão server-side; usuário deslogado.", { err });
-        } finally {
-          setIsLoading(false);
-        }
+          try {
+            // Establish the server session cookie BEFORE exposing `user` to
+            // consumers. Otherwise CartContext (and any other consumer keyed on
+            // `useAuth().user`) would fire cookie-authenticated requests like
+            // POST /api/cart/merge before the __session cookie reaches the
+            // browser, getting 401s from `requireUser()`.
+            const idToken = await fbUser.getIdToken();
+            await postSession(idToken);
+            const authedUser = await buildAuthUser(fbUser);
+            setUser(authedUser);
+            if (previousUidRef.current !== authedUser.uid) {
+              previousUidRef.current = authedUser.uid;
+              router.refresh();
+            }
+          } catch (err) {
+            if (
+              !(err instanceof AuthClientError) &&
+              !(err instanceof TypeError) &&
+              !(err instanceof FirebaseError)
+            ) {
+              throw err;
+            }
+            // postSession (AuthClientError) or fetch network (TypeError) failed —
+            // sign out of the Firebase client to avoid a divergent state where
+            // the client is authenticated but the server has no session cookie.
+            try {
+              await signOut(auth);
+            } catch (signOutErr) {
+              if (!(signOutErr instanceof FirebaseError)) {
+                throw signOutErr;
+              }
+              // Already signed out — non-fatal.
+            }
+            setUser(null);
+            logger.warn("Falha ao estabelecer sessão server-side; usuário deslogado.", { err });
+          } finally {
+            setIsLoading(false);
+          }
+        })();
       });
     } catch (err) {
       if (!(err instanceof FirebaseError)) {
@@ -186,73 +184,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe?.();
   }, [router]);
 
-  const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      const trimmedName = name.trim();
-      if (!trimmedName) throw new AuthClientError("O nome é obrigatório.");
-      if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
-      if (!password) throw new AuthClientError("A senha é obrigatória.");
-      if (password.length < 6)
-        throw new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) throw new AuthClientError("O nome é obrigatório.");
+    if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");
+    if (!password) throw new AuthClientError("A senha é obrigatória.");
+    if (password.length < 6) throw new AuthClientError("A senha deve ter pelo menos 6 caracteres.");
 
-      let credential;
-      try {
-        const auth = getClientAuth();
-        credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        await updateProfile(credential.user, { displayName: trimmedName });
-        const idToken = await credential.user.getIdToken(true);
-        await postSession(idToken);
-      } catch (err) {
-        const auth = (() => {
-          try {
-            return getClientAuth();
-          } catch (innerErr) {
-            if (!(innerErr instanceof FirebaseError)) {
-              throw innerErr;
-            }
-            return null;
+    let credential;
+    try {
+      const auth = getClientAuth();
+      credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await updateProfile(credential.user, { displayName: trimmedName });
+      const idToken = await credential.user.getIdToken(true);
+      await postSession(idToken);
+    } catch (err) {
+      const auth = (() => {
+        try {
+          return getClientAuth();
+        } catch (innerErr) {
+          if (!(innerErr instanceof FirebaseError)) {
+            throw innerErr;
           }
-        })();
-        if (auth?.currentUser) {
-          try {
-            await signOut(auth);
-          } catch (signOutErr) {
-            if (!(signOutErr instanceof FirebaseError)) {
-              throw signOutErr;
-            }
-            // Best-effort rollback of partial Firebase sign-up state.
-          }
+          return null;
         }
-        const mapped = mapFirebaseError(err);
-        throw mapped ?? err;
+      })();
+      if (auth?.currentUser) {
+        try {
+          await signOut(auth);
+        } catch (signOutErr) {
+          if (!(signOutErr instanceof FirebaseError)) {
+            throw signOutErr;
+          }
+          // Best-effort rollback of partial Firebase sign-up state.
+        }
       }
+      const mapped = mapFirebaseError(err);
+      throw mapped ?? err;
+    }
 
-      try {
-        const res = await fetch(`/api/users/${credential.user.uid}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: credential.user.uid,
-            email: email.trim().toLowerCase(),
-            firstName: trimmedName.split(" ")[0],
-            lastName: trimmedName.split(" ").slice(1).join(" ") || trimmedName.split(" ")[0],
-            role: "customer",
-          }),
-        });
-        if (!res.ok) {
-          // Não é fatal: o usuário pode completar o perfil em /conta/dados depois.
-          console.warn("Falha ao criar perfil no signup; complete em /conta/dados.");
-        }
-      } catch (err) {
-        if (!(err instanceof TypeError)) {
-          throw err;
-        }
-        // fetch() throws TypeError on network failure — non-fatal here.
-        console.warn("Falha de rede ao criar perfil no signup; complete em /conta/dados.");
+    try {
+      const res = await fetch(`/api/users/${credential.user.uid}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: credential.user.uid,
+          email: email.trim().toLowerCase(),
+          firstName: trimmedName.split(" ")[0],
+          lastName: trimmedName.split(" ").slice(1).join(" ") || trimmedName.split(" ")[0],
+          role: "customer",
+        }),
+      });
+      if (!res.ok) {
+        // Não é fatal: o usuário pode completar o perfil em /conta/dados depois.
+        console.warn("Falha ao criar perfil no signup; complete em /conta/dados.");
       }
-    },
-    [],
-  );
+    } catch (err) {
+      if (!(err instanceof TypeError)) {
+        throw err;
+      }
+      // fetch() throws TypeError on network failure — non-fatal here.
+      console.warn("Falha de rede ao criar perfil no signup; complete em /conta/dados.");
+    }
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     if (!email.trim()) throw new AuthClientError("O e-mail é obrigatório.");

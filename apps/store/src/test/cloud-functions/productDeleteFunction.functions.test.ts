@@ -39,7 +39,10 @@ async function waitForDocumentDeletion(
   return false;
 }
 
-async function waitForFileDeletion(storagePath: string, timeoutMs = FUNCTION_SETTLE_TIMEOUT_MS): Promise<boolean> {
+async function waitForFileDeletion(
+  storagePath: string,
+  timeoutMs = FUNCTION_SETTLE_TIMEOUT_MS,
+): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const [exists] = await adminBucket.file(storagePath).exists();
@@ -103,12 +106,18 @@ describeCloud("onProductDeleted (Cloud Functions)", () => {
       .doc(stockOnlyProductId)
       .set({ ...mockStock, productId: stockOnlyProductId });
 
-    const stockBefore = await adminDb.collection(firestoreCollections.stock).doc(stockOnlyProductId).get();
+    const stockBefore = await adminDb
+      .collection(firestoreCollections.stock)
+      .doc(stockOnlyProductId)
+      .get();
     expect(stockBefore.exists).toBe(true);
 
     await adminDb.collection(firestoreCollections.products).doc(stockOnlyProductId).delete();
 
-    const stockDeleted = await waitForDocumentDeletion(firestoreCollections.stock, stockOnlyProductId);
+    const stockDeleted = await waitForDocumentDeletion(
+      firestoreCollections.stock,
+      stockOnlyProductId,
+    );
     expect(stockDeleted).toBe(true);
   });
 

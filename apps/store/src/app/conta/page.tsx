@@ -40,7 +40,7 @@ export default function ContaDashboardPage() {
       }
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -59,8 +59,8 @@ export default function ContaDashboardPage() {
       {profileMissing && (
         <div className={styles.alertBox} role="status">
           <p>
-            Você ainda não completou seu perfil. Para finalizar uma compra,
-            precisamos dos seus dados de contato e fiscais.
+            Você ainda não completou seu perfil. Para finalizar uma compra, precisamos dos seus
+            dados de contato e fiscais.
           </p>
           <Link href="/conta/dados" className={styles.alertCta}>
             Completar perfil
@@ -93,9 +93,7 @@ export default function ContaDashboardPage() {
           <Link href={`/conta/pedidos/${lastOrder.id}`} className={styles.lastOrderCard}>
             <span className={styles.orderNumber}>#{lastOrder.orderNumber}</span>
             <span className={styles.orderStatus}>{getOrderDisplayStatus(lastOrder).label}</span>
-            <span className={styles.orderTotal}>
-              {formatBRL(lastOrder.grandTotal)}
-            </span>
+            <span className={styles.orderTotal}>{formatBRL(lastOrder.grandTotal)}</span>
           </Link>
         ) : (
           <p className={styles.muted}>Nenhum pedido ainda.</p>
@@ -108,4 +106,3 @@ export default function ContaDashboardPage() {
 function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
-

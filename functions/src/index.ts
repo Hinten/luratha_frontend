@@ -65,14 +65,19 @@ async function deleteStockForProduct(productId: string): Promise<void> {
       await stockRef.delete();
       console.log(`[onProductDeleted] Deleted stock document for product "${productId}"`);
     } else {
-      console.log(`[onProductDeleted] No stock document found for product "${productId}" — nothing to delete`);
+      console.log(
+        `[onProductDeleted] No stock document found for product "${productId}" — nothing to delete`,
+      );
     }
   } catch (error) {
     logger.error("[onProductDeleted] Error deleting stock", { productId, error });
   }
 }
 
-async function deleteProductStorageFiles(productId: string, productData: ProductData): Promise<void> {
+async function deleteProductStorageFiles(
+  productId: string,
+  productData: ProductData,
+): Promise<void> {
   const storagePaths: string[] = [];
 
   const photoAssets = productData.photoAssets ?? [];
@@ -143,7 +148,9 @@ async function deleteProductStorageFiles(productId: string, productData: Product
         await bucket.file(storagePath).delete();
         console.log(`[onProductDeleted] Deleted storage file: "${storagePath}"`);
       } catch (error) {
-        throw new Error(`[onProductDeleted] Could not delete storage file "${storagePath}": ${error}`);
+        throw new Error(
+          `[onProductDeleted] Could not delete storage file "${storagePath}": ${error}`,
+        );
       }
     }),
   );

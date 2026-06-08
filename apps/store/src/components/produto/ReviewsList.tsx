@@ -36,13 +36,10 @@ interface ReviewsListProps {
 
 export default function ReviewsList({ reviews }: ReviewsListProps) {
   if (reviews.length === 0) {
-    return (
-      <p className={styles.empty}>Esta peça ainda não possui avaliações.</p>
-    );
+    return <p className={styles.empty}>Esta peça ainda não possui avaliações.</p>;
   }
 
-  const averageRating =
-    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
   return (
     <section aria-label="Avaliações do produto" className={styles.section}>
@@ -60,10 +57,7 @@ export default function ReviewsList({ reviews }: ReviewsListProps) {
             <div className={styles.itemHeader}>
               <span className={styles.author}>{review.userId}</span>
               <StarRating rating={review.rating} />
-              <time
-                dateTime={review.createdAt}
-                className={styles.date}
-              >
+              <time dateTime={review.createdAt} className={styles.date}>
                 {formatReviewDate(review.createdAt)}
               </time>
             </div>

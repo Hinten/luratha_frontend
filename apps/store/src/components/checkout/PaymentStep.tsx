@@ -406,12 +406,8 @@ export default function PaymentStep(props: PaymentStepProps) {
             {!brickReady && (
               <div className={styles.brickOverlay} aria-live="polite">
                 <LockIcon className={styles.lockIcon} />
-                <p className={styles.overlayTitle}>
-                  Carregando ambiente seguro de pagamento
-                </p>
-                <p className={styles.overlaySubtitle}>
-                  Conexão criptografada com o Mercado Pago
-                </p>
+                <p className={styles.overlayTitle}>Carregando ambiente seguro de pagamento</p>
+                <p className={styles.overlaySubtitle}>Conexão criptografada com o Mercado Pago</p>
                 <Spinner size={20} className={styles.overlaySpinner} />
               </div>
             )}
@@ -429,12 +425,7 @@ export default function PaymentStep(props: PaymentStepProps) {
           </div>
 
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.backBtn}
-              onClick={onBack}
-              disabled={submitting}
-            >
+            <button type="button" className={styles.backBtn} onClick={onBack} disabled={submitting}>
               Voltar
             </button>
           </div>

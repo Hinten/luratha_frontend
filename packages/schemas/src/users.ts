@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  nonEmptyStringSchema,
-  timestampSchema,
-  uidSchema,
-} from "@luratha/schemas/utils";
+import { nonEmptyStringSchema, timestampSchema, uidSchema } from "@luratha/schemas/utils";
 
 /**
  * Identidade fiscal do usuário — necessária para emissão de NF-e.
@@ -25,7 +21,10 @@ export const taxIdentitySchema = z.discriminatedUnion("type", [
     cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/),
     rg: z.string().trim().max(20).optional(),
     /** Data de nascimento ISO YYYY-MM-DD. Útil para alguns layouts de NF-e e validações de idade. */
-    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    birthDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   }),
   z.object({
     type: z.literal("PJ"),
@@ -35,7 +34,10 @@ export const taxIdentitySchema = z.discriminatedUnion("type", [
     stateRegistration: z.union([
       z.literal("ISENTO"),
       z.literal("NAO_CONTRIBUINTE"),
-      z.string().trim().regex(/^\d{2,14}$/),
+      z
+        .string()
+        .trim()
+        .regex(/^\d{2,14}$/),
     ]),
     municipalRegistration: z.string().trim().max(20).optional(),
   }),
@@ -43,7 +45,10 @@ export const taxIdentitySchema = z.discriminatedUnion("type", [
     type: z.literal("ESTRANGEIRO"),
     documentId: nonEmptyStringSchema.max(50),
     /** País emissor do documento (ISO-3166-1 alpha-2, ex: "US", "PT"). */
-    documentCountry: z.string().trim().regex(/^[A-Z]{2}$/),
+    documentCountry: z
+      .string()
+      .trim()
+      .regex(/^[A-Z]{2}$/),
   }),
 ]);
 
@@ -54,7 +59,10 @@ export const userProfileSchema = z.object({
   email: z.email(),
   firstName: nonEmptyStringSchema,
   lastName: nonEmptyStringSchema,
-  phone: z.string().regex(/^\+?[1-9]\d{7,14}$/).optional(),
+  phone: z
+    .string()
+    .regex(/^\+?[1-9]\d{7,14}$/)
+    .optional(),
   role: z.enum(["customer", "admin"]).default("customer"),
   /**
    * Identidade fiscal. Opcional no signup, obrigatória no checkout.

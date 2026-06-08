@@ -85,7 +85,9 @@
   animation: shimmer 1.6s ease-in-out infinite;
   padding: 0;
   cursor: pointer;
-  transition: border-color 200ms ease, opacity 200ms ease;
+  transition:
+    border-color 200ms ease,
+    opacity 200ms ease;
   opacity: 0.65;
 }
 

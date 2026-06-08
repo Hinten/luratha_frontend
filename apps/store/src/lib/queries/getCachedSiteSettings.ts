@@ -12,6 +12,4 @@ import type { SiteSettings } from "@luratha/schemas";
  * Used by the institutional pages to surface the configurable company
  * identification block (`company`) — legal name, CNPJ, DPO, jurisdiction.
  */
-export const getCachedSiteSettings = cache((): Promise<SiteSettings> =>
-  getSiteSettings(),
-);
+export const getCachedSiteSettings = cache((): Promise<SiteSettings> => getSiteSettings());

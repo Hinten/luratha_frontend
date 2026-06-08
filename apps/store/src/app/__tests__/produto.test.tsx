@@ -145,7 +145,7 @@ describe("ProdutoPage", () => {
     });
     render(page as React.ReactElement);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Vestido Bordado Floral" })
+      screen.getByRole("heading", { level: 1, name: "Vestido Bordado Floral" }),
     ).toBeInTheDocument();
   });
 
@@ -184,7 +184,7 @@ describe("ProdutoPage", () => {
     getBySlugMock.mockResolvedValueOnce(null);
 
     await expect(
-      ProdutoPage({ params: Promise.resolve({ slug: "slug-que-nao-existe" }) })
+      ProdutoPage({ params: Promise.resolve({ slug: "slug-que-nao-existe" }) }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 

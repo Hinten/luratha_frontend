@@ -22,9 +22,8 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
   const highlights = product.productHighlight ?? [];
 
   const totalQuantity = stock?.quantity ?? product.totalStock;
-  const availability = totalQuantity > 0
-    ? "https://schema.org/InStock"
-    : "https://schema.org/OutOfStock";
+  const availability =
+    totalQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
 
   const productSchema = {
     "@context": "https://schema.org",

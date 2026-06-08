@@ -67,7 +67,9 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   cursor: pointer;
-  transition: background-color 200ms ease, border-color 200ms ease;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
 }
 
 .actionBtn:hover {

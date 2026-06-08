@@ -18,10 +18,7 @@ import {
 } from "@luratha/schemas";
 import { clearSiteSettingsCache } from "@luratha/repositories/siteSettingsRepository";
 import { clearShippingCache } from "@/src/lib/shipping/cache";
-import {
-  __setShippingProviderForTests,
-  getShippingProvider,
-} from "@/src/lib/shipping/provider";
+import { __setShippingProviderForTests, getShippingProvider } from "@/src/lib/shipping/provider";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
 import type { ShippingProvider } from "@/src/lib/shipping/types";

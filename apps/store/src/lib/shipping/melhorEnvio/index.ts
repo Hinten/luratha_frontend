@@ -106,9 +106,7 @@ export const melhorEnvioProvider: ShippingProvider = {
     );
 
     const enabledServices = new Map(
-      settings.enabledServices
-        .filter((s) => s.enabled)
-        .map((s) => [s.code, s.label] as const),
+      settings.enabledServices.filter((s) => s.enabled).map((s) => [s.code, s.label] as const),
     );
 
     const quotes: ShippingQuote[] = [];

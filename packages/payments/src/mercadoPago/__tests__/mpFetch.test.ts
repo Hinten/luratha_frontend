@@ -81,17 +81,15 @@ describe("mpFetch — timeout por fase (via getOrder)", () => {
     // Headers chegam na hora; `response.text()` fica pendurado até o signal
     // abortar. No código antigo o timer era limpo após o fetch resolver, então
     // o abort nunca disparava no body e este `await` penduraria para sempre.
-    const fetchMock = vi.fn(
-      async (_url: string, opts: { signal: AbortSignal }) => ({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-        text: () =>
-          new Promise<string>((_resolve, reject) => {
-            opts.signal.addEventListener("abort", () => reject(abortError()));
-          }),
-      }),
-    );
+    const fetchMock = vi.fn(async (_url: string, opts: { signal: AbortSignal }) => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: () =>
+        new Promise<string>((_resolve, reject) => {
+          opts.signal.addEventListener("abort", () => reject(abortError()));
+        }),
+    }));
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
 
     const promise = getOrder(ORDER_ID);

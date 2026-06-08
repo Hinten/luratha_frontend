@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
-import {
-  CartRepositoryError,
-  createCartsRepository,
-} from "@luratha/repositories/cartsRepository";
+import { CartRepositoryError, createCartsRepository } from "@luratha/repositories/cartsRepository";
 
 export const runtime = "nodejs";
 
@@ -15,10 +12,7 @@ export const runtime = "nodejs";
  * item — the response still returns the resulting cart snapshot, never 204,
  * so the client can re-render off a single payload.
  */
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ itemId: string }> },
-) {
+export async function PUT(request: Request, { params }: { params: Promise<{ itemId: string }> }) {
   let authedUser;
   try {
     authedUser = await requireUser();
@@ -44,11 +38,7 @@ export async function PUT(
   }
 
   const quantity = (body as { quantity?: unknown }).quantity;
-  if (
-    typeof quantity !== "number" ||
-    !Number.isFinite(quantity) ||
-    !Number.isInteger(quantity)
-  ) {
+  if (typeof quantity !== "number" || !Number.isFinite(quantity) || !Number.isInteger(quantity)) {
     return NextResponse.json(
       { message: "Campo 'quantity' deve ser um número inteiro." },
       { status: 400 },

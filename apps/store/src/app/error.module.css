@@ -71,7 +71,10 @@
   font-weight: 500;
   background-color: var(--color-primary);
   color: var(--color-neutral-dark);
-  transition: background-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
   display: inline-flex;
   align-items: center;
@@ -93,7 +96,10 @@
   color: var(--color-neutral-dark);
   border: 1px solid var(--color-secondary);
   background: none;
-  transition: background-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
   display: inline-flex;
   align-items: center;
   text-decoration: none;

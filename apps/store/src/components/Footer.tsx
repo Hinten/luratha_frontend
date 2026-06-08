@@ -41,8 +41,8 @@ export default async function Footer() {
               <Logo />
             </div>
             <p className={styles.description}>
-              Moda artesanal feminina brasileira. Peças feitas com amor para
-              durar — slow fashion com foco em versatilidade e sustentabilidade.
+              Moda artesanal feminina brasileira. Peças feitas com amor para durar — slow fashion
+              com foco em versatilidade e sustentabilidade.
             </p>
           </div>
 
@@ -51,10 +51,7 @@ export default async function Footer() {
             <h3 className={styles.columnHeading}>Atendimento</h3>
             <ul className={styles.linkList}>
               <li>
-                <a
-                  href={`tel:${contactData.phoneTel}`}
-                  className={styles.link}
-                >
+                <a href={`tel:${contactData.phoneTel}`} className={styles.link}>
                   {contactData.phone}
                 </a>
               </li>
@@ -107,8 +104,8 @@ export default async function Footer() {
         <div className={styles.bottomBar}>
           {/* CNPJ + copyright */}
           <p className={styles.copyright}>
-            CNPJ {cnpj} &mdash; &copy; {new Date().getFullYear()}{" "}
-            {appData.name}. Todos os direitos reservados.
+            CNPJ {cnpj} &mdash; &copy; {new Date().getFullYear()} {appData.name}. Todos os direitos
+            reservados.
           </p>
 
           {/* Social icons */}
@@ -179,4 +176,3 @@ export default async function Footer() {
     </footer>
   );
 }
-

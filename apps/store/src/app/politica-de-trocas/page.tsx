@@ -74,8 +74,8 @@ export default function PoliticaDeTrocasPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Política de Trocas e Devoluções</h1>
           <p className={styles.headerText}>
-            Queremos que você ame cada peça. Saiba como funciona nosso processo
-            de troca e devolução.
+            Queremos que você ame cada peça. Saiba como funciona nosso processo de troca e
+            devolução.
           </p>
         </div>
 
@@ -106,4 +106,3 @@ export default function PoliticaDeTrocasPage() {
     </div>
   );
 }
-

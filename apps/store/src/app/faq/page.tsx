@@ -106,8 +106,8 @@ export default function FaqPage() {
         <div className={styles.header}>
           <h1 className="mb-4">Perguntas Frequentes</h1>
           <p className={styles.headerText}>
-            Reunimos as dúvidas mais comuns sobre compras, pagamento, entrega e
-            cuidados com as peças. Não achou o que procurava? Fale conosco.
+            Reunimos as dúvidas mais comuns sobre compras, pagamento, entrega e cuidados com as
+            peças. Não achou o que procurava? Fale conosco.
           </p>
         </div>
 

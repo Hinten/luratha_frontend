@@ -86,7 +86,7 @@ export default function ShippingStep({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       setState({ kind: "loading" });
       try {
         const res = await fetch("/api/checkout/shipping", {
@@ -163,8 +163,7 @@ export default function ShippingStep({
     const cheapest = state.quotes.reduce((a, b) => (b.price < a.price ? b : a));
     const cheapestKey = quoteKey(cheapest);
     const eligible =
-      state.freeShippingThreshold !== null &&
-      subtotal >= state.freeShippingThreshold;
+      state.freeShippingThreshold !== null && subtotal >= state.freeShippingThreshold;
 
     if (eligible) {
       const freeQuote: ShippingQuote = {
@@ -182,10 +181,7 @@ export default function ShippingStep({
         key: freeKey,
         quote: freeQuote,
         label: "Frete grátis",
-        detail: [
-          `${cheapest.carrier} · ${cheapest.service}`,
-          deliveryLabel(cheapest.estimatedDays),
-        ]
+        detail: [`${cheapest.carrier} · ${cheapest.service}`, deliveryLabel(cheapest.estimatedDays)]
           .filter(Boolean)
           .join(" · "),
         priceLabel: "Grátis",
@@ -221,7 +217,11 @@ export default function ShippingStep({
   useEffect(() => {
     if (state.kind !== "ready" || rows.length === 0) return;
     const currentKey =
-      selectedQuote && rows.find((r) => r.quote.price === selectedQuote.price && quoteKey(r.quote) === quoteKey(selectedQuote))
+      selectedQuote &&
+      rows.find(
+        (r) =>
+          r.quote.price === selectedQuote.price && quoteKey(r.quote) === quoteKey(selectedQuote),
+      )
         ? null
         : defaultRowKey;
     if (currentKey) {
@@ -243,9 +243,7 @@ export default function ShippingStep({
       <h2 className={styles.heading}>Como você quer receber?</h2>
       <p className={styles.muted}>Entrega para o CEP {postalCode}.</p>
 
-      {state.kind === "loading" && (
-        <p className={styles.muted}>Consultando transportadoras…</p>
-      )}
+      {state.kind === "loading" && <p className={styles.muted}>Consultando transportadoras…</p>}
 
       {state.kind === "error" && (
         <p role="alert" className={styles.error}>
@@ -260,19 +258,11 @@ export default function ShippingStep({
       )}
 
       {state.kind === "ready" && rows.length > 0 && (
-        <div
-          className={styles.list}
-          role="radiogroup"
-          aria-label="Opções de frete"
-        >
+        <div className={styles.list} role="radiogroup" aria-label="Opções de frete">
           {rows.map((row) => {
             const checked = selectedKey === row.key;
             return (
-              <label
-                key={row.key}
-                className={styles.option}
-                data-checked={checked || undefined}
-              >
+              <label key={row.key} className={styles.option} data-checked={checked || undefined}>
                 <input
                   type="radio"
                   name="shipping"

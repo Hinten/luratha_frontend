@@ -31,10 +31,7 @@ export const runtime = "nodejs";
  * Returns 400 on validation failure.
  * Returns 200 with the updated product on success.
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   let body: unknown;
@@ -119,7 +116,9 @@ export async function PATCH(
       product = { ...product, ...embeddings };
     } catch (embeddingError) {
       if (embeddingError instanceof EmbeddingGenerationError) {
-        logger.warn("[PATCH /api/products] Embedding generation skipped", { message: embeddingError.message });
+        logger.warn("[PATCH /api/products] Embedding generation skipped", {
+          message: embeddingError.message,
+        });
       } else {
         throw embeddingError;
       }

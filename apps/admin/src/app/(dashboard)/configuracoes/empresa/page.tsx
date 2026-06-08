@@ -14,10 +14,9 @@ export default async function EmpresaPage() {
     <div>
       <h1 className={styles.title}>Dados da empresa</h1>
       <p className={styles.lead}>
-        Razão social, CNPJ, Encarregado de Dados (DPO) e foro. Esses dados
-        alimentam as páginas de Política de Privacidade e Termos de Uso da loja.
-        As alterações entram em vigor na loja em até 60 segundos (cache do
-        servidor).
+        Razão social, CNPJ, Encarregado de Dados (DPO) e foro. Esses dados alimentam as páginas de
+        Política de Privacidade e Termos de Uso da loja. As alterações entram em vigor na loja em
+        até 60 segundos (cache do servidor).
       </p>
       <CompanyForm initialCompany={settings.company} />
     </div>

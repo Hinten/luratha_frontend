@@ -59,11 +59,7 @@ describe("IdentificationStep", () => {
   it("NÃO clobba input em digitação quando defaults resolvem assincronamente", async () => {
     const user = userEvent.setup();
     const { rerender } = render(
-      <IdentificationStep
-        userId="user_1"
-        defaults={{}}
-        onSubmit={vi.fn()}
-      />,
+      <IdentificationStep userId="user_1" defaults={{}} onSubmit={vi.fn()} />,
     );
 
     // User começa a digitar antes do profile carregar.
@@ -94,11 +90,7 @@ describe("IdentificationStep", () => {
 
   it("re-popula o form quando defaults mudam após o mount", () => {
     const { rerender } = render(
-      <IdentificationStep
-        userId="user_1"
-        defaults={{}}
-        onSubmit={vi.fn()}
-      />,
+      <IdentificationStep userId="user_1" defaults={{}} onSubmit={vi.fn()} />,
     );
 
     expect(screen.getByLabelText("E-mail")).toHaveValue("");
@@ -307,7 +299,9 @@ describe("IdentificationStep", () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn<(payer: PaymentPayer) => void>();
     fetchSpy
-      .mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 404, body: { message: "Perfil não encontrado." } }))
+      .mockResolvedValueOnce(
+        mockFetchResponse({ ok: false, status: 404, body: { message: "Perfil não encontrado." } }),
+      )
       .mockResolvedValueOnce(mockFetchResponse({ ok: true, status: 201 }));
 
     render(
@@ -381,9 +375,7 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i)).toBeInTheDocument();
     });
     // 4xx do cliente vira severity WARN (CartContext convention).
     expect(logger.warn).toHaveBeenCalledWith(
@@ -398,7 +390,11 @@ describe("IdentificationStep", () => {
     const onSubmit = vi.fn();
     vi.mocked(logger.warn).mockClear();
     fetchSpy.mockResolvedValue(
-      mockFetchResponse({ ok: false, status: 400, body: { message: "CPF já cadastrado em outra conta." } }),
+      mockFetchResponse({
+        ok: false,
+        status: 400,
+        body: { message: "CPF já cadastrado em outra conta." },
+      }),
     );
 
     render(
@@ -418,9 +414,7 @@ describe("IdentificationStep", () => {
     await user.click(screen.getByRole("button", { name: /Continuar/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/CPF\/CNPJ ou e-mail parecem inválidos/i)).toBeInTheDocument();
     });
     expect(logger.warn).toHaveBeenCalledWith(
       "[checkout:identification]",

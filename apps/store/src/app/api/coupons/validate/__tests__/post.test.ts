@@ -136,9 +136,7 @@ describe("POST /api/coupons/validate", () => {
   });
 
   it("returns valid:false when coupon is inactive", async () => {
-    firestoreStub.getMock.mockResolvedValueOnce(
-      snapshotOf([couponDoc({ active: false })]),
-    );
+    firestoreStub.getMock.mockResolvedValueOnce(snapshotOf([couponDoc({ active: false })]));
     const res = await POST(jsonRequest({ code: "WELCOME10", cartTotal: 100 }));
     const body = await res.json();
     expect(body).toMatchObject({ valid: false, reason: "Cupom inativo." });
@@ -209,9 +207,7 @@ describe("POST /api/coupons/validate", () => {
 
   it("caps percentage discount at maxDiscountAmount when defined", async () => {
     firestoreStub.getMock.mockResolvedValueOnce(
-      snapshotOf([
-        couponDoc({ type: "percentage", amount: 50, maxDiscountAmount: 30 }),
-      ]),
+      snapshotOf([couponDoc({ type: "percentage", amount: 50, maxDiscountAmount: 30 })]),
     );
     const res = await POST(jsonRequest({ code: "WELCOME10", cartTotal: 200 }));
     const body = await res.json();
