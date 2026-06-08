@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import Breadcrumb from "@/src/components/Breadcrumb";
-import { getJsonLdScripts, findSchemaByType, assertSchemaOrgBase } from "./seoAssertions";
+import { SITE_URL, getJsonLdScripts, findSchemaByType, assertSchemaOrgBase } from "./seoAssertions";
 
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -30,8 +30,9 @@ describe("Breadcrumb BreadcrumbList schema (SEO)", () => {
       item?: string;
     }>;
     expect(items.map((entry) => entry.position)).toEqual([1, 2, 3]);
-    expect(items[0].item).toBe("/");
-    expect(items[1].item).toBe("/categoria/vestidos");
+    // Linked crumbs expose absolute item URLs for search engines.
+    expect(items[0].item).toBe(`${SITE_URL}/`);
+    expect(items[1].item).toBe(`${SITE_URL}/categoria/vestidos`);
     // The current page (no href) must not carry an `item` URL.
     expect(items[2].item).toBeUndefined();
     expect(items[2].name).toBe("Vestido Bordado Floral");

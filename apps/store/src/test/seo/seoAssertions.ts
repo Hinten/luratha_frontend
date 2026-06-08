@@ -27,10 +27,13 @@ export function getJsonLdScripts(container: HTMLElement): JsonLdRecord[] {
   const out: JsonLdRecord[] = [];
   for (const node of Array.from(nodes)) {
     const parsed = JSON.parse(node.textContent ?? "") as JsonLdRecord | JsonLdRecord[];
-    if (Array.isArray(parsed)) {
-      out.push(...parsed);
-    } else {
-      out.push(parsed);
+    for (const entry of Array.isArray(parsed) ? parsed : [parsed]) {
+      const graph = (entry as { "@graph"?: unknown })["@graph"];
+      if (Array.isArray(graph)) {
+        out.push(...(graph as JsonLdRecord[]));
+      } else {
+        out.push(entry);
+      }
     }
   }
   return out;
