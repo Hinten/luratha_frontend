@@ -1,0 +1,154 @@
+name: E2E Public
+
+# Specs Playwright "públicos" — sem login e sem MercadoPago (home, cart,
+# catalog, navigation, product, institutional). Rodam via `--project=public`,
+# que filtra pela convenção de nomes (ignora *.auth.spec.ts e *.mp.spec.ts),
+# em vez de listar arquivos: adicionar/renomear um spec público não exige
+# mexer neste YAML.
+#
+# Disparado por `workflow_run` DEPOIS do workflow `Test` concluir, reaproveitando
+# o gate lint/typecheck/unit do Test antes de gastar dev server + browser.
+# Trade-off conhecido: começa só depois do Test INTEIRO (mais tarde que um job
+# paralelo) — o ganho é isolamento/operação (workflow próprio, re-rodável).
+#
+# NÃO é required em branch protection por padrão: `workflow_run` reporta status
+# num run separado; pra bloquear o PR como check seria preciso publicar um
+# Check Run/commit status num passo extra.
+
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+  workflow_dispatch:
+
+# Serializa com `Test → e2e-auth` e `e2e-checkout-mp` no MESMO Firestore project
+# (luratha-96386). Não cancela em progresso pra não abortar uma suíte cloud no
+# meio.
+concurrency:
+  group: luratha-96386-e2e
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  e2e-public:
+    name: E2E public (Playwright + cloud)
+    # Só roda quando o Test passou E o gatilho original foi um pull_request
+    # (ignora runs de push/branch). Disparo manual via workflow_dispatch também.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'pull_request')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: luratha-96386-e2e
+      cancel-in-progress: false
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando e2e-public. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          # workflow_run roda na def. da branch default; faz checkout do commit
+          # do PR que disparou o Test pra exercitar o código certo.
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: pnpm/action-setup@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        if: steps.check_secrets.outputs.skip != 'true'
+        working-directory: apps/store
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run public E2E
+        if: steps.check_secrets.outputs.skip != 'true'
+        timeout-minutes: 6
+        working-directory: apps/store
+        run: pnpm exec playwright test --project=public
+      - name: Upload Playwright report
+        if: always() && steps.check_secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-public
+          path: apps/store/playwright-report
+          retention-days: 7
+
+  report-failure:
+    name: Post failure logs on PR
+    # Replica do `Test → report-failure`, limitado a este workflow. Como roda via
+    # workflow_run, o nº do PR vem de `workflow_run.pull_requests` (vazio em PRs
+    # de fork — nesse caso só não comenta).
+    needs: [e2e-public]
+    if: ${{ failure() && github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -uo pipefail
+          if [ -z "${PR:-}" ]; then
+            echo "Sem PR associado ao workflow_run (provável fork) — nada a reportar."
+            exit 0
+          fi
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou (E2E Public)"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md

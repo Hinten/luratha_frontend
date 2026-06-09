@@ -1,7 +1,8 @@
 name: E2E Checkout (MercadoPago)
 
-# Workflow separado do `Test` pra rodar APENAS os 3 specs Playwright do
-# fluxo de checkout / MercadoPago (cartão real + cartão mock + PIX/Boleto).
+# Workflow separado do `Test` pra rodar APENAS os specs Playwright do fluxo de
+# checkout / MercadoPago (cartão real + cartão mock + PIX/Boleto) — os arquivos
+# `*.mp.spec.ts`, selecionados via `--project=mp`.
 # Esses specs são os mais caros (dev server + Brick + tokenize MP + frete
 # real Melhor Envio) e dependem de credenciais sensíveis que outros tests
 # nem usam. Path filter abaixo garante que só dispara quando arquivos
@@ -26,7 +27,7 @@ on:
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
 # pela `concurrency` interna do job (luratha-96386-e2e), que serializa
-# com o `Test → e2e-cloud` no mesmo Firestore project.
+# com o `Test → e2e-auth` no mesmo Firestore project.
 concurrency:
   group: e2e-checkout-mp-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -38,7 +39,7 @@ jobs:
   e2e-mp:
     name: E2E Checkout (MP)
     runs-on: ubuntu-latest
-    # Mesma concurrency group do `Test → e2e-cloud` pra evitar 2 runs
+    # Mesma concurrency group do `Test → e2e-auth` pra evitar 2 runs
     # simultâneas contra o Firestore luratha-96386 entre os workflows
     # quando o test user reaproveitado entre runs poderia colidir.
     concurrency:
@@ -54,7 +55,7 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      # Melhor Envio: o spec real (`checkout-card-real.spec.ts`) bate em
+      # Melhor Envio: o spec real (`checkout-card-real.mp.spec.ts`) bate em
       # `/api/checkout/shipping` que chama o provider. Sem `MELHOR_ENVIO_TOKEN`
       # a rota retorna `alert: "MELHOR_ENVIO_TOKEN não configurado"` e o
       # radiogroup de frete nem renderiza — Step 3 trava.
@@ -67,7 +68,7 @@ jobs:
       MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
       NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
       # MP test user reaproveitado entre runs por `loginOrRegisterTestUser`
-      # (e2e/_authHelpers.ts). Sem essas vars, `checkout-card-real.spec.ts`
+      # (e2e/_authHelpers.ts). Sem essas vars, `checkout-card-real.mp.spec.ts`
       # faz throw no module-load com mensagem clara do que falta.
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
@@ -113,10 +114,9 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 10
         working-directory: apps/store
-        run: |
-          pnpm exec playwright test \
-            e2e/checkout-card-real.spec.ts \
-            e2e/checkout.spec.ts
+        # `--project=mp` filtra os *.mp.spec.ts (checkout.mp + checkout-card-real.mp)
+        # pela convenção de nomes — robusto a renomear/adicionar spec de checkout.
+        run: pnpm exec playwright test --project=mp
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4

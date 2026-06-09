@@ -188,9 +188,10 @@ mandatório no apphosting.yaml.
     `adminDb`).
   - Both use `describeCloud` + `createCloudTestPrefix()` and clean up seeded
     docs in `afterAll`.
-- **E2E checkout** (`apps/store/e2e/checkout.spec.ts` PIX + Boleto;
-  `apps/store/e2e/checkout-card.spec.ts` cartão): rodam contra `pnpm dev` no
-  CI (`e2e-cloud` job). Cada teste **registra um user novo** via `/register`
+- **E2E checkout** (`apps/store/e2e/checkout.mp.spec.ts` PIX + Boleto;
+  `apps/store/e2e/checkout-card-real.mp.spec.ts` cartão): rodam contra `pnpm dev`
+  no workflow `e2e-checkout-mp.yml` (`--project=mp`, path-triggered). Cada teste
+  **registra um user novo** via `/register`
   UI (`registerNewUser()` em `e2e/_authHelpers.ts`) — só o cookie `__session`
   não basta porque `CheckoutPage` é client component e checa
   `useAuth().user` do Firebase client SDK (estado vive em IndexedDB), e
@@ -279,11 +280,11 @@ specs E2E:
 
 ### Como testamos o checkout (E2E end-to-end real)
 
-Dois specs cobrem o fluxo completo, ambos no workflow
-`.github/workflows/e2e-checkout-mp.yml` (gated por `paths:` filter pra
-arquivos do checkout/MP):
+Dois specs (`*.mp.spec.ts`) cobrem o fluxo completo, selecionados por
+`--project=mp` no workflow `.github/workflows/e2e-checkout-mp.yml` (gated por
+`paths:` filter pra arquivos do checkout/MP):
 
-- **`apps/store/e2e/checkout-card-real.spec.ts`** — Cartão APRO ponta-a-ponta
+- **`apps/store/e2e/checkout-card-real.mp.spec.ts`** — Cartão APRO ponta-a-ponta
   sem mocks: login com MP test user (`TEST_USER_EMAIL`/`TEST_USER_PASSWORD`)
   → checkout → address criado via UI → frete real (Melhor Envio) → Order
   real (`POST /api/orders` cria no Firestore) → tab Cartão → Brick tokeniza
@@ -292,7 +293,7 @@ arquivos do checkout/MP):
   síncrono → redirect `/checkout/sucesso/{orderId}`. Asserta Firestore
   `Order.paymentStatus === "paid"` + `paymentIntentId` do MP.
 
-- **`apps/store/e2e/checkout.spec.ts`** — PIX e Boleto ponta-a-ponta sem
+- **`apps/store/e2e/checkout.mp.spec.ts`** — PIX e Boleto ponta-a-ponta sem
   mocks: mesmo fluxo até `POST /api/checkout/payment-intent`, MP devolve
   `status: "action_required"` (mapeado pra `"pending"`) + `qrCode` (PIX)
   ou `boleto.url` (Boleto). Spec **para em pending** com PaymentResult

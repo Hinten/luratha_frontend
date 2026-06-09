@@ -80,9 +80,26 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
   },
+  // Specs are routed into projects by filename convention so CI can target a
+  // lane with `--project=<name>` instead of hard-coding file lists:
+  //   *.auth.spec.ts → login required (auth project; needs E2E_LIVE_AUTH=1)
+  //   *.mp.spec.ts   → MercadoPago/checkout (mp project; needs MP secrets)
+  //   everything else → public (no login, no payment)
+  // The eslint.e2e-guards keep specs from drifting out of their lane.
   projects: [
     {
-      name: "chromium",
+      name: "public",
+      testIgnore: ["**/*.auth.spec.ts", "**/*.mp.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "auth",
+      testMatch: ["**/*.auth.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mp",
+      testMatch: ["**/*.mp.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

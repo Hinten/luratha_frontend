@@ -6,6 +6,12 @@ import {
   firestoreSyntaxRestrictions,
   firestoreImportRule,
 } from "../../eslint.firestore-guards.mjs";
+import {
+  e2eCommonImportRule,
+  e2eCommonSyntaxRestrictions,
+  e2eAuthImportRule,
+  e2eAuthSyntaxRestrictions,
+} from "./eslint.e2e-guards.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -68,6 +74,37 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": "off",
       "no-restricted-syntax": ["error", ...catchSyntaxRestrictions],
+    },
+  },
+  {
+    // E2E lane guard — COMMON specs (neither *.auth nor *.mp): forbid the login
+    // helpers AND MercadoPago plumbing, so a "public" spec can't silently run a
+    // live login or touch payments. Placed AFTER the e2e block above so it wins
+    // for these files (last matching flat-config block wins). *.mp.spec.ts is
+    // intentionally left to the e2e block (unrestricted). The catch rules are
+    // re-spread because this block replaces `no-restricted-syntax` wholesale.
+    files: ["e2e/**/*.spec.ts"],
+    ignores: ["e2e/**/*.auth.spec.ts", "e2e/**/*.mp.spec.ts"],
+    rules: {
+      "no-restricted-imports": e2eCommonImportRule,
+      "no-restricted-syntax": [
+        "error",
+        ...catchSyntaxRestrictions,
+        ...e2eCommonSyntaxRestrictions,
+      ],
+    },
+  },
+  {
+    // E2E lane guard — *.auth.spec.ts: login is allowed here, but MercadoPago is
+    // not (checkout/payment specs must be *.mp.spec.ts).
+    files: ["e2e/**/*.auth.spec.ts"],
+    rules: {
+      "no-restricted-imports": e2eAuthImportRule,
+      "no-restricted-syntax": [
+        "error",
+        ...catchSyntaxRestrictions,
+        ...e2eAuthSyntaxRestrictions,
+      ],
     },
   },
 ]);

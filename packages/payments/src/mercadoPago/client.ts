@@ -34,7 +34,7 @@ export const MP_HTTP_TIMEOUT_MS = 10_000;
  * Budget separado da fase de *body read* (`response.text()`). Generoso de
  * propósito: o boleto sandbox costuma stallar na leitura do body bem além dos
  * 10s de headers, e o e2e de boleto já tolera até 30s pelo POST da order
- * (`apps/store/e2e/checkout.spec.ts`). Mantendo este budget ≥ esse wait, o
+ * (`apps/store/e2e/checkout.mp.spec.ts`). Mantendo este budget ≥ esse wait, o
  * timeout de body nunca dispara antes do limite que o teste já tem — ele só
  * age em produção, num stall real, fechando o gap em que o body read corria
  * sem AbortController. Veja a issue #162.

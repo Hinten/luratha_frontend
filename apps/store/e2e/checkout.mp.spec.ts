@@ -18,7 +18,7 @@ import {
  *
  * Cobre o caminho real ponta-a-ponta até o status `pending` (com QR Code do
  * PIX ou link do boleto renderizados). Cartão APRO volta `processed → paid`
- * síncrono e tem spec próprio (`checkout-card-real.spec.ts`); PIX/Boleto
+ * síncrono e tem spec próprio (`checkout-card-real.mp.spec.ts`); PIX/Boleto
  * dependem de webhook do MP pra confirmar pagamento, e o webhook não chega
  * em `localhost` nem em runner do GitHub. Portanto:
  *

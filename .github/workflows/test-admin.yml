@@ -1,0 +1,104 @@
+name: Test Admin
+
+# Lane completa do app admin (`@luratha/admin`): lint + typecheck + unit + build.
+# Movida pra cá pra SAIR do fan-out do workflow `Test` (que agora exclui o admin
+# com `--filter='!@luratha/admin'`). Disparada por `pull_request` com path filter,
+# em paralelo ao `Test` — feedback cedo, só nos PRs que tocam admin ou packages.
+#
+# Sem secrets: os unit tests do admin mockam `@luratha/auth` e o `next build` do
+# admin não lê Firestore (ao contrário da storefront), então roda inclusive em
+# PRs de fork.
+#
+# CUIDADO ao marcar como required em branch protection: com path filter, PRs que
+# não tocam admin/packages NÃO disparam este workflow; um required check que
+# nunca roda fica "pending" e trava o merge (mesmo caso do e2e-checkout-mp.yml).
+
+on:
+  pull_request:
+    branches: [master, production]
+    paths:
+      - 'apps/admin/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'turbo.json'
+      - '.github/workflows/test-admin.yml'
+  workflow_dispatch:
+
+# Cancela runs anteriores do MESMO PR. Grupo próprio (não toca o Firestore de
+# teste), então roda em paralelo ao Test e ao e2e-checkout-mp.
+concurrency:
+  group: test-admin-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  admin:
+    name: Admin — lint, typecheck, unit, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint, typecheck, unit and build (admin only)
+        # `build` puxa `^build` das deps (packages) automaticamente. O build do
+        # admin não precisa de credenciais Firebase — daí nenhum secret aqui.
+        run: pnpm exec turbo run lint typecheck test build --filter=@luratha/admin
+
+  report-failure:
+    name: Post failure logs on PR
+    # Replica do `Test → report-failure`, limitado a este workflow. Sem isso, uma
+    # falha do admin não vira comentário no PR (o report-failure do Test só
+    # enxerga jobs do próprio run).
+    needs: [admin]
+    if: ${{ failure() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou (Test Admin)"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md
