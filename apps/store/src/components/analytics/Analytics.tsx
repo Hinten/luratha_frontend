@@ -25,30 +25,38 @@ interface AnalyticsProps {
 export default function Analytics({ measurementId }: AnalyticsProps) {
   if (!measurementId) return null;
 
+  // Escapa o valor para um literal JS seguro antes de interpolar no script
+  // inline. O `measurementId` vem do schema (regex G-XXXXXXXX) na maioria dos
+  // casos, MAS pode vir do fallback `NEXT_PUBLIC_GA_MEASUREMENT_ID`, que não
+  // passa pela validação Zod — um valor malformado com aspas/`</script>` poderia
+  // quebrar a tag e abrir XSS. Mesma defesa do `components/JsonLd.tsx`.
+  const jsLiteral = (value: string) => JSON.stringify(value).replace(/</g, "\\u003c");
+
   const bootstrap = `
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 window.gtag = gtag;
 gtag('consent','default',{'ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','analytics_storage':'granted'});
 try {
-  if (window.localStorage.getItem('${GA_CONSENT_STORAGE_KEY}') === 'denied') {
+  if (window.localStorage.getItem(${jsLiteral(GA_CONSENT_STORAGE_KEY)}) === 'denied') {
     gtag('consent','update',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied'});
   }
 } catch (e) { /* localStorage indisponível — mantém o default granted */ }
 gtag('js', new Date());
-gtag('config', '${measurementId}', { send_page_view: false });
+gtag('config', ${jsLiteral(measurementId)}, { send_page_view: false });
 `.trim();
 
   return (
     <>
       {/* Inline, no HTML inicial: consent default + reaplicação de opt-out
           ANTES do gtag.js carregar. Não usa next/script porque precisa rodar
-          de forma síncrona na ordem do documento. O measurementId é validado
-          pelo schema (regex G-XXXXXXXX), então é seguro interpolar. */}
+          de forma síncrona na ordem do documento. Valores interpolados são
+          escapados (jsLiteral / encodeURIComponent) por defesa em profundidade,
+          já que o ID pode vir do fallback de env sem validação de schema. */}
       <script id="ga-bootstrap" dangerouslySetInnerHTML={{ __html: bootstrap }} />
       <Script
         id="ga-gtag-js"
-        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`}
         strategy="afterInteractive"
       />
       <Suspense fallback={null}>
