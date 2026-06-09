@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildHomeSeedCategories, buildHomeSeedProducts, buildHomeSeedStock } from "@luratha/repositories/homeSeedMockData";
+import {
+  buildHomeSeedCategories,
+  buildHomeSeedProducts,
+  buildHomeSeedStock,
+} from "@luratha/repositories/homeSeedMockData";
 import { validateProduct } from "@luratha/schemas";
 
 describe("home seed mock data", () => {
@@ -42,9 +46,9 @@ describe("home seed mock data", () => {
     const variantProducts = products.filter((p) => p.variants && p.variants.length > 0);
     expect(variantProducts.length).toBeGreaterThan(0);
     for (const product of variantProducts) {
-      expect(
-        product.variants?.every((v) => Array.isArray(v.color) && v.color.length > 0),
-      ).toBe(true);
+      expect(product.variants?.every((v) => Array.isArray(v.color) && v.color.length > 0)).toBe(
+        true,
+      );
     }
   });
 
@@ -120,11 +124,12 @@ describe("home seed mock data", () => {
       slug: null, // force schema to regenerate from new title+sku
       sku: `${variantProduct!.sku}_${skuPrefix}`,
       categoryId: `${variantProduct!.categoryId}__${prefix}`,
-      variants: variantProduct!.variants?.map((v) => ({
-        ...v,
-        id: `${v.id}__${prefix}`,
-        sku: `${v.sku}_${skuPrefix}`,
-      })) ?? null,
+      variants:
+        variantProduct!.variants?.map((v) => ({
+          ...v,
+          id: `${v.id}__${prefix}`,
+          sku: `${v.sku}_${skuPrefix}`,
+        })) ?? null,
     };
 
     const revalidated = validateProduct(namespaced);

@@ -37,9 +37,13 @@ describe("useRecentlyViewed", () => {
 
   it("updates the timestamp when the same slug is marked again", () => {
     markProductViewed("vestido-floral");
-    const first = (JSON.parse(localStorage.getItem("luratha_viewed_products")!) as Record<string, number>)["vestido-floral"];
+    const first = (
+      JSON.parse(localStorage.getItem("luratha_viewed_products")!) as Record<string, number>
+    )["vestido-floral"];
     markProductViewed("vestido-floral");
-    const second = (JSON.parse(localStorage.getItem("luratha_viewed_products")!) as Record<string, number>)["vestido-floral"];
+    const second = (
+      JSON.parse(localStorage.getItem("luratha_viewed_products")!) as Record<string, number>
+    )["vestido-floral"];
     expect(second).toBeGreaterThanOrEqual(first);
   });
 

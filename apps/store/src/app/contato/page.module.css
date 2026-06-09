@@ -53,9 +53,11 @@
   font-family: var(--font-body);
   font-weight: 500;
   /* #25D366 = WhatsApp brand green — not a Luratha token */
-  background-color: #25D366;
+  background-color: #25d366;
   color: #fff;
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
   text-decoration: none;
 }
@@ -84,7 +86,9 @@
   color: var(--color-neutral-dark);
   border: 1px solid var(--color-secondary);
   background: none;
-  transition: background-color 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 300ms ease;
   text-decoration: none;
 }
 
@@ -110,7 +114,9 @@
   color: var(--color-neutral-dark);
   border: 1px solid var(--color-neutral-mid);
   background: none;
-  transition: background-color 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 300ms ease;
   text-decoration: none;
 }
 
@@ -163,7 +169,9 @@
   font-family: var(--font-body);
   font-size: 0.875rem;
   outline: none;
-  transition: border-color 300ms ease, box-shadow 300ms ease;
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
 }
 
 .input:focus,
@@ -186,7 +194,10 @@
   color: var(--color-neutral-dark);
   border: none;
   cursor: pointer;
-  transition: background-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
 }
 

@@ -170,7 +170,10 @@ export default function DevSeedButton({ enabled }: DevSeedButtonProps) {
             {isLoading && operation === "delete" ? "Deletando..." : "Deletar dados mock"}
           </button>
           {message && (
-            <p className={status === "error" ? styles.errorMessage : styles.successMessage} role="status">
+            <p
+              className={status === "error" ? styles.errorMessage : styles.successMessage}
+              role="status"
+            >
               {message}
             </p>
           )}
@@ -194,7 +197,8 @@ function parseSeedResponse(input: unknown): {
     message: typeof payload.message === "string" ? payload.message : undefined,
     categoriesCreated:
       typeof payload.categoriesCreated === "number" ? payload.categoriesCreated : undefined,
-    productsCreated: typeof payload.productsCreated === "number" ? payload.productsCreated : undefined,
+    productsCreated:
+      typeof payload.productsCreated === "number" ? payload.productsCreated : undefined,
   };
 }
 
@@ -212,9 +216,12 @@ function parseDeleteResponse(input: unknown): {
   const payload = input as Record<string, unknown>;
   return {
     message: typeof payload.message === "string" ? payload.message : undefined,
-    categoriesDeleted: typeof payload.categoriesDeleted === "number" ? payload.categoriesDeleted : undefined,
-    productsDeleted: typeof payload.productsDeleted === "number" ? payload.productsDeleted : undefined,
+    categoriesDeleted:
+      typeof payload.categoriesDeleted === "number" ? payload.categoriesDeleted : undefined,
+    productsDeleted:
+      typeof payload.productsDeleted === "number" ? payload.productsDeleted : undefined,
     stockDeleted: typeof payload.stockDeleted === "number" ? payload.stockDeleted : undefined,
-    storageFilesDeleted: typeof payload.storageFilesDeleted === "number" ? payload.storageFilesDeleted : undefined,
+    storageFilesDeleted:
+      typeof payload.storageFilesDeleted === "number" ? payload.storageFilesDeleted : undefined,
   };
 }

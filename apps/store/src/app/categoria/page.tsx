@@ -62,16 +62,9 @@ export default async function CategoriaPage() {
     <div className="container-luratha section-padding">
       <JsonLd data={collectionPageSchema} />
       <JsonLd data={breadcrumbSchema} />
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Categorias" },
-        ]}
-      />
-      <h1 className="font-[family-name:var(--font-heading)] mb-2">
-        Categorias
-      </h1>
-      <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mb-8">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Categorias" }]} />
+      <h1 className="mb-2 font-[family-name:var(--font-heading)]">Categorias</h1>
+      <p className="mb-8 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60">
         {categories.length}{" "}
         {categories.length === 1 ? "categoria disponível" : "categorias disponíveis"}
       </p>
@@ -81,7 +74,7 @@ export default async function CategoriaPage() {
           Nenhuma categoria encontrada no momento. Volte em breve!
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
           {categories.map((category) => (
             <CategoryBlock key={category.id} category={category} />
           ))}

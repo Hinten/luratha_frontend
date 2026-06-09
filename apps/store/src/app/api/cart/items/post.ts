@@ -79,10 +79,7 @@ export async function POST(request: Request) {
   const product = productSnap.data()!;
 
   if (!product.isPurchasable || product.status !== "active") {
-    return NextResponse.json(
-      { message: "Produto indisponível para compra." },
-      { status: 409 },
-    );
+    return NextResponse.json({ message: "Produto indisponível para compra." }, { status: 409 });
   }
 
   let expectedSku: string;
@@ -95,10 +92,7 @@ export async function POST(request: Request) {
       );
     }
     if (variant.active === false) {
-      return NextResponse.json(
-        { message: "Variante indisponível para compra." },
-        { status: 409 },
-      );
+      return NextResponse.json({ message: "Variante indisponível para compra." }, { status: 409 });
     }
     expectedSku = variant.sku;
   } else {

@@ -53,25 +53,15 @@ export default function BoletoDisplay({ url, digitableLine }: BoletoDisplayProps
   return (
     <div className={styles.boletoBlock}>
       <p className={styles.boletoHelp}>
-        Seu boleto foi gerado. Você pode pagar em qualquer banco ou
-        internet banking.
+        Seu boleto foi gerado. Você pode pagar em qualquer banco ou internet banking.
       </p>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.boletoBtn}
-      >
+      <a href={url} target="_blank" rel="noopener noreferrer" className={styles.boletoBtn}>
         Abrir boleto em PDF
       </a>
       {digitableLine && (
         <div className={styles.copyBlock}>
           <code className={styles.copyText}>{digitableLine}</code>
-          <button
-            type="button"
-            className={styles.copyBtn}
-            onClick={copyDigitableLine}
-          >
+          <button type="button" className={styles.copyBtn} onClick={copyDigitableLine}>
             {copied ? (
               <CheckIcon className={styles.copyIcon} />
             ) : (
@@ -81,8 +71,7 @@ export default function BoletoDisplay({ url, digitableLine }: BoletoDisplayProps
           </button>
           {copyFailed && (
             <p className={styles.copyError} role="alert">
-              Não foi possível copiar automaticamente. Selecione o código acima
-              e copie manualmente.
+              Não foi possível copiar automaticamente. Selecione o código acima e copie manualmente.
             </p>
           )}
         </div>

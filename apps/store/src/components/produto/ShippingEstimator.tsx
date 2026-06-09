@@ -75,8 +75,7 @@ export default function ShippingEstimator({ productPrice }: ShippingEstimatorPro
 
           {stored.quotes.length > 0 && (
             <p className={styles.muted}>
-              Estimativa para 1kg. O valor final é calculado no carrinho com o
-              peso real das peças.
+              Estimativa para 1kg. O valor final é calculado no carrinho com o peso real das peças.
             </p>
           )}
 

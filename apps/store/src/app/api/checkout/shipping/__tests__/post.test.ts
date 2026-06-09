@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearShippingCache } from "@/src/lib/shipping/cache";
-import {
-  __setShippingProviderForTests,
-} from "@/src/lib/shipping/provider";
+import { __setShippingProviderForTests } from "@/src/lib/shipping/provider";
 import { melhorEnvioProvider } from "@/src/lib/shipping/melhorEnvio";
 import { fixedRateProvider } from "@/src/lib/shipping/fallback/fixedRateProvider";
 import { ShippingProviderError, type ShippingProvider } from "@/src/lib/shipping/types";
@@ -92,9 +90,7 @@ describe("POST /api/checkout/shipping", () => {
   });
 
   it("free-shipping-only mode returns threshold and the 1kg quotes", async () => {
-    const res = await POST(
-      jsonRequest({ mode: "free-shipping-only", postalCode: "20040-001" }),
-    );
+    const res = await POST(jsonRequest({ mode: "free-shipping-only", postalCode: "20040-001" }));
     expect(res.status).toBe(200);
     const data = (await res.json()) as {
       threshold: number;

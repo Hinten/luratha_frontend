@@ -119,11 +119,7 @@ function normalizeRepositoryError(error: unknown, action: string): CouponReposit
   }
 
   if (error instanceof FirebaseError && error.code === "not-found") {
-    return new CouponRepositoryError(
-      `Failed to ${action}: document not found`,
-      "not_found",
-      error,
-    );
+    return new CouponRepositoryError(`Failed to ${action}: document not found`, "not_found", error);
   }
 
   if (error instanceof Error) {

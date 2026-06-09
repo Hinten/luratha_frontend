@@ -65,10 +65,7 @@ export function SettingsForm({
     patch({ fixedRate: { ...shipping.fixedRate, ...partial } });
   }
 
-  function toggleCatalogService(
-    option: MelhorEnvioServiceOption,
-    checked: boolean,
-  ) {
+  function toggleCatalogService(option: MelhorEnvioServiceOption, checked: boolean) {
     if (checked) {
       if (shipping.enabledServices.some((s) => s.code === option.code)) return;
       patch({
@@ -79,9 +76,7 @@ export function SettingsForm({
       });
     } else {
       patch({
-        enabledServices: shipping.enabledServices.filter(
-          (s) => s.code !== option.code,
-        ),
+        enabledServices: shipping.enabledServices.filter((s) => s.code !== option.code),
       });
     }
   }
@@ -120,12 +115,9 @@ export function SettingsForm({
   // Catalog mode: pick services from the Melhor Envio API instead of typing
   // codes. Falls back to the manual editor for fixed-rate or when the catalog
   // could not be fetched (no token / scope / API down).
-  const useCatalog =
-    availableServices !== null && shipping.providerId === "melhor-envio";
+  const useCatalog = availableServices !== null && shipping.providerId === "melhor-envio";
   const extraServices = availableServices
-    ? shipping.enabledServices.filter(
-        (s) => !availableServices.some((o) => o.code === s.code),
-      )
+    ? shipping.enabledServices.filter((s) => !availableServices.some((o) => o.code === s.code))
     : [];
 
   return (
@@ -139,9 +131,7 @@ export function SettingsForm({
           <select
             className={styles.input}
             value={shipping.providerId}
-            onChange={(e) =>
-              patch({ providerId: e.target.value as ShippingProviderId })
-            }
+            onChange={(e) => patch({ providerId: e.target.value as ShippingProviderId })}
           >
             {SHIPPING_PROVIDER_IDS.map((id) => (
               <option key={id} value={id}>
@@ -170,9 +160,7 @@ export function SettingsForm({
               step="0.01"
               min="0"
               value={shipping.fallbackProductWeightKg}
-              onChange={(e) =>
-                patch({ fallbackProductWeightKg: num(e.target.valueAsNumber) })
-              }
+              onChange={(e) => patch({ fallbackProductWeightKg: num(e.target.valueAsNumber) })}
             />
           </label>
           <label className={styles.field}>
@@ -183,9 +171,7 @@ export function SettingsForm({
               step="1"
               min="0"
               value={shipping.cacheTtlSeconds}
-              onChange={(e) =>
-                patch({ cacheTtlSeconds: num(e.target.valueAsNumber) })
-              }
+              onChange={(e) => patch({ cacheTtlSeconds: num(e.target.valueAsNumber) })}
             />
           </label>
         </div>
@@ -195,11 +181,7 @@ export function SettingsForm({
           {(["length", "width", "height"] as const).map((dim) => (
             <label key={dim} className={styles.field}>
               <span className={styles.subLabel}>
-                {dim === "length"
-                  ? "Comprimento"
-                  : dim === "width"
-                    ? "Largura"
-                    : "Altura"}
+                {dim === "length" ? "Comprimento" : dim === "width" ? "Largura" : "Altura"}
               </span>
               <input
                 className={styles.input}
@@ -225,8 +207,7 @@ export function SettingsForm({
       <fieldset className={styles.section}>
         <legend className={styles.sectionTitle}>Serviços habilitados</legend>
         <p className={styles.hint}>
-          Filtro pós-resposta do provider. Nenhum marcado = todos os serviços
-          passam.
+          Filtro pós-resposta do provider. Nenhum marcado = todos os serviços passam.
         </p>
 
         {useCatalog ? (
@@ -236,26 +217,19 @@ export function SettingsForm({
             </p>
             <ul className={styles.catalogList}>
               {availableServices.map((option) => {
-                const checked = shipping.enabledServices.some(
-                  (s) => s.code === option.code,
-                );
+                const checked = shipping.enabledServices.some((s) => s.code === option.code);
                 return (
                   <li key={option.code}>
                     <label className={styles.checkbox}>
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(e) =>
-                          toggleCatalogService(option, e.target.checked)
-                        }
+                        onChange={(e) => toggleCatalogService(option, e.target.checked)}
                       />
                       <span>
                         {option.label}
                         {option.company && (
-                          <span className={styles.company}>
-                            {" "}
-                            · {option.company}
-                          </span>
+                          <span className={styles.company}> · {option.company}</span>
                         )}
                         <span className={styles.code}> (#{option.code})</span>
                       </span>
@@ -266,9 +240,7 @@ export function SettingsForm({
             </ul>
             {extraServices.length > 0 && (
               <div className={styles.extras}>
-                <span className={styles.subLabel}>
-                  Serviços salvos fora do catálogo atual
-                </span>
+                <span className={styles.subLabel}>Serviços salvos fora do catálogo atual</span>
                 <div className={styles.extraChips}>
                   {extraServices.map((s) => (
                     <span key={s.code} className={styles.extraChip}>
@@ -298,8 +270,7 @@ export function SettingsForm({
             {shipping.providerId === "melhor-envio" && (
               <p className={styles.hint}>
                 Catálogo do Melhor Envio indisponível (token sem o escopo
-                <code> shipping-services</code> ou API fora do ar). Edite os
-                serviços manualmente.
+                <code> shipping-services</code> ou API fora do ar). Edite os serviços manualmente.
               </p>
             )}
             {shipping.enabledServices.map((service, index) => (
@@ -345,9 +316,7 @@ export function SettingsForm({
                   className={styles.removeButton}
                   onClick={() =>
                     patch({
-                      enabledServices: shipping.enabledServices.filter(
-                        (_, i) => i !== index,
-                      ),
+                      enabledServices: shipping.enabledServices.filter((_, i) => i !== index),
                     })
                   }
                 >
@@ -396,9 +365,7 @@ export function SettingsForm({
               min="0"
               max="1"
               value={freeShipping.divisor}
-              onChange={(e) =>
-                patchFreeShipping({ divisor: num(e.target.valueAsNumber) })
-              }
+              onChange={(e) => patchFreeShipping({ divisor: num(e.target.valueAsNumber) })}
             />
           </label>
           <label className={styles.field}>
@@ -409,9 +376,7 @@ export function SettingsForm({
               step="0.01"
               min="0"
               value={freeShipping.minThreshold}
-              onChange={(e) =>
-                patchFreeShipping({ minThreshold: num(e.target.valueAsNumber) })
-              }
+              onChange={(e) => patchFreeShipping({ minThreshold: num(e.target.valueAsNumber) })}
             />
           </label>
         </div>
@@ -420,9 +385,7 @@ export function SettingsForm({
           <input
             type="checkbox"
             checked={freeShipping.maxThreshold === null}
-            onChange={(e) =>
-              patchFreeShipping({ maxThreshold: e.target.checked ? null : 0 })
-            }
+            onChange={(e) => patchFreeShipping({ maxThreshold: e.target.checked ? null : 0 })}
           />
           <span>Sem teto de threshold</span>
         </label>
@@ -435,9 +398,7 @@ export function SettingsForm({
               step="0.01"
               min="0"
               value={freeShipping.maxThreshold}
-              onChange={(e) =>
-                patchFreeShipping({ maxThreshold: num(e.target.valueAsNumber) })
-              }
+              onChange={(e) => patchFreeShipping({ maxThreshold: num(e.target.valueAsNumber) })}
             />
           </label>
         )}
@@ -446,25 +407,19 @@ export function SettingsForm({
         <div className={styles.formula}>
           <p className={styles.formulaTitle}>Como o limite é calculado</p>
           <p className={styles.formulaText}>
-            Para cada CEP, o sistema cota o frete de um pacote de 1&nbsp;kg e
-            aplica:
+            Para cada CEP, o sistema cota o frete de um pacote de 1&nbsp;kg e aplica:
           </p>
-          <p className={styles.formulaExpr}>
-            limite = custo do frete (1&nbsp;kg) ÷ divisor
-          </p>
+          <p className={styles.formulaExpr}>limite = custo do frete (1&nbsp;kg) ÷ divisor</p>
           <p className={styles.formulaText}>
-            O resultado nunca fica abaixo do <strong>threshold mínimo</strong>.
-            Se ultrapassar o <strong>threshold máximo</strong>, o frete grátis
-            não é oferecido naquela região (frete caro demais para a loja
-            absorver). Divisor maior ⇒ limite menor ⇒ mais clientes ganham
+            O resultado nunca fica abaixo do <strong>threshold mínimo</strong>. Se ultrapassar o{" "}
+            <strong>threshold máximo</strong>, o frete grátis não é oferecido naquela região (frete
+            caro demais para a loja absorver). Divisor maior ⇒ limite menor ⇒ mais clientes ganham
             frete grátis.
           </p>
 
           <div className={styles.simulator}>
             <label className={styles.field}>
-              <span className={styles.subLabel}>
-                Simular: custo de frete 1&nbsp;kg (R$)
-              </span>
+              <span className={styles.subLabel}>Simular: custo de frete 1&nbsp;kg (R$)</span>
               <input
                 className={styles.input}
                 type="number"
@@ -508,9 +463,7 @@ export function SettingsForm({
           <input
             type="checkbox"
             checked={fixedRate.enabledAsFallback}
-            onChange={(e) =>
-              patchFixedRate({ enabledAsFallback: e.target.checked })
-            }
+            onChange={(e) => patchFixedRate({ enabledAsFallback: e.target.checked })}
           />
           <span>Usar como fallback quando o provider primário falha</span>
         </label>
@@ -606,15 +559,14 @@ function FreeShippingPreviewText({
     case "over-cap":
       return (
         <>
-          Acima do teto de {brl(config.maxThreshold ?? 0)} — frete grátis não
-          seria oferecido nesta região.
+          Acima do teto de {brl(config.maxThreshold ?? 0)} — frete grátis não seria oferecido nesta
+          região.
         </>
       );
     case "threshold":
       return (
         <>
-          Frete grátis a partir de <strong>{brl(preview.value)}</strong> de
-          subtotal.
+          Frete grátis a partir de <strong>{brl(preview.value)}</strong> de subtotal.
           {preview.flooredByMin && " (piso mínimo aplicado)"}
         </>
       );
@@ -636,9 +588,7 @@ function EntryFields({
           className={styles.input}
           value={entry.state}
           maxLength={2}
-          onChange={(e) =>
-            onChange({ ...entry, state: e.target.value.toUpperCase() })
-          }
+          onChange={(e) => onChange({ ...entry, state: e.target.value.toUpperCase() })}
         />
       </label>
       <label className={styles.field}>
@@ -660,9 +610,7 @@ function EntryFields({
           step="1"
           min="1"
           value={entry.estimatedDays}
-          onChange={(e) =>
-            onChange({ ...entry, estimatedDays: num(e.target.valueAsNumber) })
-          }
+          onChange={(e) => onChange({ ...entry, estimatedDays: num(e.target.valueAsNumber) })}
         />
       </label>
       <label className={styles.field}>
@@ -673,9 +621,7 @@ function EntryFields({
           step="0.1"
           min="0"
           value={entry.weightLimitKg}
-          onChange={(e) =>
-            onChange({ ...entry, weightLimitKg: num(e.target.valueAsNumber) })
-          }
+          onChange={(e) => onChange({ ...entry, weightLimitKg: num(e.target.valueAsNumber) })}
         />
       </label>
       <label className={styles.field}>
@@ -686,9 +632,7 @@ function EntryFields({
           step="0.01"
           min="0"
           value={entry.additionalKgPrice}
-          onChange={(e) =>
-            onChange({ ...entry, additionalKgPrice: num(e.target.valueAsNumber) })
-          }
+          onChange={(e) => onChange({ ...entry, additionalKgPrice: num(e.target.valueAsNumber) })}
         />
       </label>
     </div>

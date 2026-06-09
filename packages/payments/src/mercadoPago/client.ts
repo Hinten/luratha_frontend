@@ -50,10 +50,7 @@ export interface MercadoPagoConfig {
 export function resolveMercadoPagoConfig(): MercadoPagoConfig {
   const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   if (!accessToken) {
-    throw new PaymentProviderError(
-      "MERCADOPAGO_ACCESS_TOKEN não configurado.",
-      "config_missing",
-    );
+    throw new PaymentProviderError("MERCADOPAGO_ACCESS_TOKEN não configurado.", "config_missing");
   }
   return {
     accessToken,
@@ -65,10 +62,7 @@ export function resolveMercadoPagoConfig(): MercadoPagoConfig {
 export function resolveWebhookSecret(): string {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
   if (!secret) {
-    throw new PaymentProviderError(
-      "MERCADOPAGO_WEBHOOK_SECRET não configurado.",
-      "config_missing",
-    );
+    throw new PaymentProviderError("MERCADOPAGO_WEBHOOK_SECRET não configurado.", "config_missing");
   }
   return secret;
 }

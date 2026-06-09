@@ -142,9 +142,7 @@ describeCloud("/api/coupons/validate (Cloud Firebase)", () => {
   });
 
   it("returns valid:true with computed discount for a healthy percentage coupon", async () => {
-    const res = await validatePOST(
-      jsonRequest({ code: validCode.toLowerCase(), cartTotal: 200 }),
-    );
+    const res = await validatePOST(jsonRequest({ code: validCode.toLowerCase(), cartTotal: 200 }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       valid: true,
@@ -175,9 +173,7 @@ describeCloud("/api/coupons/validate (Cloud Firebase)", () => {
   });
 
   it("returns valid:false 'não encontrado' for an unknown code", async () => {
-    const res = await validatePOST(
-      jsonRequest({ code: `T${codeNonce}NOPE`, cartTotal: 200 }),
-    );
+    const res = await validatePOST(jsonRequest({ code: `T${codeNonce}NOPE`, cartTotal: 200 }));
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ valid: false, reason: "Cupom não encontrado." });
   });

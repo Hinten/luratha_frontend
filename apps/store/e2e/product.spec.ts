@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 // Requires Firestore fixtures seeded by globalSetup — skip when credentials are absent.
-test.skip(process.env.E2E_CLOUD_SKIP === "1", "Firebase credentials not configured — cloud fixtures not seeded");
+test.skip(
+  process.env.E2E_CLOUD_SKIP === "1",
+  "Firebase credentials not configured — cloud fixtures not seeded",
+);
 
 const PRIMARY_PRODUCT_SLUG = "vestido-bordado-floral-luratha-e2e-001";
 const SECONDARY_PRODUCT_SLUGS = [
@@ -15,7 +18,7 @@ test.describe("Product detail page", () => {
 
     await expect(page).toHaveTitle(/Vestido Bordado Floral/);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Vestido Bordado Floral" })
+      page.getByRole("heading", { level: 1, name: "Vestido Bordado Floral" }),
     ).toBeVisible();
 
     // Breadcrumb
@@ -39,9 +42,7 @@ test.describe("Product detail page", () => {
     await expect(page.getByText(/R\$\s*289/)).toBeVisible();
   });
 
-  test("renders thumbnail buttons and allows switching the main image", async ({
-    page,
-  }) => {
+  test("renders thumbnail buttons and allows switching the main image", async ({ page }) => {
     await page.goto(`/produto/${PRIMARY_PRODUCT_SLUG}`);
     const thumbBtns = page.getByRole("button", { name: /Ver imagem/ });
     const thumbCount = await thumbBtns.count();
@@ -72,10 +73,13 @@ test.describe("Product detail page", () => {
     await page.goto(`/produto/${PRIMARY_PRODUCT_SLUG}`);
     await page.getByRole("button", { name: /Adicionar .* ao carrinho/i }).click();
     await expect(page.getByText("Selecione um tamanho")).toBeVisible();
-    await page.getByRole("group", { name: "Selecione o tamanho" }).getByRole("button", {
-      name: "M",
-      exact: true,
-    }).click();
+    await page
+      .getByRole("group", { name: "Selecione o tamanho" })
+      .getByRole("button", {
+        name: "M",
+        exact: true,
+      })
+      .click();
     await expect(page.getByText("Selecione um tamanho")).not.toBeVisible();
   });
 
@@ -84,9 +88,7 @@ test.describe("Product detail page", () => {
     expect(response?.status()).toBe(404);
   });
 
-  test("all 3 mock product detail pages load without errors", async ({
-    page,
-  }) => {
+  test("all 3 mock product detail pages load without errors", async ({ page }) => {
     const slugs = [PRIMARY_PRODUCT_SLUG, ...SECONDARY_PRODUCT_SLUGS];
     for (const slug of slugs) {
       const response = await page.goto(`/produto/${slug}`);
@@ -100,8 +102,6 @@ test.describe("Product detail page", () => {
     const favBtn = page.getByRole("button", { name: "Adicionar aos favoritos" });
     await expect(favBtn).toBeVisible();
     await favBtn.click();
-    await expect(
-      page.getByRole("button", { name: "Remover dos favoritos" })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remover dos favoritos" })).toBeVisible();
   });
 });

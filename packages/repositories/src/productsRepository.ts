@@ -53,7 +53,9 @@ export interface ProductsRepository {
 const MAX_LIST_LIMIT = 100;
 
 export function createProductsRepository(dbInstance: Firestore): ProductsRepository {
-  const productsCollectionRef = collection(dbInstance, firestoreCollections.products).withConverter(clientProductConverter);
+  const productsCollectionRef = collection(dbInstance, firestoreCollections.products).withConverter(
+    clientProductConverter,
+  );
 
   async function create(input: unknown): Promise<Product> {
     try {
@@ -94,7 +96,6 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
 
   async function getBySlug(slug: string): Promise<Product | null> {
     try {
-
       const snapshot = await getDocs(
         query(productsCollectionRef, where("slug", "==", slug), queryLimit(1)),
       );
@@ -102,7 +103,6 @@ export function createProductsRepository(dbInstance: Firestore): ProductsReposit
       if (snapshot.empty) {
         return null;
       }
-      
 
       return snapshot.docs[0].data();
     } catch (error) {
@@ -197,16 +197,28 @@ function normalizeRepositoryError(error: unknown, action: string): ProductReposi
   }
 
   if (error instanceof FirebaseError && error.code === "already-exists") {
-    return new ProductRepositoryError(`Failed to ${action}: document already exists`, "conflict", error);
+    return new ProductRepositoryError(
+      `Failed to ${action}: document already exists`,
+      "conflict",
+      error,
+    );
   }
 
   if (error instanceof FirebaseError && error.code === "not-found") {
-    return new ProductRepositoryError(`Failed to ${action}: document not found`, "not_found", error);
+    return new ProductRepositoryError(
+      `Failed to ${action}: document not found`,
+      "not_found",
+      error,
+    );
   }
 
   if (error instanceof Error) {
     return new ProductRepositoryError(`Failed to ${action}: ${error.message}`, "unknown", error);
   }
 
-  return new ProductRepositoryError(`Failed to ${action} due to an unknown error`, "unknown", error);
+  return new ProductRepositoryError(
+    `Failed to ${action} due to an unknown error`,
+    "unknown",
+    error,
+  );
 }

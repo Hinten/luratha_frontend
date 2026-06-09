@@ -34,11 +34,14 @@ describeCloud("POST /api/images/upload (Cloud Firebase)", () => {
 
   beforeEach(async () => {
     await clearProductFiles(testProductId);
-    await adminDb.collection(firestoreCollections.products).doc(testProductId).set({
-      ...mockProduct,
-      id: testProductId,
-      updatedAt: new Date().toISOString(),
-    });
+    await adminDb
+      .collection(firestoreCollections.products)
+      .doc(testProductId)
+      .set({
+        ...mockProduct,
+        id: testProductId,
+        updatedAt: new Date().toISOString(),
+      });
   });
 
   afterAll(async () => {
@@ -65,7 +68,9 @@ describeCloud("POST /api/images/upload (Cloud Firebase)", () => {
     expect(payload.imageAsset.resolutions.mobile.storagePath).toContain("/mobile.webp");
     expect(payload.imageAsset.resolutions.tablet.storagePath).toContain("/tablet.webp");
     expect(payload.imageAsset.resolutions.desktop.storagePath).toContain("/desktop.webp");
-    expect(payload.imageAsset.resolutions.desktop.downloadUrl).toContain("firebasestorage.googleapis.com");
+    expect(payload.imageAsset.resolutions.desktop.downloadUrl).toContain(
+      "firebasestorage.googleapis.com",
+    );
     if (payload.imageAsset.resolutions.zoom) {
       expect(payload.imageAsset.resolutions.zoom.storagePath).toContain("/zoom.webp");
     }
@@ -80,16 +85,24 @@ describeCloud("POST /api/images/upload (Cloud Firebase)", () => {
     expect(parsedProduct.photoAssets).toHaveLength(1);
     expect(parsedProduct.photoAssets[0].resolutions.desktop.downloadUrl).toBeTruthy();
 
-    const [mobileExists] = await adminBucket.file(payload.imageAsset.resolutions.mobile.storagePath).exists();
-    const [tabletExists] = await adminBucket.file(payload.imageAsset.resolutions.tablet.storagePath).exists();
-    const [desktopExists] = await adminBucket.file(payload.imageAsset.resolutions.desktop.storagePath).exists();
+    const [mobileExists] = await adminBucket
+      .file(payload.imageAsset.resolutions.mobile.storagePath)
+      .exists();
+    const [tabletExists] = await adminBucket
+      .file(payload.imageAsset.resolutions.tablet.storagePath)
+      .exists();
+    const [desktopExists] = await adminBucket
+      .file(payload.imageAsset.resolutions.desktop.storagePath)
+      .exists();
 
     expect(mobileExists).toBe(true);
     expect(tabletExists).toBe(true);
     expect(desktopExists).toBe(true);
 
     if (payload.imageAsset.resolutions.zoom) {
-      const [zoomExists] = await adminBucket.file(payload.imageAsset.resolutions.zoom.storagePath).exists();
+      const [zoomExists] = await adminBucket
+        .file(payload.imageAsset.resolutions.zoom.storagePath)
+        .exists();
       expect(zoomExists).toBe(true);
     }
   });

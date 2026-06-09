@@ -38,8 +38,8 @@ export default function CheckoutError({ error, reset }: ErrorProps) {
         Algo deu errado no checkout
       </h1>
       <p style={{ marginBottom: "1.5rem" }}>
-        Recarregue a página para tentar de novo. Se o problema persistir, volte
-        ao carrinho e refaça o pedido — seus itens estão salvos.
+        Recarregue a página para tentar de novo. Se o problema persistir, volte ao carrinho e refaça
+        o pedido — seus itens estão salvos.
       </p>
       <button
         type="button"

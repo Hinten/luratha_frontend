@@ -34,15 +34,20 @@ export function getProductCardImage(product: Product, fallbackUrl: string): stri
   return firstAsset.resolutions.desktop.downloadUrl;
 }
 
-export function getProductGalleryImages(product: Product, fallbackUrl: string): ProductGalleryImage[] {
+export function getProductGalleryImages(
+  product: Product,
+  fallbackUrl: string,
+): ProductGalleryImage[] {
   if (product.photoAssets.length === 0) {
-    return [{
-      id: "fallback-image",
-      defaultUrl: fallbackUrl,
-      alt: `${product.title} — imagem 1`,
-      srcSet: `${fallbackUrl} 1200w`,
-      zoomUrl: null,
-    }];
+    return [
+      {
+        id: "fallback-image",
+        defaultUrl: fallbackUrl,
+        alt: `${product.title} — imagem 1`,
+        srcSet: `${fallbackUrl} 1200w`,
+        zoomUrl: null,
+      },
+    ];
   }
 
   return product.photoAssets.map((asset, index) => buildGalleryImage(asset, product.title, index));
@@ -86,10 +91,15 @@ function findVariantWithPhotos(
   product: Product,
   predicate: (variant: NonNullable<Product["variants"]>[number]) => boolean,
 ) {
-  return product.variants?.find((variant) => predicate(variant) && variant.photoIds.length > 0) ?? null;
+  return (
+    product.variants?.find((variant) => predicate(variant) && variant.photoIds.length > 0) ?? null
+  );
 }
 
-function variantAssetsByPhotoIds(product: Product, photoIds: readonly string[]): ProductImageAsset[] {
+function variantAssetsByPhotoIds(
+  product: Product,
+  photoIds: readonly string[],
+): ProductImageAsset[] {
   const assetById = new Map(product.photoAssets.map((asset) => [asset.id, asset]));
   return photoIds
     .map((id) => assetById.get(id))
@@ -106,7 +116,9 @@ export function getVariantGalleryImages(
     if (product.photoAssets.length === 0) {
       return fallbackGallery(product.title, fallbackUrl);
     }
-    return product.photoAssets.map((asset, index) => buildGalleryImage(asset, product.title, index));
+    return product.photoAssets.map((asset, index) =>
+      buildGalleryImage(asset, product.title, index),
+    );
   };
 
   if (!product.variants || product.variants.length === 0) {
@@ -122,7 +134,9 @@ export function getVariantGalleryImages(
   if (selectedColor && selectedSize) {
     const exact = findVariantWithPhotos(
       product,
-      (variant) => (variant.color?.includes(selectedColor) ?? false) && (variant.size?.includes(selectedSize) ?? false),
+      (variant) =>
+        (variant.color?.includes(selectedColor) ?? false) &&
+        (variant.size?.includes(selectedSize) ?? false),
     );
     if (exact) {
       const images = variantsToAssets(exact);
@@ -131,7 +145,10 @@ export function getVariantGalleryImages(
   }
 
   if (selectedColor) {
-    const colorOnly = findVariantWithPhotos(product, (variant) => variant.color?.includes(selectedColor) ?? false);
+    const colorOnly = findVariantWithPhotos(
+      product,
+      (variant) => variant.color?.includes(selectedColor) ?? false,
+    );
     if (colorOnly) {
       const images = variantsToAssets(colorOnly);
       if (images) return images;
@@ -139,7 +156,10 @@ export function getVariantGalleryImages(
   }
 
   if (!selectedColor && selectedSize) {
-    const sizeOnly = findVariantWithPhotos(product, (variant) => variant.size?.includes(selectedSize) ?? false);
+    const sizeOnly = findVariantWithPhotos(
+      product,
+      (variant) => variant.size?.includes(selectedSize) ?? false,
+    );
     if (sizeOnly) {
       const images = variantsToAssets(sizeOnly);
       if (images) return images;

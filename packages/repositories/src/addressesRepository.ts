@@ -126,10 +126,7 @@ export function createAddressesRepository(dbInstance: Firestore): AddressesRepos
       await setDoc(ref, merged);
       return merged;
     } catch (error) {
-      throw normalizeRepositoryError(
-        error,
-        `update address "${addressId}" for user "${userId}"`,
-      );
+      throw normalizeRepositoryError(error, `update address "${addressId}" for user "${userId}"`);
     }
   }
 
@@ -145,10 +142,7 @@ export function createAddressesRepository(dbInstance: Firestore): AddressesRepos
       }
       await deleteDoc(ref);
     } catch (error) {
-      throw normalizeRepositoryError(
-        error,
-        `delete address "${addressId}" for user "${userId}"`,
-      );
+      throw normalizeRepositoryError(error, `delete address "${addressId}" for user "${userId}"`);
     }
   }
 

@@ -1,7 +1,4 @@
-export {
-  firestoreCollections,
-  SITE_SETTINGS_DOC_ID,
-} from "@luratha/schemas/collections";
+export { firestoreCollections, SITE_SETTINGS_DOC_ID } from "@luratha/schemas/collections";
 export {
   CategorySchema,
   type Category,
@@ -22,11 +19,7 @@ export {
   type Product,
   validateProduct,
 } from "@luratha/schemas/products";
-export {
-  stockSchema,
-  type Stock,
-  validateStock,
-} from "@luratha/schemas/stock";
+export { stockSchema, type Stock, validateStock } from "@luratha/schemas/stock";
 export {
   cartItemSchema,
   cartSchema,
@@ -36,11 +29,7 @@ export {
   validateCart,
   buildCartItemId,
 } from "@luratha/schemas/carts";
-export {
-  couponSchema,
-  type Coupon,
-  validateCoupon,
-} from "@luratha/schemas/coupons";
+export { couponSchema, type Coupon, validateCoupon } from "@luratha/schemas/coupons";
 export {
   orderItemSchema,
   orderSchema,
@@ -68,10 +57,7 @@ export {
   ADDRESS_PATH_REGEX,
 } from "@luratha/schemas/addresses";
 export { UFS, UF_LABELS, type UF } from "@luratha/schemas/constants";
-export {
-  payerFormSchema,
-  type PayerFormInput,
-} from "@luratha/schemas/payments";
+export { payerFormSchema, type PayerFormInput } from "@luratha/schemas/payments";
 export { reviewSchema, type Review, validateReview } from "@luratha/schemas/reviews";
 export {
   userProfileSchema,
@@ -86,11 +72,7 @@ export {
   type PipelineSearchRequest,
   type VectorSearchRequest,
 } from "@luratha/schemas/search";
-export {
-  assertNoDroppedKeys,
-  parseStrictWrite,
-  mergeForWrite,
-} from "@luratha/schemas/strictWrite";
+export { assertNoDroppedKeys, parseStrictWrite, mergeForWrite } from "@luratha/schemas/strictWrite";
 export {
   siteSettingsSchema,
   shippingSettingsSchema,
@@ -99,6 +81,7 @@ export {
   freeShippingConfigSchema,
   fixedRateConfigSchema,
   fixedRateEntrySchema,
+  companySettingsSchema,
   SHIPPING_PROVIDER_IDS,
   validateSiteSettings,
   getDefaultSiteSettings,
@@ -110,4 +93,5 @@ export {
   type FreeShippingConfig,
   type FixedRateConfig,
   type FixedRateEntry,
+  type CompanySettings,
 } from "@luratha/schemas/siteSettings";

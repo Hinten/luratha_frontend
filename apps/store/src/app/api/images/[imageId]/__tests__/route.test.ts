@@ -66,7 +66,10 @@ describe("DELETE /api/images/[imageId]", () => {
 
   it("returns 404 when image is not found in any product", async () => {
     vi.mocked(deleteProductImage).mockRejectedValue(
-      new ProductImageDeleteError(`Imagem "${IMAGE_ID}" não encontrada em nenhum produto.`, "not_found"),
+      new ProductImageDeleteError(
+        `Imagem "${IMAGE_ID}" não encontrada em nenhum produto.`,
+        "not_found",
+      ),
     );
 
     const response = await DELETE(
@@ -100,10 +103,9 @@ describe("DELETE /api/images/[imageId]", () => {
       updatedProducts: [],
     });
 
-    await DELETE(
-      new Request(`http://localhost/api/images/${customId}`, { method: "DELETE" }),
-      { params: makeParams(customId) },
-    );
+    await DELETE(new Request(`http://localhost/api/images/${customId}`, { method: "DELETE" }), {
+      params: makeParams(customId),
+    });
 
     expect(deleteProductImage).toHaveBeenCalledWith(customId);
   });

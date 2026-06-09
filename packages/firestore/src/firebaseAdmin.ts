@@ -1,5 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { applicationDefault, cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  getApps,
+  initializeApp,
+  type ServiceAccount,
+} from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -38,7 +44,10 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   }
 
   if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-    const decodedValue = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8");
+    const decodedValue = Buffer.from(
+      process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+      "base64",
+    ).toString("utf8");
     const base64Credential = parseServiceAccount(decodedValue, "FIREBASE_SERVICE_ACCOUNT_BASE64");
     if (base64Credential) {
       return base64Credential;
@@ -48,7 +57,8 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   const serviceAccountSource = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
     ? "FIREBASE_SERVICE_ACCOUNT_PATH"
     : "GOOGLE_APPLICATION_CREDENTIALS";
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const serviceAccountPath =
+    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (!serviceAccountPath) {
     return undefined;
   }
@@ -63,7 +73,10 @@ function getServiceAccountFromEnvironment(): ServiceAccount | undefined {
   return parseServiceAccount(fileContents, `service account file ${serviceAccountPath}`);
 }
 
-function parseServiceAccount(rawValue: string | undefined, sourceLabel: string): ServiceAccount | undefined {
+function parseServiceAccount(
+  rawValue: string | undefined,
+  sourceLabel: string,
+): ServiceAccount | undefined {
   if (!rawValue?.trim()) {
     return undefined;
   }

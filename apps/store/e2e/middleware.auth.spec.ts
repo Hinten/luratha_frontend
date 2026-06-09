@@ -9,7 +9,9 @@ test.describe("Auth middleware", () => {
     await context.clearCookies();
   });
 
-  test("unauthenticated visit to /conta redirects to /login with redirect param", async ({ page }) => {
+  test("unauthenticated visit to /conta redirects to /login with redirect param", async ({
+    page,
+  }) => {
     await page.goto("/conta");
     await expect(page).toHaveURL(/\/login\?redirect=%2Fconta/);
   });

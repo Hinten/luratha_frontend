@@ -14,7 +14,7 @@ export default function PedidosListPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const uid = user.uid;
       const res = await fetch(`/api/orders?userId=${uid}&limit=100`);
       if (cancelled) return;

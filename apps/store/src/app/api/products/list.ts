@@ -82,10 +82,7 @@ async function searchByQuery(
   const regex = escapeRegex(q.toLowerCase());
 
   const pipelineFilters: BooleanExpression[] = [
-    or(
-      field("title").toLower().regexMatch(regex),
-      field("sku").toLower().regexMatch(regex),
-    ),
+    or(field("title").toLower().regexMatch(regex), field("sku").toLower().regexMatch(regex)),
   ];
 
   if (status) {

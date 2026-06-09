@@ -70,10 +70,13 @@ describeCloud("Home seed → /busca search round-trip", () => {
     const categories = buildHomeSeedCategories();
     for (const category of categories) {
       const id = namespacedId(category.id);
-      await adminDb.collection(firestoreCollections.categories).doc(id).set({
-        ...category,
-        id,
-      });
+      await adminDb
+        .collection(firestoreCollections.categories)
+        .doc(id)
+        .set({
+          ...category,
+          id,
+        });
       seededDocs.push({ collection: firestoreCollections.categories, id });
     }
 
@@ -86,18 +89,21 @@ describeCloud("Home seed → /busca search round-trip", () => {
     // the new title+sku — leaving the old slug in place would trip the
     // superRefine check that demands slug match the title/sku pair.
     const productsToSeed = allProducts
-      .filter((product) => seededProductIds.includes(product.id as typeof seededProductIds[number]))
+      .filter((product) =>
+        seededProductIds.includes(product.id as (typeof seededProductIds)[number]),
+      )
       .map((product) => ({
         ...product,
         id: namespacedId(product.id),
         slug: null,
         sku: namespacedSku(product.sku),
         categoryId: namespacedId(product.categoryId),
-        variants: product.variants?.map((variant) => ({
-          ...variant,
-          id: namespacedId(variant.id),
-          sku: namespacedSku(variant.sku),
-        })) ?? null,
+        variants:
+          product.variants?.map((variant) => ({
+            ...variant,
+            id: namespacedId(variant.id),
+            sku: namespacedSku(variant.sku),
+          })) ?? null,
       }));
 
     for (const product of productsToSeed) {

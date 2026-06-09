@@ -46,18 +46,13 @@ const ANSI: Record<Severity, string> = {
 };
 
 function emitPretty(severity: Severity, message: string, payload?: unknown): void {
-  const isTty =
-    typeof process !== "undefined" && Boolean(process.stdout?.isTTY);
+  const isTty = typeof process !== "undefined" && Boolean(process.stdout?.isTTY);
   const prefix = isTty ? `${ANSI[severity]}${TAG[severity]}\x1b[0m` : TAG[severity];
   // Route by severity so terminals/DevTools render with native severity
   // icons and colors. Safe in dev — production never takes this branch, so
   // the Cloud Run stderr → ERROR mapping is not affected.
   const sink =
-    severity === "ERROR"
-      ? console.error
-      : severity === "WARNING"
-        ? console.warn
-        : console.log;
+    severity === "ERROR" ? console.error : severity === "WARNING" ? console.warn : console.log;
   if (payload !== undefined) {
     sink(`${prefix} ${message}`, payload);
   } else {

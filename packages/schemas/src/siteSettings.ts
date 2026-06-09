@@ -47,7 +47,11 @@ export const freeShippingConfigSchema = z.object({
 
 export const fixedRateEntrySchema = z.object({
   /** UF do destino (sigla de 2 letras maiúsculas). */
-  state: z.string().trim().length(2).regex(/^[A-Z]{2}$/),
+  state: z
+    .string()
+    .trim()
+    .length(2)
+    .regex(/^[A-Z]{2}$/),
   /** Preço base do serviço (até `weightLimitKg`). */
   price: nonNegativeMoneySchema,
   /** Prazo estimado em dias úteis. */
@@ -93,17 +97,50 @@ export const shippingSettingsSchema = z.object({
     .default({ length: 20, width: 15, height: 5 }),
   /** TTL do cache em memória do servidor para cotações. */
   cacheTtlSeconds: z.number().int().min(0).max(86400).default(3600),
-  freeShipping: freeShippingConfigSchema.default(() =>
-    freeShippingConfigSchema.parse({}),
-  ),
+  freeShipping: freeShippingConfigSchema.default(() => freeShippingConfigSchema.parse({})),
   /** Configuração do fallback `fixed-rate`. Usado quando providerId === "fixed-rate"
    *  ou quando o provider externo falhar (degradação graceful). */
   fixedRate: fixedRateConfigSchema.default(() => fixedRateConfigSchema.parse({})),
 });
 
+/**
+ * Dados de identificação da empresa — alimentam as páginas institucionais
+ * (privacidade, termos de uso), inclusive o `publisher` (schema.org Organization)
+ * do JSON-LD dessas páginas.
+ *
+ * Todos os campos têm `default("")` para retrocompatibilidade: documentos
+ * `settings/global` criados antes deste bloco (apenas `shipping`) continuam
+ * válidos na leitura — o `.default()` materializa um `company` vazio. O dono
+ * preenche os valores em `/configuracoes/empresa` no admin; enquanto vazios, as
+ * páginas exibem marcadores `[INSERIR …]` em vez de texto em branco.
+ */
+export const companySettingsSchema = z.object({
+  /** Razão social registrada (ex.: "Luratha Comércio de Roupas LTDA"). */
+  legalName: z.string().trim().max(140).default(""),
+  /** Nome fantasia exibido ao público. */
+  tradeName: z.string().trim().max(140).default(""),
+  /** CNPJ — formato livre (ex.: "00.000.000/0001-00"). */
+  cnpj: z.string().trim().max(20).default(""),
+  /** Nome do Encarregado pelo Tratamento de Dados (DPO), exigido pela LGPD (art. 41). */
+  dpoName: z.string().trim().max(140).default(""),
+  /** E-mail do Encarregado/DPO para o exercício de direitos pelos titulares. */
+  dpoEmail: z.string().trim().max(140).default(""),
+  /** E-mail oficial de atendimento ao cliente. */
+  contactEmail: z.string().trim().max(140).default(""),
+  /** Endereço da sede (logradouro, número, bairro). */
+  addressLine: z.string().trim().max(200).default(""),
+  /** Município da sede. */
+  addressCity: z.string().trim().max(80).default(""),
+  /** UF da sede (sigla de 2 letras). */
+  addressState: z.string().trim().max(2).default(""),
+  /** Comarca/foro de eleição para os Termos de Uso (ex.: "São Paulo/SP"). */
+  jurisdiction: z.string().trim().max(120).default(""),
+});
+
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
+  company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -113,6 +150,7 @@ export type FreeShippingConfig = z.infer<typeof freeShippingConfigSchema>;
 export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
+export type CompanySettings = z.infer<typeof companySettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

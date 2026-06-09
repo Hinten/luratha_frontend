@@ -49,9 +49,7 @@ export default function ProductVariantView({
             <span className={styles.ratingStar} aria-hidden="true">
               ★
             </span>
-            <span className={styles.ratingValue}>
-              {product.ratingAverage.toFixed(1)}
-            </span>
+            <span className={styles.ratingValue}>{product.ratingAverage.toFixed(1)}</span>
             {product.reviewCount !== null && (
               <span className={styles.ratingCount}>
                 ({product.reviewCount} {product.reviewCount === 1 ? "avaliação" : "avaliações"})

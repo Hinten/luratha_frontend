@@ -5,20 +5,31 @@ import { appData, contactData } from "@/src/lib/constants";
 import Logo from "./Logo";
 import styles from "./Footer.module.css";
 import { getCachedCategories } from "@/src/lib/queries/getCachedCategories";
+import { getCachedSiteSettings } from "@/src/lib/queries/getCachedSiteSettings";
 
-const CNPJ = "43.123.456/0001-78";
+// Usado apenas enquanto `company.cnpj` não foi preenchido no admin
+// (/configuracoes/empresa). Uma vez configurado, o footer exibe o valor real.
+const FALLBACK_CNPJ = "43.123.456/0001-78";
 
 const INSTITUTIONAL_LINKS = [
   { href: "/sobre", label: "Sobre" },
   { href: "/contato", label: "Fale Conosco" },
+  { href: "/faq", label: "Perguntas Frequentes" },
+  { href: "/entrega", label: "Entrega e Frete" },
   { href: "/politica-de-trocas", label: "Política de Trocas" },
   { href: "/referencia-de-medidas", label: "Referência de Medidas" },
+  { href: "/politica-de-privacidade", label: "Política de Privacidade" },
+  { href: "/termos-de-uso", label: "Termos de Uso" },
 ] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 const PAYMENT_METHODS = ["Pix", "Boleto", "Visa", "Mastercard"];
 
 export default async function Footer() {
-  const categories = await getCachedCategories();
+  const [categories, settings] = await Promise.all([
+    getCachedCategories(),
+    getCachedSiteSettings(),
+  ]);
+  const cnpj = settings.company.cnpj || FALLBACK_CNPJ;
   return (
     <footer className={styles.footer}>
       {/* Main columns */}
@@ -30,8 +41,8 @@ export default async function Footer() {
               <Logo />
             </div>
             <p className={styles.description}>
-              Moda artesanal feminina brasileira. Peças feitas com amor para
-              durar — slow fashion com foco em versatilidade e sustentabilidade.
+              Moda artesanal feminina brasileira. Peças feitas com amor para durar — slow fashion
+              com foco em versatilidade e sustentabilidade.
             </p>
           </div>
 
@@ -40,10 +51,7 @@ export default async function Footer() {
             <h3 className={styles.columnHeading}>Atendimento</h3>
             <ul className={styles.linkList}>
               <li>
-                <a
-                  href={`tel:${contactData.phoneTel}`}
-                  className={styles.link}
-                >
+                <a href={`tel:${contactData.phoneTel}`} className={styles.link}>
                   {contactData.phone}
                 </a>
               </li>
@@ -96,8 +104,8 @@ export default async function Footer() {
         <div className={styles.bottomBar}>
           {/* CNPJ + copyright */}
           <p className={styles.copyright}>
-            CNPJ {CNPJ} &mdash; &copy; {new Date().getFullYear()}{" "}
-            {appData.name}. Todos os direitos reservados.
+            CNPJ {cnpj} &mdash; &copy; {new Date().getFullYear()} {appData.name}. Todos os direitos
+            reservados.
           </p>
 
           {/* Social icons */}
@@ -168,4 +176,3 @@ export default async function Footer() {
     </footer>
   );
 }
-

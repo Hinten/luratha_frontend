@@ -6,13 +6,11 @@
 >
 > **Não use em produção.**
 
-
 ---
 
 ## Sobre o projeto
 
 Frontend da **Luratha**, marca brasileira de slow fashion feminina (vestidos, blusas, calças, saias, conjuntos, moletons e acessórios artesanais).
-
 
 ### O que já existe (catálogo + storefront)
 
@@ -37,15 +35,15 @@ Roadmap detalhado em [`plan/checkout-flow-roadmap.md`](./plan/checkout-flow-road
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Framework | Next.js 16.2.2 (App Router, Turbopack) |
-| UI | React 19 + TypeScript strict |
-| Estilo | Tailwind CSS v4 + CSS Modules |
-| Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting, Functions) |
-| Embeddings/IA | Vertex AI (`text-embedding-005`) |
-| Testes | Vitest + React Testing Library + Playwright |
-| CI | GitHub Actions (lint/typecheck, unit, build, cloud-integration, E2E, deploy de Functions) |
+| Camada         | Tecnologia                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| Framework      | Next.js 16.2.2 (App Router, Turbopack)                                                    |
+| UI             | React 19 + TypeScript strict                                                              |
+| Estilo         | Tailwind CSS v4 + CSS Modules                                                             |
+| Backend (BaaS) | Firebase (Auth, Firestore, Storage, App Hosting, Functions)                               |
+| Embeddings/IA  | Vertex AI (`text-embedding-005`)                                                          |
+| Testes         | Vitest + React Testing Library + Playwright                                               |
+| CI             | GitHub Actions (lint/typecheck, unit, build, cloud-integration, E2E, deploy de Functions) |
 
 ## Pré-requisitos
 
@@ -70,18 +68,18 @@ pnpm dev         # storefront em :3000, admin em :3001
 
 ## Scripts principais
 
-| Comando | Uso |
-|---|---|
-| `npm run dev` | Dev server (Turbopack) |
-| `npm run build` | Build de produção |
-| `npm run start` | Servir build |
-| `npm run lint` | ESLint |
-| `npm test` | Testes unitários/componentes (Vitest, jsdom — sem rede) |
-| `npm run test:coverage` | Mesma suite com relatório de cobertura |
-| `npm run test:firestore` | Integração contra Firestore real do projeto de teste |
-| `npm run test:functions:cloud` | Triggers de Cloud Functions deployados |
-| `npm run test:e2e` | Playwright contra o projeto de teste |
-| `npm run test:e2e:ui` | Playwright em modo UI |
+| Comando                        | Uso                                                     |
+| ------------------------------ | ------------------------------------------------------- |
+| `npm run dev`                  | Dev server (Turbopack)                                  |
+| `npm run build`                | Build de produção                                       |
+| `npm run start`                | Servir build                                            |
+| `npm run lint`                 | ESLint                                                  |
+| `npm test`                     | Testes unitários/componentes (Vitest, jsdom — sem rede) |
+| `npm run test:coverage`        | Mesma suite com relatório de cobertura                  |
+| `npm run test:firestore`       | Integração contra Firestore real do projeto de teste    |
+| `npm run test:functions:cloud` | Triggers de Cloud Functions deployados                  |
+| `npm run test:e2e`             | Playwright contra o projeto de teste                    |
+| `npm run test:e2e:ui`          | Playwright em modo UI                                   |
 
 ## Ordem de validação
 
@@ -146,10 +144,10 @@ Já contemplados:
 Monorepo com dois apps Next.js, cada um no seu backend do **Firebase App Hosting**
 (declarados em `firebase.json` → `apphosting`):
 
-| App | Backend | `rootDir` | Domínio |
-|---|---|---|---|
-| Storefront (`@luratha/store`) | `luratha-app-frontend` | `apps/store` | `luratha.com.br` |
-| Admin (`@luratha/admin`) | `luratha-app-admin` | `apps/admin` | `admin.luratha.com.br` |
+| App                           | Backend                | `rootDir`    | Domínio                |
+| ----------------------------- | ---------------------- | ------------ | ---------------------- |
+| Storefront (`@luratha/store`) | `luratha-app-frontend` | `apps/store` | `luratha.com.br`       |
+| Admin (`@luratha/admin`)      | `luratha-app-admin`    | `apps/admin` | `admin.luratha.com.br` |
 
 Cada backend é reconstruído de forma independente a partir do seu `rootDir` quando
 há push na branch ligada — uma falha/deploy do admin não afeta a loja.

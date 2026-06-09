@@ -3,9 +3,7 @@ import { flattenError, serializeLogPayload } from "../serializeLogPayload";
 
 describe("serializeLogPayload", () => {
   it("serializes a plain object as compact JSON", () => {
-    expect(serializeLogPayload({ foo: "bar", n: 1 })).toBe(
-      '{"foo":"bar","n":1}',
-    );
+    expect(serializeLogPayload({ foo: "bar", n: 1 })).toBe('{"foo":"bar","n":1}');
   });
 
   it("extracts name and message from a plain Error, omitting stack", () => {

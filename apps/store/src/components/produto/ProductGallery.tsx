@@ -12,10 +12,7 @@ interface ProductGalleryProps {
   productName: string;
 }
 
-export default function ProductGallery({
-  images,
-  productName,
-}: ProductGalleryProps) {
+export default function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const [canScrollBack, setCanScrollBack] = useState(false);
@@ -41,7 +38,9 @@ export default function ProductGallery({
       return;
     }
 
-    const selectedThumb = container.querySelector<HTMLButtonElement>(`[data-thumb-index="${activeIndex}"]`);
+    const selectedThumb = container.querySelector<HTMLButtonElement>(
+      `[data-thumb-index="${activeIndex}"]`,
+    );
     if (selectedThumb && typeof selectedThumb.scrollIntoView === "function") {
       selectedThumb.scrollIntoView({
         behavior: "smooth",
@@ -94,9 +93,7 @@ export default function ProductGallery({
 
     const amount = direction === "forward" ? 96 : -96;
     container.scrollBy(
-      isDesktop
-        ? { top: amount, behavior: "smooth" }
-        : { left: amount, behavior: "smooth" },
+      isDesktop ? { top: amount, behavior: "smooth" } : { left: amount, behavior: "smooth" },
     );
   };
 

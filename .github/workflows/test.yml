@@ -29,6 +29,8 @@ jobs:
         run: pnpm exec turbo run typecheck --filter='!@luratha/admin'
       - name: ESLint
         run: pnpm exec turbo run lint --filter='!@luratha/admin'
+      - name: Prettier format check
+        run: pnpm run format:check
 
   unit:
     name: Unit / component (Vitest jsdom)

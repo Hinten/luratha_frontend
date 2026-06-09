@@ -1,7 +1,4 @@
-import {
-  execute,
-  field,
-} from "firebase/firestore/pipelines";
+import { execute, field } from "firebase/firestore/pipelines";
 import { z } from "zod";
 import { firestoreCollections, validateProduct, type Product } from "@luratha/schemas";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
@@ -153,10 +150,11 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
   await Promise.all(
     affectedProducts.map(async (product) => {
       const { slug: _slug, ...productWithoutSlug } = product as Record<string, unknown>;
-      const updatedVariants = product.variants?.map((variant) => ({
-        ...variant,
-        photoIds: variant.photoIds.filter((photoId) => photoId !== imageId),
-      })) ?? null;
+      const updatedVariants =
+        product.variants?.map((variant) => ({
+          ...variant,
+          photoIds: variant.photoIds.filter((photoId) => photoId !== imageId),
+        })) ?? null;
       const updatedProduct = validateProduct({
         ...productWithoutSlug,
         photoAssets: product.photoAssets.filter((asset) => asset.id !== imageId),
@@ -165,10 +163,7 @@ export async function deleteProductImage(imageId: string): Promise<DeleteProduct
         updatedAt: now,
       });
 
-      await adminDb
-        .collection(firestoreCollections.products)
-        .doc(product.id)
-        .set(updatedProduct);
+      await adminDb.collection(firestoreCollections.products).doc(product.id).set(updatedProduct);
 
       updatedProductIds.push(product.id);
     }),

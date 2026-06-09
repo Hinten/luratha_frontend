@@ -40,7 +40,9 @@ type CreateEmbeddingServiceOptions = {
 export function normalizeEmbeddingDimensions(values: number[]): number[] {
   const normalized = values.filter((value) => Number.isFinite(value));
   if (normalized.length < MIN_EMBEDDING_DIMENSIONS) {
-    throw new EmbeddingGenerationError("Embedding returned less than the minimum required dimensions.");
+    throw new EmbeddingGenerationError(
+      "Embedding returned less than the minimum required dimensions.",
+    );
   }
   return normalized.slice(0, MAX_EMBEDDING_DIMENSIONS);
 }
@@ -95,7 +97,9 @@ export function createEmbeddingService(
 
         if (!response.ok) {
           const errorBody = await response.text();
-          throw new EmbeddingGenerationError(`Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`);
+          throw new EmbeddingGenerationError(
+            `Vertex AI embedding request failed with status ${response.status} - ${errorBody}.`,
+          );
         }
 
         const json = (await response.json()) as {
@@ -106,9 +110,7 @@ export function createEmbeddingService(
         };
 
         const rawVector =
-          json.predictions?.[0]?.embeddings?.values ??
-          json.predictions?.[0]?.values ??
-          [];
+          json.predictions?.[0]?.embeddings?.values ?? json.predictions?.[0]?.values ?? [];
 
         return normalizeEmbeddingDimensions(rawVector);
       } finally {
@@ -117,4 +119,3 @@ export function createEmbeddingService(
     },
   };
 }
-

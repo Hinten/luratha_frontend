@@ -60,9 +60,7 @@ describe("AddToCartButton", () => {
   it("calls addItem with the full item payload on click", async () => {
     render(<AddToCartButton item={sampleItem} />);
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     });
     expect(mockAddItem).toHaveBeenCalledWith(sampleItem);
   });
@@ -70,9 +68,7 @@ describe("AddToCartButton", () => {
   it("shows '✓ ADICIONADO!' feedback after click", async () => {
     render(<AddToCartButton item={sampleItem} />);
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     });
     expect(screen.getByRole("button")).toHaveTextContent("✓ ADICIONADO!");
   });
@@ -80,9 +76,7 @@ describe("AddToCartButton", () => {
   it("reverts text back after 2500ms", async () => {
     render(<AddToCartButton item={sampleItem} />);
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     });
     act(() => {
       vi.advanceTimersByTime(2500);
@@ -105,9 +99,7 @@ describe("AddToCartButton", () => {
   it("calls addItem when onBeforeAdd returns true", async () => {
     render(<AddToCartButton item={sampleItem} onBeforeAdd={() => true} />);
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: /Adicionar .* ao carrinho/i }));
     });
     expect(mockAddItem).toHaveBeenCalledTimes(1);
   });

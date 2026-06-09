@@ -26,22 +26,18 @@ async function openCartWithItems(page: Page, items: E2ECartItem[]) {
   await page.goto("/carrinho");
 }
 
-function buildItem(
-  partial: {
-    productId: string;
-    variantId?: string;
-    variantSku: string;
-    productSlug: string;
-    name: string;
-    unitPrice: number;
-    variantLabel?: string;
-    quantity?: number;
-  },
-): E2ECartItem {
+function buildItem(partial: {
+  productId: string;
+  variantId?: string;
+  variantSku: string;
+  productSlug: string;
+  name: string;
+  unitPrice: number;
+  variantLabel?: string;
+  quantity?: number;
+}): E2ECartItem {
   const now = new Date().toISOString();
-  const id = partial.variantId
-    ? `${partial.productId}__${partial.variantId}`
-    : partial.productId;
+  const id = partial.variantId ? `${partial.productId}__${partial.variantId}` : partial.productId;
   return {
     id,
     userId: "guestcart",
@@ -74,9 +70,7 @@ test.describe("Cart (Carrinho)", () => {
   test("empty cart renders title, heading, message and browse link", async ({ page }) => {
     await page.goto("/carrinho");
     await expect(page).toHaveTitle(/Luratha/);
-    await expect(
-      page.getByRole("heading", { name: "Meu Carrinho" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Meu Carrinho" })).toBeVisible();
     await expect(page.getByText("Seu carrinho está vazio")).toBeVisible();
     const browseLink = page.getByRole("link", { name: "Ver Categorias" });
     await expect(browseLink).toBeVisible();
@@ -91,9 +85,7 @@ test.describe("Cart (Carrinho)", () => {
 
     await page.getByRole("link", { name: "Carrinho" }).click();
     await expect(page).toHaveURL(/\/carrinho/);
-    await expect(
-      page.getByRole("heading", { name: "Meu Carrinho" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Meu Carrinho" })).toBeVisible();
   });
 
   test("cart with items shows item rows and order summary", async ({ page }) => {
@@ -111,12 +103,8 @@ test.describe("Cart (Carrinho)", () => {
 
     await expect(page.getByText("Vestido Bordado Floral")).toBeVisible();
     // The cart row renders the variant label snapshot (e.g. "M" or "Azul / G").
-    await expect(
-      page.getByRole("list").getByText("M", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("complementary", { name: "Resumo do pedido" }),
-    ).toBeVisible();
+    await expect(page.getByRole("list").getByText("M", { exact: true })).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Resumo do pedido" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Finalizar Compra" })).toBeVisible();
   });
 

@@ -29,7 +29,9 @@ function settingsDocRef() {
     .withConverter(adminSiteSettingsConverter);
 }
 
-export async function getSiteSettings(options: { forceFresh?: boolean } = {}): Promise<SiteSettings> {
+export async function getSiteSettings(
+  options: { forceFresh?: boolean } = {},
+): Promise<SiteSettings> {
   console.debug("Buscando site settings...");
   if (!options.forceFresh && cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     console.debug("Usando site settings do cache.", cache.value);

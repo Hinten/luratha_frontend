@@ -145,7 +145,7 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
         setPollTimedOut(true);
         return;
       }
-      timer = setTimeout(runPoll, PAYMENT_POLL_INTERVAL_MS);
+      timer = setTimeout(() => void runPoll(), PAYMENT_POLL_INTERVAL_MS);
     };
 
     const runPoll = async () => {
@@ -178,7 +178,10 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
       } catch (err) {
         // Rede instável (TypeError) ou request abortado — segue tentando até o
         // deadline. Qualquer outro erro sobe (sem fallback silencioso).
-        if (err instanceof TypeError || (err instanceof DOMException && err.name === "AbortError")) {
+        if (
+          err instanceof TypeError ||
+          (err instanceof DOMException && err.name === "AbortError")
+        ) {
           scheduleNext();
           return;
         }
@@ -186,7 +189,7 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
       }
     };
 
-    timer = setTimeout(runPoll, PAYMENT_POLL_INTERVAL_MS);
+    timer = setTimeout(() => void runPoll(), PAYMENT_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -244,8 +247,8 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
             <>
               <h3 className={styles.pendingTitle}>Pagamento em análise</h3>
               <p className={styles.pendingDescription}>
-                Estamos confirmando a segurança do seu pagamento. Assim que for
-                aprovado, {artifactLabel} aparece aqui. Mantenha esta página aberta.
+                Estamos confirmando a segurança do seu pagamento. Assim que for aprovado,{" "}
+                {artifactLabel} aparece aqui. Mantenha esta página aberta.
               </p>
             </>
           ) : (
@@ -260,11 +263,7 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
       )}
 
       {result.paymentMethod === "pix" && pix && (
-        <PixDisplay
-          qrCode={pix.qrCode}
-          qrCodeBase64={pix.qrCodeBase64}
-          expiresAt={pix.expiresAt}
-        />
+        <PixDisplay qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiresAt={pix.expiresAt} />
       )}
 
       {result.paymentMethod === "boleto" && boleto && (
@@ -280,14 +279,13 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
           <HourglassIcon className={styles.pendingIcon} />
           <h3 className={styles.pendingTitle}>Seu pagamento está em análise</h3>
           <p className={styles.pendingDescription}>
-            Recebemos seu pagamento e a operadora do cartão está validando a
-            transação. Isso costuma levar alguns minutos, mas em alguns casos
-            pode demorar até <strong>2 dias úteis</strong>.
+            Recebemos seu pagamento e a operadora do cartão está validando a transação. Isso costuma
+            levar alguns minutos, mas em alguns casos pode demorar até <strong>2 dias úteis</strong>
+            .
           </p>
           <p className={styles.pendingDescription}>
-            Você receberá um e-mail assim que a aprovação for confirmada — não
-            é preciso fazer nada agora. Você também pode acompanhar o status
-            na sua conta a qualquer momento.
+            Você receberá um e-mail assim que a aprovação for confirmada — não é preciso fazer nada
+            agora. Você também pode acompanhar o status na sua conta a qualquer momento.
           </p>
         </div>
       )}
@@ -295,8 +293,8 @@ export default function PaymentResult({ result, orderId, onTryAgain }: PaymentRe
       {result.paymentMethod === "credit_card" && copy.tone === "error" && (
         <div className={styles.failedBlock}>
           <p className={styles.failedDescription}>
-            Não foi possível processar seu cartão. Verifique os dados ou tente
-            outra forma de pagamento — você não foi cobrado.
+            Não foi possível processar seu cartão. Verifique os dados ou tente outra forma de
+            pagamento — você não foi cobrado.
           </p>
           {onTryAgain && (
             <button type="button" className={styles.retryBtn} onClick={onTryAgain}>

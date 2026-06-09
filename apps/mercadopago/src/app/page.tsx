@@ -4,8 +4,7 @@ export default function HomePage() {
       <h1>Luratha — MercadoPago Webhook</h1>
       <p>
         Este backend recebe notificações da API de Orders do MercadoPago em
-        <code> POST /api/webhooks/mercadopago</code>. Nenhuma página pública é
-        servida aqui.
+        <code> POST /api/webhooks/mercadopago</code>. Nenhuma página pública é servida aqui.
       </p>
     </main>
   );

@@ -12,9 +12,7 @@ export default function ProductGrid({ products, stockMap }: ProductGridProps) {
     return (
       <div className={styles.empty}>
         <p className={styles.emptyHeading}>Nenhuma peça encontrada</p>
-        <p className={styles.emptyBody}>
-          Tente explorar outras categorias ou volte em breve.
-        </p>
+        <p className={styles.emptyBody}>Tente explorar outras categorias ou volte em breve.</p>
       </div>
     );
   }

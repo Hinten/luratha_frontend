@@ -27,20 +27,14 @@ export default function AddressCard({ address, onEdit, onDelete, onSetDefault }:
       <p className={styles.line}>
         {address.neighborhood} · {address.city}/{address.state} · CEP {address.postalCode}
       </p>
-      {address.reference && (
-        <p className={styles.muted}>Ref: {address.reference}</p>
-      )}
+      {address.reference && <p className={styles.muted}>Ref: {address.reference}</p>}
 
       <div className={styles.actions}>
         <button type="button" className={styles.actionBtn} onClick={() => onEdit(address)}>
           Editar
         </button>
         {!address.isDefault && (
-          <button
-            type="button"
-            className={styles.actionBtn}
-            onClick={() => onSetDefault(address)}
-          >
+          <button type="button" className={styles.actionBtn} onClick={() => onSetDefault(address)}>
             Tornar padrão
           </button>
         )}

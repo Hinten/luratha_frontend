@@ -29,8 +29,7 @@ const collectionPageSchema = {
   "@context": "https://schema.org" as const,
   "@type": "CollectionPage",
   name: "Todas as Peças – Luratha",
-  description:
-    "Catálogo completo da Luratha — slow fashion artesanal feminino brasileiro.",
+  description: "Catálogo completo da Luratha — slow fashion artesanal feminino brasileiro.",
   url: `${SITE_URL}/todas-as-pecas`,
   isPartOf: {
     "@type": "WebSite",
@@ -73,14 +72,10 @@ function sortProducts(products: FirestoreProduct[], sort?: string): FirestorePro
       return sorted.sort((a, b) => {
         const originalPriceA = getOriginalPrice(a);
         const currentPriceA = getCurrentPrice(a);
-        const discountA = originalPriceA
-          ? (originalPriceA - currentPriceA) / originalPriceA
-          : 0;
+        const discountA = originalPriceA ? (originalPriceA - currentPriceA) / originalPriceA : 0;
         const originalPriceB = getOriginalPrice(b);
         const currentPriceB = getCurrentPrice(b);
-        const discountB = originalPriceB
-          ? (originalPriceB - currentPriceB) / originalPriceB
-          : 0;
+        const discountB = originalPriceB ? (originalPriceB - currentPriceB) / originalPriceB : 0;
         return discountB - discountA;
       });
     default:
@@ -106,22 +101,13 @@ export default async function TodasAsPecasPage({ searchParams }: PageProps) {
     <div className="container-luratha section-padding">
       <JsonLd data={collectionPageSchema} />
       <JsonLd data={breadcrumbSchema} />
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Todas as Peças" },
-        ]}
-      />
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Todas as Peças" }]} />
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)]">
-            Todas as Peças
-          </h1>
-          <p className="font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60 mt-1">
+          <h1 className="font-[family-name:var(--font-heading)]">Todas as Peças</h1>
+          <p className="mt-1 font-[family-name:var(--font-body)] text-sm text-[var(--color-neutral-dark)]/60">
             {products.length}{" "}
-            {products.length === 1
-              ? "produto encontrado"
-              : "produtos encontrados"}
+            {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
           </p>
         </div>
         <Suspense fallback={null}>

@@ -77,13 +77,9 @@ export default function OrderSummary({
               </div>
               <div className={styles.itemInfo}>
                 <p className={styles.itemName}>{item.name}</p>
-                {item.variantLabel && (
-                  <p className={styles.itemVariant}>{item.variantLabel}</p>
-                )}
+                {item.variantLabel && <p className={styles.itemVariant}>{item.variantLabel}</p>}
               </div>
-              <p className={styles.itemPrice}>
-                {formatMoney(item.unitPrice * item.quantity)}
-              </p>
+              <p className={styles.itemPrice}>{formatMoney(item.unitPrice * item.quantity)}</p>
             </li>
           ))}
         </ul>
@@ -97,9 +93,7 @@ export default function OrderSummary({
 
         {discountTotal > 0 && (
           <div className={styles.row} data-variant="discount">
-            <dt>
-              Desconto{appliedCoupon ? ` (${appliedCoupon.code})` : ""}
-            </dt>
+            <dt>Desconto{appliedCoupon ? ` (${appliedCoupon.code})` : ""}</dt>
             <dd>− {formatMoney(discountTotal)}</dd>
           </div>
         )}

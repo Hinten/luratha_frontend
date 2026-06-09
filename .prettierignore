@@ -1,0 +1,24 @@
+# Build output & caches
+**/.next/**
+**/dist/**
+**/.turbo/**
+**/coverage/**
+**/playwright-report/**
+**/test-results/**
+
+# Generated / vendored
+pnpm-lock.yaml
+functions/lib/**
+functions/generated/**
+
+# Next.js generated types
+**/next-env.d.ts
+
+# Documentation & agent/skill instruction files — authored prose (and the
+# tooling under .github/.claude). Kept out of the formatter to avoid noisy
+# markdown/table reflow and churn unrelated to code.
+.claude/
+.github/
+plan/
+docs/
+CLAUDE.md

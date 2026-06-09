@@ -1,6 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "envMode": "loose",
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "eslint.config.base.mjs",
+    "eslint.firestore-guards.mjs",
+    "prettier.config.mjs",
+    ".prettierignore"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -4,11 +4,7 @@ import { useEffect, useState, type ChangeEvent, type FocusEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  addressFormSchema,
-  UFS,
-  UF_LABELS,
-} from "@luratha/schemas";
+import { addressFormSchema, UFS, UF_LABELS } from "@luratha/schemas";
 import { formatCep } from "@/src/lib/format/cep";
 import { lookupCep } from "@/src/lib/cep/viaCep";
 import styles from "./AddressForm.module.css";
@@ -157,9 +153,7 @@ export default function AddressForm({
   // Estado da consulta de CEP (ViaCEP): "loading" enquanto busca; "not_found" e
   // "error" só mostram AVISO (não bloqueiam o submit). O `ibgeCode` resolvido
   // entra no payload quando o CEP é encontrado.
-  const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "not_found" | "error">(
-    "idle",
-  );
+  const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "not_found" | "error">("idle");
   const [ibgeCode, setIbgeCode] = useState<string | null>(null);
 
   // Mapeia issues do servidor (ZodIssue[]) para erros por campo.
@@ -465,12 +459,7 @@ export default function AddressForm({
 
       <div className={styles.formActions}>
         {onCancel && (
-          <button
-            type="button"
-            className={styles.cancelBtn}
-            onClick={onCancel}
-            disabled={saving}
-          >
+          <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={saving}>
             {cancelLabel}
           </button>
         )}

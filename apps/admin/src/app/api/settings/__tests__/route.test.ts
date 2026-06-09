@@ -2,17 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const {
-  mockRequireUser,
-  mockAuthErrorResponse,
-  mockGetSiteSettings,
-  mockSetSiteSettings,
-} = vi.hoisted(() => ({
-  mockRequireUser: vi.fn(),
-  mockAuthErrorResponse: vi.fn(),
-  mockGetSiteSettings: vi.fn(),
-  mockSetSiteSettings: vi.fn(),
-}));
+const { mockRequireUser, mockAuthErrorResponse, mockGetSiteSettings, mockSetSiteSettings } =
+  vi.hoisted(() => ({
+    mockRequireUser: vi.fn(),
+    mockAuthErrorResponse: vi.fn(),
+    mockGetSiteSettings: vi.fn(),
+    mockSetSiteSettings: vi.fn(),
+  }));
 
 vi.mock("@luratha/auth/requireUser", () => ({
   requireUser: mockRequireUser,
@@ -102,6 +98,27 @@ describe("PATCH /api/settings", () => {
       updatedAt: "t0",
     });
     expect(await response.json()).toEqual(SAVED);
+  });
+
+  it("merges a company block over the current document and persists", async () => {
+    const company = {
+      legalName: "Luratha Comércio de Roupas LTDA",
+      cnpj: "00.000.000/0001-00",
+      dpoName: "Maria Silva",
+      dpoEmail: "dpo@luratha.com.br",
+    };
+
+    const response = await PATCH(makeRequest({ company }));
+
+    expect(response.status).toBe(200);
+    expect(mockGetSiteSettings).toHaveBeenCalledWith({ forceFresh: true });
+    // { ...current, ...payload } — the company block is added without touching shipping.
+    expect(mockSetSiteSettings).toHaveBeenCalledWith({
+      id: "global",
+      shipping: { providerId: "melhor-envio" },
+      updatedAt: "t0",
+      company,
+    });
   });
 
   it("returns 400 with issues when the merged document fails validation", async () => {

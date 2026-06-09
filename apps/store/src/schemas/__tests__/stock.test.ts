@@ -45,9 +45,7 @@ describe("stockSchema", () => {
     });
 
     it("rejects negative quantity", () => {
-      expect(() =>
-        validateStock({ ...validSimpleStock, quantity: -1 }),
-      ).toThrow();
+      expect(() => validateStock({ ...validSimpleStock, quantity: -1 })).toThrow();
     });
 
     it("accepts zero quantity (out of stock)", () => {
@@ -121,15 +119,11 @@ describe("stockSchema", () => {
     });
 
     it("rejects invalid SKU format", () => {
-      expect(() =>
-        validateStock({ ...validSimpleStock, sku: "invalid sku!" }),
-      ).toThrow();
+      expect(() => validateStock({ ...validSimpleStock, sku: "invalid sku!" })).toThrow();
     });
 
     it("rejects invalid updatedAt timestamp", () => {
-      expect(() =>
-        validateStock({ ...validSimpleStock, updatedAt: "not-a-date" }),
-      ).toThrow();
+      expect(() => validateStock({ ...validSimpleStock, updatedAt: "not-a-date" })).toThrow();
     });
   });
 });

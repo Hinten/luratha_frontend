@@ -1,11 +1,5 @@
 import { FirebaseError } from "firebase/app";
-import {
-  type Firestore,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
+import { type Firestore, collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { z } from "zod";
 import { firestoreCollections, type UserProfile, validateUserProfile } from "@luratha/schemas";
 import { clientUserProfileConverter } from "@luratha/firestore/clientUserProfileConverter";
@@ -34,9 +28,10 @@ export interface UsersRepository {
 }
 
 export function createUsersRepository(dbInstance: Firestore): UsersRepository {
-  const usersCollectionRef = collection(dbInstance, firestoreCollections.userProfiles).withConverter(
-    clientUserProfileConverter,
-  );
+  const usersCollectionRef = collection(
+    dbInstance,
+    firestoreCollections.userProfiles,
+  ).withConverter(clientUserProfileConverter);
 
   async function create(input: unknown): Promise<UserProfile> {
     try {
@@ -141,11 +136,7 @@ function normalizeRepositoryError(error: unknown, action: string): UserRepositor
   }
 
   if (error instanceof FirebaseError && error.code === "not-found") {
-    return new UserRepositoryError(
-      `Failed to ${action}: document not found`,
-      "not_found",
-      error,
-    );
+    return new UserRepositoryError(`Failed to ${action}: document not found`, "not_found", error);
   }
 
   if (error instanceof Error) {

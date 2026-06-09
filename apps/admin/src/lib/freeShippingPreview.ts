@@ -20,10 +20,7 @@ export type FreeShippingPreview =
  */
 export function previewFreeShippingThreshold(
   shippingCost1kg: number,
-  config: Pick<
-    FreeShippingConfig,
-    "divisor" | "minThreshold" | "maxThreshold" | "enabled"
-  >,
+  config: Pick<FreeShippingConfig, "divisor" | "minThreshold" | "maxThreshold" | "enabled">,
 ): FreeShippingPreview {
   if (!config.enabled) return { kind: "disabled" };
   if (!Number.isFinite(shippingCost1kg) || shippingCost1kg <= 0) {

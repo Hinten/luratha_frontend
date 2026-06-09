@@ -158,11 +158,7 @@ export async function POST(request: Request) {
 
   const repository = createCartsRepository(adminDb);
   try {
-    const snapshot = await repository.mergeItems(
-      authedUser.uid,
-      accepted,
-      parsed.mergeToken,
-    );
+    const snapshot = await repository.mergeItems(authedUser.uid, accepted, parsed.mergeToken);
     return NextResponse.json({ ...snapshot, dropped }, { status: 200 });
   } catch (error) {
     if (error instanceof CartRepositoryError) {

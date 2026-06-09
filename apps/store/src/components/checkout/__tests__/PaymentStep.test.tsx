@@ -67,35 +67,17 @@ describe("PaymentStep", () => {
 
   describe("tab PIX (default)", () => {
     it("inicia com PIX selecionado e renderiza heading correto", () => {
-      render(
-        <PaymentStep
-          cartTotal={250}
-          payer={PAYER}
-          onSubmit={vi.fn()}
-          onBack={vi.fn()}
-        />,
-      );
-      expect(
-        screen.getByRole("heading", { name: /Como você quer pagar/i }),
-      ).toBeInTheDocument();
+      render(<PaymentStep cartTotal={250} payer={PAYER} onSubmit={vi.fn()} onBack={vi.fn()} />);
+      expect(screen.getByRole("heading", { name: /Como você quer pagar/i })).toBeInTheDocument();
       const pixTab = screen.getByRole("tab", { name: "PIX" });
       expect(pixTab).toHaveAttribute("aria-selected", "true");
     });
 
     it("submete PIX usando o payer recebido por prop — sem coletar dados de novo", async () => {
       const user = userEvent.setup();
-      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(
-        async () => {},
-      );
+      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(async () => {});
 
-      render(
-        <PaymentStep
-          cartTotal={250}
-          payer={PAYER}
-          onSubmit={onSubmit}
-          onBack={vi.fn()}
-        />,
-      );
+      render(<PaymentStep cartTotal={250} payer={PAYER} onSubmit={onSubmit} onBack={vi.fn()} />);
 
       await user.click(screen.getByRole("button", { name: "Gerar PIX" }));
 
@@ -112,9 +94,7 @@ describe("PaymentStep", () => {
   describe("tab Boleto", () => {
     it("submete boleto com payerAddress derivado do shippingAddress", async () => {
       const user = userEvent.setup();
-      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(
-        async () => {},
-      );
+      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(async () => {});
 
       render(
         <PaymentStep
@@ -152,26 +132,15 @@ describe("PaymentStep", () => {
   describe("tab Cartão (Brick)", () => {
     it("propaga token + cardadados pro onSubmit, payer vem da prop", async () => {
       const user = userEvent.setup();
-      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(
-        async () => {},
-      );
+      const onSubmit = vi.fn<(payload: PaymentSubmitPayload) => Promise<void>>(async () => {});
 
-      render(
-        <PaymentStep
-          cartTotal={250}
-          payer={PAYER}
-          onSubmit={onSubmit}
-          onBack={vi.fn()}
-        />,
-      );
+      render(<PaymentStep cartTotal={250} payer={PAYER} onSubmit={onSubmit} onBack={vi.fn()} />);
 
       await user.click(screen.getByRole("tab", { name: "Cartão" }));
 
       // O Brick (stub) substitui o form local — não há mais botão "Gerar PIX".
       expect(screen.getByTestId("card-brick-stub")).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Gerar PIX" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Gerar PIX" })).not.toBeInTheDocument();
 
       await user.click(screen.getByTestId("card-brick-stub"));
 
@@ -190,14 +159,7 @@ describe("PaymentStep", () => {
 
     it("inicializa o Brick com initialization.payer prefilled (email, nome, CPF)", async () => {
       const user = userEvent.setup();
-      render(
-        <PaymentStep
-          cartTotal={250}
-          payer={PAYER}
-          onSubmit={vi.fn()}
-          onBack={vi.fn()}
-        />,
-      );
+      render(<PaymentStep cartTotal={250} payer={PAYER} onSubmit={vi.fn()} onBack={vi.fn()} />);
 
       await user.click(screen.getByRole("tab", { name: "Cartão" }));
 
@@ -221,14 +183,7 @@ describe("PaymentStep", () => {
   describe("tab Cartão (Brick) — onError", () => {
     async function selectCardTab() {
       const user = userEvent.setup();
-      render(
-        <PaymentStep
-          cartTotal={250}
-          payer={PAYER}
-          onSubmit={vi.fn()}
-          onBack={vi.fn()}
-        />,
-      );
+      render(<PaymentStep cartTotal={250} payer={PAYER} onSubmit={vi.fn()} onBack={vi.fn()} />);
       await user.click(screen.getByRole("tab", { name: "Cartão" }));
       return user;
     }

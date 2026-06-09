@@ -30,13 +30,7 @@ vi.mock("@/src/components/produto/ProductGallery", () => ({
 // SizeSelector now handles stock display; render stock info so page-level
 // stock tests can still verify that the correct data flows through.
 vi.mock("@/src/components/produto/SizeSelector", () => ({
-  default: ({
-    product,
-    stock,
-  }: {
-    product: Product;
-    stock?: Stock | null;
-  }) => {
+  default: ({ product, stock }: { product: Product; stock?: Stock | null }) => {
     const qty = stock?.quantity ?? product.totalStock;
     return (
       <div data-testid="size-selector">
@@ -112,9 +106,7 @@ describe("ProductDetailPage", () => {
 
   it("renders the product name as an h1", () => {
     render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
-    expect(
-      screen.getByRole("heading", { level: 1, name: mockProduct.title })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: mockProduct.title })).toBeInTheDocument();
   });
 
   it("renders the product gallery component", () => {
@@ -140,20 +132,14 @@ describe("ProductDetailPage", () => {
 
   it("renders highlights bullet list", () => {
     render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
-    expect(
-      screen.getByRole("list", { name: "Destaques do produto" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Destaques do produto" })).toBeInTheDocument();
     expect(screen.getByText("Bordado à mão — cada peça é única")).toBeInTheDocument();
   });
 
   it("renders the description in its own section", () => {
     render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
-    expect(
-      screen.getByRole("region", { name: "Descrição do produto" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/bordado à mão com motivos florais/)
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Descrição do produto" })).toBeInTheDocument();
+    expect(screen.getByText(/bordado à mão com motivos florais/)).toBeInTheDocument();
   });
 
   it("renders the breadcrumb with Home, category, and product name", () => {
@@ -161,11 +147,15 @@ describe("ProductDetailPage", () => {
     const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(nav.querySelector("a[href='/']")).toBeInTheDocument();
     expect(nav.querySelector("a[href='/categoria/vestidos']")).toBeInTheDocument();
-    expect(screen.getByText(mockProduct.title, { selector: "[aria-current='page']" })).toBeInTheDocument();
+    expect(
+      screen.getByText(mockProduct.title, { selector: "[aria-current='page']" }),
+    ).toBeInTheDocument();
   });
 
   it("renders the schema.org JSON-LD script", () => {
-    const { container } = render(<ProductDetailPage product={mockProduct} category={mockCategory} />);
+    const { container } = render(
+      <ProductDetailPage product={mockProduct} category={mockCategory} />,
+    );
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
     const data = JSON.parse(script!.textContent!);

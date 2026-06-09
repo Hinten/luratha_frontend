@@ -22,11 +22,7 @@ function resolveState(index: number, currentIndex: number): StepState {
   return "upcoming";
 }
 
-export default function StepIndicator({
-  steps,
-  currentStep,
-  onStepClick,
-}: StepIndicatorProps) {
+export default function StepIndicator({ steps, currentStep, onStepClick }: StepIndicatorProps) {
   const currentIndex = Math.max(
     steps.findIndex((s) => s.id === currentStep),
     0,
@@ -62,9 +58,7 @@ export default function StepIndicator({
                 </span>
               )}
               <span className={styles.labelText}>{step.label}</span>
-              {index < steps.length - 1 && (
-                <span className={styles.connector} aria-hidden="true" />
-              )}
+              {index < steps.length - 1 && <span className={styles.connector} aria-hidden="true" />}
             </li>
           );
         })}

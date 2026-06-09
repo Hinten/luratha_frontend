@@ -80,48 +80,52 @@ async function calculateWithBackoff(
 const IT_TIMEOUT_MS = 70_000;
 
 describeMelhorEnvio("melhorEnvioProvider — sandbox real", () => {
-  it("calcula cotações para um par de CEPs válido", async () => {
-    // `enabledServices: []` desliga o filtro pós-resposta: qualquer serviço que
-    // o sandbox devolver é aceito, mantendo o teste estável caso os ids mudem.
-    const settings = {
-      ...getDefaultSiteSettings().shipping,
-      enabledServices: [],
-    };
+  it(
+    "calcula cotações para um par de CEPs válido",
+    async () => {
+      // `enabledServices: []` desliga o filtro pós-resposta: qualquer serviço que
+      // o sandbox devolver é aceito, mantendo o teste estável caso os ids mudem.
+      const settings = {
+        ...getDefaultSiteSettings().shipping,
+        enabledServices: [],
+      };
 
-    const quotes = await calculateWithBackoff(
-      {
-        originPostalCode: "01310-100",
-        destinationPostalCode: "20040-002",
-        items: [
-          {
-            productId: "cloud-test-item",
-            quantity: 1,
-            weightKg: 0.5,
-            lengthCm: 20,
-            widthCm: 15,
-            heightCm: 5,
-            unitPrice: 100,
-          },
-        ],
-      },
-      settings,
-    );
+      const quotes = await calculateWithBackoff(
+        {
+          originPostalCode: "01310-100",
+          destinationPostalCode: "20040-002",
+          items: [
+            {
+              productId: "cloud-test-item",
+              quantity: 1,
+              weightKg: 0.5,
+              lengthCm: 20,
+              widthCm: 15,
+              heightCm: 5,
+              unitPrice: 100,
+            },
+          ],
+        },
+        settings,
+      );
 
-    expect(Array.isArray(quotes)).toBe(true);
-    expect(quotes.length).toBeGreaterThan(0);
+      expect(Array.isArray(quotes)).toBe(true);
+      expect(quotes.length).toBeGreaterThan(0);
 
-    for (const quote of quotes) {
-      expect(quote.providerId).toBe("melhor-envio");
-      expect(typeof quote.serviceCode).toBe("string");
-      expect(quote.serviceCode.length).toBeGreaterThan(0);
-      expect(typeof quote.carrier).toBe("string");
-      expect(typeof quote.service).toBe("string");
-      expect(quote.price).toBeGreaterThan(0);
-      expect(Number.isFinite(quote.estimatedDays)).toBe(true);
-    }
+      for (const quote of quotes) {
+        expect(quote.providerId).toBe("melhor-envio");
+        expect(typeof quote.serviceCode).toBe("string");
+        expect(quote.serviceCode.length).toBeGreaterThan(0);
+        expect(typeof quote.carrier).toBe("string");
+        expect(typeof quote.service).toBe("string");
+        expect(quote.price).toBeGreaterThan(0);
+        expect(Number.isFinite(quote.estimatedDays)).toBe(true);
+      }
 
-    // `calculate` ordena por preço crescente — a primeira é a mais barata.
-    const prices = quotes.map((q) => q.price);
-    expect([...prices].sort((a, b) => a - b)).toEqual(prices);
-  }, IT_TIMEOUT_MS);
+      // `calculate` ordena por preço crescente — a primeira é a mais barata.
+      const prices = quotes.map((q) => q.price);
+      expect([...prices].sort((a, b) => a - b)).toEqual(prices);
+    },
+    IT_TIMEOUT_MS,
+  );
 });

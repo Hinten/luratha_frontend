@@ -69,7 +69,9 @@ export async function POST(request: Request) {
     product = { ...product, ...embeddings };
   } catch (embeddingError) {
     if (embeddingError instanceof EmbeddingGenerationError) {
-      logger.warn("[POST /api/products] Embedding generation skipped", { message: embeddingError.message });
+      logger.warn("[POST /api/products] Embedding generation skipped", {
+        message: embeddingError.message,
+      });
     } else {
       throw embeddingError;
     }
@@ -104,4 +106,3 @@ function assignVariantIds(variants: unknown): unknown {
     return v.id ? v : { ...v, id: randomUUID() };
   });
 }
-

@@ -56,7 +56,10 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   cursor: pointer;
-  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease;
 }
 
 .variantBtn:hover {
@@ -178,7 +181,9 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background-color 300ms ease, transform 200ms ease;
+  transition:
+    background-color 300ms ease,
+    transform 200ms ease;
 }
 
 .addToCart:hover {
@@ -218,7 +223,9 @@
   font-weight: 500;
   color: var(--color-neutral-dark);
   cursor: pointer;
-  transition: border-color 300ms ease, background-color 300ms ease;
+  transition:
+    border-color 300ms ease,
+    background-color 300ms ease;
 }
 
 .favoriteBtn:hover {

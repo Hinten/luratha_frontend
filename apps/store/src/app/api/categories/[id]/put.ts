@@ -16,10 +16,7 @@ export const runtime = "nodejs";
  * Returns 400 on invalid JSON or validation failure.
  * Returns 200 with the updated category on success.
  */
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   let body: unknown;

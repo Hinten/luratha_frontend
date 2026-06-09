@@ -21,10 +21,7 @@ export const runtime = "nodejs";
  *   - `createdAt` é preservado se já existe; gerado se for criação
  *   - `updatedAt` sempre é atualizado
  */
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {

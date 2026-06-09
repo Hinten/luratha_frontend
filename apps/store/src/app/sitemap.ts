@@ -7,8 +7,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/", priority: 1.0, changeFrequency: "daily" as const },
     { path: "/sobre", priority: 0.8, changeFrequency: "weekly" as const },
     { path: "/contato", priority: 0.8, changeFrequency: "weekly" as const },
-    { path: "/politica-de-trocas", priority: 0.6, changeFrequency: "monthly" as const },
-    { path: "/referencia-de-medidas", priority: 0.6, changeFrequency: "monthly" as const },
+    // Páginas institucionais (conteúdo de apoio): priority 0.5 conforme a issue
+    // #84. Todas alinhadas em 0.5 — inclusive trocas/medidas, antes em 0.6 — para
+    // manter consistência relativa entre páginas do mesmo tipo.
+    { path: "/politica-de-trocas", priority: 0.5, changeFrequency: "monthly" as const },
+    { path: "/referencia-de-medidas", priority: 0.5, changeFrequency: "monthly" as const },
+    { path: "/politica-de-privacidade", priority: 0.5, changeFrequency: "yearly" as const },
+    { path: "/termos-de-uso", priority: 0.5, changeFrequency: "yearly" as const },
+    { path: "/faq", priority: 0.5, changeFrequency: "monthly" as const },
+    { path: "/entrega", priority: 0.5, changeFrequency: "monthly" as const },
     { path: "/todas-as-pecas", priority: 0.9, changeFrequency: "daily" as const },
     { path: "/sale", priority: 0.9, changeFrequency: "daily" as const },
   ];

@@ -17,10 +17,7 @@ import type { PaymentPayer } from "@/src/components/checkout/PaymentStep";
  * `legalName` / `stateRegistration` exigidos pelo `userProfileSchema` PJ — o
  * user fica livre pra completar isso depois no perfil.
  */
-export async function persistProfileFields(
-  userId: string,
-  payer: PaymentPayer,
-): Promise<void> {
+export async function persistProfileFields(userId: string, payer: PaymentPayer): Promise<void> {
   const patchBody: Record<string, unknown> = { lastName: payer.lastName };
   if (payer.identification.type === "CPF") {
     patchBody.taxIdentity = {

@@ -152,8 +152,8 @@ export default function IdentificationStep(props: IdentificationStepProps) {
     <section className={styles.section}>
       <h2 className={styles.heading}>Seus dados</h2>
       <p className={styles.intro}>
-        Vamos usar essas informações pra emitir a nota fiscal e enviar as atualizações
-        do seu pedido. Você só precisa preencher uma vez.
+        Vamos usar essas informações pra emitir a nota fiscal e enviar as atualizações do seu
+        pedido. Você só precisa preencher uma vez.
       </p>
 
       <form
@@ -249,24 +249,18 @@ export default function IdentificationStep(props: IdentificationStepProps) {
               inputMode="numeric"
               maxLength={idType === "CNPJ" ? 18 : 14}
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
-              placeholder={
-                idType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"
-              }
+              placeholder={idType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}
               {...register("identificationNumber", {
                 onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                   const formatted =
-                    idType === "CNPJ"
-                      ? formatCnpj(e.target.value)
-                      : formatCpf(e.target.value);
+                    idType === "CNPJ" ? formatCnpj(e.target.value) : formatCpf(e.target.value);
                   setValue("identificationNumber", formatted, {
                     shouldValidate: false,
                   });
                 },
               })}
             />
-            <span className={styles.muted}>
-              Pontos e traço são preenchidos automaticamente.
-            </span>
+            <span className={styles.muted}>Pontos e traço são preenchidos automaticamente.</span>
             {errors.identificationNumber?.message && (
               <span role="alert" className={styles.fieldError}>
                 {errors.identificationNumber.message}

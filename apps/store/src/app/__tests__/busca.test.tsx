@@ -60,7 +60,9 @@ describe("BuscaPage", () => {
     });
     render(page as React.ReactElement);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Buscar peças Luratha" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Buscar peças Luratha" }),
+    ).toBeInTheDocument();
     expect(searchMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId("product-grid")).not.toBeInTheDocument();
   });
@@ -82,7 +84,9 @@ describe("BuscaPage", () => {
     });
     render(page as React.ReactElement);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Resultados para: vestido" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Resultados para: vestido" }),
+    ).toBeInTheDocument();
     expect(searchMock).toHaveBeenCalledWith({
       term: "vestido",
       sort: "price_asc",
@@ -121,18 +125,16 @@ describe("BuscaPage", () => {
   it("does not cache empty search results so re-searching after a seed retries Firestore", async () => {
     // First call returns []; second call (same query) must hit the repository again
     // — otherwise users would never see products that were seeded after the empty miss.
-    searchMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: "prod_seeded",
-          name: "Vestido seeded after empty miss",
-          slug: "vestido-seeded",
-          categorySlug: "vestidos",
-          price: 200,
-          imageUrl: "https://example.com/x.jpg",
-        },
-      ]);
+    searchMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: "prod_seeded",
+        name: "Vestido seeded after empty miss",
+        slug: "vestido-seeded",
+        categorySlug: "vestidos",
+        price: 200,
+        imageUrl: "https://example.com/x.jpg",
+      },
+    ]);
 
     await BuscaPage({ searchParams: Promise.resolve({ q: "termo-empty-then-seed" }) });
     await BuscaPage({ searchParams: Promise.resolve({ q: "termo-empty-then-seed" }) });

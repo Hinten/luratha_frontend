@@ -26,10 +26,12 @@ describe("POST /api/images/upload", () => {
     const formData = new FormData();
     formData.append("image", new File(["fake"], "sample.jpg", { type: "image/jpeg" }));
 
-    const response = await POST(new Request("http://localhost/api/images/upload", {
-      method: "POST",
-      body: formData,
-    }));
+    const response = await POST(
+      new Request("http://localhost/api/images/upload", {
+        method: "POST",
+        body: formData,
+      }),
+    );
 
     expect(response.status).toBe(400);
   });
@@ -80,10 +82,12 @@ describe("POST /api/images/upload", () => {
     formData.append("productId", "prod_1");
     formData.append("image", new File(["fake"], "sample.jpg", { type: "image/jpeg" }));
 
-    const response = await POST(new Request("http://localhost/api/images/upload", {
-      method: "POST",
-      body: formData,
-    }));
+    const response = await POST(
+      new Request("http://localhost/api/images/upload", {
+        method: "POST",
+        body: formData,
+      }),
+    );
 
     expect(response.status).toBe(201);
     const payload = await response.json();
@@ -100,10 +104,12 @@ describe("POST /api/images/upload", () => {
     formData.append("productId", "missing");
     formData.append("image", new File(["fake"], "sample.jpg", { type: "image/jpeg" }));
 
-    const response = await POST(new Request("http://localhost/api/images/upload", {
-      method: "POST",
-      body: formData,
-    }));
+    const response = await POST(
+      new Request("http://localhost/api/images/upload", {
+        method: "POST",
+        body: formData,
+      }),
+    );
 
     expect(response.status).toBe(404);
   });
@@ -155,10 +161,12 @@ describe("POST /api/images/upload", () => {
     formData.append("images", new File(["fake 1"], "sample-1.jpg", { type: "image/jpeg" }));
     formData.append("images", new File(["fake 2"], "sample-2.jpg", { type: "image/jpeg" }));
 
-    const response = await POST(new Request("http://localhost/api/images/upload", {
-      method: "POST",
-      body: formData,
-    }));
+    const response = await POST(
+      new Request("http://localhost/api/images/upload", {
+        method: "POST",
+        body: formData,
+      }),
+    );
 
     expect(response.status).toBe(201);
     expect(uploadProductImage).toHaveBeenCalledTimes(2);

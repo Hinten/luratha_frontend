@@ -67,9 +67,7 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
     user = await requireUser();
   } catch (err) {
     if (err instanceof AuthError) {
-      redirect(
-        `/login?redirect=${encodeURIComponent(`/checkout/sucesso/${orderId}`)}`,
-      );
+      redirect(`/login?redirect=${encodeURIComponent(`/checkout/sucesso/${orderId}`)}`);
     }
     throw err;
   }
@@ -87,8 +85,8 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
         <p className={styles.eyebrow}>Pedido confirmado</p>
         <h1 className={styles.heading}>Obrigada pela compra!</h1>
         <p className={styles.lead}>
-          Recebemos seu pedido <strong>{order.orderNumber}</strong>. Você pode
-          acompanhar o status na sua conta.
+          Recebemos seu pedido <strong>{order.orderNumber}</strong>. Você pode acompanhar o status
+          na sua conta.
         </p>
 
         <dl className={styles.totals}>
@@ -108,11 +106,7 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
           )}
           <div className={styles.row}>
             <dt>Frete</dt>
-            <dd>
-              {order.shippingTotal === 0
-                ? "Grátis"
-                : brl.format(order.shippingTotal)}
-            </dd>
+            <dd>{order.shippingTotal === 0 ? "Grátis" : brl.format(order.shippingTotal)}</dd>
           </div>
           <div className={`${styles.row} ${styles.totalRow}`}>
             <dt>Total</dt>

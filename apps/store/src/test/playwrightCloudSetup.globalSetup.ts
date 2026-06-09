@@ -8,9 +8,7 @@ export default async function playwrightCloudGlobalSetup(): Promise<void> {
     !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
   if (!hasServiceAccount) {
-    console.warn(
-      "[E2E] globalSetup: no Firebase credentials — skipping cloud fixture seed.",
-    );
+    console.warn("[E2E] globalSetup: no Firebase credentials — skipping cloud fixture seed.");
     process.env.E2E_CLOUD_SKIP = "1";
     return;
   }
