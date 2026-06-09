@@ -6,27 +6,35 @@ name: E2E Public
 # em vez de listar arquivos: adicionar/renomear um spec público não exige
 # mexer neste YAML.
 #
-# Disparado por `workflow_run` DEPOIS do workflow `Test` concluir, reaproveitando
-# o gate lint/typecheck/unit do Test antes de gastar dev server + browser.
-# Trade-off conhecido: começa só depois do Test INTEIRO (mais tarde que um job
-# paralelo) — o ganho é isolamento/operação (workflow próprio, re-rodável).
+# Disparado por `pull_request` (igual ao `Test` e ao `e2e-checkout-mp`), com
+# path filter coarse-grain. Roda em paralelo aos demais workflows; o acesso ao
+# Firestore luratha-96386 é serializado pela `concurrency` de job
+# `luratha-96386-e2e`, compartilhada com `Test → e2e-auth` e `e2e-checkout-mp`.
 #
-# NÃO é required em branch protection por padrão: `workflow_run` reporta status
-# num run separado; pra bloquear o PR como check seria preciso publicar um
-# Check Run/commit status num passo extra.
+# NÃO é required em branch protection: quando o path filter não casa, o
+# workflow nem aparece como check; PR segue mergeável.
 
 on:
-  workflow_run:
-    workflows: [Test]
-    types: [completed]
+  pull_request:
+    branches: [master, production]
+    paths:
+      # Coarse-grain (issue #161). O filtro folha não segue o grafo de
+      # dependências: código consumido transitivamente pelos specs públicos —
+      # ex. `@luratha/firestore/firebaseAdmin` ou `@luratha/core/logging/logger`
+      # — não dispararia o workflow, deixando regressões passarem. Cobrimos a
+      # storefront inteira + todos os packages. Custo aceito: alguns runs
+      # falso-positivos (ex.: mudança só em checkout roda o E2E público à toa).
+      - 'apps/store/**'
+      - 'packages/**'
+      - '.github/workflows/e2e-public.yml'
   workflow_dispatch:
 
-# Serializa com `Test → e2e-auth` e `e2e-checkout-mp` no MESMO Firestore project
-# (luratha-96386). Não cancela em progresso pra não abortar uma suíte cloud no
-# meio.
+# Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
+# pela `concurrency` interna do job (luratha-96386-e2e), que serializa
+# com o `Test → e2e-auth` e o `e2e-checkout-mp` no mesmo Firestore project.
 concurrency:
-  group: luratha-96386-e2e
-  cancel-in-progress: false
+  group: e2e-public-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: "22"
@@ -34,13 +42,9 @@ env:
 jobs:
   e2e-public:
     name: E2E public (Playwright + cloud)
-    # Só roda quando o Test passou E o gatilho original foi um pull_request
-    # (ignora runs de push/branch). Disparo manual via workflow_dispatch também.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'pull_request')
     runs-on: ubuntu-latest
+    # Mesma concurrency group do `Test → e2e-auth` e do `e2e-checkout-mp` pra
+    # evitar 2 runs simultâneas contra o Firestore luratha-96386.
     concurrency:
       group: luratha-96386-e2e
       cancel-in-progress: false
@@ -66,10 +70,6 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
-        with:
-          # workflow_run roda na def. da branch default; faz checkout do commit
-          # do PR que disparou o Test pra exercitar o código certo.
-          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: pnpm/action-setup@v4
         if: steps.check_secrets.outputs.skip != 'true'
       - uses: actions/setup-node@v4
@@ -87,6 +87,8 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 6
         working-directory: apps/store
+        # `--project=public` filtra os specs públicos pela convenção de nomes
+        # (ignora *.auth.spec.ts e *.mp.spec.ts) — robusto a renomear/adicionar.
         run: pnpm exec playwright test --project=public
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
@@ -98,11 +100,11 @@ jobs:
 
   report-failure:
     name: Post failure logs on PR
-    # Replica do `Test → report-failure`, limitado a este workflow. Como roda via
-    # workflow_run, o nº do PR vem de `workflow_run.pull_requests` (vazio em PRs
-    # de fork — nesse caso só não comenta).
+    # Replica do `Test → report-failure`, limitado aos jobs deste workflow.
+    # Sem isso, falha em e2e-public não vira comentário no PR — o report-failure
+    # do Test workflow só enxerga jobs do seu próprio run.
     needs: [e2e-public]
-    if: ${{ failure() && github.event.workflow_run.event == 'pull_request' }}
+    if: ${{ failure() }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -114,14 +116,10 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -uo pipefail
-          if [ -z "${PR:-}" ]; then
-            echo "Sem PR associado ao workflow_run (provável fork) — nada a reportar."
-            exit 0
-          fi
           gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
             --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
           if [ ! -s /tmp/failed-jobs.tsv ]; then
