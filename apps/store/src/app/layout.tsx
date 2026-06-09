@@ -6,6 +6,8 @@ import Footer from "@/src/components/Footer";
 import WhatsAppButton from "@/src/components/WhatsAppButton";
 import JsonLd from "@/src/components/JsonLd";
 import Providers from "@/src/components/Providers";
+import Analytics from "@/src/components/analytics/Analytics";
+import { getCachedSiteSettings } from "@/src/lib/queries/getCachedSiteSettings";
 import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
 
 const playfairDisplay = Playfair_Display({
@@ -102,16 +104,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Measurement ID: admin (settings/global.google) é a fonte da verdade, com
+  // fallback para a env. `getCachedSiteSettings` é deduplicado por render
+  // (cache()), então o Footer reaproveita a mesma leitura sem custo extra.
+  const { google } = await getCachedSiteSettings();
+  const gaMeasurementId = google.enabled
+    ? google.measurementId || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""
+    : "";
+
   return (
     <html lang="pt-BR">
       <body className={`${playfairDisplay.variable} ${inter.variable}`}>
         <JsonLd data={organizationSchema} />
         <JsonLd data={websiteSchema} />
+        <Analytics measurementId={gaMeasurementId} />
         <Providers>
           <Header />
           <main>{children}</main>

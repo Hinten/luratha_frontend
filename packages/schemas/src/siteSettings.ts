@@ -137,10 +137,33 @@ export const companySettingsSchema = z.object({
   jurisdiction: z.string().trim().max(120).default(""),
 });
 
+/**
+ * Configuração do Google Analytics 4 (Consent Mode v2).
+ *
+ * `measurementId` vazio = analytics desligado na loja. Quando preenchido com um
+ * Measurement ID válido (`G-XXXXXXXX`), a storefront injeta o gtag e dispara os
+ * eventos de e-commerce. O dono configura em `/configuracoes/google-analytics`
+ * no admin; a storefront também aceita um fallback via `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
+ *
+ * `default("")`/`default(true)` garantem retrocompatibilidade: documentos
+ * `settings/global` criados antes deste bloco continuam válidos na leitura.
+ */
+export const googleSettingsSchema = z.object({
+  /** Measurement ID GA4 (`G-XXXXXXXX`). Vazio desliga o analytics. */
+  measurementId: z
+    .string()
+    .trim()
+    .regex(/^(G-[A-Z0-9]{4,})?$/, "Measurement ID inválido — esperado formato G-XXXXXXXX.")
+    .default(""),
+  /** Liga/desliga a medição sem perder o ID configurado. */
+  enabled: z.boolean().default(true),
+});
+
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
   company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
+  google: googleSettingsSchema.default(() => googleSettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -151,6 +174,7 @@ export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
 export type CompanySettings = z.infer<typeof companySettingsSchema>;
+export type GoogleSettings = z.infer<typeof googleSettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

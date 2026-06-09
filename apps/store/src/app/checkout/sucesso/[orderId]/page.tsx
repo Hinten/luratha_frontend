@@ -7,6 +7,7 @@ import { firestoreCollections, type Order } from "@luratha/schemas";
 import { AuthError, requireUser } from "@luratha/auth/requireUser";
 import JsonLd, { type JsonLdData } from "@/src/components/JsonLd";
 import SuccessClient from "./SuccessClient";
+import PurchaseTracker from "@/src/components/analytics/PurchaseTracker";
 import styles from "./page.module.css";
 
 export const runtime = "nodejs";
@@ -80,6 +81,13 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
     <main className={styles.page}>
       <JsonLd data={orderJsonLd(order)} />
       <SuccessClient />
+      <PurchaseTracker
+        transactionId={order.id}
+        value={order.grandTotal}
+        shipping={order.shippingTotal}
+        items={order.items}
+        {...(order.couponCode ? { coupon: order.couponCode } : {})}
+      />
 
       <div className={styles.card}>
         <p className={styles.eyebrow}>Pedido confirmado</p>

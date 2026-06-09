@@ -34,7 +34,7 @@ TypeScript check is mandatory: always run `pnpm typecheck` to detect type errors
 
 For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `pnpm test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
 
-**CI matrix**: PRs to `master` run lint/typecheck, unit, `build` (Next.js — all apps), integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite. The `build` job skips when Firebase secrets are absent (the storefront prerenders Firestore-backed pages). MercadoPago checkout E2E specs live in a separate path-triggered workflow (`e2e-checkout-mp.yml`); `e2e-cloud` excludes them.
+**CI matrix**: PRs to `master` run lint/typecheck, unit, `build` (Next.js — all apps), integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite. The `build` job skips when Firebase secrets are absent (the storefront prerenders Firestore-backed pages). MercadoPago checkout E2E specs live in a separate path-triggered workflow (`e2e-checkout-mp.yml`); `e2e-cloud` excludes them. GA4 analytics unit/component tests (`*.ga4.test.*`) also run in a dedicated secret-free path-triggered workflow (`test-ga4.yml`), besides being covered by the standard unit job.
 
 **CI failure logs**: when the `Test` workflow fails on a PR, its own `report-failure` job posts the tail of each failed job's log (last ~12KB) as a PR comment. If you (Claude) pushed and the CI broke, **read the most recent PR comment** for the actual error — `pull_request_read` (`get_check_runs`) only returns metadata, not log output.
 
@@ -74,6 +74,10 @@ Internal panel, deployed to a separate App Hosting backend. Auth model:
 - `POST /api/auth/session` issues the `__session` cookie only for users with the `admin` claim — it sets the cookie **host-only** (no `domain`), keeping the admin session isolated from the storefront. Never add `domain`.
 
 Grant the `admin` custom claim with `pnpm --filter @luratha/admin grant-admin <email>` (needs Firebase credentials in the repo-root `.env`; `--revoke` removes it). The user must re-login afterwards.
+
+### Analytics (GA4)
+
+Google Analytics 4 lives in the storefront (`apps/store/src/lib/analytics/` + `src/components/analytics/`). The Measurement ID source of truth is the admin (`/configuracoes/google-analytics` → `settings/global.google`), with a `NEXT_PUBLIC_GA_MEASUREMENT_ID` env fallback; empty = analytics off. Consent Mode v2 runs in **opt-out** mode (default `granted`); the opt-out control lives on the `/politica-de-dados` page and persists the choice in `localStorage` (reapplied before tags by the inline bootstrap in `Analytics.tsx`). E-commerce events are wired across the funnel (view_item, add_to_cart, begin_checkout, purchase, …).
 
 ### MercadoPago payments
 

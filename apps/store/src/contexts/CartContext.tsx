@@ -20,6 +20,7 @@ import {
 } from "@luratha/schemas";
 import { toCents } from "@luratha/schemas/utils";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
+import { trackAddToCart, trackRemoveFromCart } from "@/src/lib/analytics/ecommerce";
 import { logger } from "@luratha/core/logging/logger";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */
@@ -316,6 +317,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    */
   const lastMergedFor = useRef<string | null>(null);
 
+  // Espelha `items` num ref para o `removeItem` montar o payload de
+  // `remove_from_cart` (nome/preço/quantidade) sem entrar nas deps do callback.
+  const itemsRef = useRef<CartItem[]>(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   // --- Hydration, subscription, and guest→logged merge --------------------
   //
   // Single effect coordinates both halves of the login transition so that
@@ -503,6 +511,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           return [...prev, validatedFresh];
         });
+        trackAddToCart(input);
         return;
       }
       try {
@@ -517,6 +526,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }),
         });
         await throwIfNotOk(response, "Falha ao adicionar ao carrinho.");
+        trackAddToCart(input);
       } catch (err) {
         if (!(err instanceof ApiResponseError)) throw err;
         setError(err.message);
@@ -567,8 +577,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback(
     async (itemId: string) => {
       setError(null);
+      const removed = itemsRef.current.find((i) => i.id === itemId);
       if (!userId) {
         updateGuestItems((prev) => prev.filter((i) => i.id !== itemId));
+        if (removed) trackRemoveFromCart(removed);
         return;
       }
       try {
@@ -577,8 +589,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           method: "DELETE",
         });
         // 404 means the item was already gone — treat as success.
-        if (response.status === 404) return;
+        if (response.status === 404) {
+          if (removed) trackRemoveFromCart(removed);
+          return;
+        }
         await throwIfNotOk(response, "Falha ao remover item.");
+        if (removed) trackRemoveFromCart(removed);
       } catch (err) {
         if (!(err instanceof ApiResponseError)) throw err;
         setError(err.message);
