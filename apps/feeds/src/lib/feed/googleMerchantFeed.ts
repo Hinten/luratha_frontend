@@ -158,9 +158,12 @@ function renderItem(product: FeedProduct, offer: FeedOffer, channel: FeedChannel
 
   push("g:id", offer.id);
   if (offer.itemGroupId) push("g:item_group_id", offer.itemGroupId);
-  push("g:title", product.title);
-  push("g:description", product.description);
-  push("g:link", `${channel.siteUrl}/produto/${product.slug}`);
+  // title/description/link are the standard RSS 2.0 item elements — Google
+  // Merchant (and Meta) read these without the `g:` prefix; only the
+  // Merchant-specific attributes below carry the `g:` namespace.
+  push("title", product.title);
+  push("description", product.description);
+  push("link", `${channel.siteUrl}/produto/${product.slug}`);
 
   const [primaryPhoto, ...rest] = offer.photos;
   if (primaryPhoto) push("g:image_link", primaryPhoto.url);

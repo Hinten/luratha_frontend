@@ -148,7 +148,12 @@ export const companySettingsSchema = z.object({
  * vazio (mesmo padrão de `company`).
  */
 export const marketingSettingsSchema = z.object({
-  /** ID do Meta Pixel (Facebook/Instagram) — somente dígitos (ex.: "123456789012345"). */
+  /**
+   * ID do Meta Pixel (Facebook/Instagram), tipicamente numérico
+   * (ex.: "123456789012345"). Armazenado como string livre — o formato não é
+   * validado aqui (v1 apenas persiste; a validação fica para quando a loja
+   * passar a renderizar o script do Pixel).
+   */
   metaPixelId: z.string().trim().max(32).default(""),
   /** ID do Catálogo do Facebook/Commerce Manager onde o feed é cadastrado. */
   facebookCatalogId: z.string().trim().max(32).default(""),

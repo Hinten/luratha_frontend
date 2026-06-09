@@ -73,10 +73,12 @@ describe("buildGoogleMerchantFeed", () => {
     expect(countItems(xml)).toBe(1);
     expect(xml).toContain("<g:id>prod-1</g:id>");
     expect(xml).not.toContain("<g:item_group_id>");
-    expect(xml).toContain("<g:title>Vestido Azul</g:title>");
-    expect(xml).toContain(
-      "<g:link>https://www.luratha.com.br/produto/vestido-azul-sku123</g:link>",
-    );
+    // title/link/description use the standard RSS 2.0 element names (no g: prefix).
+    expect(xml).toContain("<title>Vestido Azul</title>");
+    expect(xml).toContain("<description>Vestido de algodão</description>");
+    expect(xml).toContain("<link>https://www.luratha.com.br/produto/vestido-azul-sku123</link>");
+    expect(xml).not.toContain("<g:title>");
+    expect(xml).not.toContain("<g:link>");
     expect(xml).toContain("<g:image_link>https://cdn.example.com/ph1.webp</g:image_link>");
     expect(xml).toContain("<g:availability>in stock</g:availability>");
     expect(xml).toContain("<g:price>129.90 BRL</g:price>");
@@ -180,7 +182,7 @@ describe("buildGoogleMerchantFeed", () => {
 
   it("escapes special characters in text fields", () => {
     const xml = buildGoogleMerchantFeed([makeProduct({ title: `Saia "P&B" <nova>` })], CHANNEL);
-    expect(xml).toContain("<g:title>Saia &quot;P&amp;B&quot; &lt;nova&gt;</g:title>");
+    expect(xml).toContain("<title>Saia &quot;P&amp;B&quot; &lt;nova&gt;</title>");
   });
 
   it("emits the first photo as image_link and the rest as additional_image_link", () => {

@@ -1,7 +1,8 @@
 # @luratha/feeds — product catalog feeds
 
 Standalone feed generator — its **own App Hosting backend** (`luratha-app-feeds`, dev port 3003).
-No public pages; serves the product catalog as XML/JSON so external ad platforms can ingest it.
+No user-facing UI (only a noindex landing at `/`); serves the product catalog as XML/JSON so
+external ad platforms can ingest it.
 Kept isolated from `@luratha/store` on purpose: generating the whole-catalog feed is a heavy read
 that must never compete with storefront traffic for CPU/memory.
 
