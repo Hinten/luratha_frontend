@@ -78,37 +78,33 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 }
 
 async function loadProducts(ids: string[]): Promise<Map<string, Product>> {
-  const snaps = await Promise.all(
-    ids.map((id) =>
-      adminDb
-        .collection(firestoreCollections.products)
-        .doc(id)
-        .withConverter(adminProductConverter)
-        .get(),
-    ),
-  );
   const map = new Map<string, Product>();
+  if (ids.length === 0) return map;
+  const refs = ids.map((id) =>
+    adminDb.collection(firestoreCollections.products).doc(id).withConverter(adminProductConverter),
+  );
+  const snaps = await adminDb.getAll(...refs);
   for (const snap of snaps) {
-    const product = snap.data();
-    if (product) map.set(product.id, product);
+    if (!snap.exists) continue;
+    // getAll perde o tipo do converter (DocumentData) — cast como em cart/merge.
+    const product = snap.data() as Product;
+    map.set(product.id, product);
   }
   return map;
 }
 
 async function loadStocks(ids: string[]): Promise<Map<string, Stock>> {
-  const snaps = await Promise.all(
-    ids.map((id) =>
-      adminDb
-        .collection(firestoreCollections.stock)
-        .doc(id)
-        .withConverter(adminStockConverter)
-        .get(),
-    ),
-  );
   const map = new Map<string, Stock>();
+  if (ids.length === 0) return map;
+  const refs = ids.map((id) =>
+    adminDb.collection(firestoreCollections.stock).doc(id).withConverter(adminStockConverter),
+  );
+  const snaps = await adminDb.getAll(...refs);
   for (const snap of snaps) {
-    const stock = snap.data();
-    if (stock) map.set(stock.productId, stock);
+    if (!snap.exists) continue;
+    // getAll perde o tipo do converter (DocumentData) — cast como em cart/merge.
+    const stock = snap.data() as Stock;
+    map.set(stock.productId, stock);
   }
   return map;
 }

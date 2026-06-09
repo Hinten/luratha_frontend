@@ -4,24 +4,7 @@ import userEvent from "@testing-library/user-event";
 import ReorderButton from "@/src/components/conta/ReorderButton";
 import type { CartItemInput } from "@/src/contexts/CartContext";
 
-const addItemMock = vi.fn<(input: CartItemInput) => Promise<void>>();
 const pushMock = vi.fn();
-
-vi.mock("@/src/contexts/CartContext", () => ({
-  useCart: () => ({
-    addItem: addItemMock,
-    isSyncing: false,
-    items: [],
-    cart: {},
-    totalItems: 0,
-    totalPrice: 0,
-    isReady: true,
-    error: null,
-    updateQuantity: vi.fn(),
-    removeItem: vi.fn(),
-    clearCart: vi.fn(),
-  }),
-}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -41,14 +24,29 @@ function item(id: string): CartItemInput {
   };
 }
 
-function stubReorder(body: {
-  items: CartItemInput[];
-  unavailable: { name: string; reason: string }[];
-}) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })),
-  );
+let fetchMock: ReturnType<typeof vi.fn>;
+
+/**
+ * Mock de fetch que roteia por URL: devolve o corpo do reorder no endpoint
+ * `/reorder` e simula `/api/cart/items` com o status configurado (200 default).
+ */
+function stubFlow(
+  body: { items: CartItemInput[]; unavailable: { name: string; reason: string }[] },
+  cartItemsStatus = 200,
+) {
+  fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("/reorder")) {
+      return new Response(JSON.stringify(body), { status: 200 });
+    }
+    // /api/cart/items
+    return new Response("{}", { status: cartItemsStatus });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+}
+
+function cartItemPostCount(): number {
+  return fetchMock.mock.calls.filter(([input]) => String(input).includes("/api/cart/items")).length;
 }
 
 afterEach(() => {
@@ -59,22 +57,18 @@ afterEach(() => {
 describe("ReorderButton", () => {
   it("re-adiciona todos os itens e navega para /checkout quando todos estão disponíveis", async () => {
     const user = userEvent.setup();
-    addItemMock.mockResolvedValue();
-    stubReorder({ items: [item("a"), item("b")], unavailable: [] });
+    stubFlow({ items: [item("a"), item("b")], unavailable: [] });
 
     render(<ReorderButton orderId="order-1" />);
     await user.click(screen.getByRole("button", { name: "Pedir novamente" }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/checkout"));
-    expect(addItemMock).toHaveBeenCalledTimes(2);
-    expect(addItemMock).toHaveBeenNthCalledWith(1, item("a"));
-    expect(addItemMock).toHaveBeenNthCalledWith(2, item("b"));
+    expect(cartItemPostCount()).toBe(2);
   });
 
   it("avisa sobre itens pulados e só navega após o cliente confirmar", async () => {
     const user = userEvent.setup();
-    addItemMock.mockResolvedValue();
-    stubReorder({
+    stubFlow({
       items: [item("a")],
       unavailable: [{ name: "Vestido Esgotado", reason: "sem estoque" }],
     });
@@ -84,7 +78,7 @@ describe("ReorderButton", () => {
 
     expect(await screen.findByText(/não estão mais disponíveis/i)).toBeInTheDocument();
     expect(screen.getByText(/Vestido Esgotado/)).toBeInTheDocument();
-    expect(addItemMock).toHaveBeenCalledTimes(1);
+    expect(cartItemPostCount()).toBe(1);
     expect(pushMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Ir para o checkout" }));
@@ -93,7 +87,7 @@ describe("ReorderButton", () => {
 
   it("mostra mensagem e não navega quando nenhum item está disponível", async () => {
     const user = userEvent.setup();
-    stubReorder({
+    stubFlow({
       items: [],
       unavailable: [{ name: "Produto X", reason: "removido" }],
     });
@@ -104,16 +98,28 @@ describe("ReorderButton", () => {
     expect(
       await screen.findByText(/Nenhum item deste pedido está disponível/i),
     ).toBeInTheDocument();
-    expect(addItemMock).not.toHaveBeenCalled();
+    expect(cartItemPostCount()).toBe(0);
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("mostra erro recuperável quando a API falha", async () => {
+  it("mostra erro recuperável quando a API de reorder falha", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({ message: "boom" }), { status: 500 })),
     );
+
+    render(<ReorderButton orderId="order-1" />);
+    await user.click(screen.getByRole("button", { name: "Pedir novamente" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível refazer/i);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("não navega quando uma adição ao carrinho falha (addItem não engole o erro)", async () => {
+    const user = userEvent.setup();
+    // reorder devolve itens disponíveis, mas o POST /api/cart/items falha (409).
+    stubFlow({ items: [item("a")], unavailable: [] }, 409);
 
     render(<ReorderButton orderId="order-1" />);
     await user.click(screen.getByRole("button", { name: "Pedir novamente" }));

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/src/contexts/CartContext";
+import type { CartItemInput } from "@/src/contexts/CartContext";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 import Spinner from "@/src/components/Spinner";
 import styles from "./ReorderButton.module.css";
@@ -13,8 +13,25 @@ interface UnavailableItem {
 }
 
 interface ReorderResponse {
-  items: Parameters<ReturnType<typeof useCart>["addItem"]>[0][];
+  items: CartItemInput[];
   unavailable: UnavailableItem[];
+}
+
+/**
+ * Adiciona um item ao carrinho do usuário autenticado. Posta direto no
+ * endpoint (em vez de `useCart().addItem`) porque o `addItem` engole
+ * `ApiResponseError` para usuários logados — aqui precisamos que a falha
+ * propague para não navegar ao checkout com o carrinho incompleto. A página
+ * `/conta` é sempre autenticada, então o caminho de guest não se aplica; o
+ * `CartProvider` reflete a escrita via onSnapshot.
+ */
+async function addItemToCart(item: CartItemInput): Promise<void> {
+  const response = await fetch("/api/cart/items", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currency: "BRL", quantity: 1, ...item }),
+  });
+  await throwIfNotOk(response, "Não foi possível adicionar um item ao carrinho.");
 }
 
 type ReorderState =
@@ -34,7 +51,6 @@ type ReorderState =
  * cliente conseguir ler o aviso antes de prosseguir.
  */
 export default function ReorderButton({ orderId }: { orderId: string }) {
-  const { addItem } = useCart();
   const router = useRouter();
   const [state, setState] = useState<ReorderState>({ kind: "idle" });
 
@@ -48,7 +64,7 @@ export default function ReorderButton({ orderId }: { orderId: string }) {
       const { items, unavailable } = (await response.json()) as ReorderResponse;
 
       for (const item of items) {
-        await addItem(item);
+        await addItemToCart(item);
       }
 
       if (items.length === 0) {
@@ -70,7 +86,7 @@ export default function ReorderButton({ orderId }: { orderId: string }) {
       }
       throw err;
     }
-  }, [addItem, orderId, router]);
+  }, [orderId, router]);
 
   const busy = state.kind === "loading";
 
