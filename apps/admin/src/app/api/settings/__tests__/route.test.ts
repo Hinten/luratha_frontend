@@ -121,6 +121,27 @@ describe("PATCH /api/settings", () => {
     });
   });
 
+  it("merges a marketing block over the current document and persists", async () => {
+    const marketing = {
+      metaPixelId: "123456789012345",
+      facebookCatalogId: "987654321",
+      googleMerchantCenterId: "555000111",
+      ga4MeasurementId: "G-ABC123XYZ",
+    };
+
+    const response = await PATCH(makeRequest({ marketing }));
+
+    expect(response.status).toBe(200);
+    expect(mockGetSiteSettings).toHaveBeenCalledWith({ forceFresh: true });
+    // { ...current, ...payload } — the marketing block is added without touching shipping.
+    expect(mockSetSiteSettings).toHaveBeenCalledWith({
+      id: "global",
+      shipping: { providerId: "melhor-envio" },
+      updatedAt: "t0",
+      marketing,
+    });
+  });
+
   it("returns 400 with issues when the merged document fails validation", async () => {
     mockSetSiteSettings.mockImplementation(async () => {
       z.number().parse("not a number"); // throws ZodError
