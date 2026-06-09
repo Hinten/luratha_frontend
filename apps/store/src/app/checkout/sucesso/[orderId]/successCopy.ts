@@ -39,6 +39,19 @@ const EYEBROW_BY_METHOD: Record<Order["paymentMethod"], string> = {
   credit_card: "Pagamento em análise",
 };
 
+/**
+ * Status que implicam pagamento já confirmado (despacho em andamento ou
+ * concluído). Só estes recebem o agradecimento — `cancelled`/`refunded`/
+ * `unknown` caem no fallback neutro para não exibir "Obrigada pela compra!"
+ * num pedido que não foi pago.
+ */
+const CONFIRMED_STATUSES: ReadonlySet<Order["status"]> = new Set([
+  "paid",
+  "processing",
+  "shipped",
+  "delivered",
+]);
+
 export function getSuccessCopy(order: Pick<Order, "status" | "paymentMethod">): SuccessCopy {
   if (order.status === "pending_payment") {
     return {
@@ -49,11 +62,21 @@ export function getSuccessCopy(order: Pick<Order, "status" | "paymentMethod">): 
     };
   }
 
-  // Qualquer status já pago/pós-pagamento (paid, processing, shipped, …).
+  if (CONFIRMED_STATUSES.has(order.status)) {
+    return {
+      eyebrow: "Pedido confirmado",
+      heading: "Obrigada pela compra!",
+      awaitingPayment: false,
+      nextStep: "Você pode acompanhar o status na sua conta.",
+    };
+  }
+
+  // cancelled / refunded / unknown (fail-safe): nem agradecimento nem cobrança —
+  // direciona ao acompanhamento, evitando um copy enganoso.
   return {
-    eyebrow: "Pedido confirmado",
-    heading: "Obrigada pela compra!",
+    eyebrow: "Status do pedido",
+    heading: "Acompanhe seu pedido",
     awaitingPayment: false,
-    nextStep: "Você pode acompanhar o status na sua conta.",
+    nextStep: "Veja os detalhes e o status atualizado na sua conta.",
   };
 }

@@ -150,6 +150,17 @@ describe("CheckoutSuccessPage — copy por estado do pedido", () => {
     expect(screen.getByText(/Seu pagamento está em análise/)).toBeInTheDocument();
   });
 
+  it("status não pago (cancelado) → fallback neutro, sem agradecimento", async () => {
+    state.order = baseOrder({ status: "cancelled", paymentStatus: "cancelled" });
+    await renderPage();
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Acompanhe seu pedido" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Obrigada pela compra!")).toBeNull();
+    expect(screen.queryByText(/Falta pouco/)).toBeNull();
+  });
+
   it('mantém o CTA "Acompanhar pedido" apontando para o detalhe do pedido', async () => {
     state.order = baseOrder({ status: "pending_payment", paymentMethod: "pix" });
     await renderPage();
