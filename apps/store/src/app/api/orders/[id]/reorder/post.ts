@@ -5,6 +5,7 @@ import { adminProductConverter } from "@luratha/firestore/adminProductConverter"
 import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
 import { firestoreCollections, type Product, type Stock } from "@luratha/schemas";
 import { authErrorResponse, requireOwnerOrAdmin, requireUser } from "@luratha/auth/requireUser";
+import { logger } from "@luratha/core/logging/logger";
 import type { CartItemInput } from "@/src/contexts/CartContext";
 import { buildReorderItem, type ReorderSkipReason } from "@/src/lib/reorder";
 
@@ -72,6 +73,21 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     } else {
       response.unavailable.push({ name: orderItem.name, reason: result.reason });
     }
+  }
+
+  // Rastro do resultado: quantos itens do snapshot ainda são compráveis e por
+  // que os demais foram pulados. Sem isso, uma falha do "Pedir novamente" fica
+  // opaca (o cliente só vê o aviso, sem o motivo no log).
+  const logPayload = {
+    orderId: id,
+    total: order.items.length,
+    resolved: response.items.length,
+    unavailable: response.unavailable,
+  };
+  if (response.items.length === 0) {
+    logger.warn("[POST /api/orders/:id/reorder] nenhum item disponível", logPayload);
+  } else {
+    logger.info("[POST /api/orders/:id/reorder] resolved", logPayload);
   }
 
   return NextResponse.json(response, { status: 200 });
