@@ -117,11 +117,8 @@ export default function PedidoDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <>
               <p className={styles.paymentNote}>
-                O código PIX deste pedido expirou ou não está mais disponível. Faça um novo pedido
-                para gerar um novo pagamento.{" "}
-                <Link href="/" className={styles.paymentNoteLink}>
-                  Ir para a loja
-                </Link>
+                O código PIX deste pedido expirou ou não está mais disponível. Refaça o pedido com
+                os preços e itens atuais:
               </p>
               <ReorderButton orderId={order.id} />
             </>
@@ -141,11 +138,8 @@ export default function PedidoDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <>
               <p className={styles.paymentNote}>
-                O boleto deste pedido expirou ou não está mais disponível. Faça um novo pedido para
-                gerar um novo pagamento.{" "}
-                <Link href="/" className={styles.paymentNoteLink}>
-                  Ir para a loja
-                </Link>
+                O boleto deste pedido expirou ou não está mais disponível. Refaça o pedido com os
+                preços e itens atuais:
               </p>
               <ReorderButton orderId={order.id} />
             </>

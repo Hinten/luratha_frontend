@@ -39,7 +39,7 @@ type ReorderState =
   | { kind: "loading" }
   | { kind: "partial"; unavailable: UnavailableItem[] }
   | { kind: "empty"; unavailable: UnavailableItem[] }
-  | { kind: "error" };
+  | { kind: "error"; message: string };
 
 /**
  * Botão "Pedir novamente" exibido no estado PIX/boleto expirado de um pedido.
@@ -78,10 +78,19 @@ export default function ReorderButton({ orderId }: { orderId: string }) {
       router.push("/checkout");
     } catch (err) {
       // ApiResponseError (resposta não-OK) e TypeError (falha de rede) são
-      // recuperáveis — mostramos um aviso de tentar de novo. Qualquer outra
-      // coisa é inesperada e propaga para a ErrorBoundary.
-      if (err instanceof ApiResponseError || err instanceof TypeError) {
-        setState({ kind: "error" });
+      // recuperáveis — mostramos o motivo real para o cliente entender (e ter
+      // rastro) em vez de um texto fixo. Qualquer outra coisa é inesperada e
+      // propaga para a ErrorBoundary.
+      if (err instanceof ApiResponseError) {
+        setState({ kind: "error", message: err.message });
+        return;
+      }
+      if (err instanceof TypeError) {
+        setState({
+          kind: "error",
+          message:
+            "Falha de conexão ao refazer o pedido. Verifique sua internet e tente novamente.",
+        });
         return;
       }
       throw err;
@@ -140,7 +149,7 @@ export default function ReorderButton({ orderId }: { orderId: string }) {
 
       {state.kind === "error" && (
         <p className={styles.error} role="alert">
-          Não foi possível refazer o pedido. Tente novamente.
+          {state.message}
         </p>
       )}
     </div>

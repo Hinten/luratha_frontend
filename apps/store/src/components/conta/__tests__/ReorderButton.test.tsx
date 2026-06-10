@@ -102,7 +102,7 @@ describe("ReorderButton", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("mostra erro recuperável quando a API de reorder falha", async () => {
+  it("mostra o motivo do servidor quando a API de reorder falha", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -112,19 +112,23 @@ describe("ReorderButton", () => {
     render(<ReorderButton orderId="order-1" />);
     await user.click(screen.getByRole("button", { name: "Pedir novamente" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível refazer/i);
+    // O alerta surface a mensagem real do servidor, não um texto fixo.
+    expect(await screen.findByRole("alert")).toHaveTextContent("boom");
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("não navega quando uma adição ao carrinho falha (addItem não engole o erro)", async () => {
+  it("mostra o motivo e não navega quando uma adição ao carrinho falha", async () => {
     const user = userEvent.setup();
-    // reorder devolve itens disponíveis, mas o POST /api/cart/items falha (409).
+    // reorder devolve itens disponíveis, mas o POST /api/cart/items falha (409)
+    // com corpo vazio — cai no fallback do throwIfNotOk de adicionar item.
     stubFlow({ items: [item("a")], unavailable: [] }, 409);
 
     render(<ReorderButton orderId="order-1" />);
     await user.click(screen.getByRole("button", { name: "Pedir novamente" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível refazer/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /não foi possível adicionar um item ao carrinho/i,
+    );
     expect(pushMock).not.toHaveBeenCalled();
   });
 });
