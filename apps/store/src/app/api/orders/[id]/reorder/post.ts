@@ -9,8 +9,6 @@ import { logger } from "@luratha/core/logging/logger";
 import type { CartItemInput } from "@/src/contexts/CartContext";
 import { buildReorderItem, type ReorderSkipReason } from "@/src/lib/reorder";
 
-export const runtime = "nodejs";
-
 interface ReorderResponse {
   items: CartItemInput[];
   unavailable: { name: string; reason: ReorderSkipReason }[];

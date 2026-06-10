@@ -11,14 +11,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// O ReorderButton (no estado expirado) usa useCart() e useRouter() — sem
-// CartProvider/router no teste, mockamos ambos para isolar a página.
+// O ReorderButton (no estado expirado) usa useRouter() — sem router no
+// teste, mockamos next/navigation para isolar a página.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
-}));
-
-vi.mock("@/src/contexts/CartContext", () => ({
-  useCart: () => ({ addItem: vi.fn() }),
 }));
 
 function baseOrder(overrides: Partial<Order> = {}): Order {
