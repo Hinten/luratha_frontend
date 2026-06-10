@@ -81,6 +81,7 @@ export {
   freeShippingConfigSchema,
   fixedRateConfigSchema,
   fixedRateEntrySchema,
+  companySettingsSchema,
   SHIPPING_PROVIDER_IDS,
   validateSiteSettings,
   getDefaultSiteSettings,
@@ -92,4 +93,5 @@ export {
   type FreeShippingConfig,
   type FixedRateConfig,
   type FixedRateEntry,
+  type CompanySettings,
 } from "@luratha/schemas/siteSettings";

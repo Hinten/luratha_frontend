@@ -19,14 +19,6 @@ A Luratha acredita que a moda pode ser um ato de amor — amor a si mesma, ao tr
 - [Acessórios](/categoria/acessorios): Acessórios artesanais femininos
 - [Busca](/busca): Página de busca global de produtos por termo, preço e tags
 - [Produto](/produto/[slug]): Página de detalhe de produto (ex: /produto/vestido-bordado-floral)
-- [Vestidos](/colecao/vestidos): Vestidos artesanais femininos
-- [Blusas](/colecao/blusas): Blusas e tops artesanais
-- [Calças](/colecao/calcas): Calças e pantalonas artesanais
-- [Saias](/colecao/saias): Saias artesanais femininas
-- [Shorts](/colecao/shorts): Shorts femininos artesanais
-- [Conjuntos](/colecao/conjuntos): Conjuntos e coordenados artesanais
-- [Moletons](/colecao/moletons): Moletons e agasalhos artesanais
-- [Acessórios](/colecao/acessorios): Acessórios artesanais femininos
 - [Sale](/sale): Peças em promoção
 
 ## Institucional
@@ -35,6 +27,10 @@ A Luratha acredita que a moda pode ser um ato de amor — amor a si mesma, ao tr
 - [Contato](/contato): Fale conosco — WhatsApp, telefone e formulário
 - [Política de Trocas](/politica-de-trocas): Política de trocas e devoluções
 - [Referência de Medidas](/referencia-de-medidas): Guia completo de tamanhos (PP ao XGG)
+- [Perguntas Frequentes](/faq): Dúvidas sobre pagamento, frete, trocas, tamanhos e cuidados com as peças
+- [Entrega e Frete](/entrega): Cálculo de frete por CEP, prazos, transportadoras, frete grátis e rastreamento
+- [Política de Privacidade](/politica-de-privacidade): Tratamento de dados pessoais conforme a LGPD
+- [Termos de Uso](/termos-de-uso): Condições de uso da loja, compras, pagamento e foro
 
 ## Contato
 

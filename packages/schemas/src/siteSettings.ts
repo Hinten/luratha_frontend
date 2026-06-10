@@ -103,9 +103,44 @@ export const shippingSettingsSchema = z.object({
   fixedRate: fixedRateConfigSchema.default(() => fixedRateConfigSchema.parse({})),
 });
 
+/**
+ * Dados de identificação da empresa — alimentam as páginas institucionais
+ * (privacidade, termos de uso), inclusive o `publisher` (schema.org Organization)
+ * do JSON-LD dessas páginas.
+ *
+ * Todos os campos têm `default("")` para retrocompatibilidade: documentos
+ * `settings/global` criados antes deste bloco (apenas `shipping`) continuam
+ * válidos na leitura — o `.default()` materializa um `company` vazio. O dono
+ * preenche os valores em `/configuracoes/empresa` no admin; enquanto vazios, as
+ * páginas exibem marcadores `[INSERIR …]` em vez de texto em branco.
+ */
+export const companySettingsSchema = z.object({
+  /** Razão social registrada (ex.: "Luratha Comércio de Roupas LTDA"). */
+  legalName: z.string().trim().max(140).default(""),
+  /** Nome fantasia exibido ao público. */
+  tradeName: z.string().trim().max(140).default(""),
+  /** CNPJ — formato livre (ex.: "00.000.000/0001-00"). */
+  cnpj: z.string().trim().max(20).default(""),
+  /** Nome do Encarregado pelo Tratamento de Dados (DPO), exigido pela LGPD (art. 41). */
+  dpoName: z.string().trim().max(140).default(""),
+  /** E-mail do Encarregado/DPO para o exercício de direitos pelos titulares. */
+  dpoEmail: z.string().trim().max(140).default(""),
+  /** E-mail oficial de atendimento ao cliente. */
+  contactEmail: z.string().trim().max(140).default(""),
+  /** Endereço da sede (logradouro, número, bairro). */
+  addressLine: z.string().trim().max(200).default(""),
+  /** Município da sede. */
+  addressCity: z.string().trim().max(80).default(""),
+  /** UF da sede (sigla de 2 letras). */
+  addressState: z.string().trim().max(2).default(""),
+  /** Comarca/foro de eleição para os Termos de Uso (ex.: "São Paulo/SP"). */
+  jurisdiction: z.string().trim().max(120).default(""),
+});
+
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
+  company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -115,6 +150,7 @@ export type FreeShippingConfig = z.infer<typeof freeShippingConfigSchema>;
 export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
+export type CompanySettings = z.infer<typeof companySettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

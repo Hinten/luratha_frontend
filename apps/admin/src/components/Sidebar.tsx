@@ -18,6 +18,9 @@ export function Sidebar({ email }: { email: string | null }) {
         <Link href="/configuracoes" className={styles.navLink}>
           Configurações
         </Link>
+        <Link href="/configuracoes/empresa" className={styles.navLink}>
+          Dados da empresa
+        </Link>
       </nav>
 
       <div className={styles.footer}>

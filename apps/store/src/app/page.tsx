@@ -60,7 +60,7 @@ export default async function Home() {
       <ProductSection
         title="Lançamentos"
         products={newArrivals}
-        viewAllHref="/colecao"
+        viewAllHref="/todas-as-pecas"
         viewAllLabel="Ver todos os lançamentos"
         stockMap={stockMap}
       />
@@ -70,7 +70,7 @@ export default async function Home() {
         <ProductSection
           title="Destaques"
           products={featured}
-          viewAllHref="/colecao"
+          viewAllHref="/todas-as-pecas"
           viewAllLabel="Ver todos os destaques"
           stockMap={stockMap}
         />
