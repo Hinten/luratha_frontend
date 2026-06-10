@@ -17,6 +17,7 @@
     "test:coverage": "turbo run test:coverage",
     "test:firestore": "turbo run test:firestore",
     "test:functions:cloud": "turbo run test:functions:cloud",
+    "test:seo": "turbo run test:seo",
     "test:e2e": "turbo run test:e2e",
     "setup:routes": "node docs/create-catalog-routes.mjs",
     "functions:build": "npm --prefix functions run build",

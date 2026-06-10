@@ -12,10 +12,12 @@
     "test": "vitest run --config vitest.config.mts",
     "test:firestore": "vitest run --config vitest.cloud.config.mts",
     "test:functions:cloud": "vitest run --config vitest.cloud-functions.config.mts",
+    "test:seo": "vitest run --config vitest.seo.config.mts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:cloud": "vitest run --config vitest.cloud.config.mts",
     "test:e2e": "playwright test",
+    "test:e2e:seo": "playwright test e2e/seo.spec.ts",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {

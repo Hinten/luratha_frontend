@@ -21,7 +21,7 @@ const slides: Slide[] = [
     gradientFrom: "var(--color-accent)",
     gradientTo: "var(--color-primary)",
     ctaLabel: "Explorar coleção",
-    ctaHref: "/colecao",
+    ctaHref: "/todas-as-pecas",
   },
   {
     id: "2",
@@ -30,7 +30,7 @@ const slides: Slide[] = [
     gradientFrom: "var(--color-primary)",
     gradientTo: "var(--color-secondary)",
     ctaLabel: "Ver lançamentos",
-    ctaHref: "/colecao",
+    ctaHref: "/todas-as-pecas",
   },
   {
     id: "3",

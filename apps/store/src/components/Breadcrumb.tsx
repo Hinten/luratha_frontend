@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { SITE_URL } from "@/src/lib/seoConstants";
 import styles from "./Breadcrumb.module.css";
 
 export interface BreadcrumbItem {
@@ -19,7 +20,11 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
       "@type": "ListItem",
       position: index + 1,
       name: item.label,
-      ...(item.href ? { item: item.href } : {}),
+      // Search engines expect absolute URLs in BreadcrumbList `item`; the
+      // visible <Link> below stays relative for client-side navigation.
+      ...(item.href
+        ? { item: item.href.startsWith("http") ? item.href : `${SITE_URL}${item.href}` }
+        : {}),
     })),
   };
 

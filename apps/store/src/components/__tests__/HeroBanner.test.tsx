@@ -68,6 +68,6 @@ describe("HeroBanner", () => {
     render(<HeroBanner />);
     const cta = screen.getByRole("link", { name: /Explorar coleção/i });
     expect(cta).toBeInTheDocument();
-    expect(cta).toHaveAttribute("href", "/colecao");
+    expect(cta).toHaveAttribute("href", "/todas-as-pecas");
   });
 });
