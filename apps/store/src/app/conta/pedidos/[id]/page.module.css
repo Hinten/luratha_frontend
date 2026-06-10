@@ -57,16 +57,6 @@
   padding: 0.875rem 1rem;
 }
 
-.paymentNoteLink {
-  color: color-mix(in srgb, var(--color-warning) 80%, var(--color-neutral-dark) 20%);
-  font-weight: 600;
-  text-decoration: underline;
-}
-
-.paymentNoteLink:hover {
-  color: var(--color-warning);
-}
-
 .section {
   background-color: #fff;
   border: 1px solid var(--color-neutral-mid);

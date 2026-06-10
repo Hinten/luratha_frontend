@@ -18,7 +18,8 @@
     "test:cloud": "vitest run --config vitest.cloud.config.mts",
     "test:e2e": "playwright test",
     "test:e2e:seo": "playwright test e2e/seo.spec.ts",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "seed-reorder-fixture": "tsx scripts/seed-reorder-fixture.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
