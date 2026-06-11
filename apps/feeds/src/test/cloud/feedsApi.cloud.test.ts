@@ -17,6 +17,7 @@ import { adminProductConverter } from "@luratha/firestore/adminProductConverter"
 import { firestoreCollections, validateProduct, type Product } from "@luratha/schemas";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 import { GET as productsFeedGET } from "@/src/app/api/feeds/products.xml/route";
+import { fetchFeedProducts } from "@/src/lib/feed/fetchFeedProducts";
 
 function photoAsset(id: string, now: string) {
   const resolution = {
@@ -48,6 +49,7 @@ describeCloud("/api/feeds/products.xml (Cloud Firebase)", () => {
   const idVariant = `${prefix}-variant`;
   const idDraft = `${prefix}-draft`;
   const idUnpurchasable = `${prefix}-nopurchase`;
+  const skuActive = `${token}ACT1`;
   const variantSku = `${token}VAR1`;
 
   const seededIds = [idActive, idVariant, idDraft, idUnpurchasable];
@@ -57,7 +59,7 @@ describeCloud("/api/feeds/products.xml (Cloud Firebase)", () => {
       id: idActive,
       title: "Feed Active Product",
       description: "Produto ativo para o teste de feed.",
-      sku: `${token}ACT1`,
+      sku: skuActive,
       isPurchasable: true,
       categoryId: "cat-test-feed",
       status: "active",
@@ -152,8 +154,8 @@ describeCloud("/api/feeds/products.xml (Cloud Firebase)", () => {
 
     const xml = await response.text();
 
-    // Active simple product: single item keyed by product id, with sale price.
-    expect(xml).toContain(`<g:id>${idActive}</g:id>`);
+    // Active simple product: single item keyed by the product SKU, with sale price.
+    expect(xml).toContain(`<g:id>${skuActive}</g:id>`);
     expect(xml).toContain("<g:sale_price>150.00 BRL</g:sale_price>");
     expect(xml).toContain(
       "<g:sale_price_effective_date>2026-01-01T00:00:00.000Z/2026-12-31T23:59:59.000Z</g:sale_price_effective_date>",
@@ -167,5 +169,21 @@ describeCloud("/api/feeds/products.xml (Cloud Firebase)", () => {
     // Draft and non-purchasable products must not be in the feed.
     expect(xml).not.toContain(idDraft);
     expect(xml).not.toContain(idUnpurchasable);
+  });
+
+  it("reads the feed through the recommended composite index (status + isPurchasable)", async () => {
+    // fetchFeedProducts runs the pipeline with `indexMode: "recommended"`, so
+    // Firestore must serve it from the (status, isPurchasable) composite index
+    // and throws FAILED_PRECONDITION if that index is missing. The index is
+    // provisioned in globalSetup (ensureFeedIndex), so a successful read here
+    // proves the query is index-backed rather than a full collection scan.
+    const products = await fetchFeedProducts();
+
+    const skus = products.map((p) => p.sku);
+    expect(skus).toContain(skuActive);
+    expect(skus).toContain(variantSku);
+    // Excluded products never reach the feed projection.
+    expect(products.map((p) => p.id)).not.toContain(idDraft);
+    expect(products.map((p) => p.id)).not.toContain(idUnpurchasable);
   });
 });

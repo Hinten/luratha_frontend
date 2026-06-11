@@ -68,10 +68,12 @@ describe("buildGoogleMerchantFeed", () => {
     expect(countItems(xml)).toBe(0);
   });
 
-  it("maps a simple product to a single item keyed by product id", () => {
+  it("maps a simple product to a single item keyed by the product SKU", () => {
     const xml = buildGoogleMerchantFeed([makeProduct()], CHANNEL);
     expect(countItems(xml)).toBe(1);
-    expect(xml).toContain("<g:id>prod-1</g:id>");
+    // g:id is the product SKU, not the Firestore document id.
+    expect(xml).toContain("<g:id>SKU123</g:id>");
+    expect(xml).not.toContain("prod-1");
     expect(xml).not.toContain("<g:item_group_id>");
     // title/link/description use the standard RSS 2.0 element names (no g: prefix).
     expect(xml).toContain("<title>Vestido Azul</title>");

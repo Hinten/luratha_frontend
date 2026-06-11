@@ -73,7 +73,13 @@ export interface FeedChannelInfo {
   description?: string;
 }
 
-/** One purchasable offer derived from a product (a variant, a size, or the product itself). */
+/**
+ * One purchasable offer derived from a product (a variant, a size, or the
+ * product itself). `id` becomes the feed `g:id` and is always a SKU: the
+ * variant SKU for variant offers, and the parent product SKU for simple
+ * products (suffixed with the size when a single SKU spans several sizes).
+ * `g:item_group_id` keeps using the parent product id to group the offers.
+ */
 interface FeedOffer {
   id: string;
   itemGroupId: string | null;
@@ -132,12 +138,16 @@ function expandOffers(product: FeedProduct): FeedOffer[] {
   }
 
   // Simple product: expand per size when several are declared, otherwise a
-  // single offer keyed by the product id.
+  // single offer. The offer id (g:id) is the product SKU — the stable
+  // merchant-facing identifier the catalog platforms key on. Fall back to the
+  // product id only if a product somehow has no SKU, since g:id must be
+  // non-empty (g:item_group_id below still uses the product id to group sizes).
   const sizes = product.sizes.length > 0 ? product.sizes : [null];
   const grouped = sizes.length > 1;
   const color = joinValues(product.colors);
+  const baseId = product.sku || product.id;
   return sizes.map((size) => ({
-    id: size ? `${product.id}-${size}` : product.id,
+    id: size ? `${baseId}-${size}` : baseId,
     itemGroupId: grouped ? product.id : null,
     mpn: product.sku,
     gtin: product.gtin,

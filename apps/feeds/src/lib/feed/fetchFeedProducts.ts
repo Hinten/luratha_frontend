@@ -178,7 +178,12 @@ export async function fetchFeedProducts(): Promise<FeedProduct[]> {
     .select(...FEED_FIELDS);
 
   try {
-    const snapshot = await execute(pipeline);
+    // `indexMode: "recommended"` makes Firestore serve the pipeline from the
+    // composite index (status, isPurchasable) declared in firestore.indexes.json
+    // instead of a full collection scan — and fail fast (FAILED_PRECONDITION)
+    // if that index is missing, so a misconfigured deploy surfaces immediately
+    // rather than silently degrading to a scan as the catalog grows.
+    const snapshot = await execute({ pipeline, indexMode: "recommended" });
     return snapshot.results.map((entry) => mapToFeedProduct(entry.data(), entry.id ?? ""));
   } catch (err) {
     if (err instanceof FirebaseError) {
