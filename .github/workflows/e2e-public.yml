@@ -7,9 +7,11 @@ name: E2E Public
 # mexer neste YAML.
 #
 # Disparado por `pull_request` (igual ao `Test` e ao `e2e-checkout-mp`), com
-# path filter coarse-grain. Roda em paralelo aos demais workflows; o acesso ao
-# Firestore luratha-96386 é serializado pela `concurrency` de job
-# `luratha-96386-e2e`, compartilhada com `Test → e2e-auth` e `e2e-checkout-mp`.
+# path filter coarse-grain. Roda em paralelo aos demais workflows. Usa um
+# concurrency group PRÓPRIO (`luratha-96386-e2e-public`), separado do
+# `luratha-96386-e2e` que serializa auth + mp: specs públicos não fazem login
+# (não reusam o TEST_USER) e só LEEM o catálogo, então podem rodar em paralelo
+# com as lanes auth/mp sem corrida no Firestore luratha-96386.
 #
 # NÃO é required em branch protection: quando o path filter não casa, o
 # workflow nem aparece como check; PR segue mergeável.
@@ -30,8 +32,8 @@ on:
   workflow_dispatch:
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
-# pela `concurrency` interna do job (luratha-96386-e2e), que serializa
-# com o `Test → e2e-auth` e o `e2e-checkout-mp` no mesmo Firestore project.
+# pela `concurrency` interna do job (`luratha-96386-e2e-public`), que limita
+# a 1 run público por vez — sem bloquear nem cancelar as lanes auth/mp.
 concurrency:
   group: e2e-public-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -43,10 +45,13 @@ jobs:
   e2e-public:
     name: E2E public (Playwright + cloud)
     runs-on: ubuntu-latest
-    # Mesma concurrency group do `Test → e2e-auth` e do `e2e-checkout-mp` pra
-    # evitar 2 runs simultâneas contra o Firestore luratha-96386.
+    # Grupo PRÓPRIO (separado do `luratha-96386-e2e` de auth + mp). Specs
+    # públicos não logam nem escrevem no Firestore — não há corrida com as
+    # lanes auth/mp, então não entram naquele grupo. Mantê-los lá deixava o
+    # grupo com 3 membros e, como ele só comporta 1 rodando + 1 na fila, o 3º
+    # (tipicamente o e2e-auth, que espera o `unit`) era cancelado.
     concurrency:
-      group: luratha-96386-e2e
+      group: luratha-96386-e2e-public
       cancel-in-progress: false
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}

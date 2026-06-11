@@ -211,6 +211,10 @@ jobs:
     name: E2E auth (Playwright + cloud, live login)
     runs-on: ubuntu-latest
     needs: [unit]
+    # Serializa com o `e2e-checkout-mp` (mesmo grupo) porque ambos reusam o
+    # MESMO TEST_USER (login real) e colidiriam no Firestore luratha-96386. O
+    # `e2e-public` NÃO entra aqui (não faz login, só leitura) — adicioná-lo
+    # levava o grupo a 3 membros e o 3º era cancelado (cabe só 1 rodando + 1 fila).
     concurrency:
       group: luratha-96386-e2e
       cancel-in-progress: false
