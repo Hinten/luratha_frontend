@@ -147,11 +147,21 @@ function indexMatchesFields(
   expected: FirestoreCompositeIndexField[],
 ): boolean {
   const declared = (index.fields ?? []).filter((f) => f.fieldPath !== "__name__");
-  if (declared.length !== expected.length) return false;
+  // Prefix match: the expected fields must lead the index's declared fields.
+  // Firestore may append extra/implicit fields, so we don't require equal length.
+  if (declared.length < expected.length) return false;
   return expected.every((want, i) => {
     const got = declared[i];
     return got.fieldPath === want.fieldPath && (got.order ?? null) === (want.order ?? null);
   });
+}
+
+/** Compact one-line summary of an index for diagnostics in failure messages. */
+function summarizeIndex(index: FirestoreCompositeIndex): string {
+  const fields = (index.fields ?? [])
+    .map((f) => `${f.fieldPath}:${f.order ?? f.arrayConfig ?? "?"}`)
+    .join(",");
+  return `${indexNameToId(index.name)}[${index.queryScope ?? "?"}|${index.state ?? "?"}]{${fields}}`;
 }
 
 /** Extracts the server-assigned index id (last path segment) used by forceIndex. */
@@ -711,7 +721,9 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
 
     expect(
       target,
-      "composite index (status, categoryId, updatedAt DESC) must be deployed for products",
+      `composite index (status, categoryId, updatedAt DESC) must be deployed for products. ` +
+        `ListIndexes returned ${indexes.length} index(es): ` +
+        `${indexes.map(summarizeIndex).join(" | ") || "<none>"}`,
     ).toBeTruthy();
     // A non-READY index cannot back a forced query, so the forceIndex run below
     // would fail for the wrong reason — assert readiness explicitly.
