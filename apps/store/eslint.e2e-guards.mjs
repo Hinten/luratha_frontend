@@ -47,18 +47,29 @@ const paymentsPackagePattern = {
   message: "Payment code belongs only in *.mp.spec.ts (mp Playwright project).",
 };
 
-/** `process.env.E2E_LIVE_AUTH` read → this is a live-login test. */
+/**
+ * `process.env.E2E_LIVE_AUTH` read → this is a live-login test.
+ *
+ * Two selectors (esquery union) so bracket notation can't sneak past the
+ * tripwire: dot access (`property.name`, an Identifier) AND computed access
+ * (`process.env["E2E_LIVE_AUTH"]`, a string `Literal` → `property.value`).
+ */
 const liveAuthEnvSelector = {
   selector:
-    "MemberExpression[object.object.name='process'][object.property.name='env'][property.name='E2E_LIVE_AUTH']",
+    "MemberExpression[object.object.name='process'][object.property.name='env'][property.name='E2E_LIVE_AUTH']," +
+    "MemberExpression[object.object.name='process'][object.property.name='env'][computed=true][property.value='E2E_LIVE_AUTH']",
   message:
     "`process.env.E2E_LIVE_AUTH` marks a live-login test — move it to *.auth.spec.ts (auth Playwright project).",
 };
 
-/** `process.env.MERCADOPAGO_* / MELHOR_ENVIO_* / NEXT_PUBLIC_MERCADOPAGO_*`. */
+/**
+ * `process.env.MERCADOPAGO_* / MELHOR_ENVIO_* / NEXT_PUBLIC_MERCADOPAGO_*`.
+ * Dot + computed (bracket) access, same reason as `liveAuthEnvSelector`.
+ */
 const mpEnvSelector = {
   selector:
-    "MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^(MERCADOPAGO_|MELHOR_ENVIO_|NEXT_PUBLIC_MERCADOPAGO_)/]",
+    "MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^(MERCADOPAGO_|MELHOR_ENVIO_|NEXT_PUBLIC_MERCADOPAGO_)/]," +
+    "MemberExpression[object.object.name='process'][object.property.name='env'][computed=true][property.value=/^(MERCADOPAGO_|MELHOR_ENVIO_|NEXT_PUBLIC_MERCADOPAGO_)/]",
   message:
     "MercadoPago / Melhor Envio env vars belong only in *.mp.spec.ts (mp Playwright project).",
 };

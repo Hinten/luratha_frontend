@@ -104,7 +104,10 @@ jobs:
     # Sem isso, falha em e2e-public não vira comentário no PR — o report-failure
     # do Test workflow só enxerga jobs do seu próprio run.
     needs: [e2e-public]
-    if: ${{ failure() }}
+    # `&& github.event_name == 'pull_request'` (igual ao test-admin.yml): em
+    # `workflow_dispatch` não existe `github.event.pull_request.*`, então PR/SHA
+    # ficam vazios e o `gh pr comment ""` falharia. Reporta só em PRs.
+    if: ${{ failure() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
