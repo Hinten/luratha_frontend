@@ -81,12 +81,13 @@ export default defineConfig({
   // lane with `--project=<name>` instead of hard-coding file lists:
   //   *.auth.spec.ts → login required (auth project; needs E2E_LIVE_AUTH=1)
   //   *.mp.spec.ts   → MercadoPago/checkout (mp project; needs MP secrets)
+  //   seo.spec.ts    → SEO/AEO/GEO (seo project; seo.yml → seo-e2e)
   //   everything else → public (no login, no payment)
   // The eslint.e2e-guards keep specs from drifting out of their lane.
   projects: [
     {
       name: "public",
-      testIgnore: ["**/*.auth.spec.ts", "**/*.mp.spec.ts"],
+      testIgnore: ["**/*.auth.spec.ts", "**/*.mp.spec.ts", "**/seo.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -97,6 +98,14 @@ export default defineConfig({
     {
       name: "mp",
       testMatch: ["**/*.mp.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      // Dedicated SEO/AEO/GEO lane (seo.yml → seo-e2e, run via test:e2e:seo).
+      // Excluded from `public` (its testIgnore above) so seo.spec.ts isn't
+      // double-run by both the public and the seo lanes.
+      name: "seo",
+      testMatch: ["**/seo.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

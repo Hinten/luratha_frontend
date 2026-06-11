@@ -212,9 +212,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [unit]
     # Serializa com o `e2e-checkout-mp` (mesmo grupo) porque ambos reusam o
-    # MESMO TEST_USER (login real) e colidiriam no Firestore luratha-96386. O
-    # `e2e-public` NÃO entra aqui (não faz login, só leitura) — adicioná-lo
-    # levava o grupo a 3 membros e o 3º era cancelado (cabe só 1 rodando + 1 fila).
+    # MESMO TEST_USER (login real) e colidiriam no Firebase Auth de luratha-96386.
+    # O `e2e-public` NÃO entra aqui (não faz login) — adicioná-lo levava o grupo a
+    # 3 membros e o 3º era cancelado (cabe só 1 rodando + 1 fila). A corrida de
+    # fixtures Firestore entre as lanes paralelas é resolvida pelo
+    # E2E_KEEP_FIXTURES=1 abaixo (teardown não-destrutivo), não pela serialização.
     concurrency:
       group: luratha-96386-e2e
       cancel-in-progress: false
@@ -228,6 +230,10 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Teardown não-destrutivo: as lanes de E2E rodam em paralelo e todas
+      # semeiam/limpam as mesmas fixtures; sem isto, a que terminar primeiro
+      # apagaria as da outra. Ver apps/store/src/test/seedE2eCloudFirestore.ts.
+      E2E_KEEP_FIXTURES: "1"
       # Lane de AUTH: roda `--project=auth` (*.auth.spec.ts) com login real
       # contra o Firebase Auth de luratha-96386. E2E_LIVE_AUTH=1 remove o
       # `test.skip()` que hoje deixa esses testes SEMPRE pulados; TEST_USER_*
