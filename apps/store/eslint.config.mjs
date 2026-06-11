@@ -91,10 +91,10 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Tests, cloud suites and E2E helpers seed/inspect Firestore directly and
-    // log freely; the raw-ref + console guards target production code, so relax
-    // them (keep the catch rules).
-    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**"],
+    // Tests, cloud suites, E2E helpers and dev CLI scripts seed/inspect
+    // Firestore directly and log freely; the raw-ref + console guards target
+    // production code, so relax them (keep the catch rules).
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**", "scripts/**"],
     rules: {
       "no-restricted-imports": "off",
       "no-restricted-syntax": ["error", ...catchSyntaxRestrictions],

@@ -17,6 +17,7 @@
     "typecheck": {},
     "test": {},
     "test:coverage": {},
+    "test:seo": {},
     "test:firestore": {
       "cache": false
     },
