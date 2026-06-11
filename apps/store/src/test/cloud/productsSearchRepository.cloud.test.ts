@@ -28,13 +28,21 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { execute } from "firebase/firestore/pipelines";
 // adminDb is the firebase-admin Firestore instance (server SDK).
 // It authenticates via service account credentials and bypasses all
 // Firestore security rules – required so seed/cleanup work regardless
-// of the rules currently deployed to the project.
-import { adminDb } from "@luratha/firestore/firebaseAdmin";
-import { DATABASE_NAME, getFirebaseWebConfig } from "@luratha/firestore/environment";
+// of the rules currently deployed to the project. adminApp exposes the
+// service-account credential used to mint an access token for the
+// Firestore Admin REST API (ListIndexes) below.
+import { adminApp, adminDb } from "@luratha/firestore/firebaseAdmin";
 import {
+  DATABASE_NAME,
+  getFirebaseProjectId,
+  getFirebaseWebConfig,
+} from "@luratha/firestore/environment";
+import {
+  buildTextSearchPipeline,
   createProductsSearchRepository,
   type SearchOptions,
 } from "@luratha/repositories/productsSearchRepository";
@@ -74,6 +82,82 @@ async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
   await Promise.all(
     tracked.map(({ collection, id }) => adminDb.collection(collection).doc(id).delete()),
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Firestore composite-index resolution (for the forceIndex assertions)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface FirestoreCompositeIndexField {
+  fieldPath: string;
+  order?: "ASCENDING" | "DESCENDING";
+  arrayConfig?: "CONTAINS";
+}
+
+interface FirestoreCompositeIndex {
+  /** projects/{p}/databases/{db}/collectionGroups/products/indexes/{indexId} */
+  name: string;
+  queryScope?: string;
+  fields?: FirestoreCompositeIndexField[];
+  state?: string;
+}
+
+/** The composite index the categorized text pipeline scans on:
+ *  status == active, categoryId == X, ordered by updatedAt desc. */
+const EXPECTED_INDEX_FIELDS: FirestoreCompositeIndexField[] = [
+  { fieldPath: "status", order: "ASCENDING" },
+  { fieldPath: "categoryId", order: "ASCENDING" },
+  { fieldPath: "updatedAt", order: "DESCENDING" },
+];
+
+/**
+ * Lists the `products` composite indexes via the Firestore Admin REST API,
+ * authenticating with the admin app's service-account credential. We resolve
+ * the index name at runtime (rather than hardcoding the server-assigned id) so
+ * the test keeps working when the index is recreated.
+ */
+async function listProductsCompositeIndexes(): Promise<FirestoreCompositeIndex[]> {
+  const credential = adminApp.options.credential;
+  if (!credential) {
+    throw new Error("Admin app has no credential; cannot authenticate the ListIndexes call.");
+  }
+
+  const { access_token: accessToken } = await credential.getAccessToken();
+  const projectId = getFirebaseProjectId();
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${projectId}` +
+    `/databases/${DATABASE_NAME}/collectionGroups/products/indexes`;
+
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Firestore ListIndexes failed (${response.status}): ${body}`);
+  }
+
+  const payload = (await response.json()) as { indexes?: FirestoreCompositeIndex[] };
+  return payload.indexes ?? [];
+}
+
+/**
+ * Matches an index by its declared fields, ignoring the implicit trailing
+ * `__name__` field that Firestore appends to every composite index.
+ */
+function indexMatchesFields(
+  index: FirestoreCompositeIndex,
+  expected: FirestoreCompositeIndexField[],
+): boolean {
+  const declared = (index.fields ?? []).filter((f) => f.fieldPath !== "__name__");
+  if (declared.length !== expected.length) return false;
+  return expected.every((want, i) => {
+    const got = declared[i];
+    return got.fieldPath === want.fieldPath && (got.order ?? null) === (want.order ?? null);
+  });
+}
+
+/** Extracts the server-assigned index id (last path segment) used by forceIndex. */
+function indexNameToId(name: string): string {
+  const segments = name.split("/");
+  return segments[segments.length - 1];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -610,5 +694,55 @@ describeCloud("productsSearchRepository (Cloud Firebase)", () => {
         }),
       });
     }
+  });
+
+  /**
+   * 14. forceIndex (positive): the text pipeline uses the real composite index.
+   *
+   * Production runs the pipeline WITHOUT forceIndex (a missing index silently
+   * degrades to a scan). Here we resolve the (status, categoryId, updatedAt desc)
+   * index at runtime and force it on the same shared builder: if the index is
+   * absent or unusable Firestore rejects, so a passing run proves the index is
+   * deployed (state READY) and actually picked up by the pipeline.
+   */
+  it("forceIndex: pipeline uses the resolved composite index and returns seeded products", async () => {
+    const indexes = await listProductsCompositeIndexes();
+    const target = indexes.find((idx) => indexMatchesFields(idx, EXPECTED_INDEX_FIELDS));
+
+    expect(
+      target,
+      "composite index (status, categoryId, updatedAt DESC) must be deployed for products",
+    ).toBeTruthy();
+    // A non-READY index cannot back a forced query, so the forceIndex run below
+    // would fail for the wrong reason — assert readiness explicitly.
+    expect(target?.state).toBe("READY");
+
+    const forceIndex = indexNameToId(target!.name);
+    const pipeline = buildTextSearchPipeline(db, {
+      filters: { term: uniqueTerm, limit: 24 },
+      categoryId,
+      forceIndex,
+    });
+
+    const snapshot = await execute(pipeline);
+    const ids = snapshot.results.map((entry) => entry.id);
+    expect(ids).toContain(`${prefix}-prod-a`);
+    expect(ids).toContain(`${prefix}-prod-b`);
+  });
+
+  /**
+   * 15. forceIndex (negative control): forcing a non-existent index must throw.
+   *
+   * This proves forceIndex is genuinely enforced by the backend — without it the
+   * positive test above could pass simply because the pipeline ignored the hint.
+   */
+  it("forceIndex: forcing a non-existent index rejects", async () => {
+    const pipeline = buildTextSearchPipeline(db, {
+      filters: { term: uniqueTerm, limit: 24 },
+      categoryId,
+      forceIndex: `nonexistent_index_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
+    });
+
+    await expect(execute(pipeline)).rejects.toThrow();
   });
 });
