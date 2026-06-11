@@ -17,7 +17,6 @@ import { adminProductConverter } from "@luratha/firestore/adminProductConverter"
 import { firestoreCollections, validateProduct, type Product } from "@luratha/schemas";
 import { createCloudTestPrefix, describeCloud } from "@/src/test/cloud/sharedSetup";
 import { GET as productsFeedGET } from "@/src/app/api/feeds/products.xml/route";
-import { fetchFeedProducts } from "@/src/lib/feed/fetchFeedProducts";
 
 function photoAsset(id: string, now: string) {
   const resolution = {
@@ -169,21 +168,5 @@ describeCloud("/api/feeds/products.xml (Cloud Firebase)", () => {
     // Draft and non-purchasable products must not be in the feed.
     expect(xml).not.toContain(idDraft);
     expect(xml).not.toContain(idUnpurchasable);
-  });
-
-  it("reads the feed through the recommended composite index (status + isPurchasable)", async () => {
-    // fetchFeedProducts runs the pipeline with `indexMode: "recommended"`, so
-    // Firestore must serve it from the (status, isPurchasable) composite index
-    // and throws FAILED_PRECONDITION if that index is missing. The index is
-    // provisioned in globalSetup (ensureFeedIndex), so a successful read here
-    // proves the query is index-backed rather than a full collection scan.
-    const products = await fetchFeedProducts();
-
-    const skus = products.map((p) => p.sku);
-    expect(skus).toContain(skuActive);
-    expect(skus).toContain(variantSku);
-    // Excluded products never reach the feed projection.
-    expect(products.map((p) => p.id)).not.toContain(idDraft);
-    expect(products.map((p) => p.id)).not.toContain(idUnpurchasable);
   });
 });

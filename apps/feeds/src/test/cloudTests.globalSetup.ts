@@ -24,10 +24,4 @@ export default async function cloudGlobalSetup(): Promise<void> {
   }
 
   process.env.CLOUD_TEST_SKIP_REASON = "";
-
-  // Credentials are present — provision the composite index the feed pipeline
-  // depends on (it runs with `indexMode: "recommended"`, which requires it).
-  // Dynamic import so the Admin SDK is only initialised when the suite runs.
-  const { ensureFeedIndex } = await import("./cloud/ensureFeedIndex");
-  await ensureFeedIndex();
 }

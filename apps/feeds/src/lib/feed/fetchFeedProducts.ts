@@ -169,6 +169,13 @@ function mapToFeedProduct(raw: unknown, fallbackId: string): FeedProduct {
  * client SDK instance; `firebase-admin` does not expose pipelines). The project
  * runs on Enterprise, so the pipeline is always available — there is **no**
  * Core-query fallback.
+ *
+ * The `status == active && isPurchasable == true` filter is backed by the
+ * `(status, isPurchasable)` composite index declared in `firestore.indexes.json`;
+ * once deployed (`firebase deploy --only firestore:indexes`) Firestore's planner
+ * uses it automatically. Note: the SDK's `execute({ indexMode })` option is
+ * rejected by this backend (`INVALID_ARGUMENT: Unsupported option: index_mode`),
+ * so we rely on the planner rather than forcing a mode here.
  */
 export async function fetchFeedProducts(): Promise<FeedProduct[]> {
   const pipeline = searchDb
@@ -178,12 +185,7 @@ export async function fetchFeedProducts(): Promise<FeedProduct[]> {
     .select(...FEED_FIELDS);
 
   try {
-    // `indexMode: "recommended"` makes Firestore serve the pipeline from the
-    // composite index (status, isPurchasable) declared in firestore.indexes.json
-    // instead of a full collection scan — and fail fast (FAILED_PRECONDITION)
-    // if that index is missing, so a misconfigured deploy surfaces immediately
-    // rather than silently degrading to a scan as the catalog grows.
-    const snapshot = await execute({ pipeline, indexMode: "recommended" });
+    const snapshot = await execute(pipeline);
     return snapshot.results.map((entry) => mapToFeedProduct(entry.data(), entry.id ?? ""));
   } catch (err) {
     if (err instanceof FirebaseError) {

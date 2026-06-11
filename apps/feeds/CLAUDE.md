@@ -18,11 +18,11 @@ Data path (`src/lib/feed/`):
   Pipeline API** (`searchDb` from `@luratha/firestore/firebaseSearchDb`), projecting only the
   feed-relevant fields (embeddings excluded to save bandwidth/memory). The project runs on
   Firestore Enterprise, so the pipeline is always available — **there is no Core-query fallback**.
-  Executes with `indexMode: "recommended"` so Firestore serves it from the `(status, isPurchasable)`
-  composite index (declared in `firestore.indexes.json`) instead of a full scan, and fails fast if
-  the index is missing. The cloud suite provisions that index up front via
-  `src/test/cloud/ensureFeedIndex.ts` (Firestore Admin REST API) — keep it in sync with
-  `firestore.indexes.json`.
+  The filter is backed by the `(status, isPurchasable)` composite index declared in
+  `firestore.indexes.json`; deploy it with `firebase deploy --only firestore:indexes` and the
+  planner uses it automatically. (The SDK's `execute({ indexMode: "recommended" })` option is
+  **rejected by this backend** — `INVALID_ARGUMENT: Unsupported option: index_mode` — so don't
+  re-add it; it breaks the route's build-time prerender.)
 - `googleMerchantFeed.ts` — pure XML builder over the `FeedProduct` shape (no Firebase imports →
   unit-testable). Expands one `<item>` per variant (and per size); each offer's `g:id` is a **SKU**
   (variant SKU, or the product SKU for simple products) and `g:item_group_id` = parent product id.
