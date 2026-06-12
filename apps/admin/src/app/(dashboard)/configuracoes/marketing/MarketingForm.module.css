@@ -23,8 +23,8 @@
 
 .grid {
   display: grid;
-  gap: 1.25rem;
-  grid-template-columns: 1fr;
+  gap: 0.875rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
 }
 
 .field {
@@ -35,13 +35,11 @@
 }
 
 .label {
-  display: block;
   font-size: 0.8125rem;
   font-weight: 600;
 }
 
 .hint {
-  display: block;
   font-size: 0.75rem;
   color: color-mix(in srgb, var(--foreground) 60%, transparent);
 }
@@ -53,7 +51,6 @@
   font: inherit;
   background: var(--color-neutral-light);
   width: 100%;
-  max-width: 22rem;
 }
 
 .input:focus-visible {

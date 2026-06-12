@@ -109,12 +109,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Measurement ID: admin (settings/global.google) é a fonte da verdade, com
+  // Measurement ID: admin (settings/global.marketing) é a fonte da verdade, com
   // fallback para a env. `getCachedSiteSettings` é deduplicado por render
   // (cache()), então o Footer reaproveita a mesma leitura sem custo extra.
-  const { google } = await getCachedSiteSettings();
-  const gaMeasurementId = google.enabled
-    ? google.measurementId || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""
+  const { marketing } = await getCachedSiteSettings();
+  const gaMeasurementId = marketing.ga4Enabled
+    ? marketing.ga4MeasurementId || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""
     : "";
 
   return (

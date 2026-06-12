@@ -138,32 +138,49 @@ export const companySettingsSchema = z.object({
 });
 
 /**
- * Configuração do Google Analytics 4 (Consent Mode v2).
+ * Identificadores de marketing/analytics que o dono cadastra sem deploy.
  *
- * `measurementId` vazio = analytics desligado na loja. Quando preenchido com um
- * Measurement ID válido (`G-XXXXXXXX`), a storefront injeta o gtag e dispara os
- * eventos de e-commerce. O dono configura em `/configuracoes/google-analytics`
- * no admin; a storefront também aceita um fallback via `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
- *
- * `default("")`/`default(true)` garantem retrocompatibilidade: documentos
- * `settings/global` criados antes deste bloco continuam válidos na leitura.
+ * O **Google Analytics 4** já é renderizado na storefront (Consent Mode v2, em
+ * modo opt-out) a partir de `ga4MeasurementId`/`ga4Enabled` — ver
+ * `apps/store/src/components/analytics/`. Os demais IDs (Meta Pixel, Catálogo do
+ * Facebook, Merchant Center) por ora são apenas **armazenados** (consumidos pelo
+ * app de feeds / wiring de Pixel em fase seguinte). Todos os campos têm
+ * `default(...)` para retrocompatibilidade: documentos `settings/global` criados
+ * antes deste bloco continuam válidos na leitura — o `.default()` materializa um
+ * `marketing` vazio (mesmo padrão de `company`).
  */
-export const googleSettingsSchema = z.object({
-  /** Measurement ID GA4 (`G-XXXXXXXX`). Vazio desliga o analytics. */
-  measurementId: z
+export const marketingSettingsSchema = z.object({
+  /**
+   * ID do Meta Pixel (Facebook/Instagram), tipicamente numérico
+   * (ex.: "123456789012345"). Armazenado como string livre — o formato não é
+   * validado aqui (v1 apenas persiste; a validação fica para quando a loja
+   * passar a renderizar o script do Pixel).
+   */
+  metaPixelId: z.string().trim().max(32).default(""),
+  /** ID do Catálogo do Facebook/Commerce Manager onde o feed é cadastrado. */
+  facebookCatalogId: z.string().trim().max(32).default(""),
+  /** ID da conta do Google Merchant Center que consome o feed de produtos. */
+  googleMerchantCenterId: z.string().trim().max(32).default(""),
+  /**
+   * Measurement ID do Google Analytics 4 (`G-XXXXXXXX`). Vazio desliga a
+   * medição na loja. Validado no formato porque, diferente dos demais IDs, este
+   * campo é efetivamente injetado no gtag.
+   */
+  ga4MeasurementId: z
     .string()
     .trim()
     .regex(/^(G-[A-Z0-9]{4,})?$/, "Measurement ID inválido — esperado formato G-XXXXXXXX.")
+    .max(20)
     .default(""),
-  /** Liga/desliga a medição sem perder o ID configurado. */
-  enabled: z.boolean().default(true),
+  /** Liga/desliga a medição do GA4 sem perder o ID configurado. */
+  ga4Enabled: z.boolean().default(true),
 });
 
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
   company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
-  google: googleSettingsSchema.default(() => googleSettingsSchema.parse({})),
+  marketing: marketingSettingsSchema.default(() => marketingSettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -174,7 +191,7 @@ export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
 export type CompanySettings = z.infer<typeof companySettingsSchema>;
-export type GoogleSettings = z.infer<typeof googleSettingsSchema>;
+export type MarketingSettings = z.infer<typeof marketingSettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

@@ -77,7 +77,7 @@ Grant the `admin` custom claim with `pnpm --filter @luratha/admin grant-admin <e
 
 ### Analytics (GA4)
 
-Google Analytics 4 lives in the storefront (`apps/store/src/lib/analytics/` + `src/components/analytics/`). The Measurement ID source of truth is the admin (`/configuracoes/google-analytics` → `settings/global.google`), with a `NEXT_PUBLIC_GA_MEASUREMENT_ID` env fallback; empty = analytics off. Consent Mode v2 runs in **opt-out** mode (default `granted`); the opt-out control lives on the `/politica-de-dados` page and persists the choice in `localStorage` (reapplied before tags by the inline bootstrap in `Analytics.tsx`). E-commerce events are wired across the funnel (view_item, add_to_cart, begin_checkout, purchase, …).
+Google Analytics 4 lives in the storefront (`apps/store/src/lib/analytics/` + `src/components/analytics/`). The Measurement ID source of truth is the admin **Marketing & Pixels** screen (`/configuracoes/marketing` → `settings/global.marketing.ga4MeasurementId`, with a `ga4Enabled` toggle), plus a `NEXT_PUBLIC_GA_MEASUREMENT_ID` env fallback; empty/disabled = analytics off. The same `marketing` block also holds the Meta Pixel / Facebook Catalog / Merchant Center IDs (feeds). Consent Mode v2 runs in **opt-out** mode (default `granted`); the opt-out control lives on the `/politica-de-dados` page and persists the choice in `localStorage` (reapplied before tags by the inline bootstrap in `Analytics.tsx`). E-commerce events are wired across the funnel (view_item, add_to_cart, begin_checkout, purchase, …).
 
 ### MercadoPago payments
 

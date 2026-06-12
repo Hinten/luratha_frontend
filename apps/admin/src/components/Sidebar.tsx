@@ -21,8 +21,8 @@ export function Sidebar({ email }: { email: string | null }) {
         <Link href="/configuracoes/empresa" className={styles.navLink}>
           Dados da empresa
         </Link>
-        <Link href="/configuracoes/google-analytics" className={styles.navLink}>
-          Google Analytics
+        <Link href="/configuracoes/marketing" className={styles.navLink}>
+          Marketing &amp; Pixels
         </Link>
       </nav>
 

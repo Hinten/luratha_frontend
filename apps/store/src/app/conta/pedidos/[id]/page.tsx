@@ -7,6 +7,7 @@ import OrderStatusBadge from "@/src/components/conta/OrderStatusBadge";
 import PaymentMethodBadge from "@/src/components/conta/PaymentMethodBadge";
 import PixDisplay from "@/src/components/checkout/PixDisplay";
 import BoletoDisplay from "@/src/components/checkout/BoletoDisplay";
+import ReorderButton from "@/src/components/conta/ReorderButton";
 import styles from "./page.module.css";
 
 /** Vencimento no passado? `false` quando a data é ausente/inválida. */
@@ -114,13 +115,13 @@ export default function PedidoDetailPage({ params }: { params: Promise<{ id: str
               expiresAt={order.paymentPix.expiresAt}
             />
           ) : (
-            <p className={styles.paymentNote}>
-              O código PIX deste pedido expirou ou não está mais disponível. Faça um novo pedido
-              para gerar um novo pagamento.{" "}
-              <Link href="/" className={styles.paymentNoteLink}>
-                Ir para a loja
-              </Link>
-            </p>
+            <>
+              <p className={styles.paymentNote}>
+                O código PIX deste pedido expirou ou não está mais disponível. Refaça o pedido com
+                os preços e itens atuais:
+              </p>
+              <ReorderButton orderId={order.id} />
+            </>
           )}
         </section>
       )}
@@ -135,13 +136,13 @@ export default function PedidoDetailPage({ params }: { params: Promise<{ id: str
               barcode={order.paymentBoleto.barcode}
             />
           ) : (
-            <p className={styles.paymentNote}>
-              O boleto deste pedido expirou ou não está mais disponível. Faça um novo pedido para
-              gerar um novo pagamento.{" "}
-              <Link href="/" className={styles.paymentNoteLink}>
-                Ir para a loja
-              </Link>
-            </p>
+            <>
+              <p className={styles.paymentNote}>
+                O boleto deste pedido expirou ou não está mais disponível. Refaça o pedido com os
+                preços e itens atuais:
+              </p>
+              <ReorderButton orderId={order.id} />
+            </>
           )}
         </section>
       )}

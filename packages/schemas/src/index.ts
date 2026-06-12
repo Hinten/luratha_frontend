@@ -82,7 +82,7 @@ export {
   fixedRateConfigSchema,
   fixedRateEntrySchema,
   companySettingsSchema,
-  googleSettingsSchema,
+  marketingSettingsSchema,
   SHIPPING_PROVIDER_IDS,
   validateSiteSettings,
   getDefaultSiteSettings,
@@ -95,5 +95,5 @@ export {
   type FixedRateConfig,
   type FixedRateEntry,
   type CompanySettings,
-  type GoogleSettings,
+  type MarketingSettings,
 } from "@luratha/schemas/siteSettings";
