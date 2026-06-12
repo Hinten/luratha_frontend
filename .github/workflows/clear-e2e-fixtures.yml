@@ -1,0 +1,54 @@
+name: Clear E2E Fixtures
+
+# Alavanca MANUAL pra apagar as fixtures de E2E (produtos + categorias
+# deterministas) do projeto de teste cloud (luratha-96386).
+#
+# As lanes de E2E em CI rodam com E2E_KEEP_FIXTURES=1 (teardown não-destrutivo)
+# pra não apagarem as fixtures umas das outras quando rodam em paralelo — então
+# as fixtures persistem entre runs. Como os IDs são fixos elas são só
+# re-semeadas (upsert idempotente), nunca acumulam. Use este workflow quando
+# mudar o conjunto de fixtures (IDs antigos virariam órfãos) ou pra forçar um
+# slate limpo.
+#
+# Só roda via dispatch manual. Rode quando NENHUMA lane de E2E estiver ativa: o
+# concurrency group `luratha-96386-e2e` serializa com auth + mp, mas não com os
+# grupos `-e2e-public` e `-seo-e2e` (um group não serializa contra três).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: luratha-96386-e2e
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  clear-fixtures:
+    name: Clear E2E cloud fixtures
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+    steps:
+      - name: Verify cloud test secrets are configured
+        run: |
+          missing=()
+          [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] && missing+=("FIREBASE_SERVICE_ACCOUNT_BASE64")
+          [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] && missing+=("FIREBASE_WEB_APP_CONFIG_BASE64")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Secrets ausentes — não dá pra limpar as fixtures: ${missing[*]}"
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Clear E2E cloud fixtures
+        run: pnpm --filter @luratha/store clear-e2e-fixtures

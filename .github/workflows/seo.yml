@@ -37,10 +37,17 @@ jobs:
     name: SEO E2E (Playwright head + JSON-LD)
     runs-on: ubuntu-latest
     needs: seo-unit
-    # Shares the cloud test project with test.yml's e2e-cloud job — serialize so
-    # the two suites do not race on the same seeded fixtures.
+    # Own concurrency group. seo-e2e doesn't log in (no TEST_USER), so it needn't
+    # serialize with the login lanes (test.yml → e2e-auth and e2e-checkout-mp.yml
+    # → e2e-mp, which share `luratha-96386-e2e` because they reuse the TEST_USER).
+    # It used to share that group, but a concurrency group holds only 1 running +
+    # 1 pending: with auth + mp + seo-e2e (3) the seo-e2e job — which enters late
+    # via `needs: seo-unit` — got cancelled. A dedicated group lets it run free.
+    # Like every E2E lane it seeds AND clears the shared deterministic fixtures
+    # via globalSetup/globalTeardown; E2E_KEEP_FIXTURES=1 (below) makes that
+    # teardown non-destructive so the parallel lanes don't delete each other's.
     concurrency:
-      group: luratha-96386-e2e
+      group: luratha-96386-seo-e2e
       cancel-in-progress: false
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
@@ -52,6 +59,10 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      # Teardown não-destrutivo: as lanes de E2E rodam em paralelo e todas
+      # semeiam/limpam as mesmas fixtures; sem isto, a que terminar primeiro
+      # apagaria as da outra. Ver apps/store/src/test/seedE2eCloudFirestore.ts.
+      E2E_KEEP_FIXTURES: "1"
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets

@@ -58,7 +58,7 @@ jobs:
             echo ""
             echo "### Checklist antes do merge"
             echo ""
-            echo "- [ ] CI verde (lint, unit, integration-cloud, e2e-cloud, functions-cloud)"
+            echo "- [ ] CI verde (lint, unit, integration-cloud, e2e-auth, e2e-public, functions-cloud)"
             echo "- [ ] Smoke test manual em staging"
             echo "- [ ] Sem migrações pendentes"
             echo ""

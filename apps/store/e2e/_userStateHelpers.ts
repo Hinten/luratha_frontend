@@ -6,7 +6,7 @@ import { firestoreCollections } from "@luratha/schemas";
  *
  * Diferente do `seedFixtureCart`/`clearFixtureCart` (que cuidam só do cart),
  * estes lidam com o resto do state que pode vazar entre runs do
- * `checkout-card-real.spec.ts` (endereços criados via UI, orders pendentes
+ * `checkout-card-real.mp.spec.ts` (endereços criados via UI, orders pendentes
  * de tentativas anteriores). Cleanup explícito evita race do snapshot do
  * `CartContext` e dados acumulando ao longo de várias execuções.
  */

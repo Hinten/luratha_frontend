@@ -1,49 +1,63 @@
-name: E2E Checkout (MercadoPago)
+name: E2E Public
 
-# Workflow separado do `Test` pra rodar APENAS os specs Playwright do fluxo de
-# checkout / MercadoPago (cartão real + cartão mock + PIX/Boleto) — os arquivos
-# `*.mp.spec.ts`, selecionados via `--project=mp`.
-# Esses specs são os mais caros (dev server + Brick + tokenize MP + frete
-# real Melhor Envio) e dependem de credenciais sensíveis que outros tests
-# nem usam. Path filter abaixo garante que só dispara quando arquivos
-# relevantes mudam — PRs em áreas não-checkout não pagam o custo.
+# Specs Playwright "públicos" — sem login e sem MercadoPago (home, cart,
+# catalog, navigation, product, institutional). Rodam via `--project=public`,
+# que filtra pela convenção de nomes (ignora *.auth.spec.ts e *.mp.spec.ts),
+# em vez de listar arquivos: adicionar/renomear um spec público não exige
+# mexer neste YAML.
 #
-# NÃO é required em branch protection: quando o filter não casa, o
+# Disparado por `pull_request` (igual ao `Test` e ao `e2e-checkout-mp`), com
+# path filter coarse-grain. Roda em paralelo aos demais workflows. Usa um
+# concurrency group PRÓPRIO (`luratha-96386-e2e-public`), separado do
+# `luratha-96386-e2e` que serializa auth + mp: specs públicos não fazem login
+# (não reusam o TEST_USER), então não precisam serializar com as lanes auth/mp.
+#
+# Toda lane de E2E (esta inclusive) semeia E limpa as MESMAS fixtures
+# deterministas via globalSetup/globalTeardown. Rodar em paralelo só é seguro
+# porque cada lane exporta `E2E_KEEP_FIXTURES=1`, que torna o teardown
+# não-destrutivo — senão a lane que terminasse primeiro apagaria as fixtures de
+# uma lane ainda em execução. Ver apps/store/src/test/seedE2eCloudFirestore.ts.
+#
+# NÃO é required em branch protection: quando o path filter não casa, o
 # workflow nem aparece como check; PR segue mergeável.
 
 on:
   pull_request:
     branches: [master, production]
     paths:
-      # Coarse-grain (issue #161). O filtro folha anterior não seguia o grafo de
-      # dependências: código consumido transitivamente pelo checkout — ex.
-      # `@luratha/firestore/firebaseAdmin` ou `@luratha/core/logging/logger` —
-      # não disparava o workflow, deixando regressões passarem sem cobertura.
-      # Cobrimos a storefront inteira + todos os packages. Custo aceito: alguns
-      # runs falso-positivos (ex.: mudança só em produtos roda o E2E-MP à toa).
+      # Coarse-grain (issue #161). O filtro folha não segue o grafo de
+      # dependências: código consumido transitivamente pelos specs públicos —
+      # ex. `@luratha/firestore/firebaseAdmin` ou `@luratha/core/logging/logger`
+      # — não dispararia o workflow, deixando regressões passarem. Cobrimos a
+      # storefront inteira + todos os packages. Custo aceito: alguns runs
+      # falso-positivos (ex.: mudança só em checkout roda o E2E público à toa).
       - 'apps/store/**'
       - 'packages/**'
-      - '.github/workflows/e2e-checkout-mp.yml'
+      - '.github/workflows/e2e-public.yml'
+  workflow_dispatch:
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
-# pela `concurrency` interna do job (luratha-96386-e2e), que serializa
-# com o `Test → e2e-auth` no mesmo Firestore project.
+# pela `concurrency` interna do job (`luratha-96386-e2e-public`), que limita
+# a 1 run público por vez — sem bloquear nem cancelar as lanes auth/mp.
 concurrency:
-  group: e2e-checkout-mp-${{ github.head_ref || github.ref }}
+  group: e2e-public-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
   NODE_VERSION: "22"
 
 jobs:
-  e2e-mp:
-    name: E2E Checkout (MP)
+  e2e-public:
+    name: E2E public (Playwright + cloud)
     runs-on: ubuntu-latest
-    # Mesma concurrency group do `Test → e2e-auth` pra evitar 2 runs
-    # simultâneas contra o Firestore luratha-96386 entre os workflows
-    # quando o test user reaproveitado entre runs poderia colidir.
+    # Grupo PRÓPRIO (separado do `luratha-96386-e2e` de auth + mp). Specs
+    # públicos não logam (não reusam o TEST_USER), então não precisam entrar
+    # naquele grupo só pra serializar login. Mantê-los lá deixava o grupo com
+    # 3 membros e, como ele só comporta 1 rodando + 1 na fila, o 3º
+    # (tipicamente o e2e-auth, que espera o `unit`) era cancelado. A corrida de
+    # fixtures entre lanes paralelas é resolvida pelo E2E_KEEP_FIXTURES=1 abaixo.
     concurrency:
-      group: luratha-96386-e2e
+      group: luratha-96386-e2e-public
       cancel-in-progress: false
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
@@ -59,43 +73,13 @@ jobs:
       # semeiam/limpam as mesmas fixtures; sem isto, a que terminar primeiro
       # apagaria as da outra. Ver apps/store/src/test/seedE2eCloudFirestore.ts.
       E2E_KEEP_FIXTURES: "1"
-      # Melhor Envio: o spec real (`checkout-card-real.mp.spec.ts`) bate em
-      # `/api/checkout/shipping` que chama o provider. Sem `MELHOR_ENVIO_TOKEN`
-      # a rota retorna `alert: "MELHOR_ENVIO_TOKEN não configurado"` e o
-      # radiogroup de frete nem renderiza — Step 3 trava.
-      MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
-      MELHOR_ENVIO_ENV: ${{ secrets.MELHOR_ENVIO_ENV }}
-      MELHOR_ENVIO_USER_AGENT: ${{ secrets.MELHOR_ENVIO_USER_AGENT }}
-      MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-      MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
-      MERCADOPAGO_ENV: sandbox
-      MERCADOPAGO_SANDBOX_PAYER_EMAIL: ${{ secrets.MERCADOPAGO_SANDBOX_PAYER_EMAIL }}
-      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY }}
-      # MP test user reaproveitado entre runs por `loginOrRegisterTestUser`
-      # (e2e/_authHelpers.ts). Sem essas vars, `checkout-card-real.mp.spec.ts`
-      # faz throw no module-load com mensagem clara do que falta.
-      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
     steps:
       - name: Verify cloud test secrets are configured
         id: check_secrets
         run: |
-          # Gate amplo: lista TODOS os secrets requeridos pelos specs MP e
-          # falha cedo (~segundos) em vez de gastar 5min de install + Playwright
-          # browser download pra só então estourar no module-load throw com a
-          # mesma informação. Cada secret unset/empty é listado no warning.
-          missing=()
-          [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] && missing+=("FIREBASE_SERVICE_ACCOUNT_BASE64")
-          [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ] && missing+=("FIREBASE_WEB_APP_CONFIG_BASE64")
-          [ -z "$MERCADOPAGO_ACCESS_TOKEN" ] && missing+=("MERCADOPAGO_ACCESS_TOKEN")
-          [ -z "$MERCADOPAGO_SANDBOX_PAYER_EMAIL" ] && missing+=("MERCADOPAGO_SANDBOX_PAYER_EMAIL")
-          [ -z "$NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY" ] && missing+=("NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY")
-          [ -z "$TEST_USER_EMAIL" ] && missing+=("TEST_USER_EMAIL")
-          [ -z "$TEST_USER_PASSWORD" ] && missing+=("TEST_USER_PASSWORD")
-          [ -z "$MELHOR_ENVIO_TOKEN" ] && missing+=("MELHOR_ENVIO_TOKEN")
-          if [ ${#missing[@]} -gt 0 ]; then
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Secrets ausentes — pulando e2e-mp. Configure: ${missing[*]}"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando e2e-public. Configure os secrets para habilitar."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -114,28 +98,31 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         working-directory: apps/store
         run: pnpm exec playwright install --with-deps chromium
-      - name: Run MP E2E specs
+      - name: Run public E2E
         if: steps.check_secrets.outputs.skip != 'true'
-        timeout-minutes: 10
+        timeout-minutes: 6
         working-directory: apps/store
-        # `--project=mp` filtra os *.mp.spec.ts (checkout.mp + checkout-card-real.mp)
-        # pela convenção de nomes — robusto a renomear/adicionar spec de checkout.
-        run: pnpm exec playwright test --project=mp
+        # `--project=public` filtra os specs públicos pela convenção de nomes
+        # (ignora *.auth.spec.ts e *.mp.spec.ts) — robusto a renomear/adicionar.
+        run: pnpm exec playwright test --project=public
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-mp
+          name: playwright-report-public
           path: apps/store/playwright-report
           retention-days: 7
 
   report-failure:
     name: Post failure logs on PR
     # Replica do `Test → report-failure`, limitado aos jobs deste workflow.
-    # Sem isso, falha em e2e-mp não vira comentário no PR — o report-failure
+    # Sem isso, falha em e2e-public não vira comentário no PR — o report-failure
     # do Test workflow só enxerga jobs do seu próprio run.
-    needs: [e2e-mp]
-    if: ${{ failure() }}
+    needs: [e2e-public]
+    # `&& github.event_name == 'pull_request'` (igual ao test-admin.yml): em
+    # `workflow_dispatch` não existe `github.event.pull_request.*`, então PR/SHA
+    # ficam vazios e o `gh pr comment ""` falharia. Reporta só em PRs.
+    if: ${{ failure() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -158,7 +145,7 @@ jobs:
             exit 0
           fi
           {
-            echo "## ❌ CI falhou (E2E Checkout MP)"
+            echo "## ❌ CI falhou (E2E Public)"
             echo
             echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
             echo

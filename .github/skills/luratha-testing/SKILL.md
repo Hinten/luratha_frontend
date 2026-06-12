@@ -48,6 +48,11 @@ npm run test:e2e:ui
 # E2E tests — specific file
 npx playwright test e2e/home.spec.ts
 
+# E2E tests — a whole lane by Playwright project (public / auth / mp)
+npx playwright test --project=public
+# the auth lane needs live login (otherwise its tests test.skip themselves):
+E2E_LIVE_AUTH=1 TEST_USER_EMAIL=… TEST_USER_PASSWORD=… npx playwright test --project=auth
+
 # E2E tests — visible browser
 npx playwright test --headed
 ```
@@ -77,8 +82,10 @@ luratha_frontend/
 │   └── test/
 │       └── setup.ts                    # Global test setup (jest-dom matchers)
 ├── e2e/
-│   ├── home.spec.ts                    # E2E: Home page
-│   └── navigation.spec.ts             # E2E: header + footer navigation
+│   ├── home.spec.ts                    # E2E public lane (--project=public)
+│   ├── navigation.spec.ts              # E2E public lane
+│   ├── authentication.auth.spec.ts     # E2E auth lane (--project=auth, live login)
+│   └── checkout.mp.spec.ts             # E2E MercadoPago lane (--project=mp)
 ├── vitest.config.mts                   # Vitest config (jsdom, globals, coverage)
 └── playwright.config.ts               # Playwright config (base URL, webServer)
 ```
@@ -88,7 +95,11 @@ luratha_frontend/
 | Location | Pattern | Purpose |
 |---|---|---|
 | `src/**/__tests__/` | `*.test.ts` or `*.test.tsx` | Unit / integration |
-| `e2e/` | `*.spec.ts` | E2E browser tests |
+| `e2e/` | `*.spec.ts` | E2E — **public** lane (no login, no payment); Playwright `--project=public` |
+| `e2e/` | `*.auth.spec.ts` | E2E — needs live login (`E2E_LIVE_AUTH=1` + `TEST_USER_*`); `--project=auth` |
+| `e2e/` | `*.mp.spec.ts` | E2E — MercadoPago checkout (MP/Melhor Envio secrets); `--project=mp` |
+
+> The lanes are enforced by `apps/store/eslint.e2e-guards.mjs`: a public spec can't `import "./_authHelpers"` or touch `@luratha/payments`, and MercadoPago env/helpers are confined to `*.mp.spec.ts`. Put a spec in the wrong lane and `pnpm lint` fails. CI runs each lane with `--project=<name>` — no hard-coded file lists.
 
 ---
 

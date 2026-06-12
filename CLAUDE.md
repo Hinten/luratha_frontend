@@ -26,7 +26,7 @@ pnpm build                    # production build — run when the change affects
 ```
 
 Scope a command to one app: `pnpm --filter @luratha/store <script>`.
-Run a single Playwright spec: `pnpm --filter @luratha/store exec playwright test e2e/home.spec.ts`
+Run a single Playwright spec: `pnpm --filter @luratha/store exec playwright test e2e/home.spec.ts` (or a whole lane: `… --project=public|auth|mp`)
 
 **Mandatory order for any code change:** `pnpm typecheck` → `pnpm lint` → `pnpm test` → `pnpm test:e2e`
 
@@ -34,7 +34,7 @@ TypeScript check is mandatory: always run `pnpm typecheck` to detect type errors
 
 For schema or Firebase request flow changes (schemas, Firestore queries, Auth/Storage calls, repositories, SSR pages, seed endpoints), also run: `pnpm test:firestore`. The `test:firestore`, `test:functions:cloud`, `test:cloud`, and `test:e2e` suites all run against the dedicated test project `luratha-96386` and require Firebase credentials in env (`FIREBASE_SERVICE_ACCOUNT_BASE64` + `FIREBASE_WEB_APP_CONFIG_BASE64` or the `NEXT_PUBLIC_FIREBASE_*` vars). They auto-skip if credentials are missing. The Firebase Emulator is no longer used.
 
-**CI matrix**: PRs to `master` run lint/typecheck, unit, `build` (Next.js — all apps), integration-cloud and e2e-cloud. PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite. The `build` job skips when Firebase secrets are absent (the storefront prerenders Firestore-backed pages). MercadoPago checkout E2E specs live in a separate path-triggered workflow (`e2e-checkout-mp.yml`); `e2e-cloud` excludes them.
+**CI matrix**: PRs to `master` run lint/typecheck, unit, `build` (Next.js — store + mercadopago), integration-cloud and `e2e-auth` (the `*.auth.spec.ts` lane, with live login: `E2E_LIVE_AUTH=1` + `TEST_USER_*` — it **fails** rather than skips when those secrets are missing). PRs to `production` additionally run the heavier `functions-cloud` (deploy + trigger tests) suite. The `build` job skips when Firebase secrets are absent (the storefront prerenders Firestore-backed pages). Three E2E lanes each target a Playwright `--project`: `e2e-auth` (in `test.yml`), the public lane in **`e2e-public.yml`** (`--project=public`, path-triggered), and the MercadoPago lane in **`e2e-checkout-mp.yml`** (`--project=mp`, path-triggered). The **admin** app has its own **`test-admin.yml`** (lint/typecheck/unit/build via `--filter=@luratha/admin`, path-triggered, no secrets); `test.yml` excludes it from the fan-out (`--filter='!@luratha/admin'`).
 
 **CI failure logs**: when the `Test` workflow fails on a PR, its own `report-failure` job posts the tail of each failed job's log (last ~12KB) as a PR comment. If you (Claude) pushed and the CI broke, **read the most recent PR comment** for the actual error — `pull_request_read` (`get_check_runs`) only returns metadata, not log output.
 
@@ -93,7 +93,7 @@ Paths below are under `apps/store/`.
 | `src/test/` | Cloud test setup, Playwright cloud setup, seed helpers, Vitest setup |
 | `src/test/cloud/` | Vitest cloud integration suite (`*.cloud.test.ts`) |
 | `src/test/cloud-functions/` | Vitest Functions trigger suite (`*.functions.test.ts`) |
-| `e2e/` | Playwright specs (run against `luratha-96386`) |
+| `e2e/` | Playwright specs (run against `luratha-96386`); routed into `public`/`auth`/`mp` projects by filename (`*.auth.spec.ts` / `*.mp.spec.ts` / else public) — see Testing Conventions |
 
 ### CRUD API layout
 
@@ -208,7 +208,7 @@ For `functions/` (separate npm project outside the pnpm workspace), use the loca
 - Unit/component tests: `src/**/__tests__/*.test.ts(x)` (Vitest, jsdom; no Firebase)
 - Cloud integration tests: `src/test/cloud/*.cloud.test.ts` and `src/test/cloud/*.test.ts` (Vitest, node) — run against `luratha-96386`
 - Cloud Functions trigger tests: `src/test/cloud-functions/*.functions.test.ts` (Vitest, node) — require Functions deployed to `luratha-96386`
-- E2E: `e2e/*.spec.ts` (Playwright) — runs against `luratha-96386`
+- E2E: `e2e/*.spec.ts` (Playwright) — runs against `luratha-96386`. Specs are routed into **projects by filename convention**: `*.auth.spec.ts` (needs live login — `E2E_LIVE_AUTH=1` + `TEST_USER_*`), `*.mp.spec.ts` (MercadoPago checkout), everything else is **public** (no login, no payment). CI targets a lane with `--project=public|auth|mp` instead of listing files. `apps/store/eslint.e2e-guards.mjs` blocks login helpers in public specs and MercadoPago plumbing outside `*.mp.spec.ts`, so the split can't silently rot
 - Always mock `next/link` and `next/navigation` in Vitest component tests (no router context)
 - Files with `import "server-only"` break Vitest unless aliased; the alias is already in `vitest.config.mts` — add new `server-only` modules to it if needed
 - Cloud-backed suites auto-skip when credentials are missing (`describeCloud` from `src/test/cloud/sharedSetup.ts`)
