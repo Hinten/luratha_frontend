@@ -16,7 +16,14 @@ type FieldPredicate = (product: FeedProduct) => boolean;
  * any of these is rejected, so we surface the offending products explicitly.
  */
 const REQUIRED_FIELDS: Record<string, FieldPredicate> = {
-  id: (p) => p.id.trim().length > 0,
+  // `g:id` is SKU-derived: a variant's SKU for variant products, the product SKU
+  // for simple ones (the Firestore doc id is only an emergency fallback). Check
+  // that SKU source — not the always-present doc id — so the report flags items
+  // with a blank SKU that would silently degrade to a doc-id identifier.
+  id: (p) =>
+    p.variants && p.variants.length > 0
+      ? p.variants.some((v) => v.sku.trim().length > 0)
+      : p.sku.trim().length > 0,
   title: (p) => p.title.trim().length > 0,
   description: (p) => p.description.trim().length > 0,
   link: (p) => p.slug.trim().length > 0,

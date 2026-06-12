@@ -67,6 +67,25 @@ describe("assessFeedQuality", () => {
     );
   });
 
+  it("flags a blank SKU as a missing required id (the g:id source), ignoring the doc id", () => {
+    const report = assessFeedQuality([makeProduct({ id: "prod-1", sku: "" })]);
+    expect(report.required.id.present).toBe(0);
+    expect(report.missingRequired).toHaveLength(1);
+    expect(report.missingRequired[0].fields).toContain("id");
+  });
+
+  it("treats a variant SKU as covering the required id even when the parent SKU is blank", () => {
+    const report = assessFeedQuality([
+      makeProduct({
+        sku: "",
+        variants: [
+          { sku: "VAR-A", gtin: null, colors: [], sizes: ["P"], photoIds: [], active: true },
+        ],
+      }),
+    ]);
+    expect(report.required.id.present).toBe(1);
+  });
+
   it("computes recommended fill-rate across the catalog", () => {
     const report = assessFeedQuality([
       makeProduct({ id: "a", gtin: "7891234567890" }),

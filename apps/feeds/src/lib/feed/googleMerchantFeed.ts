@@ -148,6 +148,8 @@ function expandOffers(product: FeedProduct): FeedOffer[] {
   // merchant-facing identifier the catalog platforms key on. Fall back to the
   // product id only if a product somehow has no SKU, since g:id must be
   // non-empty (g:item_group_id below still uses the product id to group sizes).
+  // g:mpn reuses the same baseId so the identifier stays consistent with g:id
+  // in that no-SKU fallback (it equals the SKU in the normal case).
   const sizes = product.sizes.length > 0 ? product.sizes : [null];
   const grouped = sizes.length > 1;
   const color = joinValues(product.colors);
@@ -155,7 +157,7 @@ function expandOffers(product: FeedProduct): FeedOffer[] {
   return sizes.map((size) => ({
     id: size ? `${baseId}-${size}` : baseId,
     itemGroupId: grouped ? product.id : null,
-    mpn: product.sku,
+    mpn: baseId,
     gtin: product.gtin,
     color,
     size,
