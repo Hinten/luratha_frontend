@@ -96,9 +96,9 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         if: steps.check_secrets.outputs.skip != 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: steps.check_secrets.outputs.skip != 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -119,7 +119,7 @@ jobs:
             e2e/checkout.spec.ts
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-report-mp
           path: apps/store/playwright-report
