@@ -11,7 +11,10 @@ Endpoints:
   the Facebook/Meta Catalog also ingests. ISR-cached (`revalidate = 3600`) so Firestore is read at
   most ~once/hour regardless of bot traffic.
 - `GET /api/feeds/quality.json` — internal feed-quality report (field fill-rate + items missing
-  required Merchant fields). `noindex`. Used to catch catalog gaps before the platforms reject ads.
+  required Merchant fields). Used to catch catalog gaps before the platforms reject ads.
+  **Dev-only**: it has no auth and is publicly cacheable, so it serves only under `pnpm dev`
+  (`NODE_ENV === "development"`) and responds `404` in production/preview. A production-safe guard
+  (bearer token + `private` caching) is tracked in issue #207.
 
 Data path (`src/lib/feed/`):
 - `fetchFeedProducts.ts` — reads `status == active && isPurchasable == true` via the **Enterprise

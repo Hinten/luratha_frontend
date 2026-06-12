@@ -15,8 +15,18 @@ const REQUIRED_FILL_RATE_THRESHOLD = 0.99;
  * Internal feed-quality report: per-attribute fill-rate plus the products
  * missing a required Merchant attribute. Complements the external Merchant
  * Center / Commerce Manager diagnostics by catching catalog gaps in-house.
+ *
+ * Dev-only: the report is publicly cacheable (`Cache-Control: public`) and has
+ * no auth, so in production/preview it would leak catalog gaps through shared
+ * caches. Until it gets a proper guard (bearer token + `private` caching),
+ * serve it only under `pnpm dev`; production responds 404. The production
+ * guard is tracked in issue #207.
  */
 export async function GET() {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ message: "Not found" }, { status: 404 });
+  }
+
   const products = await fetchFeedProducts();
   const report = assessFeedQuality(products);
 

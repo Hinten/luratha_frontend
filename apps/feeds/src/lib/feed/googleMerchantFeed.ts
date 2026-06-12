@@ -115,6 +115,12 @@ function pickPhotos(product: FeedProduct, photoIds: string[]): FeedPhoto[] {
 
 function expandOffers(product: FeedProduct): FeedOffer[] {
   if (product.variants && product.variants.length > 0) {
+    // When a product has variants, only its active variants are offered — there
+    // is no parent-level offer. If every variant is inactive this returns an
+    // empty list and the product is intentionally dropped from the feed: with no
+    // active variant there is nothing buyable, and falling back to a parent-SKU
+    // offer would advertise an item that cannot be purchased (Merchant Center
+    // disapproves such offers). Variant-less products take the branch below.
     const offers: FeedOffer[] = [];
     for (const variant of product.variants) {
       if (!variant.active) continue;
