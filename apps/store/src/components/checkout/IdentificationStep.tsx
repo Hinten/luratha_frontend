@@ -132,8 +132,12 @@ export default function IdentificationStep(props: IdentificationStepProps) {
       lastName: values.lastName,
       identification: {
         type: values.identificationType,
-        // CNPJ pode ser alfanumérico — remove só a pontuação da máscara.
-        number: values.identificationNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+        // Normalização por tipo: CPF é estritamente numérico; CNPJ pode ser
+        // alfanumérico — remove só a pontuação da máscara e maiusculiza.
+        number:
+          values.identificationType === "CPF"
+            ? values.identificationNumber.replace(/\D/g, "")
+            : values.identificationNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
       },
     };
 

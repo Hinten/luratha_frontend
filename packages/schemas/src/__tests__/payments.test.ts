@@ -61,6 +61,14 @@ describe("payerFormSchema", () => {
       }
     });
 
+    it("rejeita CPF contendo letras (ex.: valor alfanumérico após trocar CNPJ→CPF)", () => {
+      // 11 dígitos válidos + letra: sem o check explícito, o strip de
+      // não-dígitos aprovaria no client um valor que o servidor rejeita.
+      expect(issueMessages({ ...validBase, identificationNumber: "12345678909A" })).toContain(
+        "CPF deve conter apenas dígitos.",
+      );
+    });
+
     it("aceita CPF válido com ou sem máscara", () => {
       for (const cpf of ["123.456.789-09", "12345678909"]) {
         expect(payerFormSchema.safeParse({ ...validBase, identificationNumber: cpf }).success).toBe(

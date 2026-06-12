@@ -40,10 +40,14 @@ export const payerFormSchema = z
       ctx.addIssue({ code: "custom", path: ["identificationNumber"], message });
 
     if (data.identificationType === "CPF") {
-      const digits = data.identificationNumber.replace(/\D/g, "");
-      if (digits.length !== 11) {
+      const chars = data.identificationNumber.replace(/[^A-Za-z0-9]/g, "");
+      if (/[A-Za-z]/.test(chars)) {
+        // Letras só existem em CNPJ alfanumérico — descartá-las aqui deixaria
+        // o client aprovar um valor que o servidor rejeita (review PR #209).
+        addIssue("CPF deve conter apenas dígitos.");
+      } else if (chars.length !== 11) {
         addIssue("CPF deve ter 11 dígitos.");
-      } else if (!isValidCpf(digits)) {
+      } else if (!isValidCpf(chars)) {
         addIssue("CPF inválido. Confira os dígitos digitados.");
       }
       return;
