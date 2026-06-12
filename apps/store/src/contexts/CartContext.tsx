@@ -319,9 +319,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Espelha `items` num ref para o `removeItem` montar o payload de
   // `remove_from_cart` (nome/preço/quantidade) sem entrar nas deps do callback.
-  const itemsRef = useRef<CartItem[]>(items);
+  // Nome distinto do `itemsRef` (collection ref do Firestore) usado no effect
+  // de hidratação abaixo, para evitar shadowing.
+  const latestItemsRef = useRef<CartItem[]>(items);
   useEffect(() => {
-    itemsRef.current = items;
+    latestItemsRef.current = items;
   }, [items]);
 
   // --- Hydration, subscription, and guest→logged merge --------------------
@@ -577,7 +579,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback(
     async (itemId: string) => {
       setError(null);
-      const removed = itemsRef.current.find((i) => i.id === itemId);
+      const removed = latestItemsRef.current.find((i) => i.id === itemId);
       if (!userId) {
         updateGuestItems((prev) => prev.filter((i) => i.id !== itemId));
         if (removed) trackRemoveFromCart(removed);

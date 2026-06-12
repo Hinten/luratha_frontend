@@ -169,7 +169,10 @@ export const marketingSettingsSchema = z.object({
   ga4MeasurementId: z
     .string()
     .trim()
-    .regex(/^(G-[A-Z0-9]{4,})?$/, "Measurement ID inválido — esperado formato G-XXXXXXXX.")
+    .regex(
+      /^(G-[A-Z0-9]{4,})?$/,
+      "Measurement ID inválido — comece com 'G-' seguido de letras e números (ex.: G-XXXXXXXXXX).",
+    )
     .max(20)
     .default(""),
   /** Liga/desliga a medição do GA4 sem perder o ID configurado. */
