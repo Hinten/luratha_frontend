@@ -1,0 +1,39 @@
+{
+  "name": "@luratha/feeds",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3003",
+    "build": "next build",
+    "start": "next start --port 3003",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.mts",
+    "test:firestore": "vitest run --config vitest.cloud.config.mts",
+    "test:cloud": "vitest run --config vitest.cloud.config.mts"
+  },
+  "dependencies": {
+    "@luratha/core": "workspace:*",
+    "@luratha/firestore": "workspace:*",
+    "@luratha/schemas": "workspace:*",
+    "firebase": "^12.14.0",
+    "firebase-admin": "^13.10.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "server-only": "^0.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@luratha/devtools": "workspace:*",
+    "@types/node": "^20.19.41",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.2.6",
+    "tsx": "^4.22.3",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.7"
+  }
+}

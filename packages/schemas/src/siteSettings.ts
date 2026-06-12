@@ -137,10 +137,37 @@ export const companySettingsSchema = z.object({
   jurisdiction: z.string().trim().max(120).default(""),
 });
 
+/**
+ * Identificadores de marketing/analytics que o dono cadastra sem deploy.
+ *
+ * Por ora estes valores são apenas **armazenados** (cadastro no admin); a
+ * renderização dos scripts (Meta Pixel, GA4) na loja e a vinculação dos feeds
+ * de catálogo ficam para uma fase seguinte. Todos os campos têm `default("")`
+ * para retrocompatibilidade: documentos `settings/global` criados antes deste
+ * bloco continuam válidos na leitura — o `.default()` materializa um `marketing`
+ * vazio (mesmo padrão de `company`).
+ */
+export const marketingSettingsSchema = z.object({
+  /**
+   * ID do Meta Pixel (Facebook/Instagram), tipicamente numérico
+   * (ex.: "123456789012345"). Armazenado como string livre — o formato não é
+   * validado aqui (v1 apenas persiste; a validação fica para quando a loja
+   * passar a renderizar o script do Pixel).
+   */
+  metaPixelId: z.string().trim().max(32).default(""),
+  /** ID do Catálogo do Facebook/Commerce Manager onde o feed é cadastrado. */
+  facebookCatalogId: z.string().trim().max(32).default(""),
+  /** ID da conta do Google Merchant Center que consome o feed de produtos. */
+  googleMerchantCenterId: z.string().trim().max(32).default(""),
+  /** Measurement ID do Google Analytics 4 (ex.: "G-XXXXXXXXXX"). */
+  ga4MeasurementId: z.string().trim().max(20).default(""),
+});
+
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
   company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
+  marketing: marketingSettingsSchema.default(() => marketingSettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -151,6 +178,7 @@ export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
 export type CompanySettings = z.infer<typeof companySettingsSchema>;
+export type MarketingSettings = z.infer<typeof marketingSettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

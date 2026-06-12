@@ -52,6 +52,53 @@ describe("siteSettings schema", () => {
   });
 });
 
+describe("marketing settings", () => {
+  it("materializes an empty marketing block for documents created before it (retro-compat)", () => {
+    // Documento legado: só `shipping`, sem `marketing`. A leitura deve continuar
+    // válida e o `.default()` materializa todos os campos vazios.
+    const parsed = validateSiteSettings({
+      id: "global",
+      shipping: getDefaultSiteSettings().shipping,
+      updatedAt: new Date().toISOString(),
+    });
+    expect(parsed.marketing).toEqual({
+      metaPixelId: "",
+      facebookCatalogId: "",
+      googleMerchantCenterId: "",
+      ga4MeasurementId: "",
+    });
+  });
+
+  it("preserves provided marketing identifiers and trims them", () => {
+    const parsed = validateSiteSettings({
+      id: "global",
+      shipping: getDefaultSiteSettings().shipping,
+      marketing: {
+        metaPixelId: "  123456789012345  ",
+        facebookCatalogId: "987654321",
+        googleMerchantCenterId: "555000111",
+        ga4MeasurementId: "G-ABC123XYZ",
+      },
+      updatedAt: new Date().toISOString(),
+    });
+    expect(parsed.marketing.metaPixelId).toBe("123456789012345");
+    expect(parsed.marketing.facebookCatalogId).toBe("987654321");
+    expect(parsed.marketing.googleMerchantCenterId).toBe("555000111");
+    expect(parsed.marketing.ga4MeasurementId).toBe("G-ABC123XYZ");
+  });
+
+  it("rejects identifiers longer than the allowed maximum", () => {
+    expect(() =>
+      validateSiteSettings({
+        id: "global",
+        shipping: getDefaultSiteSettings().shipping,
+        marketing: { metaPixelId: "1".repeat(64) },
+        updatedAt: new Date().toISOString(),
+      }),
+    ).toThrow();
+  });
+});
+
 describe("normalizePostalCode", () => {
   it("inserts hyphen when missing", () => {
     expect(normalizePostalCode("01310100")).toBe("01310-100");

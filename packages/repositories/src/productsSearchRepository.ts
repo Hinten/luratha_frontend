@@ -19,6 +19,7 @@ import {
   field,
   or,
   type BooleanExpression,
+  type Pipeline,
   type PipelineSnapshot,
 } from "firebase/firestore/pipelines";
 import {
@@ -50,6 +51,19 @@ export interface SearchOptions {
 export interface ProductsSearchRepository {
   search(filters: ProductSearchFilters, options?: SearchOptions): Promise<FirestoreProduct[]>;
   findByIdOrSku(term: string): Promise<FirestoreProduct | null>;
+}
+
+export interface TextSearchPipelineParams {
+  filters: ProductSearchFilters;
+  /** Resolved by the caller from `filters.categorySlug` (the builder stays sync). */
+  categoryId: string | null;
+  /**
+   * Forces a specific Firestore index on the collection source stage. Production
+   * omits it so a missing composite index degrades to a scan instead of throwing;
+   * the cloud test passes a runtime-resolved index name to prove the index is
+   * present and actually used by the pipeline.
+   */
+  forceIndex?: string;
 }
 
 /**
@@ -126,8 +140,6 @@ export function createProductsSearchRepository(
   }
 
   async function executePipelineSearch(filters: ProductSearchFilters): Promise<FirestoreProduct[]> {
-    const plan = buildEnterprisePipelineSearchPlan(filters);
-    let pipeline = dbInstance.pipeline().collection(plan.collection);
     let categoryId: string | null = null;
 
     if (filters.categorySlug) {
@@ -138,43 +150,11 @@ export function createProductsSearchRepository(
       categoryId = category.id;
     }
 
-    const pipelineFilters = [field("status").equal("active")];
-    if (categoryId) {
-      pipelineFilters.push(field("categoryId").equal(categoryId));
-    }
-    if (filters.minPrice !== undefined) {
-      pipelineFilters.push(field("price.price").greaterThanOrEqual(filters.minPrice));
-    }
-    if (filters.maxPrice !== undefined) {
-      pipelineFilters.push(field("price.price").lessThanOrEqual(filters.maxPrice));
-    }
-    if (filters.tags?.length) {
-      pipelineFilters.push(field("tags").arrayContainsAny(filters.tags.slice(0, 10)));
-    }
-
-    pipeline = pipeline.where(combineWithAnd(pipelineFilters));
-
-    const term = (filters.term ?? "").trim();
-    if (term) {
-      // Firestore pipeline regexMatch is anchored — the full lowercased field
-      // value must match the pattern. Surround the user's escaped term with
-      // `.*` so we get substring matching (the behavior real users expect).
-      const regex = `.*${escapeRegex(term.toLowerCase())}.*`;
-      pipeline = pipeline.where(
-        or(
-          field("title").toLower().regexMatch(regex),
-          field("description").toLower().regexMatch(regex),
-        ),
-      );
-    }
-
-    pipeline = pipeline.sort(mapSortToPipelineOrdering(filters.sort));
-
-    const limit = Math.min(Math.max(filters.limit ?? 24, 1), 100);
-    const offset = Math.max(filters.offset ?? 0, 0);
-
-    pipeline = pipeline.offset(offset).limit(limit);
-
+    // Production never forces an index: if the composite index is missing the
+    // pipeline still runs (scan) instead of throwing. buildTextSearchPipeline is
+    // shared with the cloud test, which passes a resolved `forceIndex` to assert
+    // the index is present and actually used.
+    const pipeline = buildTextSearchPipeline(dbInstance, { filters, categoryId });
     const snapshot = await execute(pipeline);
     return mapPipelineSnapshotToProducts(snapshot);
   }
@@ -317,6 +297,67 @@ export function createProductsSearchRepository(
   }
 
   return { search, findByIdOrSku };
+}
+
+/**
+ * Builds the textual-search pipeline (collection source → filters → regex match
+ * → sort → pagination) shared by the production repository and the cloud index
+ * test. `categoryId` must already be resolved from the slug by the caller so the
+ * builder stays synchronous.
+ *
+ * When `forceIndex` is provided it is applied to the collection source stage,
+ * forcing Firestore to use that exact index (and throwing if it does not exist).
+ * Production omits it; the cloud test passes a runtime-resolved index name to
+ * prove the composite index is present and used by the real pipeline.
+ */
+export function buildTextSearchPipeline(
+  db: Firestore,
+  { filters, categoryId, forceIndex }: TextSearchPipelineParams,
+): Pipeline {
+  const plan = buildEnterprisePipelineSearchPlan(filters);
+
+  let pipeline = forceIndex
+    ? db.pipeline().collection({ collection: plan.collection, forceIndex })
+    : db.pipeline().collection(plan.collection);
+
+  const pipelineFilters = [field("status").equal("active")];
+  if (categoryId) {
+    pipelineFilters.push(field("categoryId").equal(categoryId));
+  }
+  if (filters.minPrice !== undefined) {
+    pipelineFilters.push(field("price.price").greaterThanOrEqual(filters.minPrice));
+  }
+  if (filters.maxPrice !== undefined) {
+    pipelineFilters.push(field("price.price").lessThanOrEqual(filters.maxPrice));
+  }
+  if (filters.tags?.length) {
+    pipelineFilters.push(field("tags").arrayContainsAny(filters.tags.slice(0, 10)));
+  }
+
+  pipeline = pipeline.where(combineWithAnd(pipelineFilters));
+
+  const term = (filters.term ?? "").trim();
+  if (term) {
+    // Firestore pipeline regexMatch is anchored — the full lowercased field
+    // value must match the pattern. Surround the user's escaped term with
+    // `.*` so we get substring matching (the behavior real users expect).
+    const regex = `.*${escapeRegex(term.toLowerCase())}.*`;
+    pipeline = pipeline.where(
+      or(
+        field("title").toLower().regexMatch(regex),
+        field("description").toLower().regexMatch(regex),
+      ),
+    );
+  }
+
+  pipeline = pipeline.sort(mapSortToPipelineOrdering(filters.sort));
+
+  const limit = Math.min(Math.max(filters.limit ?? 24, 1), 100);
+  const offset = Math.max(filters.offset ?? 0, 0);
+
+  pipeline = pipeline.offset(offset).limit(limit);
+
+  return pipeline;
 }
 
 function mapSortToPipelineOrdering(sort?: ProductSort) {

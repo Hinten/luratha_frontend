@@ -1,0 +1,12 @@
+# Firebase App Hosting backend config for the product-feed app
+# (luratha-app-feeds). See https://firebase.google.com/docs/app-hosting/configure
+#
+# Backend-only — serves the Google Merchant / Facebook catalog XML feed and a
+# feed-quality JSON report. It reads the public `products` collection through the
+# client SDK pipeline (`searchDb`); App Hosting injects the Firebase web config
+# (`FIREBASE_WEBAPP_CONFIG`) and Admin credentials automatically, so no secrets
+# are declared here. Kept isolated from the storefront backend so feed
+# generation never competes for the store's CPU/memory.
+runConfig:
+  minInstances: 0
+  maxInstances: 3
