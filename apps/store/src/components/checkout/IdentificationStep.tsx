@@ -105,9 +105,11 @@ export default function IdentificationStep(props: IdentificationStepProps) {
   // editar — não destruímos dígitos pelas costas.
   useEffect(() => {
     const current = watch("identificationNumber") ?? "";
-    const digits = current.replace(/\D/g, "");
-    const maxDigits = idType === "CNPJ" ? 14 : 11;
-    if (digits.length > maxDigits) {
+    const chars = current.replace(/[^A-Za-z0-9]/g, "");
+    const maxChars = idType === "CNPJ" ? 14 : 11;
+    // Letras só existem em CNPJ alfanumérico — trocar pra CPF com letras no
+    // valor é tratado como "excede o formato" (formatCpf as descartaria).
+    if (chars.length > maxChars || (idType === "CPF" && /[A-Za-z]/.test(chars))) {
       // Excede o novo formato — preserva o valor cru (mascarado pelo formato
       // anterior) pra dar pro user a chance de remover dígitos manualmente.
       // O Zod no submit já bloqueia caso ele tente avançar com tamanho errado.
@@ -130,7 +132,8 @@ export default function IdentificationStep(props: IdentificationStepProps) {
       lastName: values.lastName,
       identification: {
         type: values.identificationType,
-        number: values.identificationNumber.replace(/\D/g, ""),
+        // CNPJ pode ser alfanumérico — remove só a pontuação da máscara.
+        number: values.identificationNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
       },
     };
 
@@ -246,7 +249,8 @@ export default function IdentificationStep(props: IdentificationStepProps) {
             <input
               id="ident-id-number"
               className={styles.input}
-              inputMode="numeric"
+              inputMode={idType === "CNPJ" ? "text" : "numeric"}
+              autoCapitalize="characters"
               maxLength={idType === "CNPJ" ? 18 : 14}
               aria-invalid={Boolean(errors.identificationNumber) || undefined}
               placeholder={idType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}

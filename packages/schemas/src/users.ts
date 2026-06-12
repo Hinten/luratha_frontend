@@ -11,9 +11,10 @@ import { nonEmptyStringSchema, timestampSchema, uidSchema } from "@luratha/schem
  * - ESTRANGEIRO: documento + país emissor (ISO-3166-1 alpha-2).
  *
  * Os formatos aceitos são os "mascarados" (CPF: 999.999.999-99,
- * CNPJ: 99.999.999/9999-99). A normalização para apenas dígitos
- * acontece na hora de gerar a NF-e — assim o que está no banco bate
- * com o que o usuário digitou.
+ * CNPJ: 99.999.999/9999-99 — as 12 primeiras posições aceitam letras
+ * maiúsculas, cobrindo o CNPJ alfanumérico emitido a partir de jul/2026).
+ * A normalização para apenas dígitos acontece na hora de gerar a NF-e —
+ * assim o que está no banco bate com o que o usuário digitou.
  */
 export const taxIdentitySchema = z.discriminatedUnion("type", [
   z.object({
@@ -28,7 +29,7 @@ export const taxIdentitySchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("PJ"),
-    cnpj: z.string().regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/),
+    cnpj: z.string().regex(/^[A-Z\d]{2}\.[A-Z\d]{3}\.[A-Z\d]{3}\/[A-Z\d]{4}-\d{2}$/),
     legalName: nonEmptyStringSchema.max(200),
     tradeName: z.string().trim().max(200).optional(),
     stateRegistration: z.union([
