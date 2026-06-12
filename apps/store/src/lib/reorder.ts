@@ -1,4 +1,5 @@
 import type { OrderItem, Product, ProductVariant, Stock } from "@luratha/schemas";
+import { resolveAvailableQty } from "@luratha/payments/orderStock";
 import type { CartItemInput } from "@/src/contexts/CartContext";
 
 /**
@@ -84,22 +85,6 @@ export function buildReorderItem(
       quantity: Math.min(orderItem.quantity, MAX_QUANTITY_PER_ITEM),
     },
   };
-}
-
-/** Quantidade disponível para o item, priorizando o estoque por variante. */
-function resolveAvailableQty(
-  product: Product,
-  stock: Stock | null,
-  variantId: string | undefined,
-): number {
-  if (stock?.hasVariants && variantId) {
-    return stock.variants?.[variantId] ?? 0;
-  }
-  if (stock) {
-    return stock.quantity;
-  }
-  // Sem doc de estoque, cai no total denormalizado do produto.
-  return product.totalStock;
 }
 
 /**

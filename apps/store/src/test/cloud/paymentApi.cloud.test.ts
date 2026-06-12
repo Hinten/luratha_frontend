@@ -71,7 +71,6 @@ vi.mock("@luratha/payments/mercadoPago", async () => {
   return { ...actual, ...mp };
 });
 
-import { POST as ordersPOST } from "@/src/app/api/orders/route";
 import { POST as paymentIntentPOST } from "@/src/app/api/checkout/payment-intent/route";
 
 type SeedDocument = { collection: string; id: string };
@@ -96,18 +95,22 @@ describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
     mockAuthedUser(null);
   });
 
+  /**
+   * Seeda a Order direto no Firestore (converter valida o schema). Esta suite
+   * testa o payment-intent — criar via `POST /api/orders` exigiria seedar
+   * catálogo + estoque (o endpoint valida e decrementa). O fixture sem
+   * `stockMovement` também exercita o no-op do release para pedidos legados.
+   */
   async function seedOrder(): Promise<string> {
-    const res = await ordersPOST(
-      new Request("http://localhost/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildPendingOrderFixture({ userId })),
-      }),
-    );
-    expect(res.status).toBe(201);
-    const order = (await res.json()) as { id: string };
-    seededDocs.push({ collection: firestoreCollections.orders, id: order.id });
-    return order.id;
+    const id = `${prefix}-order-${Math.random().toString(36).slice(2, 10)}`;
+    const order = buildPendingOrderFixture({ id, userId });
+    await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(id)
+      .withConverter(adminOrderConverter)
+      .set(order);
+    seededDocs.push({ collection: firestoreCollections.orders, id });
+    return id;
   }
 
   it("payment-intent persists paymentIntentId on the order", async () => {
@@ -153,5 +156,84 @@ describeCloud("/api/checkout/payment-intent (Cloud Firebase)", () => {
     expect(persisted.data()?.paymentPix?.qrCode).toBe("qr-code-data");
     expect(persisted.data()?.paymentPix?.qrCodeBase64).toBe("qr-code-base64");
     expect(persisted.data()?.paymentPix?.expiresAt).toBe("2026-05-29T12:00:00.000Z");
+  });
+
+  it("recusa síncrona de cartão devolve o estoque reservado pelo pedido", async () => {
+    // Pedido com reserva de estoque (stockMovement do POST /api/orders) + doc
+    // de stock correspondente — a recusa do cartão chega na resposta do
+    // próprio payment-intent (sem webhook) e deve liberar na mesma transação.
+    const productId = `${prefix}-prod-reject`;
+    await adminDb.collection(firestoreCollections.stock).doc(productId).set({
+      productId,
+      sku: "SKU-PAY-AB",
+      quantity: 0,
+      hasVariants: false,
+      variants: null,
+      updatedAt: new Date().toISOString(),
+    });
+    seededDocs.push({ collection: firestoreCollections.stock, id: productId });
+
+    const orderId = `${prefix}-order-reject`;
+    const order = buildPendingOrderFixture({
+      id: orderId,
+      userId,
+      paymentMethod: "credit_card",
+      stockMovement: "decremented",
+      items: [
+        {
+          id: "item-1",
+          productId,
+          itemSku: "SKU-PAY-AB",
+          name: "Vestido Linho",
+          photoId: "img-pay-001",
+          quantity: 1,
+          unitPrice: 200,
+          lineTotal: 200,
+          currency: "BRL",
+        },
+      ],
+    });
+    await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .set(order);
+    seededDocs.push({ collection: firestoreCollections.orders, id: orderId });
+
+    mp.createOrder.mockResolvedValueOnce({
+      paymentId: "mp-cloud-reject-001",
+      paymentMethod: "credit_card",
+      status: "rejected",
+    });
+
+    const res = await paymentIntentPOST(
+      new Request("http://localhost/api/checkout/payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentMethod: "credit_card",
+          orderId,
+          payer: {
+            email: "comprador@teste.com",
+            identification: { type: "CPF", number: "12345678909" },
+          },
+          cardToken: "tok-cloud-reject",
+          installments: 1,
+          paymentMethodId: "master",
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const persisted = await adminDb
+      .collection(firestoreCollections.orders)
+      .doc(orderId)
+      .withConverter(adminOrderConverter)
+      .get();
+    expect(persisted.data()?.paymentStatus).toBe("rejected");
+    expect(persisted.data()?.stockMovement).toBe("released");
+
+    const stockSnap = await adminDb.collection(firestoreCollections.stock).doc(productId).get();
+    expect((stockSnap.data() as { quantity: number }).quantity).toBe(1);
   });
 });

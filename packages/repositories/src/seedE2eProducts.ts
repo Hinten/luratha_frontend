@@ -27,7 +27,10 @@ export function buildE2eTestProducts(): Product[] {
         currency: "BRL",
       },
       status: "active",
-      totalStock: 12,
+      // 99 por produto: os e2e de checkout agora decrementam estoque real a
+      // cada pedido criado — o seed re-zera a cada run (globalSetup), e a
+      // folga evita esgotar dentro de um mesmo run.
+      totalStock: 99,
       ratingAverage: 4.5,
       reviewCount: 5,
       color: ["Off White"],
@@ -37,7 +40,6 @@ export function buildE2eTestProducts(): Product[] {
           sku: "LURATHA_E2E_001_VARIANT",
           size: ["PP", "M", "GG"],
           color: ["Off White"],
-          stock: 12,
           photoIds: [],
           active: true,
         },
@@ -63,7 +65,7 @@ export function buildE2eTestProducts(): Product[] {
         currency: "BRL",
       },
       status: "active",
-      totalStock: 8,
+      totalStock: 99,
       ratingAverage: 4.7,
       reviewCount: 3,
       color: ["Terracota"],
@@ -88,7 +90,7 @@ export function buildE2eTestProducts(): Product[] {
         currency: "BRL",
       },
       status: "active",
-      totalStock: 7,
+      totalStock: 99,
       ratingAverage: 4.6,
       reviewCount: 4,
       color: ["Cinza", "Off White"],
@@ -107,17 +109,17 @@ export function buildE2eTestStock(): Stock[] {
     validateStock({
       productId: withVariants.id,
       sku: withVariants.sku,
-      quantity: 12,
+      quantity: 99,
       hasVariants: true,
       variants: {
-        var_luratha_e2e_001_v1: 12,
+        var_luratha_e2e_001_v1: 99,
       },
       updatedAt: now,
     }),
     validateStock({
       productId: withoutVariants1.id,
       sku: withoutVariants1.sku,
-      quantity: 8,
+      quantity: 99,
       hasVariants: false,
       variants: null,
       updatedAt: now,
@@ -125,7 +127,7 @@ export function buildE2eTestStock(): Stock[] {
     validateStock({
       productId: withoutVariants2.id,
       sku: withoutVariants2.sku,
-      quantity: 7,
+      quantity: 99,
       hasVariants: false,
       variants: null,
       updatedAt: now,

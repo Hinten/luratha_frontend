@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
-import { firestoreCollections, type Product } from "@luratha/schemas";
+import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
+import { firestoreCollections, type Product, type Stock } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
+import { resolveAvailableQty } from "@luratha/payments/orderStock";
 import {
   CartRepositoryError,
   cartItemInputSchema,
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
 
   const productIds = Array.from(new Set(parsed.items.map((i) => i.productId)));
   const products = new Map<string, Product>();
+  const stocks = new Map<string, Stock>();
   if (productIds.length > 0) {
     const refs = productIds.map((id) =>
       adminDb
@@ -83,11 +86,23 @@ export async function POST(request: Request) {
         .doc(id)
         .withConverter(adminProductConverter),
     );
-    const snaps = await adminDb.getAll(...refs);
+    const stockRefs = productIds.map((id) =>
+      adminDb.collection(firestoreCollections.stock).doc(id).withConverter(adminStockConverter),
+    );
+    const [snaps, stockSnaps] = await Promise.all([
+      adminDb.getAll(...refs),
+      adminDb.getAll(...stockRefs),
+    ]);
     for (const snap of snaps) {
       if (snap.exists) {
         const product = snap.data() as Product;
         products.set(product.id, product);
+      }
+    }
+    for (const snap of stockSnaps) {
+      if (snap.exists) {
+        const stock = snap.data() as Stock;
+        stocks.set(stock.productId, stock);
       }
     }
   }
@@ -143,6 +158,23 @@ export async function POST(request: Request) {
       continue;
     }
 
+    // Soft gate de estoque: esgotado → drop (com reason); parcialmente
+    // disponível → cap na quantidade. Mantém a filosofia leniente do merge —
+    // a checagem autoritativa acontece no POST /api/orders.
+    const availableQty = resolveAvailableQty(
+      product,
+      stocks.get(item.productId) ?? null,
+      item.variantId,
+    );
+    if (availableQty <= 0) {
+      dropped.push({
+        productId: item.productId,
+        variantId: item.variantId,
+        reason: "out_of_stock",
+      });
+      continue;
+    }
+
     const catalogPrice =
       product.price.salePrice !== null ? product.price.salePrice : product.price.price;
     // Refresh price/slug/dimensions from catalog instead of trusting the
@@ -152,6 +184,7 @@ export async function POST(request: Request) {
       unitPrice: catalogPrice,
       productSlug: product.slug ?? item.productSlug,
       variantSku: expectedSku,
+      quantity: Math.min(item.quantity, availableQty),
       dimensions: product.dimensions,
     });
   }
