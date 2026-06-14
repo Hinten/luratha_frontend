@@ -13,7 +13,7 @@
   "dependencies": {
     "@luratha/firestore": "workspace:*",
     "firebase-admin": "^13.10.0",
-    "next": "16.2.9",
+    "next": "16.2.6",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
