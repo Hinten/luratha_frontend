@@ -21,13 +21,21 @@ export const addressSchema = z.object({
   label: z.string().trim().max(50, "Apelido muito longo (máx. 50).").optional(),
 
   /** Nome de quem recebe — pode diferir do nome do usuário. */
-  recipientName: z.string().trim().min(1, "Informe o nome do destinatário."),
+  recipientName: z
+    .string()
+    .trim()
+    .min(1, "Informe o nome do destinatário.")
+    .max(120, "Nome do destinatário muito longo (máx. 120)."),
 
   /** CEP no formato 99999-999. */
   postalCode: z.string().regex(/^\d{5}-\d{3}$/, "CEP inválido. Use o formato 00000-000."),
 
   /** Logradouro (rua/avenida). */
-  line1: z.string().trim().min(1, "Informe o logradouro."),
+  line1: z
+    .string()
+    .trim()
+    .min(1, "Informe o logradouro.")
+    .max(120, "Logradouro muito longo (máx. 120)."),
 
   /** Número do imóvel. Aceita "S/N" para imóveis sem numeração. */
   number: z
@@ -43,10 +51,14 @@ export const addressSchema = z.object({
   reference: z.string().trim().max(200, "Referência muito longa (máx. 200).").optional(),
 
   /** Bairro. */
-  neighborhood: z.string().trim().min(1, "Informe o bairro."),
+  neighborhood: z
+    .string()
+    .trim()
+    .min(1, "Informe o bairro.")
+    .max(80, "Bairro muito longo (máx. 80)."),
 
   /** Município. */
-  city: z.string().trim().min(1, "Informe a cidade."),
+  city: z.string().trim().min(1, "Informe a cidade.").max(80, "Cidade muito longa (máx. 80)."),
 
   /** UF (sigla de 2 letras) — 26 estados + DF + EX (estrangeiro). */
   state: z.enum(UFS, { message: "Selecione um estado." }),

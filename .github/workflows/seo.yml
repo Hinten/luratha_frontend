@@ -37,11 +37,12 @@ jobs:
     name: SEO E2E (Playwright head + JSON-LD)
     runs-on: ubuntu-latest
     needs: seo-unit
-    # Shares the cloud test project with test.yml's e2e-cloud job — serialize so
-    # the two suites do not race on the same seeded fixtures.
-    concurrency:
-      group: luratha-96386-e2e
-      cancel-in-progress: false
+    # No cross-run concurrency group. This job re-seeds the shared cloud project
+    # via the same idempotent, non-destructive globalSetup as test.yml's
+    # e2e-cloud (see seedE2eCloudFirestore), and only reads catalog data — so it
+    # is safe to run concurrently. Previously it shared the `luratha-96386-e2e`
+    # group with e2e-cloud and e2e-mp; with three workflows feeding one group and
+    # GitHub allowing only one queued run, this job was the one getting cancelled.
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}

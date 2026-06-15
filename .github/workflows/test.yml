@@ -208,9 +208,11 @@ jobs:
     name: E2E (Playwright + cloud)
     runs-on: ubuntu-latest
     needs: [unit, integration-cloud]
-    concurrency:
-      group: luratha-96386-e2e
-      cancel-in-progress: false
+    # No cross-run concurrency group: the cloud fixtures are seeded idempotently
+    # and non-destructively (see seedE2eCloudFirestore), and these specs only
+    # read the shared catalog + create per-test ephemeral users — so concurrent
+    # runs (this job, seo-e2e, other PRs) no longer race. Same-PR superseded runs
+    # are already cancelled by the workflow-level concurrency above.
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}

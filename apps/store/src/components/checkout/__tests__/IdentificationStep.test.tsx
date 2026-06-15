@@ -152,6 +152,23 @@ describe("IdentificationStep", () => {
     expect(input.value).toBe("12.345.678/0001-90");
   });
 
+  it("aplica máscara CNPJ alfanumérico maiusculizando as letras", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{ email: "m@e.com", firstName: "M", lastName: "S" }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Tipo de documento"), "CNPJ");
+
+    const input = screen.getByLabelText("Número do documento") as HTMLInputElement;
+    await user.type(input, "12abc34501de35");
+    expect(input.value).toBe("12.ABC.345/01DE-35");
+  });
+
   it("preserva valor cru ao trocar de CNPJ pra CPF quando excede 11 dígitos", async () => {
     const user = userEvent.setup();
     render(
@@ -230,6 +247,81 @@ describe("IdentificationStep", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("bloqueia submit quando o CPF tem dígitos verificadores inválidos", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{ email: "marina@example.com", firstName: "Marina", lastName: "Souza" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    // 11 dígitos, mas DVs errados (sequência repetida).
+    await user.type(screen.getByLabelText("Número do documento"), "11111111111");
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/CPF inválido/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia submit quando o CNPJ tem dígitos verificadores inválidos", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{
+          email: "marina@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CNPJ",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    // 14 dígitos, mas DV correto seria "-95".
+    await user.type(screen.getByLabelText("Número do documento"), "12345678000190");
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/CNPJ inválido/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia submit quando o email tem múltiplos @", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <IdentificationStep
+        userId="user_1"
+        defaults={{ firstName: "Marina", lastName: "Souza", identificationNumber: "12345678909" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    // Email patológico da issue #160 — quebraria o withSandboxEmail do
+    // adapter MercadoPago se chegasse lá.
+    await user.type(screen.getByLabelText("E-mail"), "a@b@c.com");
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/E-mail inválido/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("bloqueia submit quando o email é inválido", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
@@ -293,6 +385,37 @@ describe("IdentificationStep", () => {
     expect(payer.email).toBe("marina@example.com");
     expect(payer.identification.number).toBe("12345678909");
     expect(payer.identification.type).toBe("CPF");
+  });
+
+  it("submit OK com CNPJ alfanumérico: payer leva o número sem máscara em maiúsculas", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payer: PaymentPayer) => void>();
+    fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
+
+    render(
+      <IdentificationStep
+        userId="user_42"
+        defaults={{
+          email: "loja@example.com",
+          firstName: "Marina",
+          lastName: "Souza",
+          identificationType: "CNPJ",
+          identificationNumber: "12.ABC.345/01DE-35",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    const payer = onSubmit.mock.calls[0][0];
+    expect(payer.identification).toEqual({ type: "CNPJ", number: "12ABC34501DE35" });
+    // CNPJ não persiste taxIdentity (form não coleta legalName/IE).
+    const [, init] = fetchSpy.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({ lastName: "Souza" });
   });
 
   it("submit com PATCH 404: faz fallback pra PUT criando o perfil completo", async () => {
