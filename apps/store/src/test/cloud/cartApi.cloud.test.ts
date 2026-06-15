@@ -68,207 +68,18 @@ import { GET as cartGET, DELETE as cartDELETE } from "@/src/app/api/cart/route";
 import { POST as itemsPOST } from "@/src/app/api/cart/items/route";
 import { PUT as itemPUT, DELETE as itemDELETE } from "@/src/app/api/cart/items/[itemId]/route";
 import { POST as mergePOST } from "@/src/app/api/cart/merge/route";
+import {
+  VARIANT_G_SKU,
+  VARIANT_M_SKU,
+  buildSimpleProduct,
+  buildVariableProduct,
+  cleanupDocuments,
+  seedProduct,
+  seedStockDoc,
+  type SeedDocument,
+} from "@/src/test/cloud/productFixtures";
 
 // ── Test fixtures ──────────────────────────────────────────────────────────
-
-type SeedDocument = { collection: string; id: string };
-
-const SIMPLE_SKU_TOKEN = "SIMPLE_AAAA";
-const VARIANT_M_SKU = "SKUVARM_BBBB";
-const VARIANT_G_SKU = "SKUVARG_CCCC";
-
-function buildPhotoAsset(productId: string, assetId: string) {
-  const now = new Date().toISOString();
-  const url = (label: string) => `https://example.com/${productId}/${assetId}/${label}.webp`;
-  return {
-    id: assetId,
-    alt: "foto teste",
-    resolutions: {
-      mobile: {
-        width: 480,
-        height: 600,
-        storagePath: `products/${productId}/${assetId}/mobile.webp`,
-        downloadUrl: url("mobile"),
-        format: "webp",
-      },
-      tablet: {
-        width: 768,
-        height: 960,
-        storagePath: `products/${productId}/${assetId}/tablet.webp`,
-        downloadUrl: url("tablet"),
-        format: "webp",
-      },
-      desktop: {
-        width: 1200,
-        height: 1500,
-        storagePath: `products/${productId}/${assetId}/desktop.webp`,
-        downloadUrl: url("desktop"),
-        format: "webp",
-      },
-    },
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-function buildSimpleProduct(prefix: string) {
-  const id = `${prefix}-prod-simple`;
-  const now = new Date().toISOString();
-  const photo = buildPhotoAsset(id, `${prefix}-photo-simple`);
-  return {
-    id,
-    slug: null,
-    title: "Camisa Linho Teste",
-    shortTitle: null,
-    description: "Produto simples — sem variantes — usado no cart cloud test.",
-    vectorEmbedding: null,
-    searchEmbedding: null,
-    sku: SIMPLE_SKU_TOKEN,
-    gtin: null,
-    mpn: null,
-    status: "active" as const,
-    isPurchasable: true,
-    brandName: "Luratha Test",
-    categoryId: `cat-${prefix}`,
-    googleProductCategoryId: null,
-    tags: [],
-    materialTags: [],
-    seasonalTags: [],
-    price: {
-      price: 120,
-      salePrice: null,
-      priceMin: null,
-      priceMax: null,
-      currency: "BRL" as const,
-      startDate: null,
-      endDate: null,
-    },
-    salePrice: null,
-    condition: "new" as const,
-    adult: false,
-    isBundle: false,
-    multipack: 1,
-    age_group: null,
-    gender: null,
-    color: null,
-    size: null,
-    sizeType: null,
-    sizeSystem: null,
-    material: [],
-    pattern: [],
-    dimensions: {
-      length: 30,
-      width: 22,
-      height: 4,
-      unit: "cm" as const,
-      weightKg: 0.35,
-      weightGrossKg: 0.4,
-    },
-    productDetail: null,
-    productHighlight: null,
-    photoAssets: [photo],
-    lifeStylePhotos: [],
-    videoUrls: [],
-    ratingAverage: null,
-    reviewCount: null,
-    totalStock: 5,
-    variants: null,
-    createdAt: now,
-    updatedAt: now,
-    photoId: photo.id,
-  };
-}
-
-function buildVariableProduct(prefix: string) {
-  const id = `${prefix}-prod-variable`;
-  const now = new Date().toISOString();
-  const photo = buildPhotoAsset(id, `${prefix}-photo-variable`);
-  return {
-    id,
-    slug: null,
-    title: "Vestido Bordado Teste",
-    shortTitle: null,
-    description: "Produto com variantes M/G para testar variantId no cart.",
-    vectorEmbedding: null,
-    searchEmbedding: null,
-    sku: `PARENT_AAAA_${prefix.slice(-4).toUpperCase()}`,
-    gtin: null,
-    mpn: null,
-    status: "active" as const,
-    isPurchasable: true,
-    brandName: "Luratha Test",
-    categoryId: `cat-${prefix}`,
-    googleProductCategoryId: null,
-    tags: [],
-    materialTags: [],
-    seasonalTags: [],
-    price: {
-      price: 280,
-      salePrice: null,
-      priceMin: null,
-      priceMax: null,
-      currency: "BRL" as const,
-      startDate: null,
-      endDate: null,
-    },
-    salePrice: null,
-    condition: "new" as const,
-    adult: false,
-    isBundle: false,
-    multipack: 1,
-    age_group: null,
-    gender: null,
-    color: null,
-    size: null,
-    sizeType: null,
-    sizeSystem: null,
-    material: [],
-    pattern: [],
-    dimensions: null,
-    productDetail: null,
-    productHighlight: null,
-    photoAssets: [photo],
-    lifeStylePhotos: [],
-    videoUrls: [],
-    ratingAverage: null,
-    reviewCount: null,
-    totalStock: 10,
-    variants: [
-      {
-        id: "var-m",
-        sku: VARIANT_M_SKU,
-        gtin: null,
-        mpn: null,
-        item_group_id: null,
-        color: null,
-        size: ["M"],
-        photoIds: [photo.id],
-        active: true,
-      },
-      {
-        id: "var-g",
-        sku: VARIANT_G_SKU,
-        gtin: null,
-        mpn: null,
-        item_group_id: null,
-        color: null,
-        size: ["G"],
-        photoIds: [photo.id],
-        active: false, // inactive variant — used to test "variante indisponível"
-      },
-    ],
-    createdAt: now,
-    updatedAt: now,
-    photoId: photo.id,
-  };
-}
-
-async function seedProduct(product: Record<string, unknown>): Promise<void> {
-  await adminDb
-    .collection(firestoreCollections.products)
-    .doc(product.id as string)
-    .set(product);
-}
 
 async function clearCartFromFirestore(userId: string): Promise<void> {
   const itemsSnap = await adminDb
@@ -280,12 +91,6 @@ async function clearCartFromFirestore(userId: string): Promise<void> {
   for (const doc of itemsSnap.docs) batch.delete(doc.ref);
   batch.delete(adminDb.collection(firestoreCollections.carts).doc(userId));
   await batch.commit();
-}
-
-async function cleanupDocuments(tracked: SeedDocument[]): Promise<void> {
-  await Promise.all(
-    tracked.map(({ collection, id }) => adminDb.collection(collection).doc(id).delete()),
-  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -302,11 +107,31 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   const seededDocs: SeedDocument[] = [
     { collection: firestoreCollections.products, id: simple.id },
     { collection: firestoreCollections.products, id: variable.id },
+    { collection: firestoreCollections.stock, id: simple.id },
+    { collection: firestoreCollections.stock, id: variable.id },
   ];
+
+  /**
+   * Estoques generosos por padrão. O add/PUT do cart NÃO checam mais estoque
+   * (o soft gate migrou para `/api/cart/validate` + merge, em bulk); estes
+   * defaults garantem que o merge não cape quantidades nos testes que não são
+   * de estoque. Os testes de gate do merge re-seedam valores baixos e
+   * restauram estes defaults ao final.
+   */
+  async function seedDefaultStocks(): Promise<void> {
+    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 500 });
+    await seedStockDoc({
+      productId: variable.id,
+      sku: variable.sku,
+      quantity: 500,
+      variants: { "var-m": 400, "var-g": 100 },
+    });
+  }
 
   beforeAll(async () => {
     await seedProduct(simple);
     await seedProduct(variable);
+    await seedDefaultStocks();
     mockAuthedUser({ uid: userId });
   });
 
@@ -921,5 +746,57 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   it("POST /api/cart/merge returns 400 sem mergeToken", async () => {
     const response = await mergePOST(jsonRequest("http://localhost/api/cart/merge", { items: [] }));
     expect(response.status).toBe(400);
+  });
+
+  // ── Soft gate de estoque (só no merge agora; add/PUT não checam mais) ─────
+  //
+  // O gate por-add saiu do caminho crítico do clique (perf). O merge segue
+  // dropando esgotados e capando quantidades via `resolveCartAvailability` —
+  // mesma fonte do `/api/cart/validate` (ver cartValidate.cloud.test.ts).
+
+  it("POST /api/cart/items NÃO bloqueia por estoque (gate migrou pro bulk)", async () => {
+    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 1 });
+    try {
+      // Pede 4 com só 1 em estoque: o add aceita (o ajuste vem depois, em bulk).
+      const over = await itemsPOST(
+        jsonRequest("http://localhost/api/cart/items", buildItemPayload({ quantity: 4 })),
+      );
+      expect(over.status).toBe(200);
+      expect((await over.json()).items[0].quantity).toBe(4);
+    } finally {
+      await seedDefaultStocks();
+    }
+  });
+
+  it("POST /api/cart/merge dropa item esgotado (out_of_stock) e capa quantidade no disponível", async () => {
+    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 0 });
+    await seedStockDoc({
+      productId: variable.id,
+      sku: variable.sku,
+      quantity: 2,
+      variants: { "var-m": 2, "var-g": 0 },
+    });
+    try {
+      const response = await mergePOST(
+        jsonRequest("http://localhost/api/cart/merge", {
+          mergeToken: crypto.randomUUID(),
+          items: [
+            buildItemPayload({ quantity: 1 }),
+            buildVariantItemPayload("var-m", VARIANT_M_SKU, { quantity: 5 }),
+          ],
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.dropped).toEqual([
+        expect.objectContaining({ productId: simple.id, reason: "out_of_stock" }),
+      ]);
+      // Pedia 5, só havia 2 — merge capa no disponível em vez de dropar.
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].variantId).toBe("var-m");
+      expect(body.items[0].quantity).toBe(2);
+    } finally {
+      await seedDefaultStocks();
+    }
   });
 });

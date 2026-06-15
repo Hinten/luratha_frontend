@@ -22,13 +22,30 @@ import { errors, expect, type Page, type Response } from "@playwright/test";
  * baixo (Firebase aguenta milhões) e dá pra limpar periodicamente.
  */
 export async function registerNewUser(page: Page): Promise<string> {
+  const { uid } = await registerNewUserWithCredentials(page);
+  return uid;
+}
+
+export interface RegisteredUser {
+  uid: string;
+  email: string;
+  password: string;
+}
+
+/**
+ * Variante de `registerNewUser` que devolve também as credenciais — necessário
+ * quando o spec precisa fazer logout e login de novo com o MESMO usuário
+ * (ex.: e2e da migração de carrinho guest → logado, issue #108).
+ */
+export async function registerNewUserWithCredentials(page: Page): Promise<RegisteredUser> {
   const uniqueEmail = `__test_checkout_${Date.now()}_${Math.floor(Math.random() * 1e6)}@luratha.com`;
+  const password = "senha123";
 
   await page.goto("/register");
   await page.getByLabel("Nome completo").fill("Marina Souza");
   await page.getByLabel("E-mail").fill(uniqueEmail);
-  await page.getByLabel("Senha", { exact: true }).fill("senha123");
-  await page.getByLabel("Confirmar senha").fill("senha123");
+  await page.getByLabel("Senha", { exact: true }).fill(password);
+  await page.getByLabel("Confirmar senha").fill(password);
 
   // Captura o uid da resposta de POST /api/auth/session — feito pelo
   // AuthContext durante o register, retorna `{ uid, email, ... }`. Sem isso
@@ -53,7 +70,47 @@ export async function registerNewUser(page: Page): Promise<string> {
     timeout: 10_000,
   });
 
+  return { uid: data.uid, email: uniqueEmail, password };
+}
+
+/**
+ * Login via UI com credenciais conhecidas. Sem fallback de register — falha
+ * explícita quando as credenciais não funcionam (espelha a metade de login de
+ * `loginOrRegisterTestUser`, ver racional dos seletores lá).
+ */
+export async function login(page: Page, email: string, password: string): Promise<string> {
+  await page.goto("/login");
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(password);
+
+  const sessionWait = page.waitForResponse(
+    (res) => res.url().includes("/api/auth/session") && res.request().method() === "POST",
+    { timeout: 15_000 },
+  );
+  await page.getByRole("button", { name: "Entrar" }).click();
+  const response = await sessionWait;
+  if (!response.ok()) {
+    throw new Error(`[E2E] Login falhou (${response.status()}) para ${email}.`);
+  }
+  const data = (await response.json()) as { uid?: string };
+  if (!data.uid) {
+    throw new Error("[E2E] /api/auth/session retornou sem uid (login).");
+  }
+
+  await expect(page).toHaveURL("/", { timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "Sair da conta" })).toBeVisible({
+    timeout: 10_000,
+  });
   return data.uid;
+}
+
+/** Logout via botão do header; espera a UI voltar ao estado deslogado. */
+export async function logout(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Sair da conta" }).click();
+  // `.first()`: o header renderiza "Entrar" no desktop e no menu mobile.
+  await expect(page.getByRole("link", { name: "Entrar" }).first()).toBeVisible({
+    timeout: 10_000,
+  });
 }
 
 /**

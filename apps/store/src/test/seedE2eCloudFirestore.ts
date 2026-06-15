@@ -1,6 +1,7 @@
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
+import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
 import { buildHomeSeedCategories } from "@luratha/repositories/homeSeedMockData";
-import { buildE2eTestProducts } from "@luratha/repositories/seedE2eProducts";
+import { buildE2eTestProducts, buildE2eTestStock } from "@luratha/repositories/seedE2eProducts";
 import { firestoreCollections } from "@luratha/schemas";
 
 /**
@@ -22,6 +23,10 @@ import { firestoreCollections } from "@luratha/schemas";
  *
  * The fixtures intentionally persist between runs. They do NOT accumulate:
  * deterministic IDs mean each run overwrites the same docs in place.
+ *
+ * Stock docs are seeded alongside products: `POST /api/orders` valida e
+ * decrementa estoque, então os specs de checkout consomem as quantidades —
+ * o re-seed por run devolve tudo para 99.
  */
 export async function seedE2eCloudFirestore(): Promise<void> {
   const categories = buildHomeSeedCategories();
@@ -43,6 +48,17 @@ export async function seedE2eCloudFirestore(): Promise<void> {
         .set(product, { merge: true }),
     ),
   );
+
+  const stocks = buildE2eTestStock();
+  await Promise.all(
+    stocks.map((stock) =>
+      adminDb
+        .collection(firestoreCollections.stock)
+        .doc(stock.productId)
+        .withConverter(adminStockConverter)
+        .set(stock),
+    ),
+  );
 }
 
 /**
@@ -59,6 +75,7 @@ export async function clearE2eFixtures(): Promise<void> {
 
   await Promise.all([
     ...productIds.map((id) => adminDb.collection(firestoreCollections.products).doc(id).delete()),
+    ...productIds.map((id) => adminDb.collection(firestoreCollections.stock).doc(id).delete()),
     ...categoryIds.map((id) =>
       adminDb.collection(firestoreCollections.categories).doc(id).delete(),
     ),

@@ -1,0 +1,56 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-accent);
+  border: 1px solid var(--color-warning);
+  border-radius: 8px;
+  color: var(--color-neutral-dark);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-warning);
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.list li + li {
+  margin-top: 0.2rem;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  line-height: 1;
+  font-size: 0.9rem;
+  color: var(--color-neutral-dark);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  background: var(--color-neutral-mid);
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}

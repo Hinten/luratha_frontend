@@ -28,6 +28,11 @@ export const runtime = "nodejs";
  * These checks make the cart a faithful, non-spoofable snapshot of the
  * catalog at add-time. We re-validate at checkout, but trusting the cart
  * here is what lets the UI show prices without an extra round-trip.
+ *
+ * Estoque NÃO é checado aqui — o gate por-add saiu do caminho crítico do
+ * clique. A disponibilidade é revalidada em bulk no `/api/cart/validate`
+ * (carrinho/checkout) e de forma autoritativa (com decremento) em
+ * `POST /api/orders`.
  */
 export async function POST(request: Request) {
   let authedUser;

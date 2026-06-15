@@ -1,14 +1,22 @@
 import "server-only";
 
+import type { Transaction } from "firebase-admin/firestore";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminOrderConverter } from "@luratha/firestore/adminOrderConverter";
+import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
+import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
 import {
   AWAITING_PAYMENT_STATUSES,
+  PAYMENT_FAILURE_STATUSES,
   firestoreCollections,
   type Order,
+  type Product,
+  type Stock,
   validateOrder,
 } from "@luratha/schemas";
+import { logger } from "@luratha/core/logging/logger";
 import { createOrder, getOrder } from "./mercadoPago";
+import { planStockRelease } from "./orderStock";
 import { buildStatusPatch } from "./orderStatusPatch";
 import {
   type PaymentIntentResult,
@@ -70,9 +78,106 @@ function mergeOrderPatch(current: Order, patch: Partial<Order>, opts?: MergeOpti
 }
 
 /**
+ * Devolve o estoque reservado por um pedido, dentro de uma transação aberta
+ * pelo chamador. Faz `tx.getAll` de stocks/produtos e por isso deve ser
+ * chamada **antes de qualquer escrita** da transação (Firestore exige todas
+ * as leituras antes da primeira escrita); as escritas de stock/`totalStock`
+ * acontecem aqui dentro, e o chamador persiste o Order retornado (já com
+ * `stockMovement: "released"`).
+ *
+ * O chamador é responsável pelo predicado de disparo E pelo guard de
+ * idempotência (`order.stockMovement === "decremented"`):
+ *  - `maybeReleaseStockInTx` (abaixo) dispara quando o pagamento entra em
+ *    `failed`/`cancelled`/`rejected`;
+ *  - `PATCH /api/orders/[id]` dispara quando o pedido transiciona para
+ *    `status: "cancelled"` (cancelamento manual do dono/admin).
+ */
+export async function releaseOrderStockInTx(tx: Transaction, order: Order): Promise<Order> {
+  const productIds = Array.from(new Set(order.items.map((item) => item.productId)));
+  const productRefs = productIds.map((pid) =>
+    // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: stock release shares the order's runTransaction (reads+writes atomic with the status patch); refs are converter-bound.
+    adminDb.collection(firestoreCollections.products).doc(pid).withConverter(adminProductConverter),
+  );
+  const stockRefs = productIds.map((pid) =>
+    // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: see above.
+    adminDb.collection(firestoreCollections.stock).doc(pid).withConverter(adminStockConverter),
+  );
+  const [productSnaps, stockSnaps] = await Promise.all([
+    tx.getAll(...productRefs),
+    tx.getAll(...stockRefs),
+  ]);
+
+  const products = new Map<string, Product>();
+  for (const snap of productSnaps) {
+    if (!snap.exists) continue;
+    // getAll perde o tipo do converter (DocumentData) — cast como nos demais consumidores.
+    const product = snap.data() as Product;
+    products.set(product.id, product);
+  }
+  const stocks = new Map<string, Stock>();
+  for (const snap of stockSnaps) {
+    if (!snap.exists) continue;
+    const stock = snap.data() as Stock;
+    stocks.set(stock.productId, stock);
+  }
+
+  const plan = planStockRelease(order.items, products, stocks, new Date().toISOString());
+  if (plan.warnings.length > 0) {
+    logger.warn("[payments] devolução de estoque degradada", {
+      orderId: order.id,
+      warnings: plan.warnings,
+    });
+  }
+
+  for (const nextStock of plan.nextStocks) {
+    // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: see above.
+    const ref = adminDb
+      .collection(firestoreCollections.stock)
+      .doc(nextStock.productId)
+      .withConverter(adminStockConverter);
+    tx.set(ref, nextStock);
+  }
+  for (const [productId, totalStock] of plan.nextTotalStockByProduct) {
+    // eslint-disable-next-line no-restricted-syntax -- sanctioned payments data layer: see above.
+    const ref = adminDb
+      .collection(firestoreCollections.products)
+      .doc(productId)
+      .withConverter(adminProductConverter);
+    // Update parcial do espelho denormalizado (update() não passa pelo converter).
+    tx.update(ref, { totalStock });
+  }
+
+  return validateOrder({ ...order, stockMovement: "released" });
+}
+
+/**
+ * Devolve o estoque quando o patch leva o pagamento a um estado de falha
+ * (`failed`/`cancelled`/`rejected` — recusa síncrona de cartão, expiração de
+ * PIX/boleto ou cancelamento via webhook). Estornos (`refunded`/
+ * `charged_back`) NÃO liberam — mercadoria devolvida exige inspeção manual
+ * antes de voltar à vitrine (`POST /api/stock`). Idempotente via
+ * `current.stockMovement` (pedidos legados sem o campo são no-op).
+ */
+async function maybeReleaseStockInTx(
+  tx: Transaction,
+  current: Order,
+  merged: Order,
+): Promise<Order> {
+  const entersFailure = (PAYMENT_FAILURE_STATUSES as readonly string[]).includes(
+    merged.paymentStatus,
+  );
+  if (!entersFailure || current.stockMovement !== "decremented") {
+    return merged;
+  }
+  return releaseOrderStockInTx(tx, merged);
+}
+
+/**
  * Aplica um patch em uma Order dentro de uma transação Firestore — garante
  * que reads/writes concorrentes (dois webhooks ou webhook + payment-intent
- * disparados simultaneamente) não se sobrescrevam.
+ * disparados simultaneamente) não se sobrescrevam. Quando o patch leva o
+ * pagamento a um estado de falha, a mesma transação devolve o estoque
+ * reservado (ver `maybeReleaseStockInTx`).
  */
 async function persistOrderPatch(
   orderId: string,
@@ -85,7 +190,8 @@ async function persistOrderPatch(
     if (!snapshot.exists) {
       throw new PaymentProviderError(`Pedido "${orderId}" não encontrado.`, "invalid_input");
     }
-    const merged = mergeOrderPatch(snapshot.data() as Order, patch, opts);
+    const current = snapshot.data() as Order;
+    const merged = await maybeReleaseStockInTx(tx, current, mergeOrderPatch(current, patch, opts));
     tx.set(ref, merged);
     return merged;
   });
@@ -208,7 +314,12 @@ export async function applyOrderWebhook(
     const clearPaymentArtifacts = !(AWAITING_PAYMENT_STATUSES as readonly string[]).includes(
       summary.status,
     );
-    tx.set(ref, mergeOrderPatch(order, patch, { clearPaymentArtifacts }));
+    const merged = await maybeReleaseStockInTx(
+      tx,
+      order,
+      mergeOrderPatch(order, patch, { clearPaymentArtifacts }),
+    );
+    tx.set(ref, merged);
 
     return { changed: true, orderId: order.id, status: summary.status };
   });

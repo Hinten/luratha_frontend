@@ -26,7 +26,7 @@ export default function AddToCartButton({
   className,
   onBeforeAdd,
 }: AddToCartButtonProps) {
-  const { addItem, isSyncing } = useCart();
+  const { addItem } = useCart();
   const [added, setAdded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -60,7 +60,7 @@ export default function AddToCartButton({
         type="button"
         className={className ?? styles.addToCart}
         onClick={handleClick}
-        disabled={disabled || busy || isSyncing}
+        disabled={disabled || busy}
         aria-busy={busy || undefined}
         aria-label={`Adicionar ${item.name} ao carrinho`}
       >

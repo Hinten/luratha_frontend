@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
-import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
-import { firestoreCollections, type Product } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   CartRepositoryError,
   cartItemInputSchema,
   createCartsRepository,
-  type CartItemWrite,
 } from "@luratha/repositories/cartsRepository";
+import { resolveCartAvailability } from "@/src/services/cartAvailability";
 
 export const runtime = "nodejs";
 
@@ -74,91 +72,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Falha ao validar merge." }, { status: 400 });
   }
 
-  const productIds = Array.from(new Set(parsed.items.map((i) => i.productId)));
-  const products = new Map<string, Product>();
-  if (productIds.length > 0) {
-    const refs = productIds.map((id) =>
-      adminDb
-        .collection(firestoreCollections.products)
-        .doc(id)
-        .withConverter(adminProductConverter),
-    );
-    const snaps = await adminDb.getAll(...refs);
-    for (const snap of snaps) {
-      if (snap.exists) {
-        const product = snap.data() as Product;
-        products.set(product.id, product);
-      }
-    }
-  }
-
-  const accepted: CartItemWrite[] = [];
-  const dropped: Array<{ productId: string; variantId?: string; reason: string }> = [];
-
-  for (const item of parsed.items) {
-    const product = products.get(item.productId);
-    if (!product) {
-      dropped.push({
-        productId: item.productId,
-        variantId: item.variantId,
-        reason: "product_not_found",
-      });
-      continue;
-    }
-    if (!product.isPurchasable || product.status !== "active") {
-      dropped.push({
-        productId: item.productId,
-        variantId: item.variantId,
-        reason: "product_unavailable",
-      });
-      continue;
-    }
-
-    let expectedSku: string;
-    if (item.variantId) {
-      const variant = product.variants?.find((v) => v.id === item.variantId);
-      if (!variant || variant.active === false) {
-        dropped.push({
-          productId: item.productId,
-          variantId: item.variantId,
-          reason: "variant_unavailable",
-        });
-        continue;
-      }
-      expectedSku = variant.sku;
-    } else {
-      if (product.variants && product.variants.length > 0) {
-        dropped.push({ productId: item.productId, reason: "variant_required" });
-        continue;
-      }
-      expectedSku = product.sku;
-    }
-
-    if (item.variantSku !== expectedSku) {
-      dropped.push({
-        productId: item.productId,
-        variantId: item.variantId,
-        reason: "sku_mismatch",
-      });
-      continue;
-    }
-
-    const catalogPrice =
-      product.price.salePrice !== null ? product.price.salePrice : product.price.price;
-    // Refresh price/slug/dimensions from catalog instead of trusting the
-    // localStorage snapshot. `dimensions` is server-derived (anti-spoof).
-    accepted.push({
-      ...item,
-      unitPrice: catalogPrice,
-      productSlug: product.slug ?? item.productSlug,
-      variantSku: expectedSku,
-      dimensions: product.dimensions,
-    });
-  }
+  // Soft gate de estoque/catálogo em bulk (mesma fonte do /api/cart/validate):
+  // dropa itens inválidos/esgotados (com `reason`) e capa a quantidade no
+  // disponível. A checagem autoritativa, com decremento, é no POST /api/orders.
+  const { accepted, dropped } = await resolveCartAvailability(adminDb, parsed.items);
+  const acceptedWrites = accepted.map((entry) => entry.write);
 
   const repository = createCartsRepository(adminDb);
   try {
-    const snapshot = await repository.mergeItems(authedUser.uid, accepted, parsed.mergeToken);
+    const snapshot = await repository.mergeItems(authedUser.uid, acceptedWrites, parsed.mergeToken);
     return NextResponse.json({ ...snapshot, dropped }, { status: 200 });
   } catch (error) {
     if (error instanceof CartRepositoryError) {

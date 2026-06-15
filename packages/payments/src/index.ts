@@ -22,8 +22,18 @@ export {
   applyOrderWebhook,
   createPaymentIntent,
   loadOrder,
+  releaseOrderStockInTx,
   type PaymentIntentMethodInput,
 } from "./orderService";
+
+export {
+  planStockDecrement,
+  planStockRelease,
+  resolveAvailableQty,
+  type StockDecrementResult,
+  type StockMovementPlan,
+  type StockShortage,
+} from "./orderStock";
 
 export {
   PaymentProviderError,

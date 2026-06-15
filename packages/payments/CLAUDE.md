@@ -4,14 +4,24 @@ Payment domain package — MercadoPago adapter + order orchestration. Imported (
 by the storefront's payment-intent endpoint and by the standalone webhook app
 (`apps/mercadopago/`, which has its own CLAUDE.md for the webhook HTTP contract).
 
-Two modules behind the barrel (`src/index.ts`):
+Three modules behind the barrel (`src/index.ts`):
 - `mercadoPago/*` — provider adapter. Talks to the **Orders API** (`POST/GET /v1/orders`)
   via raw `fetch` (no `mercadopago` npm SDK). Covers PIX, credit card (token from the Card
   Payment Brick) and boleto. Gateway errors become `PaymentProviderError`.
 - `orderService.ts` — orchestration. Loads/updates the Firestore `Order` via the Admin SDK
   inside `runTransaction`, so concurrent webhook + payment-intent writes don't clobber each
   other. `applyOrderWebhook` is idempotent (keyed on `external_reference` → local order id;
-  no-op when both status and `paymentIntentId` are unchanged).
+  no-op when both status and `paymentIntentId` are unchanged). When a patch moves
+  `paymentStatus` into `failed`/`cancelled`/`rejected`, the same transaction **releases the
+  order's reserved stock** (guarded by `Order.stockMovement`: `"decremented"` → `"released"`
+  exactly once; absent = legacy order, no-op). Refunds/chargebacks do NOT restock (returned
+  goods need manual inspection). `releaseOrderStockInTx` is exported for the storefront's
+  order-cancel PATCH.
+- `orderStock.ts` — **pure** stock-movement planner (no `server-only`/`firebase-admin`,
+  mirrors `orderStatusPatch.ts`): `resolveAvailableQty`, `planStockDecrement`,
+  `planStockRelease`. Variant-aware, keeps the `quantity == Σ variants` invariant, falls
+  back to `product.totalStock` when the stock doc is missing. Consumed by
+  `POST /api/orders` (validate + decrement at order creation) and the release paths.
 
 Consumers (both server-only):
 - Storefront: `POST apps/store/src/app/api/checkout/payment-intent` → `createPaymentIntent`
