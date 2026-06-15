@@ -111,6 +111,63 @@ describe("POST /api/checkout/payment-intent", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the payer email has multiple @ (issue #160)", async () => {
+    const res = await POST(
+      jsonRequest({
+        ...validPixBody,
+        payer: { ...validPixBody.payer, email: "a@b@c.com" },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(service.loadOrder).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the CPF check digits are invalid", async () => {
+    const res = await POST(
+      jsonRequest({
+        ...validPixBody,
+        payer: { ...validPixBody.payer, identification: { type: "CPF", number: "11111111111" } },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when the CNPJ check digits are invalid", async () => {
+    const res = await POST(
+      jsonRequest({
+        ...validPixBody,
+        payer: {
+          ...validPixBody.payer,
+          identification: { type: "CNPJ", number: "12345678000190" },
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts an alphanumeric CNPJ, normalizing it to uppercase", async () => {
+    service.loadOrder.mockResolvedValueOnce(fakeOrder());
+    service.createPaymentIntent.mockResolvedValueOnce({
+      result: { paymentId: "mp-1", paymentMethod: "pix", status: "pending" },
+      order: fakeOrder({ paymentIntentId: "mp-1" }),
+    });
+
+    const res = await POST(
+      jsonRequest({
+        ...validPixBody,
+        payer: {
+          ...validPixBody.payer,
+          identification: { type: "CNPJ", number: "12abc34501de35" },
+        },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const input = service.createPaymentIntent.mock.calls[0][1] as {
+      payer: { identification: { number: string } };
+    };
+    expect(input.payer.identification.number).toBe("12ABC34501DE35");
+  });
+
   it("returns 404 when the order does not exist", async () => {
     service.loadOrder.mockResolvedValueOnce(null);
     const res = await POST(jsonRequest(validPixBody));

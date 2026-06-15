@@ -89,10 +89,10 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
+  // No globalTeardown: the cloud fixtures are seeded idempotently and left in
+  // place (see seedE2eCloudFirestore). Deleting them on teardown would race
+  // with any concurrent E2E job reading the same shared test project.
   globalSetup: hasCredentials
     ? require.resolve("./src/test/playwrightCloudSetup.globalSetup.ts")
-    : undefined,
-  globalTeardown: hasCredentials
-    ? require.resolve("./src/test/playwrightCloudSetup.globalTeardown.ts")
     : undefined,
 });

@@ -58,6 +58,8 @@ export {
 } from "@luratha/schemas/addresses";
 export { UFS, UF_LABELS, type UF } from "@luratha/schemas/constants";
 export { payerFormSchema, type PayerFormInput } from "@luratha/schemas/payments";
+export { strictEmail } from "@luratha/schemas/email";
+export { isValidCpf, isValidCnpj } from "@luratha/schemas/documents";
 export { reviewSchema, type Review, validateReview } from "@luratha/schemas/reviews";
 export {
   userProfileSchema,
