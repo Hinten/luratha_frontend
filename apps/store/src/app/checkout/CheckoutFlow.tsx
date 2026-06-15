@@ -12,6 +12,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
+import { logger } from "@luratha/core/logging/logger";
 import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
@@ -200,6 +201,33 @@ function shippingAddressPath(userId: string, addressId: string): string {
 // 25s: margem confortável sobre os 10s do SDK MP server-side + round-trip + Firestore.
 const CONFIRM_TIMEOUT_MS = 25_000;
 
+/**
+ * Cancela (best-effort) um pedido recém-criado cujo payment-intent falhou de
+ * forma definitiva — sem isso o pedido ficaria `pending_payment` para sempre
+ * segurando o estoque reservado (o PATCH cancel devolve o estoque no servidor).
+ * Falhas aqui são apenas logadas: o usuário já está vendo o erro principal e
+ * um pedido órfão residual é recuperável pelo admin.
+ */
+async function cancelOrphanOrder(orderId: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    if (!res.ok) {
+      logger.warn("[checkout] cancelamento best-effort do pedido órfão falhou", {
+        orderId,
+        status: res.status,
+      });
+    }
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
+    // fetch lança TypeError em queda de rede — só loga, nada a fazer aqui.
+    logger.warn("[checkout] cancelamento best-effort do pedido órfão falhou (rede)", { orderId });
+  }
+}
+
 async function fetchWithTimeout(
   input: RequestInfo,
   init: RequestInit,
@@ -335,6 +363,10 @@ export default function CheckoutFlow() {
     }
     dispatch({ type: "SUBMIT_START" });
 
+    // Id do pedido criado neste submit — usado no catch para cancelar (e
+    // devolver o estoque de) um pedido cujo payment-intent falhou de vez.
+    let createdOrderId: string | null = null;
+
     const orderPayload = {
       userId: user!.uid,
       orderNumber: makeOrderNumber(),
@@ -385,6 +417,7 @@ export default function CheckoutFlow() {
         );
       }
       const created = (await orderRes.json()) as { id: string };
+      createdOrderId = created.id;
 
       const intentRes = await fetchWithTimeout(
         "/api/checkout/payment-intent",
@@ -461,6 +494,19 @@ export default function CheckoutFlow() {
         err instanceof TypeError ||
         (err instanceof DOMException && err.name === "AbortError")
       ) {
+        // O pedido foi criado mas o payment-intent falhou com 4xx definitivo
+        // (exceto 409 — "pagamento já em andamento" significa que um intent
+        // PODE existir no MP; 5xx/timeout idem: a criação pode ter ocorrido e
+        // o webhook ainda resolve). Cancelar libera o estoque reservado.
+        if (
+          createdOrderId !== null &&
+          err instanceof ApiResponseError &&
+          err.status >= 400 &&
+          err.status < 500 &&
+          err.status !== 409
+        ) {
+          void cancelOrphanOrder(createdOrderId);
+        }
         const message = reportCheckoutError({ error: err, step: "submit_order" });
         dispatch({ type: "SUBMIT_FAIL", message });
         return;

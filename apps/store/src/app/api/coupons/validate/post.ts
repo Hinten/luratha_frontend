@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminCouponConverter } from "@luratha/firestore/adminCouponConverter";
-import { firestoreCollections, type Coupon } from "@luratha/schemas";
+import { firestoreCollections } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
+import { type CouponValidationResult, evaluateCoupon } from "@/src/lib/coupons/couponEvaluation";
 
 export const runtime = "nodejs";
 
@@ -11,8 +12,9 @@ export const runtime = "nodejs";
  * POST /api/coupons/validate
  *
  * Valida um cupom contra o total do carrinho. Não persiste nada — o
- * `usageCount` só é incrementado quando o `Order` é criado de fato em
- * `POST /api/orders` com o `couponCode` no corpo.
+ * `usageCount` é incrementado quando o `Order` é criado de fato em
+ * `POST /api/orders` com o `couponCode` no corpo (que re-valida o cupom com
+ * a mesma `evaluateCoupon` compartilhada em `src/lib/coupons/couponEvaluation.ts`).
  *
  * Body: { code: string, cartTotal: number }
  *
@@ -32,58 +34,6 @@ const bodySchema = z.object({
   code: z.string().trim().min(3).max(32),
   cartTotal: z.number().nonnegative().max(1_000_000),
 });
-
-type CouponValidationResult =
-  | { valid: true; code: string; type: Coupon["type"]; discount: number }
-  | { valid: false; reason: string };
-
-function computeDiscount(coupon: Coupon, cartTotal: number): number {
-  const raw = coupon.type === "percentage" ? (cartTotal * coupon.amount) / 100 : coupon.amount;
-  const capped =
-    typeof coupon.maxDiscountAmount === "number" ? Math.min(raw, coupon.maxDiscountAmount) : raw;
-  // Nunca descontar mais do que o próprio carrinho.
-  return Math.min(capped, cartTotal);
-}
-
-function evaluateCoupon(coupon: Coupon, cartTotal: number): CouponValidationResult {
-  if (!coupon.active) {
-    return { valid: false, reason: "Cupom inativo." };
-  }
-
-  const now = Date.now();
-  const startsAt = new Date(coupon.startsAt).getTime();
-  const expiresAt = new Date(coupon.expiresAt).getTime();
-
-  if (Number.isFinite(startsAt) && now < startsAt) {
-    return { valid: false, reason: "Cupom ainda não disponível." };
-  }
-  if (Number.isFinite(expiresAt) && now > expiresAt) {
-    return { valid: false, reason: "Cupom expirado." };
-  }
-
-  if (typeof coupon.usageLimit === "number" && coupon.usageCount >= coupon.usageLimit) {
-    return { valid: false, reason: "Cupom esgotado." };
-  }
-
-  if (cartTotal < coupon.minimumOrderAmount) {
-    return {
-      valid: false,
-      reason: `Pedido abaixo do mínimo de R$ ${coupon.minimumOrderAmount.toFixed(2)}.`,
-    };
-  }
-
-  const discount = computeDiscount(coupon, cartTotal);
-  if (discount <= 0) {
-    return { valid: false, reason: "Cupom não aplicável a este pedido." };
-  }
-
-  return {
-    valid: true,
-    code: coupon.code,
-    type: coupon.type,
-    discount: Number(discount.toFixed(2)),
-  };
-}
 
 export async function POST(request: Request) {
   try {
