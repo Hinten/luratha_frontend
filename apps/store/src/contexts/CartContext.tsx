@@ -105,14 +105,14 @@ function computeLocalCart(userId: string, items: CartItem[]): Cart {
   });
 }
 
-function buildGuestItem(input: CartItemInput, previous?: CartItem): CartItem {
+function buildLocalItem(input: CartItemInput, owner: string, previous?: CartItem): CartItem {
   const id = buildCartItemId(input.productId, input.variantId);
   const now = new Date().toISOString();
   const incomingQty = input.quantity ?? 1;
   const nextQuantity = previous ? previous.quantity + incomingQty : incomingQty;
   return validateCartItem({
     id,
-    userId: GUEST_OWNER,
+    userId: owner,
     productId: input.productId,
     variantId: input.variantId,
     variantSku: input.variantSku,
@@ -316,6 +316,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    */
   const lastMergedFor = useRef<string | null>(null);
 
+  /**
+   * Último estado autoritativo vindo do `onSnapshot` (modo logado). As mutações
+   * otimistas atualizam `items` na hora e sincronizam em background; se o POST
+   * falhar, revertemos `items` para este snapshot (o POST falho não escreveu
+   * nada, então ele é a verdade atual).
+   */
+  const serverItemsRef = useRef<CartItem[]>([]);
+  /**
+   * Contador de escritas em voo. `isSyncing` reflete "há sync pendente" sem que
+   * uma operação concorrente que termina antes zere o flag de outra ainda ativa
+   * (o boolean simples tinha essa corrida). Mantém o gate do botão "Finalizar
+   * Compra" correto mesmo com vários adds otimistas em paralelo.
+   */
+  const syncCount = useRef(0);
+
+  const beginSync = useCallback(() => {
+    syncCount.current += 1;
+    setIsSyncing(true);
+  }, []);
+  const endSync = useCallback(() => {
+    syncCount.current = Math.max(0, syncCount.current - 1);
+    if (syncCount.current === 0) setIsSyncing(false);
+  }, []);
+
   // --- Hydration, subscription, and guest→logged merge --------------------
   //
   // Single effect coordinates both halves of the login transition so that
@@ -341,6 +365,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     // Logged-in mode: server is authoritative.
     setIsReady(false);
+    // Zera o snapshot de rollback até o primeiro `onSnapshot` chegar.
+    serverItemsRef.current = [];
 
     // Read pending guest items synchronously, BEFORE subscribing or merging,
     // so a slow Firestore snapshot can't race with localStorage being cleared.
@@ -406,6 +432,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       (snap) => {
         if (cancelled) return;
         const rows = snap.docs.map((d) => d.data());
+        // Verdade autoritativa para o rollback das mutações otimistas.
+        serverItemsRef.current = rows;
         setItems(rows);
         itemsReady = true;
         checkSnapshots();
@@ -418,7 +446,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (needsMerge) {
-      setIsSyncing(true);
+      beginSync();
       void (async () => {
         try {
           const response = await fetch("/api/cart/merge", {
@@ -451,7 +479,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // mergeDone flips regardless of success — otherwise a merge failure
           // would leave `isReady` stuck on false forever and block the UI.
           mergeDone = true;
-          if (!cancelled) setIsSyncing(false);
+          endSync();
           maybeReady();
         }
       })();
@@ -462,7 +490,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       unsubCart();
       unsubItems();
     };
-  }, [userId]);
+  }, [userId, beginSync, endSync]);
 
   // --- Guest mutation helpers --------------------------------------------
   /**
@@ -486,82 +514,135 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // --- Optimistic logged-in helpers --------------------------------------
+  /**
+   * Atualiza `items`/`cart` localmente na hora (modo logado). O `onSnapshot`
+   * reconcilia com a verdade do servidor quando o write commita.
+   */
+  const applyOptimistic = useCallback(
+    (uid: string, transform: (prev: CartItem[]) => CartItem[]) => {
+      setItems((prev) => {
+        const next = transform(prev);
+        setCart(computeLocalCart(uid, next));
+        return next;
+      });
+    },
+    [],
+  );
+
+  /** Reverte para o último snapshot autoritativo após um write falho. */
+  const rollback = useCallback((uid: string, message: string) => {
+    setItems(serverItemsRef.current);
+    setCart(computeLocalCart(uid, serverItemsRef.current));
+    setError(message);
+  }, []);
+
+  /**
+   * Dispara o write no servidor em background (sem bloquear o clique). Sucesso
+   * → o `onSnapshot` reconcilia. Falha (`ApiResponseError`/`TypeError`) →
+   * rollback para o snapshot autoritativo + mensagem. `okStatuses` cobre
+   * respostas idempotentes (204/404) que não são erro.
+   */
+  const syncInBackground = useCallback(
+    (uid: string, run: () => Promise<Response>, fallbackMsg: string, okStatuses: number[] = []) => {
+      void (async () => {
+        beginSync();
+        try {
+          const response = await run();
+          if (okStatuses.includes(response.status)) return;
+          await throwIfNotOk(response, fallbackMsg);
+        } catch (err) {
+          if (err instanceof ApiResponseError) {
+            rollback(uid, err.message);
+            return;
+          }
+          if (err instanceof TypeError) {
+            // Queda de conexão — o POST não chegou ao servidor.
+            rollback(uid, "Falha de conexão ao sincronizar o carrinho. Tente novamente.");
+            return;
+          }
+          throw err;
+        } finally {
+          endSync();
+        }
+      })();
+    },
+    [beginSync, endSync, rollback],
+  );
+
   // --- Public actions -----------------------------------------------------
   const addItem = useCallback(
     async (input: CartItemInput) => {
       setError(null);
+      // Validar o input *fora* do setter para que um erro de schema rejeite a
+      // Promise (em vez de ser engolido pelo scheduling do updater do React).
+      const id = buildCartItemId(input.productId, input.variantId);
       if (!userId) {
-        // Eagerly validate the input *outside* the setter so a Zod failure
-        // rejects the returned Promise instead of getting swallowed by React's
-        // updater scheduling.
-        const validatedFresh = buildGuestItem(input);
-        const id = buildCartItemId(input.productId, input.variantId);
+        const validatedFresh = buildLocalItem(input, GUEST_OWNER);
         updateGuestItems((prev) => {
           const existing = prev.find((i) => i.id === id);
           if (existing) {
-            return prev.map((i) => (i.id === id ? buildGuestItem(input, existing) : i));
+            return prev.map((i) =>
+              i.id === id ? buildLocalItem(input, GUEST_OWNER, existing) : i,
+            );
           }
           return [...prev, validatedFresh];
         });
         return;
       }
-      try {
-        setIsSyncing(true);
-        const response = await fetch("/api/cart/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currency: "BRL",
-            quantity: 1,
-            ...input,
+      // Logado: atualiza local na hora (otimista) e sincroniza em background —
+      // o botão não espera o round-trip. `buildLocalItem` valida o payload já.
+      const fresh = buildLocalItem(input, userId);
+      applyOptimistic(userId, (prev) => {
+        const existing = prev.find((i) => i.id === id);
+        if (existing) {
+          return prev.map((i) => (i.id === id ? buildLocalItem(input, userId, existing) : i));
+        }
+        return [...prev, fresh];
+      });
+      syncInBackground(
+        userId,
+        () =>
+          fetch("/api/cart/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ currency: "BRL", quantity: 1, ...input }),
           }),
-        });
-        await throwIfNotOk(response, "Falha ao adicionar ao carrinho.");
-      } catch (err) {
-        if (!(err instanceof ApiResponseError)) throw err;
-        setError(err.message);
-      } finally {
-        setIsSyncing(false);
-      }
+        "Falha ao adicionar ao carrinho.",
+      );
     },
-    [updateGuestItems, userId],
+    [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );
 
   const updateQuantity = useCallback(
     async (itemId: string, quantity: number) => {
       setError(null);
       if (!Number.isInteger(quantity)) return;
+      const transform = (prev: CartItem[]): CartItem[] => {
+        if (quantity <= 0) return prev.filter((i) => i.id !== itemId);
+        return prev.map((i) =>
+          i.id === itemId
+            ? validateCartItem({ ...i, quantity, updatedAt: new Date().toISOString() })
+            : i,
+        );
+      };
       if (!userId) {
-        updateGuestItems((prev) => {
-          if (quantity <= 0) return prev.filter((i) => i.id !== itemId);
-          return prev.map((i) =>
-            i.id === itemId
-              ? validateCartItem({
-                  ...i,
-                  quantity,
-                  updatedAt: new Date().toISOString(),
-                })
-              : i,
-          );
-        });
+        updateGuestItems(transform);
         return;
       }
-      try {
-        setIsSyncing(true);
-        const response = await fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity }),
-        });
-        await throwIfNotOk(response, "Falha ao atualizar item.");
-      } catch (err) {
-        if (!(err instanceof ApiResponseError)) throw err;
-        setError(err.message);
-      } finally {
-        setIsSyncing(false);
-      }
+      applyOptimistic(userId, transform);
+      syncInBackground(
+        userId,
+        () =>
+          fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quantity }),
+          }),
+        "Falha ao atualizar item.",
+      );
     },
-    [updateGuestItems, userId],
+    [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );
 
   const removeItem = useCallback(
@@ -571,22 +652,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateGuestItems((prev) => prev.filter((i) => i.id !== itemId));
         return;
       }
-      try {
-        setIsSyncing(true);
-        const response = await fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, {
-          method: "DELETE",
-        });
-        // 404 means the item was already gone — treat as success.
-        if (response.status === 404) return;
-        await throwIfNotOk(response, "Falha ao remover item.");
-      } catch (err) {
-        if (!(err instanceof ApiResponseError)) throw err;
-        setError(err.message);
-      } finally {
-        setIsSyncing(false);
-      }
+      applyOptimistic(userId, (prev) => prev.filter((i) => i.id !== itemId));
+      syncInBackground(
+        userId,
+        () => fetch(`/api/cart/items/${encodeURIComponent(itemId)}`, { method: "DELETE" }),
+        "Falha ao remover item.",
+        // 404 = item já tinha sumido; trata como sucesso.
+        [404],
+      );
     },
-    [updateGuestItems, userId],
+    [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );
 
   const clearCart = useCallback(async () => {
@@ -595,19 +670,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       updateGuestItems(() => []);
       return;
     }
-    try {
-      setIsSyncing(true);
-      const response = await fetch("/api/cart", { method: "DELETE" });
-      // 204 (idempotent wipe) and 404 (already empty) both mean success.
-      if (response.status === 204 || response.status === 404) return;
-      await throwIfNotOk(response, "Falha ao limpar o carrinho.");
-    } catch (err) {
-      if (!(err instanceof ApiResponseError)) throw err;
-      setError(err.message);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [updateGuestItems, userId]);
+    applyOptimistic(userId, () => []);
+    syncInBackground(
+      userId,
+      () => fetch("/api/cart", { method: "DELETE" }),
+      "Falha ao limpar o carrinho.",
+      // 204 (wipe idempotente) e 404 (já vazio) = sucesso.
+      [204, 404],
+    );
+  }, [applyOptimistic, syncInBackground, updateGuestItems, userId]);
 
   const totalItems = cart.itemCount;
   const totalPrice = cart.subtotal;

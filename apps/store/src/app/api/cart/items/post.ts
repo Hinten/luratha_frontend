@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
-import { adminStockConverter } from "@luratha/firestore/adminStockConverter";
 import { firestoreCollections } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
-import { resolveAvailableQty } from "@luratha/payments/orderStock";
 import {
   CartRepositoryError,
   cartItemInputSchema,
@@ -26,13 +24,15 @@ export const runtime = "nodejs";
  *   - variantId (when provided) must exist in product.variants
  *   - sku snapshot must match the product/variant sku
  *   - unitPrice must match the current product/variant sale or list price
- *   - resulting quantity must fit the available stock (variant-aware) — soft
- *     gate de UX; o carrinho não reserva estoque, a checagem autoritativa
- *     (com decremento) acontece em `POST /api/orders`
  *
  * These checks make the cart a faithful, non-spoofable snapshot of the
  * catalog at add-time. We re-validate at checkout, but trusting the cart
  * here is what lets the UI show prices without an extra round-trip.
+ *
+ * Estoque NÃO é checado aqui — o gate por-add saiu do caminho crítico do
+ * clique. A disponibilidade é revalidada em bulk no `/api/cart/validate`
+ * (carrinho/checkout) e de forma autoritativa (com decremento) em
+ * `POST /api/orders`.
  */
 export async function POST(request: Request) {
   let authedUser;
@@ -74,11 +74,7 @@ export async function POST(request: Request) {
     .collection(firestoreCollections.products)
     .doc(parsed.productId)
     .withConverter(adminProductConverter);
-  const stockRef = adminDb
-    .collection(firestoreCollections.stock)
-    .doc(parsed.productId)
-    .withConverter(adminStockConverter);
-  const [productSnap, stockSnap] = await Promise.all([productRef.get(), stockRef.get()]);
+  const productSnap = await productRef.get();
   if (!productSnap.exists) {
     return NextResponse.json(
       { message: `Produto "${parsed.productId}" não encontrado.` },
@@ -137,23 +133,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const availableQty = resolveAvailableQty(
-    product,
-    stockSnap.exists ? stockSnap.data()! : null,
-    parsed.variantId,
-  );
-
   const repository = createCartsRepository(adminDb);
   try {
     // `dimensions` é derivado do produto (server-side) — o cliente não envia.
-    const snapshot = await repository.addItem(
-      authedUser.uid,
-      {
-        ...parsed,
-        dimensions: product.dimensions,
-      },
-      { availableQty },
-    );
+    const snapshot = await repository.addItem(authedUser.uid, {
+      ...parsed,
+      dimensions: product.dimensions,
+    });
     return NextResponse.json(snapshot, { status: 200 });
   } catch (error) {
     if (error instanceof CartRepositoryError) {
@@ -171,8 +157,6 @@ function mapRepositoryError(error: CartRepositoryError): NextResponse {
       return NextResponse.json({ message: error.message }, { status: 409 });
     case "too_many_items":
       return NextResponse.json({ message: error.message }, { status: 409 });
-    case "out_of_stock":
-      return NextResponse.json({ message: error.message, code: error.code }, { status: 409 });
     case "not_found":
       return NextResponse.json({ message: error.message }, { status: 404 });
     default:
