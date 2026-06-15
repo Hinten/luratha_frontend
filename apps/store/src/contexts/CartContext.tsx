@@ -330,6 +330,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * Compra" correto mesmo com vários adds otimistas em paralelo.
    */
   const syncCount = useRef(0);
+  /**
+   * Contador só das **mutações otimistas** em voo (add/update/remove/clear no
+   * modo logado) — distinto de `syncCount`, que também conta o merge. Os
+   * callbacks do `onSnapshot` usam este para NÃO sobrescrever o estado otimista
+   * enquanto há writes do usuário pendentes. O merge (server-authoritative) não
+   * incrementa, então seus snapshots aplicam normalmente (evita a corrida do
+   * login→checkout, em que `items` ficaria defasado no instante do `isReady`).
+   */
+  const optimisticWrites = useRef(0);
 
   const beginSync = useCallback(() => {
     syncCount.current += 1;
@@ -417,7 +426,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       (snap) => {
         if (cancelled) return;
         const data = snap.data();
-        setCart(data ?? emptyCart(userId));
+        // Não aplica enquanto há mutação otimista em voo — o estado otimista
+        // (computeLocalCart) é a verdade até zerarem; o snapshot pós-commit
+        // reconcilia. Ver o gate de `items` abaixo.
+        if (optimisticWrites.current === 0) setCart(data ?? emptyCart(userId));
         cartReady = true;
         checkSnapshots();
       },
@@ -434,7 +446,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const rows = snap.docs.map((d) => d.data());
         // Verdade autoritativa para o rollback das mutações otimistas.
         serverItemsRef.current = rows;
-        setItems(rows);
+        // Não sobrescreve o estado otimista enquanto há mutação otimista em
+        // voo: um snapshot intermediário (ex.: commit do 1º de vários adds
+        // rápidos) reverteria a UI para uma quantidade defasada até o próximo
+        // snapshot. Ao zerar, o snapshot pós-commit reconcilia (e traz os
+        // campos server-side, como `dimensions`).
+        if (optimisticWrites.current === 0) setItems(rows);
         itemsReady = true;
         checkSnapshots();
       },
@@ -546,6 +563,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const syncInBackground = useCallback(
     (uid: string, run: () => Promise<Response>, fallbackMsg: string, okStatuses: number[] = []) => {
       void (async () => {
+        // Trava os snapshots de sobrescreverem o estado otimista até o write
+        // settlar; o snapshot pós-commit reconcilia quando voltar a 0.
+        optimisticWrites.current += 1;
         beginSync();
         try {
           const response = await run();
@@ -563,6 +583,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           throw err;
         } finally {
+          optimisticWrites.current = Math.max(0, optimisticWrites.current - 1);
           endSync();
         }
       })();

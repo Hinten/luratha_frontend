@@ -39,9 +39,12 @@ function toValidatePayload(item: CartItem) {
  * banner ("Auto-ajusta + avisa"). É best-effort — a barreira autoritativa, com
  * decremento, continua no `POST /api/orders`.
  *
- * Roda **uma vez** por montagem (guard via ref): aplicar os ajustes muda
- * `items`, mas o guard impede re-disparo. Não cancela o fetch em cleanup — assim
- * sobrevive ao double-invoke do React Strict Mode (dev/E2E) e aplica uma só vez.
+ * Dispara **uma vez** por montagem: `startedRef` impede re-disparo quando
+ * aplicar os ajustes muda `items` (e re-roda o efeito). O fetch NÃO é abortado
+ * no cleanup; em vez disso, `mountedRef` (re-armado no topo de cada run) é
+ * checado antes de aplicar/`setState`, então: (a) nada é aplicado após o
+ * unmount real, e (b) o double-invoke do Strict Mode (cleanup + remount em dev/
+ * E2E) não mata a única tentativa em voo — o 2º run re-arma `mountedRef`.
  */
 export function useCartStockCheck({
   items,
@@ -52,9 +55,15 @@ export function useCartStockCheck({
 }: UseCartStockCheckArgs): { adjustments: CartAdjustment[]; dismiss: () => void } {
   const [adjustments, setAdjustments] = useState<CartAdjustment[]>([]);
   const startedRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    if (!enabled || !isReady || items.length === 0 || startedRef.current) return;
+    mountedRef.current = true;
+    if (!enabled || !isReady || items.length === 0 || startedRef.current) {
+      return () => {
+        mountedRef.current = false;
+      };
+    }
     startedRef.current = true;
 
     const payload = items.map(toValidatePayload);
@@ -67,7 +76,8 @@ export function useCartStockCheck({
         });
         await throwIfNotOk(response, "Falha ao validar o carrinho.");
         const data = (await response.json()) as { adjustments: CartAdjustment[] };
-        if (data.adjustments.length === 0) return;
+        // Não aplica/atualiza estado se o componente já desmontou.
+        if (!mountedRef.current || data.adjustments.length === 0) return;
 
         for (const adj of data.adjustments) {
           if (adj.action === "drop") {
@@ -97,6 +107,10 @@ export function useCartStockCheck({
         throw err;
       }
     })();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [enabled, isReady, items, updateQuantity, removeItem]);
 
   const dismiss = useCallback(() => setAdjustments([]), []);
