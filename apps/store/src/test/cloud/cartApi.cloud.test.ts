@@ -69,7 +69,6 @@ import { POST as itemsPOST } from "@/src/app/api/cart/items/route";
 import { PUT as itemPUT, DELETE as itemDELETE } from "@/src/app/api/cart/items/[itemId]/route";
 import { POST as mergePOST } from "@/src/app/api/cart/merge/route";
 import {
-  SIMPLE_SKU_TOKEN,
   VARIANT_G_SKU,
   VARIANT_M_SKU,
   buildSimpleProduct,
@@ -113,9 +112,10 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
   ];
 
   /**
-   * Estoques generosos por padrão — os endpoints de cart agora aplicam um
-   * soft gate de estoque, e os testes de cap de quantidade (50+50→99) não
-   * podem esbarrar nele. Os testes de gate re-seedam valores baixos e
+   * Estoques generosos por padrão. O add/PUT do cart NÃO checam mais estoque
+   * (o soft gate migrou para `/api/cart/validate` + merge, em bulk); estes
+   * defaults garantem que o merge não cape quantidades nos testes que não são
+   * de estoque. Os testes de gate do merge re-seedam valores baixos e
    * restauram estes defaults ao final.
    */
   async function seedDefaultStocks(): Promise<void> {
@@ -748,77 +748,21 @@ describeCloud("/api/cart (Cloud Firebase)", () => {
     expect(response.status).toBe(400);
   });
 
-  // ── Soft gate de estoque (POST/PUT/merge) ────────────────────────────────
+  // ── Soft gate de estoque (só no merge agora; add/PUT não checam mais) ─────
+  //
+  // O gate por-add saiu do caminho crítico do clique (perf). O merge segue
+  // dropando esgotados e capando quantidades via `resolveCartAvailability` —
+  // mesma fonte do `/api/cart/validate` (ver cartValidate.cloud.test.ts).
 
-  it("POST /api/cart/items returns 409 out_of_stock quando a quantidade excede o estoque", async () => {
-    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 3 });
+  it("POST /api/cart/items NÃO bloqueia por estoque (gate migrou pro bulk)", async () => {
+    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 1 });
     try {
+      // Pede 4 com só 1 em estoque: o add aceita (o ajuste vem depois, em bulk).
       const over = await itemsPOST(
         jsonRequest("http://localhost/api/cart/items", buildItemPayload({ quantity: 4 })),
       );
-      expect(over.status).toBe(409);
-      expect((await over.json()).code).toBe("out_of_stock");
-
-      // Até o limite passa; o add seguinte (cumulativo) estoura.
-      const ok = await itemsPOST(
-        jsonRequest("http://localhost/api/cart/items", buildItemPayload({ quantity: 3 })),
-      );
-      expect(ok.status).toBe(200);
-      const cumulative = await itemsPOST(
-        jsonRequest("http://localhost/api/cart/items", buildItemPayload({ quantity: 1 })),
-      );
-      expect(cumulative.status).toBe(409);
-      expect((await cumulative.json()).code).toBe("out_of_stock");
-    } finally {
-      await seedDefaultStocks();
-    }
-  });
-
-  it("POST /api/cart/items returns 409 out_of_stock para variante esgotada (estoque por variante)", async () => {
-    await seedStockDoc({
-      productId: variable.id,
-      sku: variable.sku,
-      quantity: 5,
-      variants: { "var-m": 0, "var-g": 5 },
-    });
-    try {
-      const response = await itemsPOST(
-        jsonRequest(
-          "http://localhost/api/cart/items",
-          buildVariantItemPayload("var-m", VARIANT_M_SKU, { quantity: 1 }),
-        ),
-      );
-      expect(response.status).toBe(409);
-      const body = await response.json();
-      expect(body.code).toBe("out_of_stock");
-      expect(body.message).toBe("Produto esgotado.");
-    } finally {
-      await seedDefaultStocks();
-    }
-  });
-
-  it("PUT /api/cart/items/:id returns 409 out_of_stock ao subir a quantidade além do estoque", async () => {
-    const added = await itemsPOST(
-      jsonRequest("http://localhost/api/cart/items", buildItemPayload({ quantity: 2 })),
-    );
-    expect(added.status).toBe(200);
-    const itemId = (await added.json()).items[0].id as string;
-
-    await seedStockDoc({ productId: simple.id, sku: simple.sku, quantity: 2 });
-    try {
-      const over = await itemPUT(
-        jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 3 }, "PUT"),
-        { params: Promise.resolve({ itemId }) },
-      );
-      expect(over.status).toBe(409);
-      expect((await over.json()).code).toBe("out_of_stock");
-
-      // Reduzir continua permitido mesmo com estoque apertado.
-      const down = await itemPUT(
-        jsonRequest(`http://localhost/api/cart/items/${itemId}`, { quantity: 1 }, "PUT"),
-        { params: Promise.resolve({ itemId }) },
-      );
-      expect(down.status).toBe(200);
+      expect(over.status).toBe(200);
+      expect((await over.json()).items[0].quantity).toBe(4);
     } finally {
       await seedDefaultStocks();
     }

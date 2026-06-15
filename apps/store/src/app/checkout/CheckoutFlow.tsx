@@ -26,6 +26,8 @@ import StepIndicator, { type CheckoutStep } from "@/src/components/checkout/Step
 import OrderSummary, { type AppliedCoupon } from "@/src/components/checkout/OrderSummary";
 import CouponField from "@/src/components/checkout/CouponField";
 import ReviewSummary from "@/src/components/checkout/ReviewSummary";
+import CartStockBanner from "@/src/components/cart/CartStockBanner";
+import { useCartStockCheck } from "@/src/hooks/useCartStockCheck";
 import styles from "./CheckoutFlow.module.css";
 
 /**
@@ -251,7 +253,7 @@ export default function CheckoutFlow() {
   // cart vazio precisa de bypass quando `state.paymentResult` está presente —
   // sem isso, o user seria redirecionado pro /carrinho assim que o cart
   // esvazia, em vez de ver o QR/boleto. O guard local (mais abaixo) faz isso.
-  const { items, isReady: cartReady, clearCart } = useCart();
+  const { items, isReady: cartReady, clearCart, updateQuantity, removeItem } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -267,6 +269,17 @@ export default function CheckoutFlow() {
   // o user precisa ver o QR/confirmação até clicar "Acompanhar pedido".
   const showingResult = state.paymentResult !== null && state.orderId !== null;
   const activeStep: StepId = showingResult ? "result" : urlStep;
+
+  // Rede de segurança pré-pagamento: na etapa de revisão, revalida o estoque em
+  // bulk e auto-ajusta o carrinho (cap/remoção) com aviso. A barreira
+  // autoritativa, com decremento, continua no POST /api/orders.
+  const { adjustments: stockAdjustments, dismiss: dismissStockAdjustments } = useCartStockCheck({
+    items,
+    isReady: cartReady,
+    enabled: activeStep === "review",
+    updateQuantity,
+    removeItem,
+  });
 
   // Sincroniza a URL quando o requested foi rebaixado pelos pré-reqs
   // (deep link em ?step=review sem ter passado pelo address, etc.).
@@ -539,6 +552,8 @@ export default function CheckoutFlow() {
 
       <div className={styles.grid}>
         <main className={styles.main}>
+          <CartStockBanner adjustments={stockAdjustments} onDismiss={dismissStockAdjustments} />
+
           {activeStep === "identification" && (
             <IdentificationStep
               userId={user!.uid}

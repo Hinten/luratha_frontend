@@ -21,7 +21,6 @@ export type CartRepositoryErrorCode =
   | "not_found"
   | "quantity_exceeded"
   | "too_many_items"
-  | "out_of_stock"
   | "unknown";
 
 export class CartRepositoryError extends Error {
@@ -68,20 +67,9 @@ export interface CartSnapshot {
   items: CartItem[];
 }
 
-/**
- * Limites contextuais opcionais aplicados dentro da transação de escrita.
- * `availableQty` é o estoque disponível resolvido pela rota (variant-aware,
- * via `resolveAvailableQty`) — quando presente, a quantidade resultante do
- * item não pode excedê-lo (soft gate de UX; a checagem autoritativa acontece
- * no `POST /api/orders`).
- */
-export interface CartWriteLimits {
-  availableQty?: number;
-}
-
 export interface CartsRepository {
   getCart(userId: string): Promise<CartSnapshot>;
-  addItem(userId: string, input: CartItemWrite, limits?: CartWriteLimits): Promise<CartSnapshot>;
+  addItem(userId: string, input: CartItemWrite): Promise<CartSnapshot>;
   setItemQuantity(userId: string, itemId: string, quantity: number): Promise<CartSnapshot>;
   removeItem(userId: string, itemId: string): Promise<CartSnapshot>;
   clear(userId: string): Promise<void>;
@@ -164,28 +152,7 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
     }
   }
 
-  /**
-   * Soft gate de estoque: a quantidade final do item não pode exceder o
-   * disponível resolvido pela rota. Roda dentro da transação para enxergar a
-   * quantidade já existente no carrinho (add é cumulativo).
-   */
-  function assertWithinAvailable(nextQuantity: number, limits?: CartWriteLimits): void {
-    const available = limits?.availableQty;
-    if (available === undefined || nextQuantity <= available) return;
-    if (available <= 0) {
-      throw new CartRepositoryError("Produto esgotado.", "out_of_stock");
-    }
-    throw new CartRepositoryError(
-      `Estoque insuficiente. Disponível: ${available}.`,
-      "out_of_stock",
-    );
-  }
-
-  async function addItem(
-    userId: string,
-    input: CartItemWrite,
-    limits?: CartWriteLimits,
-  ): Promise<CartSnapshot> {
+  async function addItem(userId: string, input: CartItemWrite): Promise<CartSnapshot> {
     try {
       const parsedInput = cartItemWriteSchema.parse(input);
       if (parsedInput.quantity > MAX_QUANTITY_PER_ITEM) {
@@ -217,7 +184,6 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
               "quantity_exceeded",
             );
           }
-          assertWithinAvailable(nextQuantity, limits);
           updatedItem = validateCartItem({
             ...existing,
             ...parsedInput,
@@ -234,7 +200,6 @@ export function createCartsRepository(adminDb: AdminFirestore): CartsRepository 
               "too_many_items",
             );
           }
-          assertWithinAvailable(parsedInput.quantity, limits);
           updatedItem = validateCartItem({
             ...parsedInput,
             id: itemId,
