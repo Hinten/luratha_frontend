@@ -13,8 +13,10 @@ import { nonEmptyStringSchema, timestampSchema, uidSchema } from "@luratha/schem
  * Os formatos aceitos são os "mascarados" (CPF: 999.999.999-99,
  * CNPJ: 99.999.999/9999-99 — as 12 primeiras posições aceitam letras
  * maiúsculas, cobrindo o CNPJ alfanumérico emitido a partir de jul/2026).
- * A normalização para apenas dígitos acontece na hora de gerar a NF-e —
- * assim o que está no banco bate com o que o usuário digitou.
+ * Para a NF-e, a normalização remove apenas a máscara (pontos/barra/hífen)
+ * e mantém as letras em maiúsculas — o CNPJ alfanumérico não pode virar
+ * "apenas dígitos" sem perder informação. Assim o que está no banco bate
+ * com o que o usuário digitou.
  */
 export const taxIdentitySchema = z.discriminatedUnion("type", [
   z.object({

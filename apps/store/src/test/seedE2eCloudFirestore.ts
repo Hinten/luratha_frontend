@@ -10,13 +10,15 @@ import { firestoreCollections } from "@luratha/schemas";
  *
  * The seed is **idempotent and non-destructive**: it merge-upserts the same
  * deterministic documents every run and never deletes. Because every run
- * converges on the exact same fixture set, concurrent E2E jobs (e2e-cloud,
- * seo-e2e, and cross-PR runs) can seed simultaneously without racing — there
- * is no delete window where another run would read missing fixtures, and the
- * shared IDs mean the storefront never renders duplicated catalog data. This
- * is what lets each E2E job run in its own concurrency group instead of being
- * serialized through one shared group (which caused queued jobs to be
- * cancelled — see the workflow comments).
+ * writes the same deterministic IDs (merge upsert — a field removed from a
+ * fixture definition would linger until a manual reset, but the docs the specs
+ * read always converge), concurrent E2E jobs (e2e-cloud, seo-e2e, and cross-PR
+ * runs) can seed simultaneously without racing — there is no delete window
+ * where another run would read missing fixtures, and the shared IDs mean the
+ * storefront never renders duplicated catalog data. This is what lets each E2E
+ * job run in its own concurrency group instead of being serialized through one
+ * shared group (which caused queued jobs to be cancelled — see the workflow
+ * comments).
  *
  * The fixtures intentionally persist between runs. They do NOT accumulate:
  * deterministic IDs mean each run overwrites the same docs in place.
