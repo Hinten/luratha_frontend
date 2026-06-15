@@ -31,12 +31,19 @@ describe("formatCnpj", () => {
     expect(formatCnpj("12345678000190")).toBe("12.345.678/0001-90");
   });
 
-  it("descarta caracteres não-numéricos do input", () => {
+  it("descarta caracteres que não são letras nem dígitos", () => {
     expect(formatCnpj("12.345.678/0001-90")).toBe("12.345.678/0001-90");
-    expect(formatCnpj("abc12def345gh678ij0001kl90")).toBe("12.345.678/0001-90");
+    expect(formatCnpj("12 345 678/0001--90??")).toBe("12.345.678/0001-90");
   });
 
-  it("trunca no 14º dígito (CNPJ tem 14 dígitos)", () => {
+  it("aceita CNPJ alfanumérico, maiusculizando as letras", () => {
+    expect(formatCnpj("12abc34501de35")).toBe("12.ABC.345/01DE-35");
+    expect(formatCnpj("12.ABC.345/01DE-35")).toBe("12.ABC.345/01DE-35");
+    expect(formatCnpj("12AB")).toBe("12.AB");
+  });
+
+  it("trunca no 14º caractere (CNPJ tem 14 caracteres)", () => {
     expect(formatCnpj("12345678000190999")).toBe("12.345.678/0001-90");
+    expect(formatCnpj("12ABC34501DE35XYZ")).toBe("12.ABC.345/01DE-35");
   });
 });

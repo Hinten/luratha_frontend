@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isValidCnpj, isValidCpf, strictEmail } from "@luratha/schemas";
 import { authErrorResponse, requireUser } from "@luratha/auth/requireUser";
 import {
   createPaymentIntent,
@@ -30,20 +31,29 @@ export const runtime = "nodejs";
 const orderIdSchema = z.string().trim().min(1).max(120);
 
 const payerSchema = z.object({
-  email: z.email("E-mail do pagador inválido."),
+  email: strictEmail("E-mail do pagador inválido."),
   firstName: z.string().trim().min(1).max(80).optional(),
   lastName: z.string().trim().min(1).max(80).optional(),
+  // `number` sem máscara; CNPJ aceita o formato alfanumérico (12 chars
+  // [A-Z0-9] + 2 DVs numéricos) e é normalizado pra maiúsculas. Os
+  // validadores checam formato + dígitos verificadores (mod-11).
   identification: z
     .object({
       type: z.enum(["CPF", "CNPJ"]),
-      number: z
-        .string()
-        .trim()
-        .regex(/^\d{11}$|^\d{14}$/, "Documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos."),
+      number: z.string().trim().toUpperCase(),
     })
-    .refine((id) => (id.type === "CPF" ? id.number.length === 11 : id.number.length === 14), {
-      message: "Número do documento não confere com o tipo (CPF=11, CNPJ=14).",
-      path: ["number"],
+    .superRefine((id, ctx) => {
+      const valid = id.type === "CPF" ? isValidCpf(id.number) : isValidCnpj(id.number);
+      if (!valid) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["number"],
+          message:
+            id.type === "CPF"
+              ? "CPF inválido (11 dígitos, sem máscara, com DVs corretos)."
+              : "CNPJ inválido (14 caracteres, sem máscara, com DVs corretos).",
+        });
+      }
     }),
 });
 
