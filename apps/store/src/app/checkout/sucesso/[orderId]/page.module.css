@@ -33,10 +33,25 @@
   margin: 0;
 }
 
+.eyebrowAwaiting {
+  color: color-mix(in srgb, var(--color-warning) 80%, var(--color-neutral-dark) 20%);
+}
+
 .lead {
   margin: 0;
   font-size: 0.9375rem;
   color: color-mix(in srgb, var(--color-neutral-dark) 80%, transparent);
+}
+
+.callout {
+  margin: 0;
+  text-align: left;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-warning) 80%, var(--color-neutral-dark) 20%);
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
 }
 
 .totals {
