@@ -25,8 +25,8 @@ on:
       - '.github/workflows/e2e-checkout-mp.yml'
 
 # Cancela runs anteriores do MESMO PR (não cross-PR). Cross-PR é coberto
-# pela `concurrency` interna do job (luratha-96386-e2e), que serializa
-# com o `Test → e2e-cloud` no mesmo Firestore project.
+# pela `concurrency` interna do job (luratha-96386-mp-testuser), que serializa
+# o acesso ao test user reaproveitado entre runs.
 concurrency:
   group: e2e-checkout-mp-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -38,11 +38,15 @@ jobs:
   e2e-mp:
     name: E2E Checkout (MP)
     runs-on: ubuntu-latest
-    # Mesma concurrency group do `Test → e2e-cloud` pra evitar 2 runs
-    # simultâneas contra o Firestore luratha-96386 entre os workflows
-    # quando o test user reaproveitado entre runs poderia colidir.
+    # Serializa apenas os runs do PRÓPRIO suite MP entre PRs: estes specs
+    # reaproveitam um único test user do MercadoPago (loginOrRegisterTestUser)
+    # e manipulam o carrinho/pedidos dele — dois runs simultâneos colidiriam.
+    # As fixtures de catálogo são semeadas idempotentemente (seedE2eCloudFirestore),
+    # então NÃO compartilhamos mais grupo com e2e-cloud/seo-e2e — só este job usa
+    # este grupo, evitando o cancelamento por fila cheia que o grupo compartilhado
+    # `luratha-96386-e2e` causava com 3 workflows.
     concurrency:
-      group: luratha-96386-e2e
+      group: luratha-96386-mp-testuser
       cancel-in-progress: false
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
@@ -96,9 +100,9 @@ jobs:
           fi
       - uses: actions/checkout@v5
         if: steps.check_secrets.outputs.skip != 'true'
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         if: steps.check_secrets.outputs.skip != 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: steps.check_secrets.outputs.skip != 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -119,7 +123,7 @@ jobs:
             e2e/checkout.spec.ts
       - name: Upload Playwright report
         if: always() && steps.check_secrets.outputs.skip != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-report-mp
           path: apps/store/playwright-report

@@ -143,6 +143,20 @@ function pickFriendlyMessage(args: ReportCheckoutErrorArgs): string {
         }
         break;
       case "submit_order":
+        if (code === "out_of_stock") {
+          // O servidor monta a mensagem com os nomes dos itens sem estoque
+          // ("Estoque insuficiente para: X, Y. Ajuste as quantidades…").
+          return error.message;
+        }
+        if (code === "price_mismatch") {
+          return "Os preços de itens do carrinho mudaram. Revise o carrinho e tente novamente.";
+        }
+        if (code === "coupon_invalid" || code === "discount_mismatch") {
+          return "O cupom aplicado não é mais válido. Remova ou reaplique o cupom e tente novamente.";
+        }
+        if (code === "catalog_mismatch" || code === "shipping_mismatch") {
+          return "Os dados do pedido ficaram desatualizados. Volte ao carrinho e refaça o pedido.";
+        }
         if (code === "invalid_input") {
           return "Confira os dados de pagamento e tente novamente.";
         }

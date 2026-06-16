@@ -3,14 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CartItem } from "@luratha/schemas";
 import { useCart } from "@/src/contexts/CartContext";
+import { trackViewCart } from "@/src/lib/analytics/ecommerce";
 import { useCartShipping } from "@/src/hooks/useCartShipping";
+import { useCartStockCheck } from "@/src/hooks/useCartStockCheck";
 import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
 import CartShippingOptions, {
   cartShippingQuoteKey,
 } from "@/src/components/shipping/CartShippingOptions";
+import CartStockBanner from "@/src/components/cart/CartStockBanner";
 import Spinner from "@/src/components/Spinner";
 import styles from "./page.module.css";
 
@@ -32,7 +35,21 @@ export default function CarrinhoPage() {
   } = useCart();
 
   const shipping = useCartShipping(items);
+  const { adjustments, dismiss } = useCartStockCheck({
+    items,
+    isReady,
+    updateQuantity,
+    removeItem,
+  });
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // GA4 `view_cart` — uma vez, quando o carrinho terminou de hidratar com itens.
+  const viewCartFired = useRef(false);
+  useEffect(() => {
+    if (!isReady || items.length === 0 || viewCartFired.current) return;
+    viewCartFired.current = true;
+    trackViewCart(items, totalPrice);
+  }, [isReady, items, totalPrice]);
 
   const isEmpty = items.length === 0;
 
@@ -61,6 +78,8 @@ export default function CarrinhoPage() {
     <main className={styles.page}>
       <div className={`container-luratha ${styles.inner}`}>
         <h1 className={styles.heading}>Meu Carrinho</h1>
+
+        <CartStockBanner adjustments={adjustments} onDismiss={dismiss} />
 
         {error && (
           <p className={styles.error} role="alert">

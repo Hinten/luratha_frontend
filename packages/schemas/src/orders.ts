@@ -235,6 +235,18 @@ export const orderSchema = z
     paidAt: timestampSchema.optional(),
     shippedAt: timestampSchema.optional(),
     deliveredAt: timestampSchema.optional(),
+    /**
+     * Bookkeeping do estoque reservado por este pedido. Controlado 100% pelo
+     * servidor (o `POST /api/orders` descarta o campo do payload do cliente):
+     *  - `"decremented"` — setado na criação do pedido, junto do decremento
+     *    transacional dos docs de `stock`.
+     *  - `"released"` — setado (uma única vez) quando o estoque volta: pagamento
+     *    `failed`/`cancelled`/`rejected` ou cancelamento do pedido.
+     * Ausente = pedido anterior à reserva de estoque (legado) — os caminhos de
+     * release fazem no-op. Enum único em vez de dois booleans para impedir
+     * estados contraditórios.
+     */
+    stockMovement: z.enum(["decremented", "released"]).optional(),
     notes: z.string().trim().max(500).optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
@@ -257,6 +269,18 @@ export const orderSchema = z
           message: "lineTotal must equal unitPrice multiplied by quantity",
         });
       }
+    }
+
+    const calculatedSubtotalCents = order.items.reduce(
+      (sum, item) => sum + toCents(item.lineTotal),
+      0,
+    );
+    if (toCents(order.subtotal) !== calculatedSubtotalCents) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["subtotal"],
+        message: "subtotal must equal the sum of all item lineTotals",
+      });
     }
 
     const calculatedGrandTotalCents =

@@ -103,9 +103,87 @@ export const shippingSettingsSchema = z.object({
   fixedRate: fixedRateConfigSchema.default(() => fixedRateConfigSchema.parse({})),
 });
 
+/**
+ * Dados de identificação da empresa — alimentam as páginas institucionais
+ * (privacidade, termos de uso), inclusive o `publisher` (schema.org Organization)
+ * do JSON-LD dessas páginas.
+ *
+ * Todos os campos têm `default("")` para retrocompatibilidade: documentos
+ * `settings/global` criados antes deste bloco (apenas `shipping`) continuam
+ * válidos na leitura — o `.default()` materializa um `company` vazio. O dono
+ * preenche os valores em `/configuracoes/empresa` no admin; enquanto vazios, as
+ * páginas exibem marcadores `[INSERIR …]` em vez de texto em branco.
+ */
+export const companySettingsSchema = z.object({
+  /** Razão social registrada (ex.: "Luratha Comércio de Roupas LTDA"). */
+  legalName: z.string().trim().max(140).default(""),
+  /** Nome fantasia exibido ao público. */
+  tradeName: z.string().trim().max(140).default(""),
+  /** CNPJ — formato livre (ex.: "00.000.000/0001-00"). */
+  cnpj: z.string().trim().max(20).default(""),
+  /** Nome do Encarregado pelo Tratamento de Dados (DPO), exigido pela LGPD (art. 41). */
+  dpoName: z.string().trim().max(140).default(""),
+  /** E-mail do Encarregado/DPO para o exercício de direitos pelos titulares. */
+  dpoEmail: z.string().trim().max(140).default(""),
+  /** E-mail oficial de atendimento ao cliente. */
+  contactEmail: z.string().trim().max(140).default(""),
+  /** Endereço da sede (logradouro, número, bairro). */
+  addressLine: z.string().trim().max(200).default(""),
+  /** Município da sede. */
+  addressCity: z.string().trim().max(80).default(""),
+  /** UF da sede (sigla de 2 letras). */
+  addressState: z.string().trim().max(2).default(""),
+  /** Comarca/foro de eleição para os Termos de Uso (ex.: "São Paulo/SP"). */
+  jurisdiction: z.string().trim().max(120).default(""),
+});
+
+/**
+ * Identificadores de marketing/analytics que o dono cadastra sem deploy.
+ *
+ * O **Google Analytics 4** já é renderizado na storefront (Consent Mode v2, em
+ * modo opt-out) a partir de `ga4MeasurementId`/`ga4Enabled` — ver
+ * `apps/store/src/components/analytics/`. Os demais IDs (Meta Pixel, Catálogo do
+ * Facebook, Merchant Center) por ora são apenas **armazenados** (consumidos pelo
+ * app de feeds / wiring de Pixel em fase seguinte). Todos os campos têm
+ * `default(...)` para retrocompatibilidade: documentos `settings/global` criados
+ * antes deste bloco continuam válidos na leitura — o `.default()` materializa um
+ * `marketing` vazio (mesmo padrão de `company`).
+ */
+export const marketingSettingsSchema = z.object({
+  /**
+   * ID do Meta Pixel (Facebook/Instagram), tipicamente numérico
+   * (ex.: "123456789012345"). Armazenado como string livre — o formato não é
+   * validado aqui (v1 apenas persiste; a validação fica para quando a loja
+   * passar a renderizar o script do Pixel).
+   */
+  metaPixelId: z.string().trim().max(32).default(""),
+  /** ID do Catálogo do Facebook/Commerce Manager onde o feed é cadastrado. */
+  facebookCatalogId: z.string().trim().max(32).default(""),
+  /** ID da conta do Google Merchant Center que consome o feed de produtos. */
+  googleMerchantCenterId: z.string().trim().max(32).default(""),
+  /**
+   * Measurement ID do Google Analytics 4 (`G-XXXXXXXX`). Vazio desliga a
+   * medição na loja. Validado no formato porque, diferente dos demais IDs, este
+   * campo é efetivamente injetado no gtag.
+   */
+  ga4MeasurementId: z
+    .string()
+    .trim()
+    .regex(
+      /^(G-[A-Z0-9]{4,})?$/,
+      "Measurement ID inválido — comece com 'G-' seguido de letras e números (ex.: G-XXXXXXXXXX).",
+    )
+    .max(20)
+    .default(""),
+  /** Liga/desliga a medição do GA4 sem perder o ID configurado. */
+  ga4Enabled: z.boolean().default(true),
+});
+
 export const siteSettingsSchema = z.object({
   id: z.literal("global"),
   shipping: shippingSettingsSchema,
+  company: companySettingsSchema.default(() => companySettingsSchema.parse({})),
+  marketing: marketingSettingsSchema.default(() => marketingSettingsSchema.parse({})),
   updatedAt: timestampSchema,
 });
 
@@ -115,6 +193,8 @@ export type FreeShippingConfig = z.infer<typeof freeShippingConfigSchema>;
 export type FixedRateEntry = z.infer<typeof fixedRateEntrySchema>;
 export type FixedRateConfig = z.infer<typeof fixedRateConfigSchema>;
 export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
+export type CompanySettings = z.infer<typeof companySettingsSchema>;
+export type MarketingSettings = z.infer<typeof marketingSettingsSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export function validateSiteSettings(input: unknown): SiteSettings {

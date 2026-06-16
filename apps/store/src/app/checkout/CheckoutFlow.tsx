@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useReducer, useState } from "react";
+import { startTransition, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   PAYMENT_FAILURE_STATUSES,
@@ -11,7 +11,13 @@ import {
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
+import {
+  trackAddPaymentInfo,
+  trackAddShippingInfo,
+  trackBeginCheckout,
+} from "@/src/lib/analytics/ecommerce";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
+import { logger } from "@luratha/core/logging/logger";
 import Spinner from "@/src/components/Spinner";
 import AddressStep from "@/src/components/checkout/AddressStep";
 import IdentificationStep from "@/src/components/checkout/IdentificationStep";
@@ -25,6 +31,8 @@ import StepIndicator, { type CheckoutStep } from "@/src/components/checkout/Step
 import OrderSummary, { type AppliedCoupon } from "@/src/components/checkout/OrderSummary";
 import CouponField from "@/src/components/checkout/CouponField";
 import ReviewSummary from "@/src/components/checkout/ReviewSummary";
+import CartStockBanner from "@/src/components/cart/CartStockBanner";
+import { useCartStockCheck } from "@/src/hooks/useCartStockCheck";
 import styles from "./CheckoutFlow.module.css";
 
 /**
@@ -200,6 +208,33 @@ function shippingAddressPath(userId: string, addressId: string): string {
 // 25s: margem confortável sobre os 10s do SDK MP server-side + round-trip + Firestore.
 const CONFIRM_TIMEOUT_MS = 25_000;
 
+/**
+ * Cancela (best-effort) um pedido recém-criado cujo payment-intent falhou de
+ * forma definitiva — sem isso o pedido ficaria `pending_payment` para sempre
+ * segurando o estoque reservado (o PATCH cancel devolve o estoque no servidor).
+ * Falhas aqui são apenas logadas: o usuário já está vendo o erro principal e
+ * um pedido órfão residual é recuperável pelo admin.
+ */
+async function cancelOrphanOrder(orderId: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    if (!res.ok) {
+      logger.warn("[checkout] cancelamento best-effort do pedido órfão falhou", {
+        orderId,
+        status: res.status,
+      });
+    }
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
+    // fetch lança TypeError em queda de rede — só loga, nada a fazer aqui.
+    logger.warn("[checkout] cancelamento best-effort do pedido órfão falhou (rede)", { orderId });
+  }
+}
+
 async function fetchWithTimeout(
   input: RequestInfo,
   init: RequestInit,
@@ -223,9 +258,11 @@ export default function CheckoutFlow() {
   // cart vazio precisa de bypass quando `state.paymentResult` está presente —
   // sem isso, o user seria redirecionado pro /carrinho assim que o cart
   // esvazia, em vez de ver o QR/boleto. O guard local (mais abaixo) faz isso.
-  const { items, isReady: cartReady, clearCart } = useCart();
+  const { items, isReady: cartReady, clearCart, updateQuantity, removeItem } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  // GA4 `begin_checkout` dispara uma vez, quando o cart hidrata com itens.
+  const beginCheckoutFired = useRef(false);
 
   // URL → step (com fallback pra "identification" — primeiro step — se o
   // param for inválido).
@@ -239,6 +276,17 @@ export default function CheckoutFlow() {
   // o user precisa ver o QR/confirmação até clicar "Acompanhar pedido".
   const showingResult = state.paymentResult !== null && state.orderId !== null;
   const activeStep: StepId = showingResult ? "result" : urlStep;
+
+  // Rede de segurança pré-pagamento: na etapa de revisão, revalida o estoque em
+  // bulk e auto-ajusta o carrinho (cap/remoção) com aviso. A barreira
+  // autoritativa, com decremento, continua no POST /api/orders.
+  const { adjustments: stockAdjustments, dismiss: dismissStockAdjustments } = useCartStockCheck({
+    items,
+    isReady: cartReady,
+    enabled: activeStep === "review",
+    updateQuantity,
+    removeItem,
+  });
 
   // Sincroniza a URL quando o requested foi rebaixado pelos pré-reqs
   // (deep link em ?step=review sem ter passado pelo address, etc.).
@@ -291,6 +339,15 @@ export default function CheckoutFlow() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeStep]);
 
+  // GA4 `begin_checkout` — uma vez, assim que o cart termina de hidratar com
+  // itens. `value` = subtotal do cart (frete/desconto ainda não escolhidos).
+  useEffect(() => {
+    if (!cartReady || items.length === 0 || beginCheckoutFired.current) return;
+    beginCheckoutFired.current = true;
+    const cartSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    trackBeginCheckout(items, cartSubtotal);
+  }, [cartReady, items]);
+
   if (!user) return null;
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
@@ -334,6 +391,12 @@ export default function CheckoutFlow() {
       return;
     }
     dispatch({ type: "SUBMIT_START" });
+    // GA4 `add_payment_info` — o usuário confirmou o pagamento com um método.
+    trackAddPaymentInfo(items, grandTotal, draft.paymentMethod);
+
+    // Id do pedido criado neste submit — usado no catch para cancelar (e
+    // devolver o estoque de) um pedido cujo payment-intent falhou de vez.
+    let createdOrderId: string | null = null;
 
     const orderPayload = {
       userId: user!.uid,
@@ -385,6 +448,7 @@ export default function CheckoutFlow() {
         );
       }
       const created = (await orderRes.json()) as { id: string };
+      createdOrderId = created.id;
 
       const intentRes = await fetchWithTimeout(
         "/api/checkout/payment-intent",
@@ -461,6 +525,19 @@ export default function CheckoutFlow() {
         err instanceof TypeError ||
         (err instanceof DOMException && err.name === "AbortError")
       ) {
+        // O pedido foi criado mas o payment-intent falhou com 4xx definitivo
+        // (exceto 409 — "pagamento já em andamento" significa que um intent
+        // PODE existir no MP; 5xx/timeout idem: a criação pode ter ocorrido e
+        // o webhook ainda resolve). Cancelar libera o estoque reservado.
+        if (
+          createdOrderId !== null &&
+          err instanceof ApiResponseError &&
+          err.status >= 400 &&
+          err.status < 500 &&
+          err.status !== 409
+        ) {
+          void cancelOrphanOrder(createdOrderId);
+        }
         const message = reportCheckoutError({ error: err, step: "submit_order" });
         dispatch({ type: "SUBMIT_FAIL", message });
         return;
@@ -493,6 +570,8 @@ export default function CheckoutFlow() {
 
       <div className={styles.grid}>
         <main className={styles.main}>
+          <CartStockBanner adjustments={stockAdjustments} onDismiss={dismissStockAdjustments} />
+
           {activeStep === "identification" && (
             <IdentificationStep
               userId={user!.uid}
@@ -534,7 +613,12 @@ export default function CheckoutFlow() {
               subtotal={subtotal}
               selectedQuote={state.quote}
               onSelect={(q) => dispatch({ type: "SET_QUOTE", quote: q })}
-              onContinue={() => goToStep("review")}
+              onContinue={() => {
+                if (state.quote) {
+                  trackAddShippingInfo(items, grandTotal, state.quote.service);
+                }
+                goToStep("review");
+              }}
               onBack={goBack}
             />
           )}

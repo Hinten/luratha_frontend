@@ -1,0 +1,91 @@
+name: SEO / AEO / GEO
+
+# Dedicated gate for the SEO / AEO / GEO test suite (metadata, JSON-LD
+# structured data, sitemap, robots, llms.txt). Kept separate from `test.yml`
+# so SEO regressions are easy to spot and filter. The `seo-unit` job is
+# deterministic (jsdom, no credentials); `seo-e2e` validates head tags and
+# JSON-LD in a real browser and skips when Firebase secrets are absent.
+
+on:
+  pull_request:
+    branches: [master, production]
+
+# Cancel previous runs on the same PR to avoid wasted minutes.
+concurrency:
+  group: seo-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  seo-unit:
+    name: SEO unit (Vitest jsdom)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run SEO/AEO/GEO unit suite
+        run: pnpm test:seo
+
+  seo-e2e:
+    name: SEO E2E (Playwright head + JSON-LD)
+    runs-on: ubuntu-latest
+    needs: seo-unit
+    # No cross-run concurrency group. This job re-seeds the shared cloud project
+    # via the same idempotent, non-destructive globalSetup as test.yml's
+    # e2e-cloud (see seedE2eCloudFirestore), and only reads catalog data — so it
+    # is safe to run concurrently. Previously it shared the `luratha-96386-e2e`
+    # group with e2e-cloud and e2e-mp; with three workflows feeding one group and
+    # GitHub allowing only one queued run, this job was the one getting cancelled.
+    env:
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
+      FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: luratha-96386
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - name: Verify cloud test secrets are configured
+        id: check_secrets
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ] || [ -z "$FIREBASE_WEB_APP_CONFIG_BASE64" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT_BASE64 ou FIREBASE_WEB_APP_CONFIG_BASE64 ausentes — pulando seo-e2e. Configure os secrets para habilitar."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: pnpm/action-setup@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+      - uses: actions/setup-node@v5
+        if: steps.check_secrets.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - if: steps.check_secrets.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        if: steps.check_secrets.outputs.skip != 'true'
+        working-directory: apps/store
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run SEO E2E spec
+        if: steps.check_secrets.outputs.skip != 'true'
+        timeout-minutes: 6
+        run: pnpm --filter @luratha/store test:e2e:seo
+      - name: Upload Playwright report
+        if: always() && steps.check_secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report-seo
+          path: apps/store/playwright-report
+          retention-days: 7

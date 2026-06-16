@@ -11,6 +11,10 @@ export const runtime = "nodejs";
  * Sets the quantity of an existing cart item. A quantity ≤ 0 removes the
  * item — the response still returns the resulting cart snapshot, never 204,
  * so the client can re-render off a single payload.
+ *
+ * Estoque NÃO é checado aqui — a disponibilidade é revalidada em bulk no
+ * `/api/cart/validate` (carrinho/checkout) e de forma autoritativa em
+ * `POST /api/orders`.
  */
 export async function PUT(request: Request, { params }: { params: Promise<{ itemId: string }> }) {
   let authedUser;

@@ -100,6 +100,48 @@ describe("PATCH /api/settings", () => {
     expect(await response.json()).toEqual(SAVED);
   });
 
+  it("merges a company block over the current document and persists", async () => {
+    const company = {
+      legalName: "Luratha Comércio de Roupas LTDA",
+      cnpj: "00.000.000/0001-00",
+      dpoName: "Maria Silva",
+      dpoEmail: "dpo@luratha.com.br",
+    };
+
+    const response = await PATCH(makeRequest({ company }));
+
+    expect(response.status).toBe(200);
+    expect(mockGetSiteSettings).toHaveBeenCalledWith({ forceFresh: true });
+    // { ...current, ...payload } — the company block is added without touching shipping.
+    expect(mockSetSiteSettings).toHaveBeenCalledWith({
+      id: "global",
+      shipping: { providerId: "melhor-envio" },
+      updatedAt: "t0",
+      company,
+    });
+  });
+
+  it("merges a marketing block over the current document and persists", async () => {
+    const marketing = {
+      metaPixelId: "123456789012345",
+      facebookCatalogId: "987654321",
+      googleMerchantCenterId: "555000111",
+      ga4MeasurementId: "G-ABC123XYZ",
+    };
+
+    const response = await PATCH(makeRequest({ marketing }));
+
+    expect(response.status).toBe(200);
+    expect(mockGetSiteSettings).toHaveBeenCalledWith({ forceFresh: true });
+    // { ...current, ...payload } — the marketing block is added without touching shipping.
+    expect(mockSetSiteSettings).toHaveBeenCalledWith({
+      id: "global",
+      shipping: { providerId: "melhor-envio" },
+      updatedAt: "t0",
+      marketing,
+    });
+  });
+
   it("returns 400 with issues when the merged document fails validation", async () => {
     mockSetSiteSettings.mockImplementation(async () => {
       z.number().parse("not a number"); // throws ZodError
