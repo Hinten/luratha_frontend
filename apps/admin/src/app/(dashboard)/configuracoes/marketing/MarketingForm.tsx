@@ -11,12 +11,19 @@ type Status =
   | { kind: "saved" }
   | { kind: "error"; message: string };
 
+/** Chaves de `MarketingSettings` cujo valor é string (renderizadas como input). */
+type MarketingStringKey = {
+  [K in keyof MarketingSettings]: MarketingSettings[K] extends string ? K : never;
+}[keyof MarketingSettings];
+
 type Field = {
-  key: keyof MarketingSettings;
+  key: MarketingStringKey;
   label: string;
   placeholder?: string;
   hint?: string;
   maxLength?: number;
+  /** Força maiúsculas ao digitar (ex.: Measurement ID GA4). */
+  uppercase?: boolean;
 };
 
 const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
@@ -53,8 +60,9 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
         key: "ga4MeasurementId",
         label: "GA4 Measurement ID",
         placeholder: "G-XXXXXXXXXX",
-        hint: "Measurement ID do Google Analytics 4.",
+        hint: "Injetado na loja (Consent Mode v2, modo opt-out). Vazio desliga a medição.",
         maxLength: 20,
+        uppercase: true,
       },
     ],
   },
@@ -65,7 +73,7 @@ export function MarketingForm({ initialMarketing }: { initialMarketing: Marketin
   const [marketing, setMarketing] = useState<MarketingSettings>(initialMarketing);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
-  function patch(key: keyof MarketingSettings, value: string) {
+  function patch(key: MarketingStringKey, value: string) {
     setMarketing((m) => ({ ...m, [key]: value }));
     setStatus({ kind: "idle" });
   }
@@ -114,12 +122,36 @@ export function MarketingForm({ initialMarketing }: { initialMarketing: Marketin
                   value={marketing[field.key]}
                   placeholder={field.placeholder}
                   maxLength={field.maxLength}
-                  onChange={(e) => patch(field.key, e.target.value)}
+                  onChange={(e) =>
+                    patch(
+                      field.key,
+                      field.uppercase ? e.target.value.toUpperCase() : e.target.value,
+                    )
+                  }
                 />
                 {field.hint && <span className={styles.hint}>{field.hint}</span>}
               </label>
             ))}
           </div>
+          {group.title === "Google" && (
+            <label className={styles.checkboxField}>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={marketing.ga4Enabled}
+                onChange={(e) => {
+                  setMarketing((m) => ({ ...m, ga4Enabled: e.target.checked }));
+                  setStatus({ kind: "idle" });
+                }}
+              />
+              <span>
+                <span className={styles.label}>Medição do GA4 ativa</span>
+                <span className={styles.hint}>
+                  Desmarque para pausar a coleta sem perder o Measurement ID.
+                </span>
+              </span>
+            </label>
+          )}
         </fieldset>
       ))}
 

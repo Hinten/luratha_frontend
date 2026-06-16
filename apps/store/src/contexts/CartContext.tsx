@@ -20,6 +20,7 @@ import {
 } from "@luratha/schemas";
 import { toCents } from "@luratha/schemas/utils";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
+import { trackAddToCart, trackRemoveFromCart } from "@/src/lib/analytics/ecommerce";
 import { logger } from "@luratha/core/logging/logger";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */
@@ -316,6 +317,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    */
   const lastMergedFor = useRef<string | null>(null);
 
+  // Espelha `items` num ref para o `removeItem` montar o payload de
+  // `remove_from_cart` (nome/preço/quantidade) sem entrar nas deps do callback.
+  // Nome distinto do `itemsRef` (collection ref do Firestore) usado no effect
+  // de hidratação abaixo, para evitar shadowing.
+  const latestItemsRef = useRef<CartItem[]>(items);
+  useEffect(() => {
+    latestItemsRef.current = items;
+  }, [items]);
+
   /**
    * Último estado autoritativo vindo do `onSnapshot` (modo logado). As mutações
    * otimistas atualizam `items` na hora e sincronizam em background; se o POST
@@ -609,6 +619,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           return [...prev, validatedFresh];
         });
+        trackAddToCart(input);
         return;
       }
       // Logado: atualiza local na hora (otimista) e sincroniza em background —
@@ -631,6 +642,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }),
         "Falha ao adicionar ao carrinho.",
       );
+      trackAddToCart(input);
     },
     [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );
@@ -669,8 +681,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback(
     async (itemId: string) => {
       setError(null);
+      const removed = latestItemsRef.current.find((i) => i.id === itemId);
       if (!userId) {
         updateGuestItems((prev) => prev.filter((i) => i.id !== itemId));
+        if (removed) trackRemoveFromCart(removed);
         return;
       }
       applyOptimistic(userId, (prev) => prev.filter((i) => i.id !== itemId));
@@ -681,6 +695,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // 404 = item já tinha sumido; trata como sucesso.
         [404],
       );
+      if (removed) trackRemoveFromCart(removed);
     },
     [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );

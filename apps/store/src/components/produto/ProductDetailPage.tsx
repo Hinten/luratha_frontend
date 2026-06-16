@@ -2,6 +2,7 @@ import type { FirestoreCategory, Product as FirestoreProduct, Stock } from "@lur
 import Breadcrumb from "@/src/components/Breadcrumb";
 import ProductDescription from "@/src/components/produto/ProductDescription";
 import ProductVariantView from "@/src/components/produto/ProductVariantView";
+import ViewItemTracker from "@/src/components/analytics/ViewItemTracker";
 import { getVariantGalleryImages } from "@/src/lib/productImages";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "/image_404.png";
@@ -57,6 +58,7 @@ export default function ProductDetailPage({ product, category, stock }: ProductD
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
+      <ViewItemTracker product={product} />
       <div className="container-luratha section-padding">
         <Breadcrumb
           items={[

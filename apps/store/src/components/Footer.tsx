@@ -19,6 +19,7 @@ const INSTITUTIONAL_LINKS = [
   { href: "/politica-de-trocas", label: "Política de Trocas" },
   { href: "/referencia-de-medidas", label: "Referência de Medidas" },
   { href: "/politica-de-privacidade", label: "Política de Privacidade" },
+  { href: "/politica-de-dados", label: "Política de Dados" },
   { href: "/termos-de-uso", label: "Termos de Uso" },
 ] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 

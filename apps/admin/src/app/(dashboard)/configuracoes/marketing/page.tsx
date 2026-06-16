@@ -15,8 +15,10 @@ export default async function MarketingPage() {
       <h1 className={styles.title}>Marketing &amp; Pixels</h1>
       <p className={styles.lead}>
         Identificadores das plataformas de anúncio e analytics: Meta Pixel, Catálogo do Facebook,
-        Google Merchant Center e Google Analytics 4. Por enquanto esses dados são apenas armazenados
-        — o feed de produtos e os scripts de rastreamento são configurados em fases seguintes.
+        Google Merchant Center e Google Analytics 4. O <strong>GA4 já é medido na loja</strong>{" "}
+        (Consent Mode v2, modo opt-out) a partir do Measurement ID abaixo; os demais IDs alimentam o
+        feed de produtos e o rastreamento de anúncios em fases seguintes. As alterações entram em
+        vigor na loja em até 60 segundos.
       </p>
       <MarketingForm initialMarketing={settings.marketing} />
     </div>

@@ -66,7 +66,27 @@ describe("marketing settings", () => {
       facebookCatalogId: "",
       googleMerchantCenterId: "",
       ga4MeasurementId: "",
+      ga4Enabled: true,
     });
+  });
+
+  it("ga4Enabled defaults to true and rejects a malformed GA4 Measurement ID", () => {
+    const parsed = validateSiteSettings({
+      id: "global",
+      shipping: getDefaultSiteSettings().shipping,
+      marketing: { ga4MeasurementId: "G-ABC123" },
+      updatedAt: new Date().toISOString(),
+    });
+    expect(parsed.marketing.ga4Enabled).toBe(true);
+
+    expect(() =>
+      validateSiteSettings({
+        id: "global",
+        shipping: getDefaultSiteSettings().shipping,
+        marketing: { ga4MeasurementId: "not-a-measurement-id" },
+        updatedAt: new Date().toISOString(),
+      }),
+    ).toThrow();
   });
 
   it("preserves provided marketing identifiers and trims them", () => {

@@ -1,0 +1,102 @@
+name: Test GA4 Analytics
+
+# Workflow dedicado aos testes unit/componente da integração Google Analytics 4
+# (eventos de e-commerce, Consent Mode v2 / opt-out e a página de Política de
+# Dados). São testes jsdom puros — NÃO usam Firebase nem nenhum secret — então
+# rodam rápido e isolados. O path filter abaixo garante que só disparam quando
+# arquivos relevantes mudam.
+#
+# Esses mesmos arquivos (`*.ga4.test.*`) também são cobertos pelo job unit do
+# workflow `Test`; este workflow dá um sinal focado e rápido em PRs de analytics.
+#
+# NÃO é required em branch protection: quando o filter não casa, o workflow nem
+# aparece como check e o PR segue mergeável.
+
+on:
+  pull_request:
+    branches: [master, production]
+    paths:
+      - 'apps/store/src/lib/analytics/**'
+      - 'apps/store/src/components/analytics/**'
+      - 'apps/store/src/contexts/CartContext.tsx'
+      - 'apps/store/src/app/carrinho/**'
+      - 'apps/store/src/app/checkout/**'
+      - 'apps/store/src/app/produto/**'
+      - 'apps/store/src/app/politica-de-dados/**'
+      - 'apps/store/src/components/categoria/**'
+      - 'apps/store/src/components/produto/**'
+      - 'packages/schemas/src/siteSettings.ts'
+      - '.github/workflows/test-ga4.yml'
+
+concurrency:
+  group: test-ga4-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ga4:
+    name: GA4 unit/component tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run GA4 tests
+        working-directory: apps/store
+        run: pnpm exec vitest run --config vitest.config.mts ga4
+
+  report-failure:
+    name: Post failure logs on PR
+    needs: [ga4]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou (Test GA4 Analytics)"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md

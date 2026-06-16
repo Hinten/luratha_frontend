@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CartItem } from "@luratha/schemas";
 import { useCart } from "@/src/contexts/CartContext";
+import { trackViewCart } from "@/src/lib/analytics/ecommerce";
 import { useCartShipping } from "@/src/hooks/useCartShipping";
 import { useCartStockCheck } from "@/src/hooks/useCartStockCheck";
 import ShippingCepForm from "@/src/components/shipping/ShippingCepForm";
@@ -41,6 +42,14 @@ export default function CarrinhoPage() {
     removeItem,
   });
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // GA4 `view_cart` — uma vez, quando o carrinho terminou de hidratar com itens.
+  const viewCartFired = useRef(false);
+  useEffect(() => {
+    if (!isReady || items.length === 0 || viewCartFired.current) return;
+    viewCartFired.current = true;
+    trackViewCart(items, totalPrice);
+  }, [isReady, items, totalPrice]);
 
   const isEmpty = items.length === 0;
 

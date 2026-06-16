@@ -140,12 +140,14 @@ export const companySettingsSchema = z.object({
 /**
  * Identificadores de marketing/analytics que o dono cadastra sem deploy.
  *
- * Por ora estes valores são apenas **armazenados** (cadastro no admin); a
- * renderização dos scripts (Meta Pixel, GA4) na loja e a vinculação dos feeds
- * de catálogo ficam para uma fase seguinte. Todos os campos têm `default("")`
- * para retrocompatibilidade: documentos `settings/global` criados antes deste
- * bloco continuam válidos na leitura — o `.default()` materializa um `marketing`
- * vazio (mesmo padrão de `company`).
+ * O **Google Analytics 4** já é renderizado na storefront (Consent Mode v2, em
+ * modo opt-out) a partir de `ga4MeasurementId`/`ga4Enabled` — ver
+ * `apps/store/src/components/analytics/`. Os demais IDs (Meta Pixel, Catálogo do
+ * Facebook, Merchant Center) por ora são apenas **armazenados** (consumidos pelo
+ * app de feeds / wiring de Pixel em fase seguinte). Todos os campos têm
+ * `default(...)` para retrocompatibilidade: documentos `settings/global` criados
+ * antes deste bloco continuam válidos na leitura — o `.default()` materializa um
+ * `marketing` vazio (mesmo padrão de `company`).
  */
 export const marketingSettingsSchema = z.object({
   /**
@@ -159,8 +161,22 @@ export const marketingSettingsSchema = z.object({
   facebookCatalogId: z.string().trim().max(32).default(""),
   /** ID da conta do Google Merchant Center que consome o feed de produtos. */
   googleMerchantCenterId: z.string().trim().max(32).default(""),
-  /** Measurement ID do Google Analytics 4 (ex.: "G-XXXXXXXXXX"). */
-  ga4MeasurementId: z.string().trim().max(20).default(""),
+  /**
+   * Measurement ID do Google Analytics 4 (`G-XXXXXXXX`). Vazio desliga a
+   * medição na loja. Validado no formato porque, diferente dos demais IDs, este
+   * campo é efetivamente injetado no gtag.
+   */
+  ga4MeasurementId: z
+    .string()
+    .trim()
+    .regex(
+      /^(G-[A-Z0-9]{4,})?$/,
+      "Measurement ID inválido — comece com 'G-' seguido de letras e números (ex.: G-XXXXXXXXXX).",
+    )
+    .max(20)
+    .default(""),
+  /** Liga/desliga a medição do GA4 sem perder o ID configurado. */
+  ga4Enabled: z.boolean().default(true),
 });
 
 export const siteSettingsSchema = z.object({

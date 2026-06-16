@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useReducer, useState } from "react";
+import { startTransition, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   PAYMENT_FAILURE_STATUSES,
@@ -11,6 +11,11 @@ import {
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useCart } from "@/src/contexts/CartContext";
 import { ApiResponseError } from "@/src/lib/errors";
+import {
+  trackAddPaymentInfo,
+  trackAddShippingInfo,
+  trackBeginCheckout,
+} from "@/src/lib/analytics/ecommerce";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import { logger } from "@luratha/core/logging/logger";
 import Spinner from "@/src/components/Spinner";
@@ -256,6 +261,8 @@ export default function CheckoutFlow() {
   const { items, isReady: cartReady, clearCart, updateQuantity, removeItem } = useCart();
   const [state, dispatch] = useReducer(reducer, undefined, emptyInitial);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  // GA4 `begin_checkout` dispara uma vez, quando o cart hidrata com itens.
+  const beginCheckoutFired = useRef(false);
 
   // URL → step (com fallback pra "identification" — primeiro step — se o
   // param for inválido).
@@ -332,6 +339,15 @@ export default function CheckoutFlow() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeStep]);
 
+  // GA4 `begin_checkout` — uma vez, assim que o cart termina de hidratar com
+  // itens. `value` = subtotal do cart (frete/desconto ainda não escolhidos).
+  useEffect(() => {
+    if (!cartReady || items.length === 0 || beginCheckoutFired.current) return;
+    beginCheckoutFired.current = true;
+    const cartSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    trackBeginCheckout(items, cartSubtotal);
+  }, [cartReady, items]);
+
   if (!user) return null;
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
@@ -375,6 +391,8 @@ export default function CheckoutFlow() {
       return;
     }
     dispatch({ type: "SUBMIT_START" });
+    // GA4 `add_payment_info` — o usuário confirmou o pagamento com um método.
+    trackAddPaymentInfo(items, grandTotal, draft.paymentMethod);
 
     // Id do pedido criado neste submit — usado no catch para cancelar (e
     // devolver o estoque de) um pedido cujo payment-intent falhou de vez.
@@ -595,7 +613,12 @@ export default function CheckoutFlow() {
               subtotal={subtotal}
               selectedQuote={state.quote}
               onSelect={(q) => dispatch({ type: "SET_QUOTE", quote: q })}
-              onContinue={() => goToStep("review")}
+              onContinue={() => {
+                if (state.quote) {
+                  trackAddShippingInfo(items, grandTotal, state.quote.service);
+                }
+                goToStep("review");
+              }}
               onBack={goBack}
             />
           )}
