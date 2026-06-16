@@ -93,6 +93,19 @@ export function trackViewItemList(products: Product[], listName?: string): void 
   });
 }
 
+/**
+ * `select_item` — clique num item de uma lista (grade de categoria/busca). O
+ * `index`/`listName` devem casar com o `view_item_list` correspondente para o
+ * GA4 atribuir a posição e a lista de origem. Por spec, `select_item` não leva
+ * `currency`/`value` (só `item_list_name`/`item_list_id` + `items`).
+ */
+export function trackSelectItem(product: Product, listName?: string, index?: number): void {
+  trackEvent("select_item", {
+    ...(listName ? { item_list_name: listName } : {}),
+    items: [productToItem(product, index)],
+  });
+}
+
 export function trackAddToCart(line: CartLineInput): void {
   const item = cartLineToItem(line);
   trackEvent("add_to_cart", {
@@ -177,4 +190,24 @@ export function trackPurchase({
     ...(coupon ? { coupon } : {}),
     items: items.map(orderItemToItem),
   });
+}
+
+// ── Eventos de engajamento ──────────────────────────────────────────────────
+
+/**
+ * `login` — autenticação bem-sucedida. `method` identifica o provedor; hoje a
+ * loja só tem e-mail/senha, mas o parâmetro fica aberto para login social.
+ */
+export function trackLogin(method = "password"): void {
+  trackEvent("login", { method });
+}
+
+/** `sign_up` — criação de conta concluída (mesma convenção de `method`). */
+export function trackSignUp(method = "password"): void {
+  trackEvent("sign_up", { method });
+}
+
+/** `search` — termo pesquisado na busca do site. */
+export function trackSearch(searchTerm: string): void {
+  trackEvent("search", { search_term: searchTerm });
 }

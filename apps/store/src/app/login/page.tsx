@@ -5,6 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { trackLogin } from "@/src/lib/analytics/ecommerce";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -32,6 +33,7 @@ function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
+      trackLogin();
       // `redirect` é um path arbitrário validado em runtime — typed routes não
       // conseguem inferi-lo estaticamente, daí o cast para `Route`.
       const target = (

@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { trackSearch } from "@/src/lib/analytics/ecommerce";
 import styles from "./SearchInput.module.css";
 
 export default function SearchInput() {
@@ -26,6 +27,7 @@ export default function SearchInput() {
       params.delete("page");
       const query = params.toString();
       router.push(query ? `/busca?${query}` : "/busca");
+      trackSearch(nextTerm);
       return;
     }
 

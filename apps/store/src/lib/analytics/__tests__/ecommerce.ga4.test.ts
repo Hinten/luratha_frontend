@@ -15,6 +15,7 @@ import {
   sumItemsValue,
   trackViewItem,
   trackViewItemList,
+  trackSelectItem,
   trackAddToCart,
   trackRemoveFromCart,
   trackViewCart,
@@ -22,6 +23,9 @@ import {
   trackAddShippingInfo,
   trackAddPaymentInfo,
   trackPurchase,
+  trackLogin,
+  trackSignUp,
+  trackSearch,
 } from "@/src/lib/analytics/ecommerce";
 
 function makeProduct(overrides: Partial<Product> = {}): Product {
@@ -192,6 +196,32 @@ describe("ecommerce events", () => {
     expect((params.items as { index: number }[]).map((i) => i.index)).toEqual([0, 1]);
   });
 
+  it("trackSelectItem emits select_item with the list name and indexed item", () => {
+    trackSelectItem(makeProduct(), "Vestidos", 3);
+    const [, name, params] = lastEvent();
+    expect(name).toBe("select_item");
+    expect(params.item_list_name).toBe("Vestidos");
+    expect(params.items).toEqual([
+      {
+        item_id: "LURATHA_9001",
+        item_name: "Vestido Bordado Floral",
+        item_brand: "Luratha",
+        price: 289,
+        quantity: 1,
+        index: 3,
+      },
+    ]);
+  });
+
+  it("trackSelectItem omits item_list_name when not given (no currency/value per spec)", () => {
+    trackSelectItem(makeProduct());
+    const [, name, params] = lastEvent();
+    expect(name).toBe("select_item");
+    expect(params).not.toHaveProperty("item_list_name");
+    expect(params).not.toHaveProperty("currency");
+    expect(params).not.toHaveProperty("value");
+  });
+
   it("trackAddToCart computes value = price × quantity", () => {
     trackAddToCart({ variantSku: "SKU_A", name: "Peça", unitPrice: 120, quantity: 3 });
     const [, name, params] = lastEvent();
@@ -271,5 +301,34 @@ describe("ecommerce events", () => {
     expect(params.items).toEqual([
       { item_id: "LURATHA_9001_M", item_name: "Vestido Bordado Floral", price: 200, quantity: 2 },
     ]);
+  });
+});
+
+describe("engagement events", () => {
+  it("trackLogin emits login with the default method", () => {
+    trackLogin();
+    const [, name, params] = lastEvent();
+    expect(name).toBe("login");
+    expect(params).toEqual({ method: "password" });
+  });
+
+  it("trackLogin honors a custom method", () => {
+    trackLogin("google");
+    const [, , params] = lastEvent();
+    expect(params).toEqual({ method: "google" });
+  });
+
+  it("trackSignUp emits sign_up with the default method", () => {
+    trackSignUp();
+    const [, name, params] = lastEvent();
+    expect(name).toBe("sign_up");
+    expect(params).toEqual({ method: "password" });
+  });
+
+  it("trackSearch emits search with the search_term", () => {
+    trackSearch("vestido de linho");
+    const [, name, params] = lastEvent();
+    expect(name).toBe("search");
+    expect(params).toEqual({ search_term: "vestido de linho" });
   });
 });
