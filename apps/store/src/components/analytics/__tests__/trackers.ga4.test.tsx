@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { StrictMode } from "react";
 import { render, fireEvent, screen } from "@testing-library/react";
-import ViewItemTracker from "@/src/components/analytics/ViewItemTracker";
-import ViewItemListTracker from "@/src/components/analytics/ViewItemListTracker";
+import ViewItemTracker, {
+  __resetViewItemTrackerForTests,
+} from "@/src/components/analytics/ViewItemTracker";
+import ViewItemListTracker, {
+  __resetViewItemListTrackerForTests,
+} from "@/src/components/analytics/ViewItemListTracker";
 import SelectItemTracker from "@/src/components/analytics/SelectItemTracker";
-import PageViewTracker from "@/src/components/analytics/PageViewTracker";
+import PageViewTracker, {
+  __resetPageViewTrackerForTests,
+} from "@/src/components/analytics/PageViewTracker";
 import { buildProductSlug, validateProduct, type Product } from "@luratha/schemas";
 
 // next/navigation controlável: testes mutam `navState` e fazem rerender para
@@ -48,6 +54,11 @@ function eventNames() {
 beforeEach(() => {
   gtag = vi.fn();
   vi.stubGlobal("gtag", gtag);
+  // Os trackers usam dedup em escopo de módulo (persiste entre montagens),
+  // então cada teste precisa resetar pra começar do zero.
+  __resetPageViewTrackerForTests();
+  __resetViewItemTrackerForTests();
+  __resetViewItemListTrackerForTests();
 });
 
 afterEach(() => {
@@ -73,6 +84,26 @@ describe("ViewItemTracker", () => {
       </StrictMode>,
     );
     expect(count("view_item")).toBe(1);
+  });
+
+  it("does not re-fire when remounted with the same product (module-scope dedup)", () => {
+    const product = makeProduct();
+    const { unmount } = render(<ViewItemTracker product={product} />);
+    unmount();
+    render(<ViewItemTracker product={product} />);
+    expect(count("view_item")).toBe(1);
+  });
+
+  it("re-fires when the product id actually changes", () => {
+    const a = makeProduct();
+    const b = makeProduct({
+      id: "prod_2",
+      sku: "LURATHA_9002",
+      slug: buildProductSlug("Vestido Bordado Floral", "LURATHA_9002"),
+    });
+    const { rerender } = render(<ViewItemTracker product={a} />);
+    rerender(<ViewItemTracker product={b} />);
+    expect(count("view_item")).toBe(2);
   });
 });
 
@@ -109,6 +140,77 @@ describe("ViewItemListTracker", () => {
     );
     expect(count("view_item_list")).toBe(1);
   });
+
+  it("re-fires when the product list actually changes (different ids)", () => {
+    const a = makeProduct({
+      id: "p1",
+      title: "Peça A",
+      sku: "LURATHA_A",
+      slug: buildProductSlug("Peça A", "LURATHA_A"),
+    });
+    const b = makeProduct({
+      id: "p2",
+      title: "Peça B",
+      sku: "LURATHA_B",
+      slug: buildProductSlug("Peça B", "LURATHA_B"),
+    });
+    const c = makeProduct({
+      id: "p3",
+      title: "Peça C",
+      sku: "LURATHA_C",
+      slug: buildProductSlug("Peça C", "LURATHA_C"),
+    });
+    const { rerender } = render(<ViewItemListTracker products={[a, b]} listName="Vestidos" />);
+    expect(count("view_item_list")).toBe(1);
+    // Mudança real de lista (ids diferentes) → dispara de novo.
+    rerender(<ViewItemListTracker products={[b, c]} listName="Vestidos" />);
+    expect(count("view_item_list")).toBe(2);
+  });
+
+  it("does not re-fire on referentially-new array with the same ids", () => {
+    const a = makeProduct({
+      id: "p1",
+      title: "Peça A",
+      sku: "LURATHA_A",
+      slug: buildProductSlug("Peça A", "LURATHA_A"),
+    });
+    const b = makeProduct({
+      id: "p2",
+      title: "Peça B",
+      sku: "LURATHA_B",
+      slug: buildProductSlug("Peça B", "LURATHA_B"),
+    });
+    const { rerender } = render(<ViewItemListTracker products={[a, b]} listName="Vestidos" />);
+    expect(count("view_item_list")).toBe(1);
+    // Mesmos ids, mesmo nome — array novo: NÃO duplica.
+    rerender(<ViewItemListTracker products={[a, b]} listName="Vestidos" />);
+    expect(count("view_item_list")).toBe(1);
+  });
+
+  it("re-fires when only the listName changes", () => {
+    const a = makeProduct({
+      id: "p1",
+      title: "Peça A",
+      sku: "LURATHA_A",
+      slug: buildProductSlug("Peça A", "LURATHA_A"),
+    });
+    const { rerender } = render(<ViewItemListTracker products={[a]} listName="Vestidos" />);
+    rerender(<ViewItemListTracker products={[a]} listName="Resultados de busca" />);
+    expect(count("view_item_list")).toBe(2);
+  });
+
+  it("does not re-fire when remounted with the same list (module-scope dedup)", () => {
+    const a = makeProduct({
+      id: "p1",
+      title: "Peça A",
+      sku: "LURATHA_A",
+      slug: buildProductSlug("Peça A", "LURATHA_A"),
+    });
+    const { unmount } = render(<ViewItemListTracker products={[a]} listName="Vestidos" />);
+    unmount();
+    render(<ViewItemListTracker products={[a]} listName="Vestidos" />);
+    expect(count("view_item_list")).toBe(1);
+  });
 });
 
 describe("PageViewTracker", () => {
@@ -137,6 +239,20 @@ describe("PageViewTracker", () => {
         <PageViewTracker />
       </StrictMode>,
     );
+    expect(count("page_view")).toBe(1);
+  });
+
+  it("does not re-fire when remounted on the same path (module-scope dedup)", () => {
+    // Caso reproduzido no /checkout/sucesso/{orderId}: o tracker pode ser
+    // remontado por unwind de Suspense ou pela árvore de layout em transições
+    // de rota. Sem o dedup em escopo de módulo, o `useRef` reseta e o
+    // page_view dispara de novo no mesmo path.
+    navState.pathname = "/checkout/sucesso/abc123";
+    navState.search = "";
+    const { unmount } = render(<PageViewTracker />);
+    expect(count("page_view")).toBe(1);
+    unmount();
+    render(<PageViewTracker />);
     expect(count("page_view")).toBe(1);
   });
 });

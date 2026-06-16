@@ -1,22 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { Product } from "@luratha/schemas";
 import { trackViewItem } from "@/src/lib/analytics/ecommerce";
 
 /**
  * Dispara `view_item` ao montar a página de detalhe do produto. Renderiza
  * `null` — só side-effect. Recebe o `Product` do server component pai
- * (serializável). O `lastId` ref evita o disparo duplo do React StrictMode
- * (dev) e só re-dispara quando o produto exibido muda de fato.
+ * (serializável). O dedup por `lastFiredProductId` em escopo de módulo
+ * sobrevive a remounts (StrictMode dev, Suspense unwind) e só re-dispara
+ * quando o produto exibido muda de fato.
  */
+let lastFiredProductId: string | null = null;
+
+/** @internal — uso exclusivo de testes para resetar o dedup de módulo. */
+export function __resetViewItemTrackerForTests(): void {
+  lastFiredProductId = null;
+}
+
 export default function ViewItemTracker({ product }: { product: Product }) {
-  const lastId = useRef<string | null>(null);
   useEffect(() => {
-    if (lastId.current === product.id) return;
-    lastId.current = product.id;
+    if (lastFiredProductId === product.id) return;
+    lastFiredProductId = product.id;
     trackViewItem(product);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
+  }, [product]);
   return null;
 }

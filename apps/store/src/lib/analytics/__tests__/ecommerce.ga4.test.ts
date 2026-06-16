@@ -26,6 +26,7 @@ import {
   trackLogin,
   trackSignUp,
   trackSearch,
+  sanitizeSearchTerm,
 } from "@/src/lib/analytics/ecommerce";
 
 function makeProduct(overrides: Partial<Product> = {}): Product {
@@ -330,5 +331,61 @@ describe("engagement events", () => {
     const [, name, params] = lastEvent();
     expect(name).toBe("search");
     expect(params).toEqual({ search_term: "vestido de linho" });
+  });
+
+  it("trackSearch redacts e-mail addresses from the term", () => {
+    trackSearch("joao@gmail.com vestido");
+    const [, , params] = lastEvent();
+    expect(params).toEqual({ search_term: "[email] vestido" });
+  });
+
+  it("trackSearch redacts BR phone numbers from the term", () => {
+    trackSearch("(11) 98765-4321 blusa");
+    const [, , params] = lastEvent();
+    expect(params).toEqual({ search_term: "[phone] blusa" });
+  });
+
+  it("trackSearch redacts CPF and CNPJ", () => {
+    trackSearch("123.456.789-00 e 12.345.678/0001-90");
+    const [, , params] = lastEvent();
+    expect(params).toEqual({ search_term: "[cpf] e [cnpj]" });
+  });
+
+  it("trackSearch trims whitespace and is a no-op for blank input", () => {
+    trackSearch("   ");
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
+  it("trackSearch still emits when the term reduces to a redaction tag only", () => {
+    // PII puro vira `[email]` — preserva o sinal de "houve uma busca" sem
+    // vazar dado; só whitespace puro é silenciado.
+    trackSearch("foo@bar.com");
+    const [, , params] = lastEvent();
+    expect(params).toEqual({ search_term: "[email]" });
+  });
+});
+
+describe("sanitizeSearchTerm", () => {
+  it("trims surrounding whitespace", () => {
+    expect(sanitizeSearchTerm("   vestido   ")).toBe("vestido");
+  });
+
+  it("truncates strings longer than 100 chars before redaction", () => {
+    const long = "a".repeat(250);
+    expect(sanitizeSearchTerm(long)).toHaveLength(100);
+  });
+
+  it("redacts multiple PII patterns in one pass", () => {
+    expect(sanitizeSearchTerm("Lucas (11) 98765-4321 lucas@x.com 123.456.789-00")).toBe(
+      "Lucas [phone] [email] [cpf]",
+    );
+  });
+
+  it("redacts phone with +55 country code", () => {
+    expect(sanitizeSearchTerm("+55 11 98765-4321")).toBe("[phone]");
+  });
+
+  it("returns empty string for whitespace-only input", () => {
+    expect(sanitizeSearchTerm("   ")).toBe("");
   });
 });

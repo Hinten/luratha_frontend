@@ -207,7 +207,42 @@ export function trackSignUp(method = "password"): void {
   trackEvent("sign_up", { method });
 }
 
-/** `search` — termo pesquisado na busca do site. */
+/**
+ * Tamanho máximo permitido para `search_term`. Acima disso o termo é truncado
+ * antes da redação — barra regex em strings absurdamente longas e limita o
+ * payload do evento.
+ */
+const SEARCH_TERM_MAX_LENGTH = 100;
+
+/**
+ * Padrões de PII redigidos antes de enviar o termo de busca pro GA4. A
+ * política do Google Analytics proíbe PII (e-mail, telefone, documento) em
+ * parâmetros de evento. Os patterns cobrem os formatos mais comuns no Brasil
+ * — não é uma rede exaustiva, é o piso de segurança contra colagem acidental.
+ */
+const PII_REDACTIONS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/[\w.+-]+@[\w-]+\.[\w.-]+/gi, "[email]"],
+  [/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, "[cpf]"],
+  [/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/g, "[cnpj]"],
+  [/(?:\+?55[\s.-]?)?\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}\b/g, "[phone]"],
+];
+
+/**
+ * Normaliza o termo de busca antes de mandar pro GA4: trim, trunca em 100
+ * chars, redige padrões comuns de PII (e-mail, CPF, CNPJ, telefone BR).
+ * Retorna string vazia quando sobra nada útil (whitespace puro).
+ */
+export function sanitizeSearchTerm(raw: string): string {
+  let term = raw.trim().slice(0, SEARCH_TERM_MAX_LENGTH);
+  for (const [pattern, replacement] of PII_REDACTIONS) {
+    term = term.replace(pattern, replacement);
+  }
+  return term;
+}
+
+/** `search` — termo pesquisado na busca do site, sanitizado contra PII. */
 export function trackSearch(searchTerm: string): void {
-  trackEvent("search", { search_term: searchTerm });
+  const sanitized = sanitizeSearchTerm(searchTerm);
+  if (!sanitized) return;
+  trackEvent("search", { search_term: sanitized });
 }
