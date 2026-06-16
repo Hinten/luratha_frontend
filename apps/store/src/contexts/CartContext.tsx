@@ -21,6 +21,7 @@ import {
 import { toCents } from "@luratha/schemas/utils";
 import { ApiResponseError, throwIfNotOk } from "@/src/lib/errors";
 import { trackAddToCart, trackRemoveFromCart } from "@/src/lib/analytics/ecommerce";
+import { trackPixelAddToCart } from "@/src/lib/analytics/pixel-ecommerce";
 import { logger } from "@luratha/core/logging/logger";
 
 /** Public payload accepted by `addItem`. Mirrors the server input schema. */
@@ -620,6 +621,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           return [...prev, validatedFresh];
         });
         trackAddToCart(input);
+        trackPixelAddToCart(input);
         return;
       }
       // Logado: atualiza local na hora (otimista) e sincroniza em background —
@@ -643,6 +645,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         "Falha ao adicionar ao carrinho.",
       );
       trackAddToCart(input);
+      trackPixelAddToCart(input);
     },
     [applyOptimistic, syncInBackground, updateGuestItems, userId],
   );

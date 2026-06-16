@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { Product } from "@luratha/schemas";
 import { trackViewItemList } from "@/src/lib/analytics/ecommerce";
+import { trackPixelViewCategory } from "@/src/lib/analytics/pixel-ecommerce";
 
 interface ViewItemListTrackerProps {
   products: Product[];
@@ -18,6 +19,7 @@ export default function ViewItemListTracker({ products, listName }: ViewItemList
   useEffect(() => {
     if (products.length === 0) return;
     trackViewItemList(products, listName);
+    trackPixelViewCategory(products, listName);
     // Dispara uma vez por montagem da lista.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -133,6 +133,26 @@ export function MarketingForm({ initialMarketing }: { initialMarketing: Marketin
               </label>
             ))}
           </div>
+          {group.title === "Meta (Facebook / Instagram)" && (
+            <label className={styles.checkboxField}>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={marketing.metaPixelEnabled}
+                onChange={(e) => {
+                  setMarketing((m) => ({ ...m, metaPixelEnabled: e.target.checked }));
+                  setStatus({ kind: "idle" });
+                }}
+              />
+              <span>
+                <span className={styles.label}>Pixel + Conversions API ativos</span>
+                <span className={styles.hint}>
+                  Desmarque para pausar o Pixel (navegador) e a Conversions API (Purchase
+                  server-side) sem perder o Pixel ID.
+                </span>
+              </span>
+            </label>
+          )}
           {group.title === "Google" && (
             <label className={styles.checkboxField}>
               <input

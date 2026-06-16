@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { OrderItem } from "@luratha/schemas";
 import { trackPurchase } from "@/src/lib/analytics/ecommerce";
+import { trackPixelPurchase } from "@/src/lib/analytics/pixel-ecommerce";
 import { GA_PURCHASE_DEDUP_PREFIX } from "@/src/lib/analytics/gtag";
 
 interface PurchaseTrackerProps {
@@ -44,6 +45,9 @@ export default function PurchaseTracker({
     }
 
     trackPurchase({ transactionId, value, shipping, items, ...(coupon ? { coupon } : {}) });
+    // Meta `Purchase` com eventID = order.id → o Meta deduplica com o evento
+    // server-side da Conversions API (mesmo event_id).
+    trackPixelPurchase({ transactionId, value, items });
   }, [transactionId, value, shipping, items, coupon]);
 
   return null;

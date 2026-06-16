@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { applyOrderWebhook, PaymentProviderError, verifyWebhookSignature } from "@luratha/payments";
+import {
+  applyOrderWebhook,
+  notifyPurchaseConversion,
+  PaymentProviderError,
+  verifyWebhookSignature,
+} from "@luratha/payments";
 
 // `runtime = "nodejs"` mora em route.ts — Next.js só lê route segment config
 // do entry. Duplicar aqui seria dead code.
@@ -82,6 +87,14 @@ export async function POST(request: Request) {
 
   try {
     const outcome = await applyOrderWebhook(dataId);
+    // Pedido recém-confirmado como pago → reforça a conversão pela Meta CAPI
+    // (server-authoritative, deduplicado com o Purchase do Pixel por order.id).
+    // Aguardamos o envio para garantir a entrega antes de o runtime serverless
+    // congelar a instância; `notifyPurchaseConversion` engole falhas de envio
+    // internamente, então isto nunca faz o webhook falhar.
+    if (outcome.changed && outcome.status === "paid") {
+      await notifyPurchaseConversion(outcome.orderId);
+    }
     return NextResponse.json({ received: true, ...outcome }, { status: 200 });
   } catch (error) {
     if (error instanceof PaymentProviderError) {

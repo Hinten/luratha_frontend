@@ -33,3 +33,12 @@ env:
     value: "test_user_6882404001016965566@testuser.com"
     availability:
       - RUNTIME
+
+  # Access token da Meta Conversions API (System User token do Events Manager).
+  # Habilita o Purchase server-side (CAPI). Ausente = CAPI desligada (só o Pixel
+  # do navegador mede). O Pixel ID e o liga/desliga vêm de
+  # settings/global.marketing (metaPixelId / metaPixelEnabled), não daqui.
+  - variable: META_CAPI_ACCESS_TOKEN
+    secret: meta-capi-access-token
+    availability:
+      - RUNTIME
