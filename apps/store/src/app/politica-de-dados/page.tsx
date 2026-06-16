@@ -6,7 +6,6 @@ import JsonLd from "@/src/components/JsonLd";
 import CookiePreferences from "@/src/components/analytics/CookiePreferences";
 import { SITE_URL, DEFAULT_OG_IMAGE, LURATHA_SCHEMA } from "@/src/lib/seoConstants";
 import { getCachedSiteSettings } from "@/src/lib/queries/getCachedSiteSettings";
-import type { CompanySettings } from "@luratha/schemas";
 
 // SSR a cada request para refletir as edições de `company` feitas no admin
 // (mesmo padrão da Política de Privacidade). O repositório mantém cache de 60s.
@@ -43,14 +42,9 @@ function orPlaceholder(value: string, placeholder: string): string {
 
 /**
  * MINUTA — texto-base sobre tratamento de dados de navegação (cookies +
- * analytics). Os dados de identificação vêm de `siteSettings.company`,
- * editáveis no admin. Requer revisão jurídica antes da publicação definitiva.
+ * analytics). Requer revisão jurídica antes da publicação definitiva.
  */
-function buildSections(company: CompanySettings): Section[] {
-  const contactEmail = orPlaceholder(company.contactEmail, "[INSERIR E-MAIL DE CONTATO]");
-  const dpoName = orPlaceholder(company.dpoName, "[INSERIR NOME DO ENCARREGADO]");
-  const dpoEmail = orPlaceholder(company.dpoEmail, "[INSERIR E-MAIL DO ENCARREGADO]");
-
+function buildSections(): Section[] {
   return [
     {
       title: "1. O que esta política cobre",
@@ -77,18 +71,12 @@ function buildSections(company: CompanySettings): Section[] {
         "Tratamos os dados de navegação com base no legítimo interesse de entender e melhorar a loja, sempre oferecendo a você a opção de recusar (art. 7º, IX e art. 18 da LGPD). Você pode revisar ou alterar a sua escolha quando quiser nesta página, e exercer os demais direitos previstos na nossa Política de Privacidade.",
       ],
     },
-    {
-      title: "5. Falar com o Encarregado de Dados (DPO)",
-      paragraphs: [
-        `Para dúvidas sobre o tratamento dos seus dados, fale com o nosso Encarregado: ${dpoName} — ${dpoEmail}. Você também pode nos escrever em ${contactEmail}.`,
-      ],
-    },
   ];
 }
 
 export default async function PoliticaDeDadosPage() {
   const { company } = await getCachedSiteSettings();
-  const sections = buildSections(company);
+  const sections = buildSections();
 
   const schema = {
     "@context": "https://schema.org" as const,
