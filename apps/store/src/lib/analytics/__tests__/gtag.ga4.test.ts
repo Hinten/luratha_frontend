@@ -97,5 +97,16 @@ describe("gtag helpers", () => {
       document.cookie = "_ga=not-a-ga-cookie; path=/";
       expect(getGaClientId()).toBeNull();
     });
+
+    it("returns null when the client_id is not in the <n>.<n> format", () => {
+      document.cookie = "_ga=GA1.1.abc.def; path=/";
+      expect(getGaClientId()).toBeNull();
+    });
+
+    it("returns null (no throw) when the cookie has invalid percent-encoding", () => {
+      document.cookie = "_ga=GA1.1.%E0%A4%A.123; path=/";
+      expect(() => getGaClientId()).not.toThrow();
+      expect(getGaClientId()).toBeNull();
+    });
   });
 });

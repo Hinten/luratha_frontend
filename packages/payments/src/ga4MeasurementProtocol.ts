@@ -18,6 +18,13 @@ import { logger } from "@luratha/core/logging/logger";
 
 const MP_COLLECT_ENDPOINT = "https://www.google-analytics.com/mp/collect";
 
+/**
+ * Formato do `client_id` do GA4 (`<n>.<n>`, dois inteiros). Guard server-side:
+ * mesmo que um cliente malicioso injete PII (ex.: e-mail) no `ga4ClientId` via
+ * POST cru, não enviamos esse valor ao GA4 (política de PII + ruído).
+ */
+const GA_CLIENT_ID_PATTERN = /^\d+\.\d+$/;
+
 /** Payload do Measurement Protocol para um único evento `purchase`. */
 interface Ga4PurchasePayload {
   client_id: string;
@@ -43,15 +50,16 @@ interface Ga4PurchasePayload {
  * Monta o payload do `purchase` para um pedido pago. Função pura.
  *
  * Retorna `null` quando o pedido não tem `ga4ClientId` (visitante sem cookie
- * `_ga` / opt-out): sem `client_id` o MP não atribui o evento, então não
- * enviamos — em vez de inventar um id sintético, que criaria um usuário
- * fantasma e desrespeitaria o opt-out.
+ * `_ga` / opt-out) ou quando o valor não tem o formato do GA4 client_id
+ * (`<n>.<n>`): sem um `client_id` válido o MP não atribui o evento, então não
+ * enviamos — em vez de inventar um id sintético (usuário fantasma + opt-out
+ * desrespeitado) ou repassar PII que tenha sido injetada no campo.
  *
  * `transaction_id` = `order.id`, o MESMO usado no disparo client-side do cartão
  * aprovado na hora — garante a dedup nativa do GA4 por `transaction_id`.
  */
 export function buildGa4PurchasePayload(order: Order): Ga4PurchasePayload | null {
-  if (!order.ga4ClientId) return null;
+  if (!order.ga4ClientId || !GA_CLIENT_ID_PATTERN.test(order.ga4ClientId)) return null;
   return {
     client_id: order.ga4ClientId,
     events: [
@@ -112,19 +120,25 @@ export async function sendGa4Purchase(order: Order): Promise<boolean> {
     return false;
   }
 
-  const measurementId = await resolveMeasurementId();
-  if (!measurementId) {
-    logger.info("[ga4-mp] GA4 desligado ou sem measurement ID — purchase não enviado", {
-      orderId: order.id,
-    });
-    return false;
-  }
-
-  const url = `${MP_COLLECT_ENDPOINT}?measurement_id=${encodeURIComponent(
-    measurementId,
-  )}&api_secret=${encodeURIComponent(apiSecret)}`;
-
+  // A leitura das settings (Firestore) e o `fetch` ficam dentro do try: ambos
+  // são I/O que pode lançar, e este envio é best-effort — roda DEPOIS do pedido
+  // já ter sido persistido como `paid`. NENHUM erro pode escapar: se escapasse,
+  // o webhook devolveria 500, o MercadoPago reentregaria e, na reentrega, o
+  // pedido já estaria `paid` (guard `becamePaid` barra) → o evento seria
+  // perdido de qualquer forma, sem ganho. Logamos e seguimos com `false`.
   try {
+    const measurementId = await resolveMeasurementId();
+    if (!measurementId) {
+      logger.info("[ga4-mp] GA4 desligado ou sem measurement ID — purchase não enviado", {
+        orderId: order.id,
+      });
+      return false;
+    }
+
+    const url = `${MP_COLLECT_ENDPOINT}?measurement_id=${encodeURIComponent(
+      measurementId,
+    )}&api_secret=${encodeURIComponent(apiSecret)}`;
+
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -143,11 +157,13 @@ export async function sendGa4Purchase(order: Order): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    if (err instanceof TypeError) {
-      // Falha de rede do `fetch` — não relança: o webhook precisa dar ACK
-      // mesmo assim. Não setar `ga4PurchaseSent` não causa reenvio: numa
-      // reentrega o status já será `paid` e o guard `becamePaid` barra.
-      logger.error("[ga4-mp] falha de rede ao enviar purchase", { orderId: order.id, err });
+    // Swallow proposital (caso sancionado — ver CLAUDE.md "No generic catches"):
+    // este side-effect best-effort não pode quebrar o ACK do webhook. Cobre
+    // falha de rede do `fetch` (`TypeError`), `DOMException`, e erros da leitura
+    // de settings no Firestore — todos `Error`. Um `throw` não-Error (raro)
+    // ainda propaga, pra não mascarar bug de programação.
+    if (err instanceof Error) {
+      logger.error("[ga4-mp] falha ao enviar purchase server-side", { orderId: order.id, err });
       return false;
     }
     throw err;

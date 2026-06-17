@@ -8,6 +8,7 @@ const settingsMock = vi.hoisted(() => ({
     exists: true,
     data: () => ({ marketing: { ga4Enabled: true, ga4MeasurementId: "G-TEST123" } }),
   } as { exists: boolean; data: () => unknown },
+  throws: false,
 }));
 
 vi.mock("@luratha/firestore/firebaseAdmin", () => ({
@@ -15,7 +16,10 @@ vi.mock("@luratha/firestore/firebaseAdmin", () => ({
     collection: () => ({
       doc: () => ({
         withConverter: () => ({
-          get: async () => settingsMock.current,
+          get: async () => {
+            if (settingsMock.throws) throw new Error("firestore unavailable");
+            return settingsMock.current;
+          },
         }),
       }),
     }),
@@ -73,6 +77,11 @@ describe("buildGa4PurchasePayload", () => {
   it("returns null when the order has no ga4ClientId", () => {
     expect(buildGa4PurchasePayload(makeOrder({ ga4ClientId: undefined }))).toBeNull();
   });
+
+  it("returns null when ga4ClientId is not in the GA4 format (e.g. injected PII)", () => {
+    expect(buildGa4PurchasePayload(makeOrder({ ga4ClientId: "victim@example.com" }))).toBeNull();
+    expect(buildGa4PurchasePayload(makeOrder({ ga4ClientId: "1234567890" }))).toBeNull();
+  });
 });
 
 describe("sendGa4Purchase", () => {
@@ -82,6 +91,7 @@ describe("sendGa4Purchase", () => {
     fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
     vi.stubGlobal("fetch", fetchMock);
     vi.stubEnv("GA4_API_SECRET", "secret_abc");
+    settingsMock.throws = false;
     settingsMock.current = {
       exists: true,
       data: () => ({ marketing: { ga4Enabled: true, ga4MeasurementId: "G-TEST123" } }),
@@ -133,6 +143,12 @@ describe("sendGa4Purchase", () => {
   it("returns false (does not throw) on a network failure", async () => {
     fetchMock.mockRejectedValue(new TypeError("network down"));
     await expect(sendGa4Purchase(makeOrder())).resolves.toBe(false);
+  });
+
+  it("returns false (does not throw) when the settings read fails", async () => {
+    settingsMock.throws = true;
+    await expect(sendGa4Purchase(makeOrder())).resolves.toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns false on a non-OK response", async () => {
