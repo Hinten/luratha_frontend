@@ -186,7 +186,7 @@ export default async function BuscaPage({ searchParams }: PageProps) {
       </div>
 
       {term ? (
-        <ProductGrid products={products} stockMap={stockMap} />
+        <ProductGrid products={products} stockMap={stockMap} listName="Resultados de busca" />
       ) : (
         <section aria-label="Guia de busca">
           <p className="font-[family-name:var(--font-body)] text-[var(--color-neutral-dark)]/80">

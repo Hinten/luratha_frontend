@@ -143,7 +143,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           />
         </Suspense>
       </div>
-      <ProductGrid products={products} />
+      <ProductGrid products={products} listName={category.name} />
     </div>
   );
 }
