@@ -20,6 +20,7 @@
 
 import type { CartItem, OrderItem, Product } from "@luratha/schemas";
 import { trackPixelEvent } from "./fbq";
+import { sanitizeSearchTerm } from "./ecommerce";
 import type { CartLineInput } from "./ecommerce";
 
 const CURRENCY = "BRL" as const;
@@ -156,4 +157,17 @@ export function trackPixelPurchase({ transactionId, value, items }: PixelPurchas
     },
     { eventID: transactionId },
   );
+}
+
+// ── Engajamento ─────────────────────────────────────────────────────────────
+
+/**
+ * `Search` — termo pesquisado no site (evento padrão do Meta). Reusa o
+ * sanitizador de PII do GA4 (`sanitizeSearchTerm`) para não enviar
+ * e-mail/CPF/telefone ao Meta; no-op quando sobra termo vazio.
+ */
+export function trackPixelSearch(searchTerm: string): void {
+  const sanitized = sanitizeSearchTerm(searchTerm);
+  if (!sanitized) return;
+  trackPixelEvent("Search", { search_string: sanitized });
 }

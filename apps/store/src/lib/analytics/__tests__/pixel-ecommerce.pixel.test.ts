@@ -18,6 +18,7 @@ import {
   trackPixelInitiateCheckout,
   trackPixelAddPaymentInfo,
   trackPixelPurchase,
+  trackPixelSearch,
 } from "@/src/lib/analytics/pixel-ecommerce";
 
 function makeProduct(overrides: Partial<Product> = {}): Product {
@@ -204,5 +205,25 @@ describe("pixel funnel events", () => {
       content_ids: ["LURATHA_9001_M"],
     });
     expect(call[3]).toEqual({ eventID: "order_9" });
+  });
+});
+
+describe("pixel engagement events", () => {
+  it("trackPixelSearch emits Search with the sanitized term", () => {
+    trackPixelSearch("vestido floral");
+    const [, name, params] = lastTrack();
+    expect(name).toBe("Search");
+    expect(params).toEqual({ search_string: "vestido floral" });
+  });
+
+  it("trackPixelSearch redacts PII (reuses the GA4 sanitizer)", () => {
+    trackPixelSearch("meu contato teste@example.com");
+    const [, , params] = lastTrack();
+    expect(params.search_string).toBe("meu contato [email]");
+  });
+
+  it("trackPixelSearch does not fire for an empty / whitespace term", () => {
+    trackPixelSearch("   ");
+    expect(fbq.mock.calls.filter((c) => c[0] === "track")).toHaveLength(0);
   });
 });

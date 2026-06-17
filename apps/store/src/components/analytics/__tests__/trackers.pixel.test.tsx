@@ -96,13 +96,14 @@ describe("ViewItemListTracker (Meta)", () => {
 });
 
 describe("PurchaseTracker (Meta)", () => {
-  it("fires Purchase once with eventID = transactionId", () => {
+  it("fires Purchase once with eventID = transactionId when the order is paid", () => {
     render(
       <PurchaseTracker
         transactionId="order_77"
         value={500}
         shipping={20}
         items={[makeOrderItem()]}
+        paid
       />,
     );
     const purchases = fbq.mock.calls.filter((c) => c[1] === "Purchase");
@@ -111,12 +112,26 @@ describe("PurchaseTracker (Meta)", () => {
     expect(purchases[0][3]).toEqual({ eventID: "order_77" });
   });
 
+  it("does NOT fire the Meta Purchase when the order is not paid (PIX/boleto pendente)", () => {
+    render(
+      <PurchaseTracker
+        transactionId="order_pending"
+        value={500}
+        shipping={20}
+        items={[makeOrderItem()]}
+        paid={false}
+      />,
+    );
+    expect(fbq.mock.calls.filter((c) => c[1] === "Purchase")).toHaveLength(0);
+  });
+
   it("dedupes across remounts via localStorage (no double count)", () => {
     const props = {
       transactionId: "order_88",
       value: 500,
       shipping: 20,
       items: [makeOrderItem()],
+      paid: true,
     };
     const first = render(<PurchaseTracker {...props} />);
     first.unmount();

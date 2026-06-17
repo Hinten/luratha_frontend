@@ -12,10 +12,23 @@ interface PurchaseTrackerProps {
   shipping: number;
   items: OrderItem[];
   coupon?: string;
+  /**
+   * Pagamento confirmado (`paymentStatus === "paid"`). O `Purchase` do Meta no
+   * navegador só dispara quando `true`. Pagamentos assíncronos (PIX/boleto)
+   * ainda não pagos são contados pela Conversions API quando o webhook confirma
+   * o pagamento (server-authoritative, deduplicado por `event_id`) — evita
+   * conversão falsa quando o cliente abandona o PIX.
+   */
+  paid: boolean;
 }
 
 /**
- * Dispara `purchase` ao montar a página de sucesso. Renderiza `null`.
+ * Dispara o evento de compra ao montar a página de sucesso. Renderiza `null`.
+ *
+ * - **GA4 `purchase`**: dispara sempre (a loja não tem medição server-side de
+ *   GA4; mantém a cobertura de pedidos assíncronos como antes).
+ * - **Meta `Purchase`**: só dispara quando `paid` — PIX/boleto pendentes vêm da
+ *   Conversions API no webhook do pagamento confirmado.
  *
  * Deduplicado por pedido via `localStorage` (`ga_purchase_<orderId>`): um
  * reload da página de sucesso não conta a compra duas vezes. A ref evita o
@@ -27,6 +40,7 @@ export default function PurchaseTracker({
   shipping,
   items,
   coupon,
+  paid,
 }: PurchaseTrackerProps) {
   const ran = useRef(false);
 
@@ -45,10 +59,13 @@ export default function PurchaseTracker({
     }
 
     trackPurchase({ transactionId, value, shipping, items, ...(coupon ? { coupon } : {}) });
-    // Meta `Purchase` com eventID = order.id → o Meta deduplica com o evento
-    // server-side da Conversions API (mesmo event_id).
-    trackPixelPurchase({ transactionId, value, items });
-  }, [transactionId, value, shipping, items, coupon]);
+    // Meta `Purchase` (eventID = order.id) só com pagamento confirmado. PIX/boleto
+    // pendentes são enviados pela Conversions API quando o webhook confirma o
+    // pagamento — mesmo event_id, então o Meta deduplica e não conta duas vezes.
+    if (paid) {
+      trackPixelPurchase({ transactionId, value, items });
+    }
+  }, [transactionId, value, shipping, items, coupon, paid]);
 
   return null;
 }
