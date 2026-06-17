@@ -18,6 +18,7 @@ import { logger } from "@luratha/core/logging/logger";
 import { createOrder, getOrder } from "./mercadoPago";
 import { planStockRelease } from "./orderStock";
 import { buildStatusPatch } from "./orderStatusPatch";
+import { sendGa4Purchase } from "./ga4MeasurementProtocol";
 import {
   type PaymentIntentResult,
   type PaymentPayer,
@@ -286,7 +287,7 @@ export async function applyOrderWebhook(
 ): Promise<{ changed: boolean; orderId: string; status: PaymentStatus }> {
   const summary = await getOrder(mpOrderId);
 
-  return adminDb.runTransaction(async (tx) => {
+  const outcome = await adminDb.runTransaction(async (tx) => {
     const ref = orderRef(summary.orderId);
     const snapshot = await tx.get(ref);
     if (!snapshot.exists) {
@@ -300,7 +301,7 @@ export async function applyOrderWebhook(
     const statusChanged = order.paymentStatus !== summary.status;
     const intentIdChanged = order.paymentIntentId !== summary.paymentId;
     if (!statusChanged && !intentIdChanged) {
-      return { changed: false, orderId: order.id, status: summary.status };
+      return { changed: false, order, becamePaid: false };
     }
 
     const patch: Partial<Order> = {
@@ -321,6 +322,25 @@ export async function applyOrderWebhook(
     );
     tx.set(ref, merged);
 
-    return { changed: true, orderId: order.id, status: summary.status };
+    // Transição p/ pago acontecendo AGORA (pagamento assíncrono confirmado): o
+    // pedido não estava `paid` e passou a estar. É o gatilho do `purchase`
+    // server-side (PIX/boleto/cartão pós-análise). O cartão aprovado na hora já
+    // chega `paid` (medido client-side) → este webhook vê `order.status ===
+    // "paid"` e não reentra aqui.
+    const becamePaid = merged.status === "paid" && order.status !== "paid";
+    return { changed: true, order: merged, becamePaid };
   });
+
+  // GA4 `purchase` server-side FORA da transação (I/O de rede). Idempotente: o
+  // guard `becamePaid` só dispara na transição, e a flag `ga4PurchaseSent`
+  // barra reenvios. `sendGa4Purchase` nunca lança — falha no GA não pode
+  // impedir o ACK do webhook (senão o MP reentrega indefinidamente).
+  if (outcome.becamePaid && !outcome.order.ga4PurchaseSent) {
+    const sent = await sendGa4Purchase(outcome.order);
+    if (sent) {
+      await persistOrderPatch(outcome.order.id, { ga4PurchaseSent: true });
+    }
+  }
+
+  return { changed: outcome.changed, orderId: outcome.order.id, status: summary.status };
 }

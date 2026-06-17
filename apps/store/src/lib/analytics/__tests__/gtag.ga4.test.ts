@@ -1,8 +1,14 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { trackEvent, updateConsent, pageview } from "@/src/lib/analytics/gtag";
+import { trackEvent, updateConsent, pageview, getGaClientId } from "@/src/lib/analytics/gtag";
+
+/** Remove o cookie `_ga` (jsdom acumula cookies entre testes). */
+function clearGaCookie() {
+  document.cookie = "_ga=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  clearGaCookie();
 });
 
 describe("gtag helpers", () => {
@@ -67,6 +73,29 @@ describe("gtag helpers", () => {
         page_location: window.location.href,
         page_title: "Página de Teste",
       });
+    });
+  });
+
+  describe("getGaClientId", () => {
+    it("extracts the client_id from the _ga cookie (everything after the 2nd dot)", () => {
+      document.cookie = "_ga=GA1.1.1234567890.987654321; path=/";
+      expect(getGaClientId()).toBe("1234567890.987654321");
+    });
+
+    it("reads _ga among other cookies", () => {
+      document.cookie = "foo=bar; path=/";
+      document.cookie = "_ga=GA1.2.111.222; path=/";
+      document.cookie = "_ga_ABC=GS1.1.xyz; path=/";
+      expect(getGaClientId()).toBe("111.222");
+    });
+
+    it("returns null when the _ga cookie is absent", () => {
+      expect(getGaClientId()).toBeNull();
+    });
+
+    it("returns null for a malformed _ga value", () => {
+      document.cookie = "_ga=not-a-ga-cookie; path=/";
+      expect(getGaClientId()).toBeNull();
     });
   });
 });

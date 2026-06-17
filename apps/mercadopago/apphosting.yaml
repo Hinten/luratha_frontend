@@ -33,3 +33,12 @@ env:
     value: "test_user_6882404001016965566@testuser.com"
     availability:
       - RUNTIME
+
+  # GA4 Measurement Protocol API secret (GA4 Admin -> Fluxo de dados -> Measurement
+  # Protocol API secrets). Usado para enviar o `purchase` server-side quando o
+  # webhook confirma pagamento assíncrono (PIX/boleto/cartão pós-análise). Ausente
+  # = envio server-side vira no-op (o cartão aprovado na hora segue client-side).
+  - variable: GA4_API_SECRET
+    secret: ga4-api-secret
+    availability:
+      - RUNTIME

@@ -98,7 +98,14 @@ async function renderPage() {
 afterEach(() => {
   state.order = null;
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  window.localStorage.clear();
 });
+
+/** Nomes dos eventos GA4 disparados via `window.gtag("event", name, …)`. */
+function gtagEventNames(gtag: ReturnType<typeof vi.fn>) {
+  return gtag.mock.calls.filter((c) => c[0] === "event").map((c) => c[1]);
+}
 
 describe("CheckoutSuccessPage — copy por estado do pedido", () => {
   it("pedido pago → agradece e não mostra orientação de pagamento", async () => {
@@ -167,5 +174,40 @@ describe("CheckoutSuccessPage — copy por estado do pedido", () => {
 
     const cta = await screen.findByRole("link", { name: "Acompanhar pedido" });
     expect(cta.getAttribute("href")).toBe("/conta/pedidos/order-1");
+  });
+});
+
+describe("CheckoutSuccessPage — gating do purchase client-side", () => {
+  it("dispara purchase client-side quando o pedido já está pago (cartão aprovado na hora)", async () => {
+    const gtag = vi.fn();
+    vi.stubGlobal("gtag", gtag);
+    state.order = baseOrder({
+      status: "paid",
+      paymentStatus: "paid",
+      paymentMethod: "credit_card",
+    });
+    await renderPage();
+
+    expect(gtagEventNames(gtag)).toContain("purchase");
+    const call = gtag.mock.calls.find((c) => c[1] === "purchase");
+    expect(call?.[2]).toMatchObject({ transaction_id: "order-1", currency: "BRL", value: 220 });
+  });
+
+  it("NÃO dispara purchase client-side com PIX pendente (sai server-side no webhook)", async () => {
+    const gtag = vi.fn();
+    vi.stubGlobal("gtag", gtag);
+    state.order = baseOrder({ status: "pending_payment", paymentStatus: "awaiting_pix" });
+    await renderPage();
+
+    expect(gtagEventNames(gtag)).not.toContain("purchase");
+  });
+
+  it("NÃO dispara purchase client-side com cartão em análise (pending)", async () => {
+    const gtag = vi.fn();
+    vi.stubGlobal("gtag", gtag);
+    state.order = baseOrder({ status: "pending_payment", paymentMethod: "credit_card" });
+    await renderPage();
+
+    expect(gtagEventNames(gtag)).not.toContain("purchase");
   });
 });

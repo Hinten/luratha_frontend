@@ -75,6 +75,7 @@ const SERVER_ONLY_FIELDS = [
   "shippedAt",
   "deliveredAt",
   "stockMovement",
+  "ga4PurchaseSent",
 ] as const;
 
 /** Erro de regra de negócio lançado de dentro da transação → resposta 409. */

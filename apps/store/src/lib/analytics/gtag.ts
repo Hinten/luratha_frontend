@@ -49,6 +49,25 @@ export function updateConsent(signals: Record<ConsentSignal, ConsentValue>): voi
   window.gtag("consent", "update", signals);
 }
 
+/**
+ * Lê o `client_id` do GA4 a partir do cookie `_ga`, no formato
+ * `GA1.<n>.<client_id>` — onde `client_id` é tudo após o 2º ponto
+ * (ex.: `GA1.1.1234567890.987654321` → `1234567890.987654321`).
+ *
+ * Síncrono e sem depender do measurement ID. Retorna `null` quando o cookie
+ * não existe (SSR, ou visitante que optou por sair → sem `_ga`): nesse caso o
+ * envio server-side do `purchase` é pulado, respeitando o consentimento (sem
+ * client_id sintético).
+ */
+export function getGaClientId(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)_ga=([^;]+)/);
+  if (!match) return null;
+  const parts = decodeURIComponent(match[1]).split(".");
+  if (parts.length < 4 || parts[0] !== "GA1") return null;
+  return parts.slice(2).join(".");
+}
+
 /** Envia um `page_view` manual (o `config` usa `send_page_view: false`). */
 export function pageview(path: string): void {
   if (typeof window === "undefined") return;
