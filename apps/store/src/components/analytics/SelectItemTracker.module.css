@@ -1,0 +1,9 @@
+/*
+ * `display: contents` faz o wrapper não gerar caixa própria, deixando o card
+ * filho participar diretamente do grid do `ProductGrid` (layout inalterado).
+ * A captura de clique (`onClickCapture`) continua funcionando porque a
+ * propagação de eventos do DOM independe do box de layout.
+ */
+.wrapper {
+  display: contents;
+}

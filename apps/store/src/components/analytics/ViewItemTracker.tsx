@@ -8,14 +8,23 @@ import { trackPixelViewContent } from "@/src/lib/analytics/pixel-ecommerce";
 /**
  * Dispara `view_item` ao montar a página de detalhe do produto. Renderiza
  * `null` — só side-effect. Recebe o `Product` do server component pai
- * (serializável).
+ * (serializável). O dedup por `lastFiredProductId` em escopo de módulo
+ * sobrevive a remounts (StrictMode dev, Suspense unwind) e só re-dispara
+ * quando o produto exibido muda de fato.
  */
+let lastFiredProductId: string | null = null;
+
+/** @internal — uso exclusivo de testes para resetar o dedup de módulo. */
+export function __resetViewItemTrackerForTests(): void {
+  lastFiredProductId = null;
+}
+
 export default function ViewItemTracker({ product }: { product: Product }) {
   useEffect(() => {
+    if (lastFiredProductId === product.id) return;
+    lastFiredProductId = product.id;
     trackViewItem(product);
     trackPixelViewContent(product);
-    // Só re-dispara se o produto exibido mudar de fato.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
+  }, [product]);
   return null;
 }

@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render } from "@testing-library/react";
-import ViewItemTracker from "@/src/components/analytics/ViewItemTracker";
-import ViewItemListTracker from "@/src/components/analytics/ViewItemListTracker";
+import ViewItemTracker, {
+  __resetViewItemTrackerForTests,
+} from "@/src/components/analytics/ViewItemTracker";
+import ViewItemListTracker, {
+  __resetViewItemListTrackerForTests,
+} from "@/src/components/analytics/ViewItemListTracker";
 import PurchaseTracker from "@/src/components/analytics/PurchaseTracker";
 import {
   buildProductSlug,
@@ -58,6 +62,9 @@ function trackNames() {
 
 beforeEach(() => {
   localStorage.clear();
+  // O dedup em escopo de módulo (mérge do #215) persiste entre testes; reseta.
+  __resetViewItemTrackerForTests();
+  __resetViewItemListTrackerForTests();
   fbq = vi.fn();
   vi.stubGlobal("fbq", fbq);
 });

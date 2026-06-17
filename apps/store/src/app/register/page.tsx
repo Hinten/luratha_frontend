@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { AuthClientError } from "@/src/lib/errors";
+import { trackSignUp } from "@/src/lib/analytics/ecommerce";
 import styles from "./page.module.css";
 
 export default function RegisterPage() {
@@ -30,6 +31,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(name, email, password);
+      trackSignUp();
       router.push("/");
     } catch (err) {
       if (err instanceof AuthClientError) {
