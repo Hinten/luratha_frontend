@@ -231,6 +231,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --ipc=host
+    # Em job com container o shell padrão do Actions é `sh` (dash), não `bash`
+    # como no runner host — restauramos bash p/ todos os steps, igual aos
+    # demais jobs deste workflow.
+    defaults:
+      run:
+        shell: bash
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
