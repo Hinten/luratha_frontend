@@ -76,6 +76,10 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
+    // CI roda o Chromium como root no container oficial do Playwright, que
+    // recusa iniciar sem --no-sandbox. Gated em CI pra manter o sandbox local.
+    // Seguro: testes first-party contra nosso próprio app em localhost.
+    launchOptions: { args: process.env.CI ? ["--no-sandbox"] : [] },
   },
   projects: [
     {

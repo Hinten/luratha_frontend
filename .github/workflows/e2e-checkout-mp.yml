@@ -48,6 +48,14 @@ jobs:
     concurrency:
       group: luratha-96386-mp-testuser
       cancel-in-progress: false
+    # Imagem oficial do Playwright — browsers + libs de SO já embutidas (evita o
+    # `install-deps` via apt, lento a cada run). A tag DEVE casar com a versão de
+    # @playwright/test no pnpm-lock.yaml; suba as duas juntas. `--ipc=host` dá ao
+    # Chromium a memória compartilhada do host (o /dev/shm de 64MB do Docker
+    # derruba abas no meio do teste).
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --ipc=host
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
@@ -112,7 +120,10 @@ jobs:
       - name: Install Playwright browsers
         if: steps.check_secrets.outputs.skip != 'true'
         working-directory: apps/store
-        run: pnpm exec playwright install --with-deps chromium
+        # Drift guard: no-op enquanto a tag da imagem casar com o lockfile; só
+        # baixa o browser se um bump de Playwright passar na frente da tag.
+        # Sem --with-deps — as libs de SO já vêm na imagem.
+        run: pnpm exec playwright install chromium
       - name: Run MP E2E specs
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 10

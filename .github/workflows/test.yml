@@ -54,6 +54,7 @@ jobs:
     # needs credentials + network. Skips (like the other cloud jobs) when the
     # secrets are absent — the admin build alone never needs credentials.
     env:
+      NEXT_TELEMETRY_DISABLED: "1"
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
       FIREBASE_PROJECT_ID: luratha-96386
@@ -84,6 +85,15 @@ jobs:
           cache: pnpm
       - if: steps.check_secrets.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
+      - name: Cache Next.js build
+        if: steps.check_secrets.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          # Glob cobre store, admin, mercadopago e feeds (distDir padrão .next).
+          path: apps/*/.next/cache
+          key: nextjs-monorepo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-monorepo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Build all apps
         if: steps.check_secrets.outputs.skip != 'true'
         run: pnpm run build
@@ -213,6 +223,14 @@ jobs:
     # read the shared catalog + create per-test ephemeral users — so concurrent
     # runs (this job, seo-e2e, other PRs) no longer race. Same-PR superseded runs
     # are already cancelled by the workflow-level concurrency above.
+    # Imagem oficial do Playwright — browsers + libs de SO já embutidas (evita o
+    # `install-deps` via apt, lento a cada run). A tag DEVE casar com a versão de
+    # @playwright/test no pnpm-lock.yaml; suba as duas juntas. `--ipc=host` dá ao
+    # Chromium a memória compartilhada do host (o /dev/shm de 64MB do Docker
+    # derruba abas no meio do teste).
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --ipc=host
     env:
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
       FIREBASE_WEB_APP_CONFIG_BASE64: ${{ secrets.FIREBASE_WEB_APP_CONFIG_BASE64 }}
@@ -252,7 +270,10 @@ jobs:
       - name: Install Playwright browsers
         if: steps.check_secrets.outputs.skip != 'true'
         working-directory: apps/store
-        run: pnpm exec playwright install --with-deps chromium
+        # Drift guard: no-op enquanto a tag da imagem casar com o lockfile; só
+        # baixa o browser se um bump de Playwright passar na frente da tag.
+        # Sem --with-deps — as libs de SO já vêm na imagem.
+        run: pnpm exec playwright install chromium
       - name: Run E2E tests (non-MP)
         if: steps.check_secrets.outputs.skip != 'true'
         timeout-minutes: 6
