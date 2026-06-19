@@ -86,6 +86,10 @@ vi.mock("firebase/auth", () => {
     sendPasswordResetEmail: vi.fn(async () => {
       // sucesso silencioso
     }),
+    verifyPasswordResetCode: vi.fn(async () => "ana@luratha.com"),
+    confirmPasswordReset: vi.fn(async () => {
+      // sucesso silencioso
+    }),
   };
 });
 
@@ -106,6 +110,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
 } from "firebase/auth";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -266,7 +272,7 @@ describe("AuthContext", () => {
     expect(result.current.isAuthenticated).toBe(false);
   });
 
-  it("sendPasswordReset chama sendPasswordResetEmail", async () => {
+  it("sendPasswordReset chama sendPasswordResetEmail localizado em PT-BR", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -275,6 +281,50 @@ describe("AuthContext", () => {
     });
 
     expect(sendPasswordResetEmail).toHaveBeenCalled();
+    const sendMock = sendPasswordResetEmail as unknown as ReturnType<typeof vi.fn>;
+    const [authArg] = sendMock.mock.calls[0];
+    expect((authArg as { languageCode?: string }).languageCode).toBe("pt-BR");
+  });
+
+  it("verifyPasswordResetCode retorna o email e chama o Firebase", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let email = "";
+    await act(async () => {
+      email = await result.current.verifyPasswordResetCode("oob-123");
+    });
+
+    expect(verifyPasswordResetCode).toHaveBeenCalled();
+    expect(email).toBe("ana@luratha.com");
+  });
+
+  it("confirmPasswordReset chama o Firebase com o oobCode e a nova senha", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.confirmPasswordReset("oob-123", "novaSenha123");
+    });
+
+    expect(confirmPasswordReset).toHaveBeenCalled();
+    const confirmMock = confirmPasswordReset as unknown as ReturnType<typeof vi.fn>;
+    const [, oobCode, newPassword] = confirmMock.mock.calls[0];
+    expect(oobCode).toBe("oob-123");
+    expect(newPassword).toBe("novaSenha123");
+  });
+
+  it("verifyPasswordResetCode mapeia auth/expired-action-code para AuthClientError", async () => {
+    const verifyMock = verifyPasswordResetCode as unknown as ReturnType<typeof vi.fn>;
+    verifyMock.mockRejectedValueOnce(new FirebaseError("auth/expired-action-code", "expired"));
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await expect(result.current.verifyPasswordResetCode("oob-expired")).rejects.toThrow(
+        "O link de redefinição expirou. Solicite um novo.",
+      );
+    });
   });
 
   it("limpa chaves legadas de localStorage no mount", () => {
