@@ -5,6 +5,7 @@
 **/coverage/**
 **/playwright-report/**
 **/test-results/**
+report/
 
 # Generated / vendored
 pnpm-lock.yaml
