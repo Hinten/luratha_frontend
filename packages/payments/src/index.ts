@@ -36,6 +36,18 @@ export {
 } from "./orderStock";
 
 export {
+  buildPurchaseEventData,
+  MetaCapiError,
+  notifyPurchaseConversion,
+  resolveMetaCapiConfig,
+  sendPurchaseEvent,
+  type MetaCapiConfig,
+  type MetaCapiErrorCode,
+  type MetaPurchaseEventData,
+  type MetaUserData,
+} from "./metaCapi";
+
+export {
   PaymentProviderError,
   type BoletoArtifact,
   type CreateBoletoPaymentInput,

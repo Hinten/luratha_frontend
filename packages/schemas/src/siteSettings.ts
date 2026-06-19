@@ -140,23 +140,31 @@ export const companySettingsSchema = z.object({
 /**
  * Identificadores de marketing/analytics que o dono cadastra sem deploy.
  *
- * O **Google Analytics 4** já é renderizado na storefront (Consent Mode v2, em
- * modo opt-out) a partir de `ga4MeasurementId`/`ga4Enabled` — ver
- * `apps/store/src/components/analytics/`. Os demais IDs (Meta Pixel, Catálogo do
- * Facebook, Merchant Center) por ora são apenas **armazenados** (consumidos pelo
- * app de feeds / wiring de Pixel em fase seguinte). Todos os campos têm
- * `default(...)` para retrocompatibilidade: documentos `settings/global` criados
- * antes deste bloco continuam válidos na leitura — o `.default()` materializa um
- * `marketing` vazio (mesmo padrão de `company`).
+ * **Google Analytics 4** e **Meta (Facebook) Pixel** são renderizados na
+ * storefront (Consent Mode v2 / consentimento do Pixel, em modo opt-out
+ * compartilhado) a partir de `ga4MeasurementId`/`ga4Enabled` e
+ * `metaPixelId`/`metaPixelEnabled` — ver `apps/store/src/components/analytics/`.
+ * O `metaPixelId` também alimenta a Conversions API (Purchase server-side, no
+ * webhook do MercadoPago). Os demais IDs (Catálogo do Facebook, Merchant Center)
+ * são consumidos pelo app de feeds. Todos os campos têm `default(...)` para
+ * retrocompatibilidade: documentos `settings/global` criados antes deste bloco
+ * continuam válidos na leitura — o `.default()` materializa um `marketing`
+ * vazio (mesmo padrão de `company`).
  */
 export const marketingSettingsSchema = z.object({
   /**
-   * ID do Meta Pixel (Facebook/Instagram), tipicamente numérico
-   * (ex.: "123456789012345"). Armazenado como string livre — o formato não é
-   * validado aqui (v1 apenas persiste; a validação fica para quando a loja
-   * passar a renderizar o script do Pixel).
+   * ID do Meta Pixel (Facebook/Instagram), numérico (ex.: "123456789012345").
+   * Validado no formato (apenas dígitos) porque, como o `ga4MeasurementId`, é
+   * efetivamente injetado no script do Pixel e na URL da Conversions API.
    */
-  metaPixelId: z.string().trim().max(32).default(""),
+  metaPixelId: z
+    .string()
+    .trim()
+    .regex(/^\d*$/, "Meta Pixel ID inválido — use apenas dígitos.")
+    .max(32)
+    .default(""),
+  /** Liga/desliga o Pixel + Conversions API do Meta sem perder o ID configurado. */
+  metaPixelEnabled: z.boolean().default(true),
   /** ID do Catálogo do Facebook/Commerce Manager onde o feed é cadastrado. */
   facebookCatalogId: z.string().trim().max(32).default(""),
   /** ID da conta do Google Merchant Center que consome o feed de produtos. */

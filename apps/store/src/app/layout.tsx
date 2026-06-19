@@ -7,6 +7,7 @@ import WhatsAppButton from "@/src/components/WhatsAppButton";
 import JsonLd from "@/src/components/JsonLd";
 import Providers from "@/src/components/Providers";
 import Analytics from "@/src/components/analytics/Analytics";
+import MetaPixel from "@/src/components/analytics/MetaPixel";
 import { getCachedSiteSettings } from "@/src/lib/queries/getCachedSiteSettings";
 import { SITE_URL, LURATHA_SCHEMA, DEFAULT_OG_IMAGE } from "@/src/lib/seoConstants";
 
@@ -116,6 +117,9 @@ export default async function RootLayout({
   const gaMeasurementId = marketing.ga4Enabled
     ? marketing.ga4MeasurementId || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""
     : "";
+  // Meta Pixel: admin (settings/global.marketing) é a fonte da verdade. Vazio
+  // (sem ID ou toggle desligado) = Pixel desligado.
+  const metaPixelId = marketing.metaPixelEnabled ? marketing.metaPixelId : "";
 
   return (
     <html lang="pt-BR">
@@ -123,6 +127,7 @@ export default async function RootLayout({
         <JsonLd data={organizationSchema} />
         <JsonLd data={websiteSchema} />
         <Analytics measurementId={gaMeasurementId} />
+        <MetaPixel pixelId={metaPixelId} />
         <Providers>
           <Header />
           <main>{children}</main>

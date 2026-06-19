@@ -89,6 +89,7 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
         value={order.grandTotal}
         shipping={order.shippingTotal}
         items={order.items}
+        paid={order.paymentStatus === "paid"}
         {...(order.couponCode ? { coupon: order.couponCode } : {})}
       />
 

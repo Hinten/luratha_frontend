@@ -16,6 +16,10 @@ import {
   trackAddShippingInfo,
   trackBeginCheckout,
 } from "@/src/lib/analytics/ecommerce";
+import {
+  trackPixelAddPaymentInfo,
+  trackPixelInitiateCheckout,
+} from "@/src/lib/analytics/pixel-ecommerce";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import { logger } from "@luratha/core/logging/logger";
 import Spinner from "@/src/components/Spinner";
@@ -346,6 +350,7 @@ export default function CheckoutFlow() {
     beginCheckoutFired.current = true;
     const cartSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     trackBeginCheckout(items, cartSubtotal);
+    trackPixelInitiateCheckout(items, cartSubtotal);
   }, [cartReady, items]);
 
   if (!user) return null;
@@ -391,8 +396,10 @@ export default function CheckoutFlow() {
       return;
     }
     dispatch({ type: "SUBMIT_START" });
-    // GA4 `add_payment_info` — o usuário confirmou o pagamento com um método.
+    // GA4 `add_payment_info` / Meta `AddPaymentInfo` — o usuário confirmou o
+    // pagamento com um método.
     trackAddPaymentInfo(items, grandTotal, draft.paymentMethod);
+    trackPixelAddPaymentInfo(items, grandTotal);
 
     // Id do pedido criado neste submit — usado no catch para cancelar (e
     // devolver o estoque de) um pedido cujo payment-intent falhou de vez.

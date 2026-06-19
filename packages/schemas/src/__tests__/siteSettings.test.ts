@@ -63,11 +63,32 @@ describe("marketing settings", () => {
     });
     expect(parsed.marketing).toEqual({
       metaPixelId: "",
+      metaPixelEnabled: true,
       facebookCatalogId: "",
       googleMerchantCenterId: "",
       ga4MeasurementId: "",
       ga4Enabled: true,
     });
+  });
+
+  it("metaPixelEnabled defaults to true and rejects a non-numeric Meta Pixel ID", () => {
+    const parsed = validateSiteSettings({
+      id: "global",
+      shipping: getDefaultSiteSettings().shipping,
+      marketing: { metaPixelId: "123456789012345" },
+      updatedAt: new Date().toISOString(),
+    });
+    expect(parsed.marketing.metaPixelEnabled).toBe(true);
+
+    // Agora que o Pixel ID é injetado no script/CAPI, o formato é validado.
+    expect(() =>
+      validateSiteSettings({
+        id: "global",
+        shipping: getDefaultSiteSettings().shipping,
+        marketing: { metaPixelId: "FB-123-not-digits" },
+        updatedAt: new Date().toISOString(),
+      }),
+    ).toThrow();
   });
 
   it("ga4Enabled defaults to true and rejects a malformed GA4 Measurement ID", () => {

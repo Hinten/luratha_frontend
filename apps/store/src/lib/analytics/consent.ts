@@ -18,6 +18,7 @@ import {
   type ConsentSignal,
   type ConsentValue,
 } from "./gtag";
+import { updatePixelConsent } from "./fbq";
 
 export type ConsentChoice = ConsentValue | null;
 
@@ -64,11 +65,14 @@ function persistConsentChoice(choice: ConsentValue): void {
 }
 
 /**
- * Aplica e persiste uma escolha do visitante: grava no `localStorage` e dispara
- * o `consent update` com os 4 sinais no mesmo valor. Usado pelos botões
- * Recusar/Permitir do controle de opt-out.
+ * Aplica e persiste uma escolha do visitante: grava no `localStorage`, dispara
+ * o `consent update` do GA4 (4 sinais no mesmo valor) e reflete a escolha no
+ * Meta Pixel (`grant`/`revoke`). Uma única escolha governa análise e anúncios em
+ * ambas as plataformas. Usado pelos botões Recusar/Permitir do controle de
+ * opt-out.
  */
 export function setConsentChoice(choice: ConsentValue): void {
   persistConsentChoice(choice);
   updateConsent(allSignals(choice));
+  updatePixelConsent(choice);
 }

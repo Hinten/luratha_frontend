@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { trackSearch } from "@/src/lib/analytics/ecommerce";
+import { trackPixelSearch } from "@/src/lib/analytics/pixel-ecommerce";
 import styles from "./SearchInput.module.css";
 
 export default function SearchInput() {
@@ -28,6 +29,7 @@ export default function SearchInput() {
       const query = params.toString();
       router.push(query ? `/busca?${query}` : "/busca");
       trackSearch(nextTerm);
+      trackPixelSearch(nextTerm);
       return;
     }
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { Product } from "@luratha/schemas";
 import { trackViewItem } from "@/src/lib/analytics/ecommerce";
+import { trackPixelViewContent } from "@/src/lib/analytics/pixel-ecommerce";
 
 /**
  * Dispara `view_item` ao montar a página de detalhe do produto. Renderiza
@@ -23,6 +24,7 @@ export default function ViewItemTracker({ product }: { product: Product }) {
     if (lastFiredProductId === product.id) return;
     lastFiredProductId = product.id;
     trackViewItem(product);
+    trackPixelViewContent(product);
   }, [product]);
   return null;
 }

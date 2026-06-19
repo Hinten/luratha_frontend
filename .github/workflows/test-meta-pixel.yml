@@ -1,0 +1,121 @@
+name: Test Meta Pixel + CAPI
+
+# Workflow dedicado aos testes da integração Meta (Facebook): o Pixel no
+# navegador (eventos de e-commerce, consentimento opt-out compartilhado com o
+# GA4, injeção do script) e a Conversions API server-side (Purchase via webhook
+# do MercadoPago: hashing, montagem do evento, gating e envio).
+#
+# São testes jsdom/node puros — NÃO usam Firebase nem nenhum secret (o Admin SDK
+# é mockado) — então rodam rápido e isolados. O path filter abaixo garante que
+# só disparam quando arquivos relevantes mudam.
+#
+# Os mesmos arquivos (`*.pixel.test.*` na store e `src/metaCapi/**` em payments)
+# também são cobertos pelo job unit do workflow `Test`; este dá um sinal focado
+# e rápido em PRs de marketing/analytics.
+#
+# NÃO é required em branch protection: quando o filter não casa, o workflow nem
+# aparece como check e o PR segue mergeável.
+
+on:
+  pull_request:
+    branches: [master, production]
+    paths:
+      - 'apps/store/src/lib/analytics/**'
+      - 'apps/store/src/components/analytics/**'
+      - 'apps/store/src/contexts/CartContext.tsx'
+      - 'apps/store/src/app/checkout/**'
+      - 'apps/store/src/app/produto/**'
+      - 'apps/store/src/components/categoria/**'
+      - 'apps/store/src/components/produto/**'
+      - 'apps/mercadopago/**'
+      - 'packages/payments/src/metaCapi/**'
+      - 'packages/payments/src/index.ts'
+      - 'packages/schemas/src/siteSettings.ts'
+      - '.github/workflows/test-meta-pixel.yml'
+
+concurrency:
+  group: test-meta-pixel-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  pixel:
+    name: Meta Pixel (storefront) unit/component tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run Meta Pixel tests
+        working-directory: apps/store
+        run: pnpm exec vitest run --config vitest.config.mts pixel
+
+  capi:
+    name: Meta Conversions API (payments) tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run Meta CAPI tests
+        run: pnpm --filter @luratha/payments exec vitest run metaCapi
+
+  report-failure:
+    name: Post failure logs on PR
+    needs: [pixel, capi]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Fetch failed job logs and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | [.id, .name] | @tsv' > /tmp/failed-jobs.tsv
+          if [ ! -s /tmp/failed-jobs.tsv ]; then
+            echo "Nenhum job em falha encontrado — nada a reportar."
+            exit 0
+          fi
+          {
+            echo "## ❌ CI falhou (Test Meta Pixel + CAPI)"
+            echo
+            echo "Workflow \`${{ github.workflow }}\` no commit <code>${HEAD_SHA:0:7}</code> · [ver run completo]($RUN_URL)"
+            echo
+          } > /tmp/body.md
+          while IFS=$'\t' read -r job_id job_name; do
+            if ! gh api "repos/$REPO/actions/jobs/$job_id/logs" > "/tmp/job-$job_id.log" 2>/dev/null; then
+              echo "(log indisponível — abra o run no GitHub)" > "/tmp/job-$job_id.log"
+            fi
+            {
+              echo "<details>"
+              echo "<summary>Job <code>$job_name</code> — últimos 12KB do log</summary>"
+              echo
+              echo '```'
+              tail -c 12000 "/tmp/job-$job_id.log"
+              echo
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> /tmp/body.md
+          done < /tmp/failed-jobs.tsv
+          gh pr comment "$PR" --repo "$REPO" --body-file /tmp/body.md
