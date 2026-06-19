@@ -91,9 +91,12 @@ jobs:
         with:
           # Glob cobre store, admin, mercadopago e feeds (distDir padrão .next).
           path: apps/*/.next/cache
-          key: nextjs-monorepo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          # node<versão> no key isola o cache entre upgrades de Node (o .next/cache
+          # carrega artefatos SWC sensíveis ao runtime; um bump de Node sem mexer
+          # no lockfile não deve restaurar cache de outra versão).
+          key: nextjs-monorepo-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            nextjs-monorepo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-monorepo-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Build all apps
         if: steps.check_secrets.outputs.skip != 'true'
         run: pnpm run build
