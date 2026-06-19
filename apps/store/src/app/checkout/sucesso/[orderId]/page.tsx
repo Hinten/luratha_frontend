@@ -84,13 +84,20 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
     <main className={styles.page}>
       <JsonLd data={orderJsonLd(order)} />
       <SuccessClient />
-      <PurchaseTracker
-        transactionId={order.id}
-        value={order.grandTotal}
-        shipping={order.shippingTotal}
-        items={order.items}
-        {...(order.couponCode ? { coupon: order.couponCode } : {})}
-      />
+      {/* `purchase` client-side só para pagamento já confirmado (cartão
+          aprovado na hora). PIX/boleto/cartão-em-análise chegam aqui ainda
+          `pending` — o `purchase` desses sai server-side (Measurement
+          Protocol) quando o webhook confirmar, evitando inflar receita de
+          pedidos não pagos. */}
+      {order.status === "paid" && (
+        <PurchaseTracker
+          transactionId={order.id}
+          value={order.grandTotal}
+          shipping={order.shippingTotal}
+          items={order.items}
+          {...(order.couponCode ? { coupon: order.couponCode } : {})}
+        />
+      )}
 
       <div className={styles.card}>
         <p className={`${styles.eyebrow} ${copy.awaitingPayment ? styles.eyebrowAwaiting : ""}`}>

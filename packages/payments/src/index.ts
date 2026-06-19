@@ -26,6 +26,8 @@ export {
   type PaymentIntentMethodInput,
 } from "./orderService";
 
+export { buildGa4PurchasePayload, sendGa4Purchase } from "./ga4MeasurementProtocol";
+
 export {
   planStockDecrement,
   planStockRelease,

@@ -16,6 +16,7 @@ import {
   trackAddShippingInfo,
   trackBeginCheckout,
 } from "@/src/lib/analytics/ecommerce";
+import { getGaClientId } from "@/src/lib/analytics/gtag";
 import { reportCheckoutError } from "@/src/lib/checkoutErrors";
 import { logger } from "@luratha/core/logging/logger";
 import Spinner from "@/src/components/Spinner";
@@ -398,6 +399,12 @@ export default function CheckoutFlow() {
     // devolver o estoque de) um pedido cujo payment-intent falhou de vez.
     let createdOrderId: string | null = null;
 
+    // GA4 `client_id` (cookie `_ga`) persistido no pedido para o envio
+    // server-side do `purchase` via Measurement Protocol quando o pagamento
+    // confirma de forma assíncrona (PIX/boleto/cartão pós-análise). `null`
+    // quando o visitante optou por sair (sem cookie) → sem envio server-side.
+    const ga4ClientId = getGaClientId();
+
     const orderPayload = {
       userId: user!.uid,
       orderNumber: makeOrderNumber(),
@@ -411,6 +418,7 @@ export default function CheckoutFlow() {
       shippingTotal,
       grandTotal,
       currency: "BRL" as const,
+      ...(ga4ClientId ? { ga4ClientId } : {}),
       ...(state.appliedCoupon ? { couponCode: state.appliedCoupon.code } : {}),
       shippingAddressPath: shippingAddressPath(user!.uid, state.address.id),
       shippingMethod: {

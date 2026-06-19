@@ -49,6 +49,36 @@ export function updateConsent(signals: Record<ConsentSignal, ConsentValue>): voi
   window.gtag("consent", "update", signals);
 }
 
+/**
+ * Lê o `client_id` do GA4 a partir do cookie `_ga`, no formato
+ * `GA1.<n>.<client_id>` — onde `client_id` é tudo após o 2º ponto
+ * (ex.: `GA1.1.1234567890.987654321` → `1234567890.987654321`).
+ *
+ * Síncrono e sem depender do measurement ID. Retorna `null` quando o cookie
+ * não existe (SSR, ou visitante que optou por sair → sem `_ga`), está
+ * malformado, ou o valor não bate com o formato do GA4 client_id (`<n>.<n>`).
+ * Nesses casos o envio server-side do `purchase` é pulado, respeitando o
+ * consentimento (sem client_id sintético) e barrando lixo/PII na origem.
+ */
+export function getGaClientId(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)_ga=([^;]+)/);
+  if (!match) return null;
+  let value: string;
+  try {
+    value = decodeURIComponent(match[1]);
+  } catch (err) {
+    // Cookie com percent-encoding inválido → trata como ausente. `URIError` é
+    // o único erro que `decodeURIComponent` lança; nunca deixa quebrar o checkout.
+    if (err instanceof URIError) return null;
+    throw err;
+  }
+  const parts = value.split(".");
+  if (parts.length < 4 || parts[0] !== "GA1") return null;
+  const clientId = parts.slice(2).join(".");
+  return /^\d+\.\d+$/.test(clientId) ? clientId : null;
+}
+
 /** Envia um `page_view` manual (o `config` usa `send_page_view: false`). */
 export function pageview(path: string): void {
   if (typeof window === "undefined") return;

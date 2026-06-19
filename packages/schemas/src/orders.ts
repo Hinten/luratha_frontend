@@ -248,6 +248,31 @@ export const orderSchema = z
      */
     stockMovement: z.enum(["decremented", "released"]).optional(),
     notes: z.string().trim().max(500).optional(),
+    /**
+     * `client_id` do GA4 capturado no navegador na criação do pedido (cookie
+     * `_ga`). Usado para enviar o `purchase` server-side via Measurement
+     * Protocol quando o pagamento confirma de forma assíncrona (PIX, boleto ou
+     * cartão liberado após análise antifraude) — atribuindo o evento ao mesmo
+     * visitante. Ausente quando o cliente optou por sair (sem cookie `_ga`).
+     *
+     * Formato fixo do GA4 client_id (`<n>.<n>`, dois inteiros): o cliente
+     * preenche este campo, então validamos o shape para impedir injeção de PII
+     * (ex.: e-mail) que acabaria repassada ao GA4. O capturador (`getGaClientId`)
+     * só devolve valores nesse formato ou `null`, então clientes legítimos nunca
+     * caem aqui — o regex barra apenas POSTs adulterados.
+     */
+    ga4ClientId: z
+      .string()
+      .regex(/^\d+\.\d+$/, 'ga4ClientId deve ter o formato do GA4 client_id ("<n>.<n>")')
+      .max(64)
+      .optional(),
+    /**
+     * Flag de dedup do envio server-side do `purchase` (Measurement Protocol).
+     * Setada (uma única vez) após o webhook confirmar o pagamento e despachar o
+     * evento, impedindo reenvio em re-entregas/retries do webhook. Controlada
+     * 100% pelo servidor (o `POST /api/orders` descarta o campo do payload).
+     */
+    ga4PurchaseSent: z.boolean().optional(),
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
   })
