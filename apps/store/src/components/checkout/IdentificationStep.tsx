@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { payerFormSchema, type PayerFormInput } from "@luratha/schemas";
 import { ApiResponseError } from "@/src/lib/errors";
@@ -63,8 +63,9 @@ export default function IdentificationStep(props: IdentificationStepProps) {
     register,
     handleSubmit,
     reset,
-    watch,
+    getValues,
     setValue,
+    control,
     formState: { errors, isDirty },
   } = useForm<PayerFormInput>({
     resolver: zodResolver(payerFormSchema),
@@ -95,7 +96,7 @@ export default function IdentificationStep(props: IdentificationStepProps) {
     isDirty,
   ]);
 
-  const idType = watch("identificationType");
+  const idType = useWatch({ control, name: "identificationType" });
 
   // Quando o usuário troca o tipo (CPF↔CNPJ), re-formata o número atual com
   // a máscara correspondente. Preservar os dígitos é importante: trocar CNPJ
@@ -104,7 +105,7 @@ export default function IdentificationStep(props: IdentificationStepProps) {
   // tipo, mantemos o valor cru e exibimos uma mensagem de erro pro usuário
   // editar — não destruímos dígitos pelas costas.
   useEffect(() => {
-    const current = watch("identificationNumber") ?? "";
+    const current = getValues("identificationNumber") ?? "";
     const chars = current.replace(/[^A-Za-z0-9]/g, "");
     const maxChars = idType === "CNPJ" ? 14 : 11;
     // Letras só existem em CNPJ alfanumérico — trocar pra CPF com letras no
