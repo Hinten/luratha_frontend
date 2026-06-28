@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "eslint": "^9.39.4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
