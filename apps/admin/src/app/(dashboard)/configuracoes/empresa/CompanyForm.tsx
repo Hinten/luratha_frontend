@@ -6,10 +6,7 @@ import type { CompanySettings } from "@luratha/schemas";
 import styles from "./CompanyForm.module.css";
 
 type Status =
-  | { kind: "idle" }
-  | { kind: "saving" }
-  | { kind: "saved" }
-  | { kind: "error"; message: string };
+  { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
 type Field = {
   key: keyof CompanySettings;

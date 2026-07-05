@@ -65,11 +65,7 @@ export interface ShippingProvider {
 export class ShippingProviderError extends Error {
   readonly providerId: ShippingProviderId | "unknown";
   readonly code:
-    | "config_missing"
-    | "invalid_input"
-    | "provider_unavailable"
-    | "not_supported"
-    | "unknown";
+    "config_missing" | "invalid_input" | "provider_unavailable" | "not_supported" | "unknown";
   readonly cause?: unknown;
   /** HTTP status of the provider response, when the error came from a non-ok HTTP reply. */
   readonly httpStatus?: number;

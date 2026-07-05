@@ -6,10 +6,7 @@ import type { MarketingSettings } from "@luratha/schemas";
 import styles from "./MarketingForm.module.css";
 
 type Status =
-  | { kind: "idle" }
-  | { kind: "saving" }
-  | { kind: "saved" }
-  | { kind: "error"; message: string };
+  { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
 /** Chaves de `MarketingSettings` cujo valor é string (renderizadas como input). */
 type MarketingStringKey = {

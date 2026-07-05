@@ -9,10 +9,7 @@
 
 /** Sinais de consentimento do Consent Mode v2. */
 export type ConsentSignal =
-  | "ad_storage"
-  | "ad_user_data"
-  | "ad_personalization"
-  | "analytics_storage";
+  "ad_storage" | "ad_user_data" | "ad_personalization" | "analytics_storage";
 
 export type ConsentValue = "granted" | "denied";
 

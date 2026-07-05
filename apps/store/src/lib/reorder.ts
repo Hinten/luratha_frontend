@@ -22,8 +22,7 @@ const MAX_QUANTITY_PER_ITEM = 99;
 export type ReorderSkipReason = "removido" | "indisponível" | "sem estoque" | "sem imagem";
 
 export type ReorderItemResult =
-  | { ok: true; item: CartItemInput }
-  | { ok: false; reason: ReorderSkipReason };
+  { ok: true; item: CartItemInput } | { ok: false; reason: ReorderSkipReason };
 
 export function buildReorderItem(
   orderItem: OrderItem,

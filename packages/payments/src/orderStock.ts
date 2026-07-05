@@ -58,8 +58,7 @@ export interface StockMovementPlan {
 }
 
 export type StockDecrementResult =
-  | ({ ok: true } & StockMovementPlan)
-  | { ok: false; insufficient: StockShortage[] };
+  ({ ok: true } & StockMovementPlan) | { ok: false; insufficient: StockShortage[] };
 
 interface MovementState {
   drafts: Map<string, Stock>;
