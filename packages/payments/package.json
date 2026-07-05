@@ -21,9 +21,9 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "eslint": "^9.39.4",
     "typescript": "^5",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.9"
   }
 }

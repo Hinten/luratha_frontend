@@ -14,15 +14,15 @@
   "dependencies": {
     "@luratha/core": "workspace:*",
     "@luratha/schemas": "workspace:*",
-    "firebase": "^12.14.0",
+    "firebase": "^12.15.0",
     "firebase-admin": "^13.10.0",
-    "next": "16.2.6",
+    "next": "16.2.10",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "eslint": "^9.39.4",
     "typescript": "^5",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.9"
   }
 }

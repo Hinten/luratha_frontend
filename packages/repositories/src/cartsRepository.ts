@@ -17,11 +17,7 @@ const MAX_QUANTITY_PER_ITEM = 99;
 const MAX_DISTINCT_ITEMS = 50;
 
 export type CartRepositoryErrorCode =
-  | "validation"
-  | "not_found"
-  | "quantity_exceeded"
-  | "too_many_items"
-  | "unknown";
+  "validation" | "not_found" | "quantity_exceeded" | "too_many_items" | "unknown";
 
 export class CartRepositoryError extends Error {
   readonly code: CartRepositoryErrorCode;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import { firestoreCollections, type Product, validateProduct } from "@luratha/schemas";
 import { adminBucket, adminDb } from "@luratha/firestore/firebaseAdmin";
 import { adminProductConverter } from "@luratha/firestore/adminProductConverter";
@@ -259,7 +259,7 @@ async function createZoomVariant(
   productId: string,
   imageId: string,
   fileBuffer: Buffer,
-  sourceMetadata: sharp.Metadata,
+  sourceMetadata: Metadata,
 ): Promise<ProductImageResolution | undefined> {
   const sourceWidth = sourceMetadata.width ?? 0;
   const sourceHeight = sourceMetadata.height ?? 0;

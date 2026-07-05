@@ -27,10 +27,7 @@ const EMPTY_ENTRY: FixedRateEntry = {
 };
 
 type Status =
-  | { kind: "idle" }
-  | { kind: "saving" }
-  | { kind: "saved" }
-  | { kind: "error"; message: string };
+  { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
 /** NaN (empty input) collapses to 0; the server-side Zod schema rejects invalid values. */
 function num(value: number): number {

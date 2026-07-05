@@ -71,9 +71,7 @@ export interface CreateBoletoPaymentInput extends BaseCreatePaymentInput {
 }
 
 export type CreatePaymentInput =
-  | CreatePixPaymentInput
-  | CreateCardPaymentInput
-  | CreateBoletoPaymentInput;
+  CreatePixPaymentInput | CreateCardPaymentInput | CreateBoletoPaymentInput;
 
 /** Resultado devolvido ao client para concluir o pagamento. */
 export interface PaymentIntentResult {
@@ -144,10 +142,7 @@ export interface ProviderPaymentSummary {
 }
 
 export type PaymentProviderErrorCode =
-  | "config_missing"
-  | "invalid_input"
-  | "provider_unavailable"
-  | "unknown";
+  "config_missing" | "invalid_input" | "provider_unavailable" | "unknown";
 
 export class PaymentProviderError extends Error {
   readonly code: PaymentProviderErrorCode;
